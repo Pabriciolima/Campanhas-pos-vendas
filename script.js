@@ -1,3 +1,15 @@
+import { firestore } from "./firebase-config.js";
+
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
 const FILIAIS = [
   { dn: '4700', unidade: 'ANANINDEUA' }, { dn: '4731', unidade: 'SÃO LUIS' },
   { dn: '1960', unidade: 'BACABAL' }, { dn: '4700', unidade: 'BELÉM' },
@@ -13,12 +25,43 @@ const DB_KEY = 'campanha_oficina_mvp_v1';
 let db = carregarDB();
 let apuracaoAtual = [];
 
+const funcionariosRef = collection(firestore, "funcionarios");
+
 function carregarDB() {
-  const salvo = localStorage.getItem(DB_KEY);
-  if (salvo) return JSON.parse(salvo);
-  return { funcionarios: [], lancamentos: [] };
+  try {
+    const salvo = localStorage.getItem(DB_KEY);
+
+    if (!salvo) {
+      return {
+        funcionarios: [],
+        lancamentos: []
+      };
+    }
+
+    const dados = JSON.parse(salvo);
+
+    return {
+      funcionarios: [],
+      lancamentos: dados.lancamentos || []
+    };
+  } catch (erro) {
+    console.error("Erro ao carregar dados locais:", erro);
+
+    return {
+      funcionarios: [],
+      lancamentos: []
+    };
+  }
 }
-function salvarDB() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+
+function salvarDB() {
+  const dadosLocais = {
+    lancamentos: db.lancamentos
+  };
+
+  localStorage.setItem(DB_KEY, JSON.stringify(dadosLocais));
+}
+
 function uid() { return crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2); }
 function moeda(v) { return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
 function pct(v) { return Number.isFinite(v) ? `${v.toFixed(2).replace('.', ',')}%` : '0,00%'; }
@@ -27,6 +70,33 @@ function mesAtual() { return new Date().toISOString().slice(0, 7); }
 function filialPorNome(nome) { return FILIAIS.find(f => f.unidade === nome); }
 function funcionarioPorId(id) { return db.funcionarios.find(f => f.id === id); }
 function toast(msg) { const el = document.querySelector('#toast'); el.textContent = msg; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 2200); }
+
+function iniciarFuncionariosTempoReal() {
+  onSnapshot(
+    funcionariosRef,
+
+    snapshot => {
+      db.funcionarios = snapshot.docs.map(documento => ({
+        id: documento.id,
+        ...documento.data()
+      }));
+
+      renderTudo();
+
+      console.log(
+        `${db.funcionarios.length} funcionário(s) carregado(s) do Firebase.`
+      );
+    },
+
+    erro => {
+      console.error("Erro ao buscar funcionários no Firebase:", erro);
+
+      alert(
+        "Não foi possível carregar os funcionários do Firebase. Verifique a conexão e as regras do Firestore."
+      );
+    }
+  );
+}
 
 function bonusMecanicoProdutividade(valor) {
   if (valor >= 100) return 1000;
@@ -182,9 +252,44 @@ window.editarFuncionario = id => {
   const f=funcionarioPorId(id); if(!f)return;
   document.querySelector('#funcionarioId').value=f.id; document.querySelector('#funcionarioFilial').value=f.filial; document.querySelector('#funcionarioDn').value=f.dn; document.querySelector('#funcionarioNome').value=f.nome; document.querySelector('#funcionarioCargo').value=f.cargo; document.querySelector('#funcionarioAtivo').value=String(f.ativo); document.querySelector('#modalFuncionario').showModal();
 };
-window.excluirFuncionario = id => {
-  if(db.lancamentos.some(l=>l.funcionarioId===id)) return alert('Este funcionário possui lançamentos. Exclua os lançamentos primeiro ou deixe-o inativo.');
-  if(confirm('Excluir este funcionário?')){db.funcionarios=db.funcionarios.filter(f=>f.id!==id);salvarDB();renderTudo();toast('Funcionário excluído');}
+window.excluirFuncionario = async id => {
+  const possuiLancamentos = db.lancamentos.some(
+    lancamento => lancamento.funcionarioId === id
+  );
+
+  if (possuiLancamentos) {
+    alert(
+      "Este funcionário possui lançamentos. Exclua os lançamentos primeiro ou deixe o funcionário inativo."
+    );
+
+    return;
+  }
+
+  const confirmou = confirm(
+    "Deseja realmente excluir este funcionário?"
+  );
+
+  if (!confirmou) {
+    return;
+  }
+
+  try {
+    const funcionarioDocumento = doc(
+      firestore,
+      "funcionarios",
+      id
+    );
+
+    await deleteDoc(funcionarioDocumento);
+
+    toast("Funcionário excluído");
+  } catch (erro) {
+    console.error("Erro ao excluir funcionário:", erro);
+
+    alert(
+      "Não foi possível excluir o funcionário. Verifique o Firebase e tente novamente."
+    );
+  }
 };
 
 function atualizarFuncionariosLancamento() {
@@ -260,7 +365,80 @@ function configurarEventos(){
   document.querySelector('#lancamentoFilial').addEventListener('change',atualizarFuncionariosLancamento);
   document.querySelector('#lancamentoFuncionario').addEventListener('change',()=>renderCamposDinamicos());
   document.querySelectorAll('.fechar-modal').forEach(b=>b.addEventListener('click',()=>b.closest('dialog').close()));
-  document.querySelector('#formFuncionario').addEventListener('submit',e=>{e.preventDefault();const id=document.querySelector('#funcionarioId').value||uid();const filial=document.querySelector('#funcionarioFilial').value;const item={id,dn:filialPorNome(filial).dn,filial,nome:document.querySelector('#funcionarioNome').value.trim(),cargo:document.querySelector('#funcionarioCargo').value,ativo:document.querySelector('#funcionarioAtivo').value==='true'};const idx=db.funcionarios.findIndex(f=>f.id===id);idx>=0?db.funcionarios[idx]=item:db.funcionarios.push(item);salvarDB();e.target.closest('dialog').close();renderTudo();toast('Funcionário salvo');});
+  
+  document
+  .querySelector("#formFuncionario")
+  .addEventListener("submit", async event => {
+    event.preventDefault();
+
+    const botaoSalvar = event.submitter;
+    const funcionarioId = document.querySelector("#funcionarioId").value;
+    const filial = document.querySelector("#funcionarioFilial").value;
+    const dadosFilial = filialPorNome(filial);
+
+    if (!dadosFilial) {
+      alert("Selecione uma filial válida.");
+      return;
+    }
+
+    const funcionario = {
+      dn: dadosFilial.dn,
+      filial,
+      nome: document.querySelector("#funcionarioNome").value.trim(),
+      cargo: document.querySelector("#funcionarioCargo").value,
+      ativo: document.querySelector("#funcionarioAtivo").value === "true",
+      atualizadoEm: serverTimestamp()
+    };
+
+    if (!funcionario.nome) {
+      alert("Informe o nome do funcionário.");
+      return;
+    }
+
+    try {
+      if (botaoSalvar) {
+        botaoSalvar.disabled = true;
+        botaoSalvar.textContent = "Salvando...";
+      }
+
+      if (funcionarioId) {
+        const funcionarioDocumento = doc(
+          firestore,
+          "funcionarios",
+          funcionarioId
+        );
+
+        await updateDoc(funcionarioDocumento, funcionario);
+
+        toast("Funcionário atualizado");
+      } else {
+        await addDoc(funcionariosRef, {
+          ...funcionario,
+          criadoEm: serverTimestamp()
+        });
+
+        toast("Funcionário cadastrado");
+      }
+
+      event.target.closest("dialog").close();
+      event.target.reset();
+
+      document.querySelector("#funcionarioId").value = "";
+      document.querySelector("#funcionarioDn").value = "";
+    } catch (erro) {
+      console.error("Erro ao salvar funcionário:", erro);
+
+      alert(
+        "Não foi possível salvar o funcionário. Verifique o Firebase e tente novamente."
+      );
+    } finally {
+      if (botaoSalvar) {
+        botaoSalvar.disabled = false;
+        botaoSalvar.textContent = "Salvar";
+      }
+    }
+  });
+  
   document.querySelector('#formLancamento').addEventListener('submit',e=>{e.preventDefault();const item=coletarLancamentoFormulario();const idx=db.lancamentos.findIndex(l=>l.id===item.id);idx>=0?db.lancamentos[idx]=item:db.lancamentos.push(item);salvarDB();e.target.closest('dialog').close();renderTudo();toast('Lançamento salvo');});
   ['buscaFuncionario','filtroFilialFuncionario','filtroCargoFuncionario'].forEach(id=>document.querySelector(`#${id}`).addEventListener('input',renderFuncionarios));
   ['filtroCompetenciaLancamento','filtroFilialLancamento','filtroCargoLancamento'].forEach(id=>document.querySelector(`#${id}`).addEventListener('change',renderLancamentos));
@@ -269,4 +447,7 @@ function configurarEventos(){
   document.querySelector('#btnLimparTudo').addEventListener('click',()=>{if(confirm('Apagar todos os funcionários e lançamentos deste navegador?')){db={funcionarios:[],lancamentos:[]};salvarDB();renderTudo();toast('Dados apagados');}});
 }
 
-iniciarSelects(); configurarEventos(); renderTudo();
+iniciarSelects();
+configurarEventos();
+renderTudo();
+iniciarFuncionariosTempoReal();
