@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campanha de Oficina</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">CM</div>
+      <div>
+        <strong>Campanhas</strong>
+        <span>Pós-Vendas</span>
+      </div>
+    </div>
+
+    <nav>
+      <button class="nav-btn active" data-view="dashboard">Visão geral</button>
+      <button class="nav-btn" data-view="funcionarios">Base de funcionários</button>
+      <button class="nav-btn" data-view="lancamentos">Lançamentos</button>
+      <button class="nav-btn" data-view="apuracao">Apuração</button>
+      <button class="nav-btn" data-view="politicas">Políticas</button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <small>Dados salvos neste navegador</small>
+      <button id="btnLimparTudo" class="danger-link">Limpar dados</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">MVP</p>
+        <h1 id="pageTitle">Visão geral</h1>
+      </div>
+      <div class="topbar-actions">
+        <label>
+          Competência
+          <input type="month" id="competenciaGlobal" />
+        </label>
+        <button id="btnExportar" class="secondary">Exportar JSON</button>
+      </div>
+    </header>
+
+    <section id="dashboard" class="view active">
+      <div class="cards" id="dashboardCards"></div>
+
+      <div class="grid-2">
+        <article class="panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Resumo</p>
+              <h2>Valores por cargo</h2>
+            </div>
+          </div>
+          <div id="resumoCargo"></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Filiais</p>
+              <h2>Investimento por unidade</h2>
+            </div>
+          </div>
+          <div id="resumoFilial"></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="funcionarios" class="view">
+      <article class="panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Cadastro</p>
+            <h2>Base de funcionários</h2>
+          </div>
+          <button id="btnNovoFuncionario" class="primary">+ Novo funcionário</button>
+        </div>
+
+        <div class="filters">
+          <input id="buscaFuncionario" type="search" placeholder="Buscar por nome, filial ou cargo" />
+          <select id="filtroFilialFuncionario"><option value="">Todas as filiais</option></select>
+          <select id="filtroCargoFuncionario"><option value="">Todos os cargos</option></select>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>DN</th><th>Filial</th><th>Nome</th><th>Cargo</th><th>Status</th><th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaFuncionarios"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section id="lancamentos" class="view">
+      <article class="panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Mensuração</p>
+            <h2>Lançamentos da campanha</h2>
+          </div>
+          <button id="btnNovoLancamento" class="primary">+ Novo lançamento</button>
+        </div>
+
+        <div class="filters">
+          <select id="filtroCompetenciaLancamento"><option value="">Todas as competências</option></select>
+          <select id="filtroFilialLancamento"><option value="">Todas as filiais</option></select>
+          <select id="filtroCargoLancamento"><option value="">Todos os cargos</option></select>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Competência</th><th>Filial</th><th>Colaborador</th><th>Cargo</th><th>Indicadores</th><th>Bônus final</th><th>Status</th><th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaLancamentos"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section id="apuracao" class="view">
+      <div class="cards" id="apuracaoCards"></div>
+      <article class="panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Resultado consolidado</p>
+            <h2>Apuração simplificada</h2>
+          </div>
+          <button id="btnExportarCsv" class="secondary">Exportar CSV</button>
+        </div>
+
+        <div class="filters">
+          <select id="filtroCompetenciaApuracao"><option value="">Todas as competências</option></select>
+          <select id="filtroFilialApuracao"><option value="">Todas as filiais</option></select>
+          <select id="filtroStatusApuracao">
+            <option value="">Todos os status</option>
+            <option value="HABILITADO">Habilitado</option>
+            <option value="NÃO HABILITADO">Não habilitado</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Competência</th><th>DN</th><th>Filial</th><th>Colaborador</th><th>Cargo</th><th>Prod.</th><th>Eficiência</th><th>Bônus bruto</th><th>Penalidade</th><th>Total</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaApuracao"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section id="politicas" class="view">
+      <div class="policy-grid">
+        <article class="panel policy-card">
+          <h2>Mecânico produtivo</h2>
+          <p>Produtividade = horas trabalhadas ÷ horas disponíveis.</p>
+          <p>Eficiência = horas vendidas ÷ horas trabalhadas.</p>
+          <ul>
+            <li>Produtividade: 70–79,99% = R$ 600; 80–89,99% = R$ 690; 90–99,99% = R$ 790; ≥100% = R$ 1.000.</li>
+            <li>Eficiência: 80–89,99% = R$ 690; 90–99,99% = R$ 790; ≥100% = R$ 1.000.</li>
+            <li>As duas métricas precisam ser atingidas.</li>
+            <li>Horas vendidas precisam representar pelo menos 70% das horas disponíveis.</li>
+            <li>Treinamento pendente: desconto de 50%.</li>
+            <li>Retrabalho, imperícia ou prejuízo: inabilitação total.</li>
+          </ul>
+        </article>
+
+        <article class="panel policy-card">
+          <h2>Chefe de oficina e mecânico líder</h2>
+          <ul>
+            <li>R$ 300 por mecânico com faturamento acima de R$ 50 mil.</li>
+            <li>R$ 500 por mecânico com faturamento acima de R$ 60 mil.</li>
+            <li>O líder recebe 50% do bônus calculado para o chefe.</li>
+            <li>Treinamento pendente do chefe/líder: inabilitação.</li>
+            <li>Equipe com menos de 95% dos treinamentos em dia: desconto de 50%.</li>
+          </ul>
+        </article>
+
+        <article class="panel policy-card">
+          <h2>Controlador de produtividade</h2>
+          <ul>
+            <li>Produtividade: 70–79,99% = R$ 100; 80–89,99% = R$ 300; ≥90% = R$ 500.</li>
+            <li>Eficiência: 80–89,99% = R$ 100; 90–99,99% = R$ 300; ≥100% = R$ 500.</li>
+            <li>Neste MVP, as duas métricas precisam ser atingidas e os valores são somados.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="modalFuncionario">
+    <form id="formFuncionario" method="dialog" class="modal-form">
+      <div class="modal-header"><h2>Funcionário</h2><button type="button" class="icon-btn fechar-modal">×</button></div>
+      <input type="hidden" id="funcionarioId" />
+      <div class="form-grid">
+        <label>Filial<select id="funcionarioFilial" required></select></label>
+        <label>DN<input id="funcionarioDn" readonly /></label>
+        <label class="full">Nome<input id="funcionarioNome" required placeholder="Nome completo" /></label>
+        <label>Cargo<select id="funcionarioCargo" required></select></label>
+        <label>Status<select id="funcionarioAtivo"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
+      </div>
+      <div class="modal-actions"><button type="button" class="secondary fechar-modal">Cancelar</button><button class="primary" value="default">Salvar</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="modalLancamento">
+    <form id="formLancamento" method="dialog" class="modal-form wide">
+      <div class="modal-header"><h2>Lançamento</h2><button type="button" class="icon-btn fechar-modal">×</button></div>
+      <input type="hidden" id="lancamentoId" />
+      <div class="form-grid">
+        <label>Competência<input type="month" id="lancamentoCompetencia" required /></label>
+        <label>Filial<select id="lancamentoFilial" required></select></label>
+        <label class="full">Colaborador<select id="lancamentoFuncionario" required></select></label>
+      </div>
+      <div id="camposDinamicos" class="dynamic-fields"></div>
+      <div class="resultado-preview" id="resultadoPreview"></div>
+      <div class="modal-actions"><button type="button" class="secondary fechar-modal">Cancelar</button><button class="primary" value="default">Salvar lançamento</button></div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast"></div>
+  <script src="script.js"></script>
+</body>
+</html>
