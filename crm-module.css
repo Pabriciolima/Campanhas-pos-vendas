@@ -1,0 +1,43 @@
+.module-icon-crm {
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  color: #ffffff;
+  box-shadow: 0 5px 14px rgba(79, 70, 229, 0.28);
+}
+
+.crm-menu-btn {
+  width: 100%;
+  border: 0;
+  border-radius: 9px;
+  padding: 10px 12px;
+  background: transparent;
+  color: #bfd0df;
+  text-align: left;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.crm-menu-btn:hover,
+.crm-menu-btn.active {
+  background: rgba(255, 255, 255, 0.11);
+  color: #ffffff;
+  transform: translateX(2px);
+}
+
+body.modulo-crm-ativo
+[data-module-group="crm"]
+.module-toggle {
+  background: rgba(124, 58, 237, 0.18);
+  border-color: rgba(167, 139, 250, 0.34);
+}
+
+body.modulo-crm-ativo
+[data-module-group="crm"]
+.module-toggle-text small {
+  color: #d8ccff;
+}

@@ -1,238 +1,894 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Campanha de Oficina</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <aside class="sidebar">
-    <div class="brand">
-      <div class="brand-mark">CM</div>
-      <div>
-        <strong>Campanhas</strong>
-        <span>Pós-Vendas</span>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistema de Campanhas Pós-Vendas</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="./evidencias-produtivos.css?v=20260715-03" />
+    <link rel="stylesheet" href="crm-module.css" />
+    <link rel="stylesheet" href="garantia-module.css" />
+    <link rel="stylesheet" href="garantia-module.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">CM</div>
+        <div><strong>Campanhas</strong><span>Pós-Vendas</span></div>
       </div>
-    </div>
 
-    <nav>
-      <button class="nav-btn active" data-view="dashboard">Visão geral</button>
-      <button class="nav-btn" data-view="funcionarios">Base de funcionários</button>
-      <button class="nav-btn" data-view="lancamentos">Lançamentos</button>
-      <button class="nav-btn" data-view="apuracao">Apuração</button>
-      <button class="nav-btn" data-view="politicas">Políticas</button>
-    </nav>
+      <nav class="campaign-modules-nav">
+        <!-- CAMPANHA DOS PRODUTIVOS -->
+        <div class="campaign-module-group open" data-module-group="produtivos">
+          <button
+            type="button"
+            class="module-toggle"
+            data-module-toggle="produtivos"
+            aria-expanded="true"
+          >
+            <span class="module-icon module-icon-prod"> MP </span>
 
-    <div class="sidebar-footer">
-      <small>Dados salvos neste navegador</small>
-      <button id="btnLimparTudo" class="danger-link">Limpar dados</button>
-    </div>
-  </aside>
+            <span class="module-toggle-text">
+              <strong> Campanha dos Produtivos </strong>
 
-  <main class="main">
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">MVP</p>
-        <h1 id="pageTitle">Visão geral</h1>
+              <small> Oficina e produtividade </small>
+            </span>
+
+            <span class="module-chevron"> ⌄ </span>
+          </button>
+
+          <div class="module-dropdown">
+            <button class="nav-btn active" data-view="dashboard">
+              Visão geral
+            </button>
+
+            <button class="nav-btn" data-view="funcionarios">
+              Base de funcionários
+            </button>
+
+            <button class="nav-btn" data-view="lancamentos">Lançamentos</button>
+
+            <button class="nav-btn" data-view="apuracao">Apuração</button>
+
+            <button class="nav-btn" data-view="politicas">Políticas</button>
+          </div>
+        </div>
+
+        <!-- PIX DO PRESIDENTE -->
+        <div class="campaign-module-group" data-module-group="pix">
+          <button
+            type="button"
+            class="module-toggle"
+            data-module-toggle="pix"
+            aria-expanded="false"
+          >
+            <span class="module-icon module-icon-pix"> PIX </span>
+
+            <span class="module-toggle-text">
+              <strong> Pix do Presidente </strong>
+
+              <small> Campanha semanal </small>
+            </span>
+
+            <span class="module-chevron"> ⌄ </span>
+          </button>
+
+          <div class="module-dropdown">
+            <button
+              type="button"
+              class="pix-menu-btn active"
+              data-pix-view="dashboard"
+            >
+              Visão geral
+            </button>
+
+            <button
+              type="button"
+              class="pix-menu-btn"
+              data-pix-view="funcionarios"
+            >
+              Base de participantes
+            </button>
+
+            <button
+              type="button"
+              class="pix-menu-btn"
+              data-pix-view="lancamentos"
+            >
+              Lançamentos
+            </button>
+
+            <button type="button" class="pix-menu-btn" data-pix-view="apuracao">
+              Apuração
+            </button>
+
+            <button
+              type="button"
+              class="pix-menu-btn"
+              data-pix-view="politicas"
+            >
+              Políticas
+            </button>
+          </div>
+        </div>
+
+        <!-- CAMPANHAS DO CRM -->
+        <div class="campaign-module-group" data-module-group="crm">
+          <button
+            type="button"
+            class="module-toggle"
+            data-module-toggle="crm"
+            aria-expanded="false"
+          >
+            <span class="module-icon module-icon-crm"> CRM </span>
+
+            <span class="module-toggle-text">
+              <strong> Campanhas do CRM </strong>
+
+              <small> Em estruturação </small>
+            </span>
+
+            <span class="module-chevron"> ⌄ </span>
+          </button>
+
+          <div class="module-dropdown">
+            <button
+              type="button"
+              class="crm-menu-btn"
+              data-crm-view="dashboard"
+            >
+              Visão geral
+            </button>
+
+            <button
+              type="button"
+              class="crm-menu-btn"
+              data-crm-view="funcionarios"
+            >
+              Base de participantes
+            </button>
+
+            <button
+              type="button"
+              class="crm-menu-btn"
+              data-crm-view="lancamentos"
+            >
+              Lançamentos
+            </button>
+
+            <button type="button" class="crm-menu-btn" data-crm-view="apuracao">
+              Apuração
+            </button>
+
+            <button
+              type="button"
+              class="crm-menu-btn"
+              data-crm-view="politicas"
+            >
+              Políticas
+            </button>
+          </div>
+        </div>
+
+        <!-- CAMPANHAS DE GARANTIA -->
+        <div class="campaign-module-group" data-module-group="garantia">
+          <button
+            type="button"
+            class="module-toggle"
+            data-module-toggle="garantia"
+            aria-expanded="false"
+          >
+            <span class="module-icon module-icon-garantia"> GAR </span>
+
+            <span class="module-toggle-text">
+              <strong> Campanhas de Garantia </strong>
+
+              <small> Em estruturação </small>
+            </span>
+
+            <span class="module-chevron"> ⌄ </span>
+          </button>
+
+          <div class="module-dropdown">
+            <button
+              type="button"
+              class="garantia-menu-btn"
+              data-garantia-view="dashboard"
+            >
+              Visão geral
+            </button>
+
+            <button
+              type="button"
+              class="garantia-menu-btn"
+              data-garantia-view="funcionarios"
+            >
+              Base de participantes
+            </button>
+
+            <button
+              type="button"
+              class="garantia-menu-btn"
+              data-garantia-view="lancamentos"
+            >
+              Lançamentos
+            </button>
+
+            <button
+              type="button"
+              class="garantia-menu-btn"
+              data-garantia-view="apuracao"
+            >
+              Apuração
+            </button>
+
+            <button
+              type="button"
+              class="garantia-menu-btn"
+              data-garantia-view="politicas"
+            >
+              Políticas
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <small>Dados sincronizados com o sistema</small>
+        <button id="btnLimparTudo" class="danger-link">
+          Limpar lançamentos locais
+        </button>
       </div>
-      <div class="topbar-actions">
-        <label>
-          Competência
-          <input type="month" id="competenciaGlobal" />
-        </label>
-        <button id="btnExportar" class="secondary">Exportar JSON</button>
-      </div>
-    </header>
+    </aside>
 
-    <section id="dashboard" class="view active">
-      <div class="cards" id="dashboardCards"></div>
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">MVP</p>
+          <h1 id="pageTitle">Campanha dos Produtivos</h1>
+        </div>
+        <div class="topbar-actions" id="produtivosTopbarActions">
+          <label
+            >Competência<input type="month" id="competenciaGlobal"
+          /></label>
+          <div class="export-toolbar">
+            <label class="export-filter"
+              ><span>Exportar</span
+              ><select id="tipoExportacao">
+                <option value="habilitados">Somente habilitados</option>
+                <option value="todos">Todos os resultados</option>
+              </select></label
+            >
+            <div class="export-buttons">
+              <button
+                type="button"
+                id="btnExportarExcel"
+                class="export-btn export-excel"
+              >
+                <span><small>Exportar</small>Excel</span>
+              </button>
+              <button
+                type="button"
+                id="btnExportarPdf"
+                class="export-btn export-pdf"
+              >
+                <span><small>Exportar</small>PDF</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
 
-      <div class="grid-2">
+      <!-- CAMPANHA DOS PRODUTIVOS -->
+      <section id="dashboard" class="view active">
+        <div class="cards" id="dashboardCards"></div>
+        <div class="grid-2">
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Resumo</p>
+                <h2>Valores por cargo</h2>
+              </div>
+            </div>
+            <div id="resumoCargo"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Filiais</p>
+                <h2>Investimento por unidade</h2>
+              </div>
+            </div>
+            <div id="resumoFilial"></div>
+          </article>
+        </div>
+        <article class="panel monthly-history-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Histórico e avaliação</p>
+              <h2>Resultado individual do mês</h2>
+            </div>
+            <div id="historicoResumo" class="monthly-history-summary"></div>
+          </div>
+          <div class="table-wrap">
+            <table class="monthly-history-table">
+              <thead>
+                <tr>
+                  <th>Colaborador</th>
+                  <th>Filial</th>
+                  <th>Cargo</th>
+                  <th>Faturamento</th>
+                  <th>Produtividade</th>
+                  <th>Eficiência</th>
+                  <th>Bônus</th>
+                  <th>Status</th>
+                  <th>Avaliação</th>
+                </tr>
+              </thead>
+              <tbody id="tabelaHistoricoMensal"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="funcionarios" class="view">
         <article class="panel">
           <div class="panel-header">
             <div>
-              <p class="eyebrow">Resumo</p>
-              <h2>Valores por cargo</h2>
+              <p class="eyebrow">Cadastro</p>
+              <h2>Base de funcionários</h2>
             </div>
+            <button id="btnNovoFuncionario" class="primary">
+              + Novo funcionário
+            </button>
           </div>
-          <div id="resumoCargo"></div>
+          <div class="filters">
+            <input
+              id="buscaFuncionario"
+              type="search"
+              placeholder="Buscar por nome, filial ou cargo"
+            /><select id="filtroFilialFuncionario">
+              <option value="">Todas as filiais</option></select
+            ><select id="filtroCargoFuncionario">
+              <option value="">Todos os cargos</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>DN</th>
+                  <th>Filial</th>
+                  <th>Nome</th>
+                  <th>Cargo</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tabelaFuncionarios"></tbody>
+            </table>
+          </div>
         </article>
+      </section>
 
+      <section id="lancamentos" class="view">
         <article class="panel">
           <div class="panel-header">
             <div>
-              <p class="eyebrow">Filiais</p>
-              <h2>Investimento por unidade</h2>
+              <p class="eyebrow">Mensuração</p>
+              <h2>Lançamentos da campanha</h2>
+            </div>
+            <button id="btnNovoLancamento" class="primary">
+              + Novo lançamento
+            </button>
+          </div>
+          <div class="filters">
+            <select id="filtroCompetenciaLancamento">
+              <option value="">Todas as competências</option></select
+            ><select id="filtroFilialLancamento">
+              <option value="">Todas as filiais</option></select
+            ><select id="filtroCargoLancamento">
+              <option value="">Todos os cargos</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Competência</th>
+                  <th>Filial</th>
+                  <th>Colaborador</th>
+                  <th>Cargo</th>
+                  <th>Indicadores</th>
+                  <th>Bônus final</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tabelaLancamentos"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="apuracao" class="view">
+        <div class="cards" id="apuracaoCards"></div>
+        <article class="panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Resultado consolidado</p>
+              <h2>Apuração dos Produtivos</h2>
+            </div>
+            <button id="btnExportarCsv" class="secondary">Exportar CSV</button>
+          </div>
+          <div class="filters">
+            <select id="filtroCompetenciaApuracao">
+              <option value="">Todas as competências</option></select
+            ><select id="filtroFilialApuracao">
+              <option value="">Todas as filiais</option></select
+            ><select id="filtroStatusApuracao">
+              <option value="">Todos os status</option>
+              <option value="HABILITADO">Habilitado</option>
+              <option value="NÃO HABILITADO">Não habilitado</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Competência</th>
+                  <th>DN</th>
+                  <th>Filial</th>
+                  <th>Colaborador</th>
+                  <th>Cargo</th>
+                  <th>Prod.</th>
+                  <th>Eficiência</th>
+                  <th>Bônus bruto</th>
+                  <th>Penalidade</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="tabelaApuracao"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="politicas" class="view">
+        <div class="policy-grid">
+          <article class="panel policy-card">
+            <h2>Mecânico produtivo</h2>
+            <p>Produtividade = horas trabalhadas ÷ horas disponíveis.</p>
+            <p>Eficiência = horas vendidas ÷ horas trabalhadas.</p>
+          </article>
+          <article class="panel policy-card">
+            <h2>Chefe e líder</h2>
+            <p>
+              Apuração automática conforme faturamento dos mecânicos da filial.
+            </p>
+          </article>
+          <article class="panel policy-card">
+            <h2>Controlador</h2>
+            <p>Bonificação conforme produtividade e eficiência.</p>
+          </article>
+        </div>
+      </section>
+
+      <!-- PIX DO PRESIDENTE -->
+      <section id="pixPresidente" class="view">
+        <div class="pix-module-hero">
+          <div>
+            <p class="eyebrow">Campanha independente</p>
+            <h2>Pix do Presidente</h2>
+            <p>Apuração semanal separada da Campanha dos Produtivos.</p>
+          </div>
+        </div>
+
+        <div id="pix-dashboard" class="pix-subview active">
+          <div class="pix-page-header">
+            <div>
+              <p class="eyebrow">Resumo mensal</p>
+              <h2>Visão geral da apuração</h2>
+            </div>
+            <label class="pix-competencia-box"
+              >Competência<input
+                type="month"
+                id="pixDashboardCompetencia"
+                min="2026-06"
+            /></label>
+          </div>
+          <div id="pixDashboardCards" class="pix-dashboard-cards"></div>
+          <div class="grid-2">
+            <article class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Resumo</p>
+                  <h2>Valores por cargo</h2>
+                </div>
+              </div>
+              <div id="pixResumoCargo"></div>
+            </article>
+            <article class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Filiais</p>
+                  <h2>Investimento por unidade</h2>
+                </div>
+              </div>
+              <div id="pixResumoFilial"></div>
+            </article>
+          </div>
+        </div>
+
+        <div id="pix-funcionarios" class="pix-subview">
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Cadastro exclusivo</p>
+                <h2>Base de participantes</h2>
+                <p class="pix-section-description">
+                  Somente cargos do Pix do Presidente.
+                </p>
+              </div>
+              <button type="button" id="btnNovoFuncionarioPix" class="primary">
+                + Novo participante
+              </button>
+            </div>
+            <div class="filters">
+              <input
+                id="pixBuscaFuncionario"
+                type="search"
+                placeholder="Buscar participante"
+              /><select id="pixFiltroFilialFuncionario">
+                <option value="">Todas as filiais</option></select
+              ><select id="pixFiltroCargoFuncionario">
+                <option value="">Todos os cargos</option>
+              </select>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>DN</th>
+                    <th>Filial</th>
+                    <th>Nome</th>
+                    <th>Cargo</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="pixTabelaFuncionarios"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+
+        <div id="pix-lancamentos" class="pix-subview">
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Semanas 1 a 4</p>
+                <h2>Lançamentos semanais</h2>
+              </div>
+              <button
+                type="button"
+                id="btnNovoLancamentoPix"
+                class="primary pix-primary-button"
+              >
+                + Novo lançamento
+              </button>
+            </div>
+            <div class="pix-filters pix-filters-4">
+              <select id="pixFiltroCompetenciaLancamento">
+                <option value="">Todas as competências</option></select
+              ><select id="pixFiltroFilialLancamento">
+                <option value="">Todas as filiais</option></select
+              ><select id="pixFiltroCargoLancamento">
+                <option value="">Todos os cargos</option></select
+              ><select id="pixFiltroSemanaLancamento">
+                <option value="">Todas as semanas</option>
+                <option value="1">Semana 1</option>
+                <option value="2">Semana 2</option>
+                <option value="3">Semana 3</option>
+                <option value="4">Semana 4</option>
+              </select>
+            </div>
+            <div class="table-wrap">
+              <table class="pix-table">
+                <thead>
+                  <tr>
+                    <th>Competência</th>
+                    <th>Semana</th>
+                    <th>Filial</th>
+                    <th>Colaborador</th>
+                    <th>Cargo</th>
+                    <th>Indicadores</th>
+                    <th>Bonif. faturamento</th>
+                    <th>Bônus ticket</th>
+                    <th>NPS</th>
+                    <th>Penalidade</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="pixTabelaLancamentos"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+
+        <div id="pix-apuracao" class="pix-subview">
+          <div id="pixApuracaoCards" class="pix-dashboard-cards"></div>
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Resultado consolidado</p>
+                <h2>Apuração do Pix do Presidente</h2>
+              </div>
+            </div>
+            <div class="pix-filters">
+              <select id="pixFiltroCompetenciaApuracao">
+                <option value="">Todas as competências</option></select
+              ><select id="pixFiltroFilialApuracao">
+                <option value="">Todas as filiais</option></select
+              ><select id="pixFiltroCargoApuracao">
+                <option value="">Todos os cargos</option></select
+              ><select id="pixFiltroSemanaApuracao">
+                <option value="">Todas as semanas</option>
+                <option value="1">Semana 1</option>
+                <option value="2">Semana 2</option>
+                <option value="3">Semana 3</option>
+                <option value="4">Semana 4</option></select
+              ><select id="pixFiltroStatusApuracao">
+                <option value="">Todos os status</option>
+                <option value="HABILITADO">Habilitado</option>
+                <option value="NÃO HABILITADO">Não habilitado</option>
+              </select>
+            </div>
+            <div class="table-wrap">
+              <table class="pix-table pix-table-apuracao">
+                <thead>
+                  <tr>
+                    <th>Competência</th>
+                    <th>Semana</th>
+                    <th>Filial</th>
+                    <th>Colaborador</th>
+                    <th>Cargo</th>
+                    <th>Indicadores</th>
+                    <th>Bonif. faturamento</th>
+                    <th>Bônus ticket</th>
+                    <th>NPS</th>
+                    <th>Penalidade</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="pixTabelaApuracao"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+
+        <div id="pix-politicas" class="pix-subview">
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Regras exclusivas</p>
+                <h2>Políticas do Pix do Presidente</h2>
+              </div>
+            </div>
+            <div id="pixPolicyGrid" class="pix-policy-grid"></div>
+            <div class="pix-penalty-policy">
+              <strong>Regra especial da Semana 4</strong>
+              <p>
+                O NPS é pago mesmo sem atingir a meta semanal. O.S. em aberto
+                acima de 28% aplica penalidade de 50% sobre o total da Semana 4.
+              </p>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <!-- MODAIS PRODUTIVOS -->
+    <dialog id="modalFuncionario">
+      <form id="formFuncionario" class="modal-form">
+        <div class="modal-header">
+          <h2>Funcionário</h2>
+          <button type="button" class="icon-btn fechar-modal">×</button>
+        </div>
+        <input type="hidden" id="funcionarioId" />
+        <div class="form-grid">
+          <label>Filial<select id="funcionarioFilial" required></select></label
+          ><label>DN<input id="funcionarioDn" readonly /></label
+          ><label class="full"
+            >Nome<input id="funcionarioNome" required /></label
+          ><label>Cargo<select id="funcionarioCargo" required></select></label
+          ><label
+            >Status<select id="funcionarioAtivo">
+              <option value="true">Ativo</option>
+              <option value="false">Inativo</option>
+            </select></label
+          >
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="secondary fechar-modal">Cancelar</button
+          ><button type="submit" class="primary">Salvar participante</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="modalLancamento">
+      <form id="formLancamento" class="modal-form wide">
+        <div class="modal-header">
+          <h2>Lançamento</h2>
+          <button type="button" class="icon-btn fechar-modal">×</button>
+        </div>
+        <input type="hidden" id="lancamentoId" />
+        <div class="form-grid">
+          <label
+            >Competência<input
+              type="month"
+              id="lancamentoCompetencia"
+              required /></label
+          ><label>Filial<select id="lancamentoFilial" required></select></label
+          ><label class="full"
+            >Colaborador<select id="lancamentoFuncionario" required></select
+          ></label>
+        </div>
+        <div id="camposDinamicos" class="dynamic-fields"></div>
+        
+        <section id="evidenciaProdutivos" class="evidence-section">
+          <div class="evidence-section-header">
+            <div>
+              <p class="eyebrow">Evidências da filial</p>
+              <h3>Anexar imagens para o relatório</h3>
+              <p>As imagens valem para toda a filial da competência selecionada.</p>
+            </div>
+            <span id="evidenciaContador" class="evidence-counter">0/20</span>
+          </div>
+
+          <div id="evidenciaLegendaFilial" class="evidence-branch-label">
+            Selecione a competência e a filial
+          </div>
+
+          <div id="evidenciaDropzone" class="evidence-dropzone">
+            <input
+              type="file"
+              id="evidenciaInput"
+              class="evidence-input"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+            />
+
+            <div class="evidence-dropzone-content">
+              <div class="evidence-upload-icon">↑</div>
+              <strong>Arraste as imagens para cá</strong>
+              <small>JPG, PNG ou WEBP</small>
+
+              <button
+                type="button"
+                id="btnSelecionarEvidencia"
+                class="evidence-select-button">
+                Selecionar imagens
+              </button>
             </div>
           </div>
-          <div id="resumoFilial"></div>
-        </article>
-      </div>
-    </section>
 
-    <section id="funcionarios" class="view">
-      <article class="panel">
-        <div class="panel-header">
-          <div>
-            <p class="eyebrow">Cadastro</p>
-            <h2>Base de funcionários</h2>
+          <p id="evidenciaMensagem" class="evidence-message"></p>
+
+          <div
+            id="evidenciaGaleria"
+            class="evidence-gallery">
           </div>
-          <button id="btnNovoFuncionario" class="primary">+ Novo funcionário</button>
-        </div>
+        </section>
 
-        <div class="filters">
-          <input id="buscaFuncionario" type="search" placeholder="Buscar por nome, filial ou cargo" />
-          <select id="filtroFilialFuncionario"><option value="">Todas as filiais</option></select>
-          <select id="filtroCargoFuncionario"><option value="">Todos os cargos</option></select>
+        <div id="resultadoPreview" class="resultado-preview"></div>
+        <div class="modal-actions">
+          <button type="button" class="secondary fechar-modal">Cancelar</button
+          ><button type="submit" class="primary">Salvar lançamento</button>
         </div>
+      </form>
+    </dialog>
 
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>DN</th><th>Filial</th><th>Nome</th><th>Cargo</th><th>Status</th><th>Ações</th>
-              </tr>
-            </thead>
-            <tbody id="tabelaFuncionarios"></tbody>
-          </table>
-        </div>
-      </article>
-    </section>
-
-    <section id="lancamentos" class="view">
-      <article class="panel">
-        <div class="panel-header">
+    <!-- MODAIS PIX -->
+    <dialog id="modalFuncionarioPix">
+      <form id="formFuncionarioPix" class="modal-form">
+        <div class="modal-header">
           <div>
-            <p class="eyebrow">Mensuração</p>
-            <h2>Lançamentos da campanha</h2>
+            <p class="eyebrow">Pix do Presidente</p>
+            <h2>Participante</h2>
           </div>
-          <button id="btnNovoLancamento" class="primary">+ Novo lançamento</button>
+          <button type="button" id="fecharModalFuncionarioPix" class="icon-btn">
+            ×
+          </button>
         </div>
-
-        <div class="filters">
-          <select id="filtroCompetenciaLancamento"><option value="">Todas as competências</option></select>
-          <select id="filtroFilialLancamento"><option value="">Todas as filiais</option></select>
-          <select id="filtroCargoLancamento"><option value="">Todos os cargos</option></select>
+        <input type="hidden" id="pixFuncionarioId" />
+        <div class="form-grid">
+          <label
+            >Filial<select id="pixFuncionarioFilial" required></select></label
+          ><label>DN<input id="pixFuncionarioDn" readonly /></label
+          ><label class="full"
+            >Nome<input id="pixFuncionarioNome" required /></label
+          ><label
+            >Cargo<select id="pixFuncionarioCargo" required></select></label
+          ><label
+            >Status<select id="pixFuncionarioAtivo">
+              <option value="true">Ativo</option>
+              <option value="false">Inativo</option>
+            </select></label
+          >
         </div>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Competência</th><th>Filial</th><th>Colaborador</th><th>Cargo</th><th>Indicadores</th><th>Bônus final</th><th>Status</th><th>Ações</th>
-              </tr>
-            </thead>
-            <tbody id="tabelaLancamentos"></tbody>
-          </table>
+        <div class="modal-actions">
+          <button
+            type="button"
+            id="cancelarModalFuncionarioPix"
+            class="secondary"
+          >
+            Cancelar</button
+          ><button type="submit" class="primary">Salvar participante</button>
         </div>
-      </article>
-    </section>
+      </form>
+    </dialog>
 
-    <section id="apuracao" class="view">
-      <div class="cards" id="apuracaoCards"></div>
-      <article class="panel">
-        <div class="panel-header">
+    <dialog id="modalPixPresidente" class="pix-dialog">
+      <form id="formPixPresidente" class="modal-form wide">
+        <div class="modal-header">
           <div>
-            <p class="eyebrow">Resultado consolidado</p>
-            <h2>Apuração simplificada</h2>
+            <p class="eyebrow">Pix do Presidente</p>
+            <h2>Lançamento semanal</h2>
           </div>
-          <button id="btnExportarCsv" class="secondary">Exportar CSV</button>
+          <button type="button" id="fecharModalPix" class="icon-btn">×</button>
         </div>
-
-        <div class="filters">
-          <select id="filtroCompetenciaApuracao"><option value="">Todas as competências</option></select>
-          <select id="filtroFilialApuracao"><option value="">Todas as filiais</option></select>
-          <select id="filtroStatusApuracao">
-            <option value="">Todos os status</option>
-            <option value="HABILITADO">Habilitado</option>
-            <option value="NÃO HABILITADO">Não habilitado</option>
-          </select>
+        <input type="hidden" id="pixLancamentoId" />
+        <div class="form-grid">
+          <label
+            >Competência<input
+              type="month"
+              id="pixLancamentoCompetencia"
+              min="2026-06"
+              required /></label
+          ><label
+            >Semana<select id="pixLancamentoSemana" required>
+              <option value="1">Semana 1</option>
+              <option value="2">Semana 2</option>
+              <option value="3">Semana 3</option>
+              <option value="4">Semana 4</option>
+            </select></label
+          ><label
+            >Filial<select id="pixLancamentoFilial" required></select></label
+          ><label
+            >Consultor Técnico<select
+              id="pixLancamentoFuncionario"
+              required
+            ></select
+          ></label>
         </div>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Competência</th><th>DN</th><th>Filial</th><th>Colaborador</th><th>Cargo</th><th>Prod.</th><th>Eficiência</th><th>Bônus bruto</th><th>Penalidade</th><th>Total</th><th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="tabelaApuracao"></tbody>
-          </table>
+        <div
+          id="pixCamposDinamicos"
+          class="dynamic-fields pix-dynamic-fields"
+        ></div>
+        <div id="pixResultadoPreview" class="resultado-preview pix-preview">
+          O cálculo aparecerá aqui.
         </div>
-      </article>
-    </section>
+        <div class="modal-actions">
+          <button type="button" id="cancelarModalPix" class="secondary">
+            Cancelar</button
+          ><button type="submit" class="primary">Salvar lançamento</button>
+        </div>
+      </form>
+    </dialog>
 
-    <section id="politicas" class="view">
-      <div class="policy-grid">
-        <article class="panel policy-card">
-          <h2>Mecânico produtivo</h2>
-          <p>Produtividade = horas trabalhadas ÷ horas disponíveis.</p>
-          <p>Eficiência = horas vendidas ÷ horas trabalhadas.</p>
-          <ul>
-            <li>Produtividade: 70–79,99% = R$ 600; 80–89,99% = R$ 690; 90–99,99% = R$ 790; ≥100% = R$ 1.000.</li>
-            <li>Eficiência: 80–89,99% = R$ 690; 90–99,99% = R$ 790; ≥100% = R$ 1.000.</li>
-            <li>As duas métricas precisam ser atingidas.</li>
-            <li>Horas vendidas precisam representar pelo menos 70% das horas disponíveis.</li>
-            <li>Treinamento pendente: desconto de 50%.</li>
-            <li>Retrabalho, imperícia ou prejuízo: inabilitação total.</li>
-          </ul>
-        </article>
+    <div id="toast" class="toast"></div>
 
-        <article class="panel policy-card">
-          <h2>Chefe de oficina e mecânico líder</h2>
-          <ul>
-            <li>R$ 300 por mecânico com faturamento acima de R$ 50 mil.</li>
-            <li>R$ 500 por mecânico com faturamento acima de R$ 60 mil.</li>
-            <li>O líder recebe 50% do bônus calculado para o chefe.</li>
-            <li>Treinamento pendente do chefe/líder: inabilitação.</li>
-            <li>Equipe com menos de 95% dos treinamentos em dia: desconto de 50%.</li>
-          </ul>
-        </article>
-
-        <article class="panel policy-card">
-          <h2>Controlador de produtividade</h2>
-          <ul>
-            <li>Produtividade: 70–79,99% = R$ 100; 80–89,99% = R$ 300; ≥90% = R$ 500.</li>
-            <li>Eficiência: 80–89,99% = R$ 100; 90–99,99% = R$ 300; ≥100% = R$ 500.</li>
-            <li>Neste MVP, as duas métricas precisam ser atingidas e os valores são somados.</li>
-          </ul>
-        </article>
-      </div>
-    </section>
-  </main>
-
-  <dialog id="modalFuncionario">
-    <form id="formFuncionario" method="dialog" class="modal-form">
-      <div class="modal-header"><h2>Funcionário</h2><button type="button" class="icon-btn fechar-modal">×</button></div>
-      <input type="hidden" id="funcionarioId" />
-      <div class="form-grid">
-        <label>Filial<select id="funcionarioFilial" required></select></label>
-        <label>DN<input id="funcionarioDn" readonly /></label>
-        <label class="full">Nome<input id="funcionarioNome" required placeholder="Nome completo" /></label>
-        <label>Cargo<select id="funcionarioCargo" required></select></label>
-        <label>Status<select id="funcionarioAtivo"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
-      </div>
-      <div class="modal-actions"><button type="button" class="secondary fechar-modal">Cancelar</button><button class="primary" value="default">Salvar</button></div>
-    </form>
-  </dialog>
-
-  <dialog id="modalLancamento">
-    <form id="formLancamento" method="dialog" class="modal-form wide">
-      <div class="modal-header"><h2>Lançamento</h2><button type="button" class="icon-btn fechar-modal">×</button></div>
-      <input type="hidden" id="lancamentoId" />
-      <div class="form-grid">
-        <label>Competência<input type="month" id="lancamentoCompetencia" required /></label>
-        <label>Filial<select id="lancamentoFilial" required></select></label>
-        <label class="full">Colaborador<select id="lancamentoFuncionario" required></select></label>
-      </div>
-      <div id="camposDinamicos" class="dynamic-fields"></div>
-      <div class="resultado-preview" id="resultadoPreview"></div>
-      <div class="modal-actions"><button type="button" class="secondary fechar-modal">Cancelar</button><button class="primary" value="default">Salvar lançamento</button></div>
-    </form>
-  </dialog>
-
-  <div id="toast" class="toast"></div>
-  <script type="module" src="./script.js"></script>
-</body>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
+    <script type="module" src="./script.js?v=20260714-03"></script>
+    <script type="module" src="./pix-presidente.js?v=20260714-03"></script>
+    <script type="module" src="./evidencias-produtivos.js?v=20260715-03"></script>
+    <script src="./module-switcher.js?v=20260715-01"></script>
+  </body>
 </html>
