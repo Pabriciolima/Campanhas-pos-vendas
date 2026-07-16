@@ -1,0 +1,59 @@
+.pix-history-panel {
+  margin-top: 18px;
+}
+
+.pix-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.pix-history-header h2 {
+  margin: 4px 0 0;
+}
+
+.pix-history-summary {
+  color: #526572;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.pix-history-summary strong {
+  color: #102030;
+  font-size: 14px;
+}
+
+.pix-history-panel table {
+  min-width: 1200px;
+}
+
+.pix-history-panel tbody td {
+  font-size: 11px;
+}
+
+.pix-history-panel tbody tr {
+  transition:
+    background .16s ease;
+}
+
+.pix-history-panel tbody tr:hover {
+  background: #f8fbfc;
+}
+
+.pix-penalty-value {
+  color: #b42318;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .pix-history-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .pix-history-summary {
+    white-space: normal;
+  }
+}

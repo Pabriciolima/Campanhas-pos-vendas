@@ -2133,3 +2133,405 @@ dialog::backdrop {
     grid-template-columns: 1fr;
   }
 }
+/* Cabeçalho da tabela */
+#historicoIndividual table thead th,
+#resultadoIndividualMes table thead th,
+.history-table thead th,
+table[data-history-table] thead th {
+  position: relative;
+  padding: 0;
+  background:
+    linear-gradient(
+      180deg,
+      #f7fafc 0%,
+      #eef4f7 100%
+    );
+  border-bottom:
+    1px solid #d9e4ea;
+}
+
+/* Botão principal do filtro */
+#historicoIndividual table thead th > button,
+#resultadoIndividualMes table thead th > button,
+.history-table thead th > button,
+table[data-history-table] thead th > button {
+  width: 100%;
+  min-height: 42px;
+  border: 0;
+  border-radius: 0;
+  padding: 10px 12px;
+  background: transparent;
+  color: #405463;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: .045em;
+  text-align: left;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  transition:
+    background .18s ease,
+    color .18s ease,
+    box-shadow .18s ease;
+}
+
+/* Hover */
+#historicoIndividual table thead th > button:hover,
+#resultadoIndividualMes table thead th > button:hover,
+.history-table thead th > button:hover,
+table[data-history-table] thead th > button:hover {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(11, 122, 83, .08),
+      rgba(11, 122, 83, .04)
+    );
+  color: #0b7a53;
+}
+
+/* Foco de teclado */
+#historicoIndividual table thead th > button:focus-visible,
+#resultadoIndividualMes table thead th > button:focus-visible,
+.history-table thead th > button:focus-visible,
+table[data-history-table] thead th > button:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 0 0 2px rgba(11, 122, 83, .35);
+}
+
+/* Área do ícone de ordenação */
+#historicoIndividual table thead th > button::after,
+#resultadoIndividualMes table thead th > button::after,
+.history-table thead th > button::after,
+table[data-history-table] thead th > button::after {
+  content: "↕";
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  border:
+    1px solid #cfdae1;
+  border-radius: 7px;
+  background:
+    rgba(255, 255, 255, .9);
+  color: #728391;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 900;
+  box-shadow:
+    0 2px 7px rgba(18, 37, 56, .06);
+  transition:
+    transform .18s ease,
+    background .18s ease,
+    color .18s ease,
+    border-color .18s ease;
+}
+
+/* Hover do ícone */
+#historicoIndividual table thead th > button:hover::after,
+#resultadoIndividualMes table thead th > button:hover::after,
+.history-table thead th > button:hover::after,
+table[data-history-table] thead th > button:hover::after {
+  transform: translateY(-1px);
+  background: #0b7a53;
+  color: #ffffff;
+  border-color: #0b7a53;
+}
+
+/* Ordenação crescente */
+#historicoIndividual table thead th > button[data-sort-direction="asc"],
+#resultadoIndividualMes table thead th > button[data-sort-direction="asc"],
+.history-table thead th > button[data-sort-direction="asc"],
+table[data-history-table] thead th > button[data-sort-direction="asc"],
+#historicoIndividual table thead th > button.asc,
+#resultadoIndividualMes table thead th > button.asc,
+.history-table thead th > button.asc,
+table[data-history-table] thead th > button.asc {
+  color: #0b7a53;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(11, 122, 83, .11),
+      rgba(11, 122, 83, .04)
+    );
+  box-shadow:
+    inset 0 -2px 0 #0b7a53;
+}
+
+#historicoIndividual table thead th > button[data-sort-direction="asc"]::after,
+#resultadoIndividualMes table thead th > button[data-sort-direction="asc"]::after,
+.history-table thead th > button[data-sort-direction="asc"]::after,
+table[data-history-table] thead th > button[data-sort-direction="asc"]::after,
+#historicoIndividual table thead th > button.asc::after,
+#resultadoIndividualMes table thead th > button.asc::after,
+.history-table thead th > button.asc::after,
+table[data-history-table] thead th > button.asc::after {
+  content: "↑";
+  background: #0b7a53;
+  color: #ffffff;
+  border-color: #0b7a53;
+}
+
+/* Ordenação decrescente */
+#historicoIndividual table thead th > button[data-sort-direction="desc"],
+#resultadoIndividualMes table thead th > button[data-sort-direction="desc"],
+.history-table thead th > button[data-sort-direction="desc"],
+table[data-history-table] thead th > button[data-sort-direction="desc"],
+#historicoIndividual table thead th > button.desc,
+#resultadoIndividualMes table thead th > button.desc,
+.history-table thead th > button.desc,
+table[data-history-table] thead th > button.desc {
+  color: #0b7a53;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(11, 122, 83, .11),
+      rgba(11, 122, 83, .04)
+    );
+  box-shadow:
+    inset 0 -2px 0 #0b7a53;
+}
+
+#historicoIndividual table thead th > button[data-sort-direction="desc"]::after,
+#resultadoIndividualMes table thead th > button[data-sort-direction="desc"]::after,
+.history-table thead th > button[data-sort-direction="desc"]::after,
+table[data-history-table] thead th > button[data-sort-direction="desc"]::after,
+#historicoIndividual table thead th > button.desc::after,
+#resultadoIndividualMes table thead th > button.desc::after,
+.history-table thead th > button.desc::after,
+table[data-history-table] thead th > button.desc::after {
+  content: "↓";
+  background: #0b7a53;
+  color: #ffffff;
+  border-color: #0b7a53;
+}
+
+/* Remove os caracteres antigos ↑ ↓ ↕ inseridos no texto pelo JavaScript,
+   quando eles estiverem dentro de um span específico */
+#historicoIndividual table thead th > button .sort-icon,
+#resultadoIndividualMes table thead th > button .sort-icon,
+.history-table thead th > button .sort-icon,
+table[data-history-table] thead th > button .sort-icon {
+  display: none;
+}
+
+/* Bordas arredondadas nas extremidades */
+#historicoIndividual table thead th:first-child,
+#resultadoIndividualMes table thead th:first-child,
+.history-table thead th:first-child,
+table[data-history-table] thead th:first-child {
+  border-top-left-radius: 11px;
+}
+
+#historicoIndividual table thead th:last-child,
+#resultadoIndividualMes table thead th:last-child,
+.history-table thead th:last-child,
+table[data-history-table] thead th:last-child {
+  border-top-right-radius: 11px;
+}
+
+/* Melhor separação vertical entre cabeçalhos */
+#historicoIndividual table thead th:not(:last-child)::before,
+#resultadoIndividualMes table thead th:not(:last-child)::before,
+.history-table thead th:not(:last-child)::before,
+table[data-history-table] thead th:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  right: 0;
+  width: 1px;
+  height: calc(100% - 20px);
+  background: #dfe8ed;
+}
+
+/* Responsividade */
+@media (max-width: 900px) {
+  #historicoIndividual table thead th > button,
+  #resultadoIndividualMes table thead th > button,
+  .history-table thead th > button,
+  table[data-history-table] thead th > button {
+    min-width: 115px;
+    font-size: 9px;
+    padding: 9px 10px;
+  }
+}
+table thead th button,
+table thead th .sort-button,
+thead th button {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  font: inherit !important;
+}
+
+/* Cabeçalho premium */
+table thead th {
+  position: relative;
+  padding: 0 !important;
+  background:
+    linear-gradient(
+      180deg,
+      #f8fafc 0%,
+      #eef3f6 100%
+    ) !important;
+  border-bottom: 1px solid #dbe4ea !important;
+  color: #425563 !important;
+}
+
+/* Botão completo do cabeçalho */
+table thead th button,
+table thead th .sort-button {
+  width: 100% !important;
+  min-height: 42px !important;
+  padding: 10px 12px !important;
+  border-radius: 0 !important;
+  color: #425563 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  text-align: left !important;
+  text-transform: uppercase !important;
+  letter-spacing: .04em !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+  transition:
+    background .18s ease,
+    color .18s ease,
+    box-shadow .18s ease !important;
+}
+
+/* Hover elegante */
+table thead th button:hover,
+table thead th .sort-button:hover {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(11, 122, 83, .10),
+      rgba(11, 122, 83, .04)
+    ) !important;
+  color: #0b7a53 !important;
+}
+
+/* Ícone premium */
+table thead th button::after,
+table thead th .sort-button::after {
+  content: "↕";
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  border: 1px solid #d0dbe2;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #6d7d89;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 900;
+  box-shadow: 0 2px 8px rgba(18, 37, 56, .08);
+}
+
+/* Estado crescente */
+table thead th button[data-sort-direction="asc"],
+table thead th button.asc,
+table thead th .sort-button[data-sort-direction="asc"],
+table thead th .sort-button.asc {
+  color: #0b7a53 !important;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(11, 122, 83, .12),
+      rgba(11, 122, 83, .04)
+    ) !important;
+  box-shadow: inset 0 -2px 0 #0b7a53 !important;
+}
+
+table thead th button[data-sort-direction="asc"]::after,
+table thead th button.asc::after,
+table thead th .sort-button[data-sort-direction="asc"]::after,
+table thead th .sort-button.asc::after {
+  content: "↑";
+  background: #0b7a53;
+  color: #ffffff;
+  border-color: #0b7a53;
+}
+
+/* Estado decrescente */
+table thead th button[data-sort-direction="desc"],
+table thead th button.desc,
+table thead th .sort-button[data-sort-direction="desc"],
+table thead th .sort-button.desc {
+  color: #0b7a53 !important;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(11, 122, 83, .12),
+      rgba(11, 122, 83, .04)
+    ) !important;
+  box-shadow: inset 0 -2px 0 #0b7a53 !important;
+}
+
+table thead th button[data-sort-direction="desc"]::after,
+table thead th button.desc::after,
+table thead th .sort-button[data-sort-direction="desc"]::after,
+table thead th .sort-button.desc::after {
+  content: "↓";
+  background: #0b7a53;
+  color: #ffffff;
+  border-color: #0b7a53;
+}
+
+/* Esconde setas antigas inseridas como texto ou span */
+table thead th button .sort-icon,
+table thead th .sort-button .sort-icon,
+table thead th button .sort-arrow,
+table thead th .sort-button .sort-arrow {
+  display: none !important;
+}
+
+/* Evita aparência de botão cinza do Windows */
+table thead th button::-moz-focus-inner {
+  border: 0;
+  padding: 0;
+}
+
+/* Bordas nas pontas */
+table thead th:first-child {
+  border-top-left-radius: 10px;
+  overflow: hidden;
+}
+
+table thead th:last-child {
+  border-top-right-radius: 10px;
+  overflow: hidden;
+}
+
+/* Separadores verticais discretos */
+table thead th:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  right: 0;
+  width: 1px;
+  height: calc(100% - 20px);
+  background: #dde6eb;
+}
+
+/* Responsivo */
+@media (max-width: 900px) {
+  table thead th button,
+  table thead th .sort-button {
+    min-width: 110px !important;
+    font-size: 9px !important;
+    padding: 9px 10px !important;
+  }
+}

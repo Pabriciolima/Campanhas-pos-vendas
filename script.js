@@ -10,11 +10,405 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
+/* =========================================================
+   CENTRAL DE ALERTAS PREMIUM
+   Inserida sem alterar as regras existentes do sistema.
+========================================================= */
+
+if (!window.CampanhaUI) {
+  window.CampanhaUI = (() => {
+    const fila = [];
+    let aberto = false;
+
+    const icones = {
+      success: "✓",
+      error: "!",
+      warning: "!",
+      info: "i",
+      question: "?",
+      delete: "⌫"
+    };
+
+    function garantirEstrutura() {
+      if (document.querySelector("#campanhaUiOverlay")) {
+        return;
+      }
+
+      const estilo = document.createElement("style");
+      estilo.id = "campanhaUiStyle";
+      estilo.textContent = `
+        body.campanha-ui-open { overflow: hidden; }
+
+        .campanha-ui-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 999999;
+          padding: 20px;
+          background: rgba(4, 18, 31, .68);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          display: grid;
+          place-items: center;
+          opacity: 0;
+          visibility: hidden;
+          transition: opacity .22s ease, visibility .22s ease;
+        }
+
+        .campanha-ui-overlay.show {
+          opacity: 1;
+          visibility: visible;
+        }
+
+        .campanha-ui-card {
+          position: relative;
+          width: min(450px, 100%);
+          overflow: hidden;
+          border: 1px solid rgba(255,255,255,.76);
+          border-radius: 24px;
+          padding: 30px;
+          background: linear-gradient(145deg, #fff, #f7fafc);
+          box-shadow: 0 32px 95px rgba(3, 18, 31, .38);
+          transform: translateY(18px) scale(.965);
+          opacity: 0;
+          transition: transform .26s cubic-bezier(.2,.85,.3,1.14), opacity .2s ease;
+        }
+
+        .campanha-ui-card.show {
+          transform: translateY(0) scale(1);
+          opacity: 1;
+        }
+
+        .campanha-ui-accent {
+          position: absolute;
+          inset: 0 0 auto;
+          height: 5px;
+          background: linear-gradient(90deg, #0b7a53, #24b47e);
+        }
+
+        .campanha-ui-card.error .campanha-ui-accent,
+        .campanha-ui-card.delete .campanha-ui-accent {
+          background: linear-gradient(90deg, #a72019, #e1493f);
+        }
+
+        .campanha-ui-card.warning .campanha-ui-accent {
+          background: linear-gradient(90deg, #c47b00, #ffc83d);
+        }
+
+        .campanha-ui-card.info .campanha-ui-accent {
+          background: linear-gradient(90deg, #155c92, #49a1df);
+        }
+
+        .campanha-ui-card.question .campanha-ui-accent {
+          background: linear-gradient(90deg, #6941c6, #9675e8);
+        }
+
+        .campanha-ui-close {
+          position: absolute;
+          top: 16px;
+          right: 16px;
+          width: 35px;
+          height: 35px;
+          border: 0;
+          border-radius: 50%;
+          background: #edf2f5;
+          color: #5f707c;
+          display: grid;
+          place-items: center;
+          font-size: 22px;
+          cursor: pointer;
+        }
+
+        .campanha-ui-icon {
+          width: 60px;
+          height: 60px;
+          border-radius: 19px;
+          margin-bottom: 20px;
+          background: linear-gradient(145deg, #e6f7ef, #c8eddb);
+          color: #087344;
+          display: grid;
+          place-items: center;
+          font-size: 27px;
+          font-weight: 900;
+          box-shadow: 0 11px 26px rgba(8,115,68,.15);
+        }
+
+        .campanha-ui-card.error .campanha-ui-icon,
+        .campanha-ui-card.delete .campanha-ui-icon {
+          background: linear-gradient(145deg, #fff0ef, #ffd8d4);
+          color: #b42318;
+        }
+
+        .campanha-ui-card.warning .campanha-ui-icon {
+          background: linear-gradient(145deg, #fff8e6, #ffe9a9);
+          color: #9b6500;
+        }
+
+        .campanha-ui-card.info .campanha-ui-icon {
+          background: linear-gradient(145deg, #edf7ff, #d2ebfc);
+          color: #155c92;
+        }
+
+        .campanha-ui-card.question .campanha-ui-icon {
+          background: linear-gradient(145deg, #f3efff, #e3d8ff);
+          color: #6941c6;
+        }
+
+        .campanha-ui-label {
+          color: #087344;
+          font-size: 10px;
+          font-weight: 900;
+          letter-spacing: .12em;
+          text-transform: uppercase;
+        }
+
+        .campanha-ui-card.error .campanha-ui-label,
+        .campanha-ui-card.delete .campanha-ui-label { color: #b42318; }
+        .campanha-ui-card.warning .campanha-ui-label { color: #9b6500; }
+        .campanha-ui-card.info .campanha-ui-label { color: #155c92; }
+        .campanha-ui-card.question .campanha-ui-label { color: #6941c6; }
+
+        .campanha-ui-title {
+          margin: 6px 0 10px;
+          color: #102030;
+          font-size: 24px;
+          line-height: 1.14;
+          letter-spacing: -.025em;
+        }
+
+        .campanha-ui-message {
+          margin: 0;
+          color: #526572;
+          font-size: 14px;
+          line-height: 1.65;
+          white-space: pre-line;
+        }
+
+        .campanha-ui-actions {
+          margin-top: 26px;
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+        }
+
+        .campanha-ui-btn {
+          min-width: 116px;
+          border: 0;
+          border-radius: 12px;
+          padding: 11px 18px;
+          font: inherit;
+          font-size: 12px;
+          font-weight: 850;
+          cursor: pointer;
+          transition: transform .18s ease, box-shadow .18s ease;
+        }
+
+        .campanha-ui-btn:hover { transform: translateY(-1px); }
+
+        .campanha-ui-btn.primary {
+          background: linear-gradient(135deg, #0b7a53, #09915f);
+          color: #fff;
+          box-shadow: 0 10px 23px rgba(11,122,83,.23);
+        }
+
+        .campanha-ui-btn.danger {
+          background: linear-gradient(135deg, #a72019, #d63d34);
+          color: #fff;
+          box-shadow: 0 10px 23px rgba(180,35,24,.23);
+        }
+
+        .campanha-ui-btn.secondary {
+          border: 1px solid #d7e1e7;
+          background: #fff;
+          color: #425563;
+        }
+
+        @media (max-width: 560px) {
+          .campanha-ui-overlay { padding: 14px; }
+          .campanha-ui-card { border-radius: 20px; padding: 25px 21px 21px; }
+          .campanha-ui-title { font-size: 21px; }
+          .campanha-ui-actions { flex-direction: column-reverse; }
+          .campanha-ui-btn { width: 100%; }
+        }
+      `;
+      document.head.appendChild(estilo);
+
+      document.body.insertAdjacentHTML("beforeend", `
+        <div id="campanhaUiOverlay" class="campanha-ui-overlay" aria-hidden="true">
+          <section id="campanhaUiCard" class="campanha-ui-card" role="alertdialog" aria-modal="true">
+            <div class="campanha-ui-accent"></div>
+            <button type="button" id="campanhaUiClose" class="campanha-ui-close" aria-label="Fechar">×</button>
+            <div id="campanhaUiIcon" class="campanha-ui-icon"></div>
+            <span id="campanhaUiLabel" class="campanha-ui-label"></span>
+            <h2 id="campanhaUiTitle" class="campanha-ui-title"></h2>
+            <p id="campanhaUiMessage" class="campanha-ui-message"></p>
+            <div id="campanhaUiActions" class="campanha-ui-actions"></div>
+          </section>
+        </div>
+      `);
+    }
+
+    function inferirTipo(mensagem) {
+      const texto = String(mensagem ?? "").toLowerCase();
+      if (texto.includes("sucesso") || texto.includes("salvo") || texto.includes("cadastrado") || texto.includes("atualizado") || texto.includes("excluído") || texto.includes("excluido")) return "success";
+      if (texto.includes("erro") || texto.includes("falha") || texto.includes("não foi possível") || texto.includes("nao foi possivel")) return "error";
+      if (texto.includes("selecione") || texto.includes("atenção") || texto.includes("atencao") || texto.includes("nenhum") || texto.includes("possui lançamentos")) return "warning";
+      return "info";
+    }
+
+    function normalizar(opcoes = {}) {
+      if (typeof opcoes === "string") opcoes = { mensagem: opcoes };
+      const mensagem = opcoes.mensagem ?? opcoes.message ?? "";
+      const tipo = opcoes.tipo ?? opcoes.type ?? inferirTipo(mensagem);
+      const titulos = {
+        success: "Tudo certo!",
+        error: "Não foi possível concluir",
+        warning: "Atenção",
+        info: "Informação",
+        question: "Confirmar ação",
+        delete: "Excluir item?"
+      };
+      const rotulos = {
+        success: "Concluído",
+        error: "Erro",
+        warning: "Aviso",
+        info: "Sistema",
+        question: "Confirmação",
+        delete: "Ação irreversível"
+      };
+      return {
+        tipo,
+        titulo: opcoes.titulo ?? opcoes.title ?? titulos[tipo] ?? titulos.info,
+        rotulo: opcoes.rotulo ?? opcoes.label ?? rotulos[tipo] ?? rotulos.info,
+        mensagem,
+        confirmar: opcoes.textoConfirmar ?? opcoes.confirmText ?? "Entendi",
+        cancelar: opcoes.textoCancelar ?? opcoes.cancelText ?? "Cancelar",
+        mostrarCancelar: Boolean(opcoes.mostrarCancelar ?? opcoes.showCancel),
+        perigoso: Boolean(opcoes.perigoso ?? opcoes.dangerous ?? tipo === "delete")
+      };
+    }
+
+    function fechar(resultado) {
+      const overlay = document.querySelector("#campanhaUiOverlay");
+      const card = document.querySelector("#campanhaUiCard");
+      overlay?.classList.remove("show");
+      card?.classList.remove("show");
+      document.body.classList.remove("campanha-ui-open");
+      setTimeout(() => {
+        overlay?.setAttribute("aria-hidden", "true");
+        const atual = fila.shift();
+        atual?.resolve(resultado);
+        aberto = false;
+        processar();
+      }, 220);
+    }
+
+    function processar() {
+      if (aberto || !fila.length) return;
+      aberto = true;
+      garantirEstrutura();
+      const atual = fila[0];
+      const opcoes = normalizar(atual.opcoes);
+      const overlay = document.querySelector("#campanhaUiOverlay");
+      const card = document.querySelector("#campanhaUiCard");
+      const actions = document.querySelector("#campanhaUiActions");
+
+      card.className = `campanha-ui-card ${opcoes.tipo}`;
+      document.querySelector("#campanhaUiIcon").textContent = icones[opcoes.tipo] ?? icones.info;
+      document.querySelector("#campanhaUiLabel").textContent = opcoes.rotulo;
+      document.querySelector("#campanhaUiTitle").textContent = opcoes.titulo;
+      document.querySelector("#campanhaUiMessage").textContent = opcoes.mensagem;
+      actions.innerHTML = "";
+
+      if (opcoes.mostrarCancelar) {
+        const cancelar = document.createElement("button");
+        cancelar.type = "button";
+        cancelar.className = "campanha-ui-btn secondary";
+        cancelar.textContent = opcoes.cancelar;
+        cancelar.addEventListener("click", () => fechar(false), { once: true });
+        actions.appendChild(cancelar);
+      }
+
+      const confirmar = document.createElement("button");
+      confirmar.type = "button";
+      confirmar.className = opcoes.perigoso ? "campanha-ui-btn danger" : "campanha-ui-btn primary";
+      confirmar.textContent = opcoes.confirmar;
+      confirmar.addEventListener("click", () => fechar(true), { once: true });
+      actions.appendChild(confirmar);
+
+      document.querySelector("#campanhaUiClose").onclick = () => fechar(false);
+      overlay.onclick = evento => {
+        if (evento.target === overlay) fechar(false);
+      };
+
+      document.body.classList.add("campanha-ui-open");
+      overlay.setAttribute("aria-hidden", "false");
+      requestAnimationFrame(() => {
+        overlay.classList.add("show");
+        card.classList.add("show");
+        (opcoes.mostrarCancelar ? actions.querySelector(".secondary") : confirmar)?.focus();
+      });
+    }
+
+    function mostrar(opcoes) {
+      return new Promise(resolve => {
+        fila.push({ opcoes, resolve });
+        processar();
+      });
+    }
+
+    document.addEventListener("keydown", evento => {
+      const overlay = document.querySelector("#campanhaUiOverlay");
+      if (!overlay?.classList.contains("show")) return;
+      if (evento.key === "Escape") {
+        evento.preventDefault();
+        fechar(false);
+      }
+      if (evento.key === "Enter") {
+        evento.preventDefault();
+        document.querySelector("#campanhaUiActions .danger, #campanhaUiActions .primary")?.click();
+      }
+    });
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", garantirEstrutura, { once: true });
+    } else {
+      garantirEstrutura();
+    }
+
+    return {
+      alert(mensagem, opcoes = {}) {
+        return mostrar({ ...opcoes, mensagem });
+      },
+      confirm(opcoes = {}) {
+        return mostrar({
+          tipo: opcoes.tipo ?? "question",
+          titulo: opcoes.titulo ?? "Confirmar ação",
+          mensagem: opcoes.mensagem ?? "Deseja continuar?",
+          textoConfirmar: opcoes.textoConfirmar ?? "Confirmar",
+          textoCancelar: opcoes.textoCancelar ?? "Cancelar",
+          mostrarCancelar: true
+        });
+      },
+      deleteConfirm(opcoes = {}) {
+        return mostrar({
+          tipo: "delete",
+          titulo: opcoes.titulo ?? "Excluir item?",
+          mensagem: opcoes.mensagem ?? "Esta ação não poderá ser desfeita.",
+          textoConfirmar: opcoes.textoConfirmar ?? "Excluir",
+          textoCancelar: opcoes.textoCancelar ?? "Cancelar",
+          mostrarCancelar: true,
+          perigoso: true
+        });
+      }
+    };
+  })();
+}
+
+
 const FILIAIS = [
   { dn: "4700", unidade: "ANANINDEUA" },
   { dn: "4731", unidade: "SÃO LUIS" },
   { dn: "1960", unidade: "BACABAL" },
-  { dn: "4700", unidade: "BELÉM" },
   { dn: "4756", unidade: "MACAPÁ" },
   { dn: "4730", unidade: "TERESINA" },
   { dn: "4730", unidade: "URUÇUI" },
@@ -46,6 +440,27 @@ const HISTORICO_INICIO = "2026-06";
 let db = carregarDB();
 let apuracaoAtual = [];
 let funcionariosCarregados = false;
+
+/* =========================================================
+   ORDENAÇÃO DO HISTÓRICO MENSAL
+========================================================= */
+
+const ordenacaoHistorico = {
+  campo: "status",
+  direcao: "asc"
+};
+
+const COLUNAS_HISTORICO = [
+  { campo: "nome", rotulo: "Colaborador", tipo: "texto" },
+  { campo: "filial", rotulo: "Filial", tipo: "texto" },
+  { campo: "cargo", rotulo: "Cargo", tipo: "texto" },
+  { campo: "faturamento", rotulo: "Faturamento", tipo: "numero" },
+  { campo: "produtividade", rotulo: "Produtividade", tipo: "numero" },
+  { campo: "eficiencia", rotulo: "Eficiência", tipo: "numero" },
+  { campo: "bonusFinal", rotulo: "Bônus", tipo: "numero" },
+  { campo: "status", rotulo: "Status", tipo: "texto" },
+  { campo: "avaliacao", rotulo: "Avaliação", tipo: "texto" }
+];
 
 const funcionariosRef = collection(
   firestore,
@@ -245,7 +660,7 @@ function iniciarFuncionariosTempoReal() {
         erro
       );
 
-      alert(
+      window.CampanhaUI.alert(
         "Não foi possível carregar os funcionários do Firebase. Verifique a conexão e as regras do Firestore."
       );
     }
@@ -1712,6 +2127,338 @@ function motivoResultado(
   );
 }
 
+function valorOrdenacaoHistorico(
+  resultado,
+  campo
+) {
+  if (campo === "avaliacao") {
+    return motivoResultado(
+      resultado
+    );
+  }
+
+  if (
+    [
+      "faturamento",
+      "produtividade",
+      "eficiencia",
+      "bonusFinal"
+    ].includes(campo)
+  ) {
+    return numero(
+      resultado[campo]
+    );
+  }
+
+  return String(
+    resultado[campo] || ""
+  );
+}
+
+function ordenarResultadosHistorico(
+  resultados
+) {
+  const coluna =
+    COLUNAS_HISTORICO.find(
+      item =>
+        item.campo ===
+        ordenacaoHistorico.campo
+    ) ||
+    COLUNAS_HISTORICO[0];
+
+  const multiplicador =
+    ordenacaoHistorico.direcao ===
+    "asc"
+      ? 1
+      : -1;
+
+  return [...resultados].sort(
+    (a, b) => {
+      const valorA =
+        valorOrdenacaoHistorico(
+          a,
+          coluna.campo
+        );
+
+      const valorB =
+        valorOrdenacaoHistorico(
+          b,
+          coluna.campo
+        );
+
+      if (
+        coluna.tipo ===
+        "numero"
+      ) {
+        const diferenca =
+          numero(valorA) -
+          numero(valorB);
+
+        if (diferenca !== 0) {
+          return diferenca *
+            multiplicador;
+        }
+      } else {
+        const comparacao =
+          String(valorA).localeCompare(
+            String(valorB),
+            "pt-BR",
+            {
+              sensitivity: "base",
+              numeric: true
+            }
+          );
+
+        if (comparacao !== 0) {
+          return comparacao *
+            multiplicador;
+        }
+      }
+
+      return String(
+        a.nome || ""
+      ).localeCompare(
+        String(
+          b.nome || ""
+        ),
+        "pt-BR",
+        {
+          sensitivity: "base"
+        }
+      );
+    }
+  );
+}
+
+function iconeOrdenacaoHistorico(
+  campo
+) {
+  if (
+    ordenacaoHistorico.campo !==
+    campo
+  ) {
+    return "↕";
+  }
+
+  return ordenacaoHistorico.direcao ===
+    "asc"
+      ? "↑"
+      : "↓";
+}
+
+function tituloOrdenacaoHistorico(
+  coluna
+) {
+  const ativa =
+    ordenacaoHistorico.campo ===
+    coluna.campo;
+
+  if (
+    coluna.tipo ===
+    "numero"
+  ) {
+    if (!ativa) {
+      return `Ordenar ${coluna.rotulo}: maior para menor`;
+    }
+
+    return ordenacaoHistorico.direcao ===
+      "desc"
+        ? `Ordenar ${coluna.rotulo}: menor para maior`
+        : `Ordenar ${coluna.rotulo}: maior para menor`;
+  }
+
+  if (!ativa) {
+    return `Ordenar ${coluna.rotulo}: A–Z`;
+  }
+
+  return ordenacaoHistorico.direcao ===
+    "asc"
+      ? `Ordenar ${coluna.rotulo}: Z–A`
+      : `Ordenar ${coluna.rotulo}: A–Z`;
+}
+
+function aplicarEstiloOrdenacaoHistorico() {
+  if (
+    document.querySelector(
+      "#estiloOrdenacaoHistorico"
+    )
+  ) {
+    return;
+  }
+
+  const estilo =
+    document.createElement(
+      "style"
+    );
+
+  estilo.id =
+    "estiloOrdenacaoHistorico";
+
+  estilo.textContent = `
+    #tabelaHistoricoMensal
+      .historico-sort-btn {
+      width: 100%;
+      min-width: 72px;
+      border: 0;
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 7px;
+      font: inherit;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      cursor: pointer;
+    }
+
+    #tabelaHistoricoMensal
+      .historico-sort-btn:hover {
+      color: var(--primary);
+    }
+
+    #tabelaHistoricoMensal
+      .historico-sort-btn.active {
+      color: var(--primary);
+    }
+
+    #tabelaHistoricoMensal
+      .historico-sort-icon {
+      width: 20px;
+      height: 20px;
+      flex: 0 0 20px;
+      border-radius: 6px;
+      background: rgba(11, 122, 83, .09);
+      display: inline-grid;
+      place-items: center;
+      font-size: 12px;
+      line-height: 1;
+    }
+  `;
+
+  document.head.appendChild(
+    estilo
+  );
+}
+
+function configurarCabecalhoHistorico() {
+  aplicarEstiloOrdenacaoHistorico();
+
+  const tabelaBody =
+    document.querySelector(
+      "#tabelaHistoricoMensal"
+    );
+
+  const tabela =
+    tabelaBody?.closest(
+      "table"
+    );
+
+  const cabecalhos =
+    tabela
+      ? [
+          ...tabela.querySelectorAll(
+            "thead th"
+          )
+        ]
+      : [];
+
+  if (
+    cabecalhos.length <
+    COLUNAS_HISTORICO.length
+  ) {
+    return;
+  }
+
+  COLUNAS_HISTORICO.forEach(
+    (coluna, indice) => {
+      const th =
+        cabecalhos[indice];
+
+      const ativo =
+        ordenacaoHistorico.campo ===
+        coluna.campo;
+
+      th.innerHTML = `
+        <button
+          type="button"
+          class="historico-sort-btn ${
+            ativo
+              ? "active"
+              : ""
+          }"
+          data-historico-sort="${coluna.campo}"
+          title="${tituloOrdenacaoHistorico(coluna)}"
+          aria-label="${tituloOrdenacaoHistorico(coluna)}"
+        >
+          <span>
+            ${coluna.rotulo}
+          </span>
+
+          <span
+            class="historico-sort-icon"
+            aria-hidden="true"
+          >
+            ${iconeOrdenacaoHistorico(coluna.campo)}
+          </span>
+        </button>
+      `;
+    }
+  );
+
+  tabela
+    .querySelectorAll(
+      "[data-historico-sort]"
+    )
+    .forEach(
+      botao => {
+        botao.addEventListener(
+          "click",
+          () => {
+            const campo =
+              botao.dataset
+                .historicoSort;
+
+            const coluna =
+              COLUNAS_HISTORICO.find(
+                item =>
+                  item.campo ===
+                  campo
+              );
+
+            if (!coluna) {
+              return;
+            }
+
+            if (
+              ordenacaoHistorico.campo ===
+              campo
+            ) {
+              ordenacaoHistorico.direcao =
+                ordenacaoHistorico.direcao ===
+                "asc"
+                  ? "desc"
+                  : "asc";
+            } else {
+              ordenacaoHistorico.campo =
+                campo;
+
+              ordenacaoHistorico.direcao =
+                coluna.tipo ===
+                "numero"
+                  ? "desc"
+                  : "asc";
+            }
+
+            renderDashboard();
+          }
+        );
+      }
+    );
+}
+
 function renderHistoricoMensal(
   resultados
 ) {
@@ -1723,6 +2470,13 @@ function renderHistoricoMensal(
   if (!tabela) {
     return;
   }
+
+  configurarCabecalhoHistorico();
+
+  const resultadosOrdenados =
+    ordenarResultadosHistorico(
+      resultados
+    );
 
   const naoAtingiram =
     resultados.filter(
@@ -1768,33 +2522,8 @@ function renderHistoricoMensal(
   }
 
   tabela.innerHTML =
-    resultados.length
-      ? resultados
-          .sort(
-            (a, b) => {
-              const status =
-                String(
-                  a.status
-                ).localeCompare(
-                  String(
-                    b.status
-                  )
-                );
-
-              if (status !== 0) {
-                return status;
-              }
-
-              return String(
-                a.nome || ""
-              ).localeCompare(
-                String(
-                  b.nome || ""
-                ),
-                "pt-BR"
-              );
-            }
-          )
+    resultadosOrdenados.length
+      ? resultadosOrdenados
           .map(
             resultado => `
               <tr>
@@ -2163,7 +2892,7 @@ window.excluirFuncionario =
       );
 
     if (possuiLancamentos) {
-      alert(
+      window.CampanhaUI.alert(
         "Este funcionário possui lançamentos. Exclua os lançamentos primeiro ou deixe o funcionário inativo."
       );
 
@@ -2171,9 +2900,13 @@ window.excluirFuncionario =
     }
 
     const confirmou =
-      confirm(
-        "Deseja realmente excluir este funcionário?"
-      );
+      await window.CampanhaUI.deleteConfirm({
+        titulo: "Excluir funcionário?",
+        mensagem:
+          "O funcionário será removido definitivamente da base da Campanha dos Produtivos.",
+        textoConfirmar: "Excluir funcionário",
+        textoCancelar: "Cancelar"
+      });
 
     if (!confirmou) {
       return;
@@ -2197,7 +2930,7 @@ window.excluirFuncionario =
         erro
       );
 
-      alert(
+      window.CampanhaUI.alert(
         "Não foi possível excluir o funcionário."
       );
     }
@@ -2604,7 +3337,7 @@ function abrirLancamento() {
   if (
     !possuiColaboradorManual
   ) {
-    alert(
+    window.CampanhaUI.alert(
       "Cadastre pelo menos um Mecânico Produtivo ou Controlador ativo primeiro."
     );
 
@@ -2693,11 +3426,15 @@ window.editarLancamento =
   };
 
 window.excluirLancamento =
-  id => {
+  async id => {
     const confirmou =
-      confirm(
-        "Excluir este lançamento?"
-      );
+      await window.CampanhaUI.deleteConfirm({
+        titulo: "Excluir lançamento?",
+        mensagem:
+          "Este lançamento será removido definitivamente da Campanha dos Produtivos.",
+        textoConfirmar: "Excluir lançamento",
+        textoCancelar: "Cancelar"
+      });
 
     if (!confirmou) {
       return;
@@ -3218,7 +3955,7 @@ function adicionarTabelaExcel(planilha, resultados) {
 
 async function exportarExcel() {
   if (!funcionariosCarregados) {
-    alert(
+    window.CampanhaUI.alert(
       "A base de funcionários ainda está carregando. Aguarde alguns segundos e tente novamente."
     );
 
@@ -3229,7 +3966,7 @@ async function exportarExcel() {
     obterResultadosParaExportacao();
 
   if (!resultados.length) {
-    alert(
+    window.CampanhaUI.alert(
       "Não existem resultados para os critérios selecionados."
     );
     return;
@@ -3315,7 +4052,7 @@ async function exportarExcel() {
       erro
     );
 
-    alert(
+    window.CampanhaUI.alert(
       erro.message ||
       "Não foi possível gerar o arquivo Excel."
     );
@@ -3324,7 +4061,7 @@ async function exportarExcel() {
 
 async function exportarPdf() {
   if (!funcionariosCarregados) {
-    alert(
+    window.CampanhaUI.alert(
       "A base de funcionários ainda está carregando. Aguarde alguns segundos e tente novamente."
     );
 
@@ -3335,7 +4072,7 @@ async function exportarPdf() {
     obterResultadosParaExportacao();
 
   if (!resultados.length) {
-    alert(
+    window.CampanhaUI.alert(
       "Não existem resultados para os critérios selecionados."
     );
 
@@ -3784,7 +4521,7 @@ async function exportarPdf() {
       erro
     );
 
-    alert(
+    window.CampanhaUI.alert(
       erro.message ||
       "Não foi possível gerar o arquivo PDF."
     );
@@ -4094,7 +4831,7 @@ function configurarEventos() {
           filialPorNome(filial);
 
         if (!dadosFilial) {
-          alert(
+          window.CampanhaUI.alert(
             "Selecione uma filial válida."
           );
 
@@ -4131,7 +4868,7 @@ function configurarEventos() {
         };
 
         if (!funcionario.nome) {
-          alert(
+          window.CampanhaUI.alert(
             "Informe o nome do funcionário."
           );
 
@@ -4139,7 +4876,7 @@ function configurarEventos() {
         }
 
         if (!funcionario.cargo) {
-          alert(
+          window.CampanhaUI.alert(
             "Selecione o cargo do funcionário."
           );
 
@@ -4205,7 +4942,7 @@ function configurarEventos() {
             erro
           );
 
-          alert(
+          window.CampanhaUI.alert(
             "Não foi possível salvar o funcionário. Verifique o Firebase e tente novamente."
           );
         } finally {
@@ -4267,7 +5004,7 @@ function configurarEventos() {
             erro
           );
 
-          alert(erro.message);
+          window.CampanhaUI.alert(erro.message);
         }
       }
     );
@@ -4350,11 +5087,15 @@ function configurarEventos() {
     )
     .addEventListener(
       "click",
-      () => {
+      async () => {
         const confirmou =
-          confirm(
-            "Apagar todos os lançamentos salvos neste navegador?"
-          );
+          await window.CampanhaUI.deleteConfirm({
+            titulo: "Limpar lançamentos locais?",
+            mensagem:
+              "Todos os lançamentos salvos somente neste navegador serão apagados. Esta ação não poderá ser desfeita.",
+            textoConfirmar: "Limpar lançamentos",
+            textoCancelar: "Cancelar"
+          });
 
         if (!confirmou) {
           return;

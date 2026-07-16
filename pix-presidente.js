@@ -14,6 +14,51 @@ console.info(
   "[PIX] Versão 2026.07.14-01 carregada"
 );
 
+
+/* =========================================================
+   INTEGRAÇÃO COM A CENTRAL DE ALERTAS PREMIUM
+   Não altera as regras do Pix.
+========================================================= */
+
+function pixAlert(
+  mensagem,
+  opcoes = {}
+) {
+  if (
+    window.CampanhaUI &&
+    typeof window.CampanhaUI.alert === "function"
+  ) {
+    return window.CampanhaUI.alert(
+      mensagem,
+      opcoes
+    );
+  }
+
+  window.alert(mensagem);
+  return Promise.resolve(true);
+}
+
+async function pixDeleteConfirm({
+  titulo = "Excluir item?",
+  mensagem = "Esta ação não poderá ser desfeita.",
+  textoConfirmar = "Excluir",
+  textoCancelar = "Cancelar"
+} = {}) {
+  if (
+    window.CampanhaUI &&
+    typeof window.CampanhaUI.deleteConfirm === "function"
+  ) {
+    return window.CampanhaUI.deleteConfirm({
+      titulo,
+      mensagem,
+      textoConfirmar,
+      textoCancelar
+    });
+  }
+
+  return window.confirm(mensagem);
+}
+
 /* =========================================================
    PIX DO PRESIDENTE — MÓDULO COMPLETO E ISOLADO
 ========================================================= */
@@ -26,7 +71,6 @@ const FILIAIS_PIX = [
   { dn: "4700", unidade: "ANANINDEUA" },
   { dn: "4731", unidade: "SÃO LUIS" },
   { dn: "1960", unidade: "BACABAL" },
-  { dn: "4700", unidade: "BELÉM" },
   { dn: "4756", unidade: "MACAPÁ" },
   { dn: "4730", unidade: "TERESINA" },
   { dn: "4730", unidade: "URUÇUI" },
@@ -1432,7 +1476,7 @@ function abrirFuncionarioPix() {
     !formulario ||
     !modal
   ) {
-    alert(
+    pixAlert(
       "O modal de participantes do Pix não foi encontrado no index.html."
     );
 
@@ -1496,7 +1540,7 @@ async function salvarFuncionarioPix(evento) {
     );
 
   if (!formulario) {
-    alert(
+    pixAlert(
       "O formulário de participantes não foi encontrado no HTML."
     );
 
@@ -1525,7 +1569,7 @@ async function salvarFuncionarioPix(evento) {
     $("#pixFuncionarioAtivo")?.value !== "false";
 
   if (!dadosFilial) {
-    alert(
+    pixAlert(
       "Selecione uma filial válida."
     );
 
@@ -1534,7 +1578,7 @@ async function salvarFuncionarioPix(evento) {
   }
 
   if (!nome) {
-    alert(
+    pixAlert(
       "Informe o nome do participante."
     );
 
@@ -1554,7 +1598,7 @@ async function salvarFuncionarioPix(evento) {
     );
 
   if (!cargoCanonico) {
-    alert(
+    pixAlert(
       "Selecione um cargo válido do Pix do Presidente."
     );
 
@@ -1581,7 +1625,7 @@ async function salvarFuncionarioPix(evento) {
     );
 
   if (duplicado) {
-    alert(
+    pixAlert(
       "Já existe um participante com este nome nesta filial."
     );
 
@@ -1640,7 +1684,7 @@ async function salvarFuncionarioPix(evento) {
 
     renderFuncionariosPix();
 
-    alert(
+    pixAlert(
       id
         ? "Participante atualizado com sucesso."
         : "Participante cadastrado com sucesso."
@@ -1651,7 +1695,7 @@ async function salvarFuncionarioPix(evento) {
       erro
     );
 
-    alert(
+    pixAlert(
       `Não foi possível salvar o participante.
 
 ${erro.message || erro}`
@@ -1675,13 +1719,21 @@ async function excluirFuncionarioPix(id) {
     );
 
   if (possuiLancamentos) {
-    alert(
+    pixAlert(
       "Este participante possui lançamentos. Exclua-os primeiro ou deixe-o inativo."
     );
     return;
   }
 
-  if (!confirm("Deseja excluir este participante?")) {
+  const confirmou = await pixDeleteConfirm({
+    titulo: "Excluir participante?",
+    mensagem:
+      "O participante será removido da base do Pix do Presidente. Esta ação não poderá ser desfeita.",
+    textoConfirmar: "Excluir participante",
+    textoCancelar: "Cancelar"
+  });
+
+  if (!confirmou) {
     return;
   }
 
@@ -1691,7 +1743,7 @@ async function excluirFuncionarioPix(id) {
     );
   } catch (erro) {
     console.error("Erro ao excluir participante:", erro);
-    alert("Não foi possível excluir o participante.");
+    pixAlert("Não foi possível excluir o participante.");
   }
 }
 
@@ -2194,7 +2246,7 @@ function abrirLancamentoPix() {
         )
     )
   ) {
-    alert(
+    pixAlert(
       "Cadastre pelo menos um participante ativo no Pix do Presidente."
     );
     abrirViewPix("funcionarios");
@@ -2280,7 +2332,7 @@ async function salvarLancamentoPix(evento) {
       );
 
     if (duplicado) {
-      alert(
+      pixAlert(
         "Este participante já possui lançamento nesta competência e semana."
       );
       return;
@@ -2320,7 +2372,7 @@ async function salvarLancamentoPix(evento) {
     $("#modalPixPresidente").close();
   } catch (erro) {
     console.error("Erro ao salvar lançamento Pix:", erro);
-    alert(
+    pixAlert(
       erro.message ||
       "Não foi possível salvar o lançamento."
     );
@@ -2333,7 +2385,15 @@ async function salvarLancamentoPix(evento) {
 }
 
 async function excluirLancamentoPix(id) {
-  if (!confirm("Deseja excluir este lançamento?")) {
+  const confirmou = await pixDeleteConfirm({
+    titulo: "Excluir lançamento?",
+    mensagem:
+      "O lançamento será removido definitivamente da campanha do Pix do Presidente.",
+    textoConfirmar: "Excluir lançamento",
+    textoCancelar: "Cancelar"
+  });
+
+  if (!confirmou) {
     return;
   }
 
@@ -2347,7 +2407,7 @@ async function excluirLancamentoPix(id) {
     );
   } catch (erro) {
     console.error("Erro ao excluir lançamento Pix:", erro);
-    alert("Não foi possível excluir o lançamento.");
+    pixAlert("Não foi possível excluir o lançamento.");
   }
 }
 
@@ -2610,7 +2670,7 @@ function iniciarFirebasePix() {
         erro
       );
 
-      alert(
+      pixAlert(
         `Não foi possível carregar a Base de Participantes do Pix.
 
 ${erro.message || erro}`
@@ -2637,7 +2697,7 @@ ${erro.message || erro}`
         erro
       );
 
-      alert(
+      pixAlert(
         "Não foi possível carregar os lançamentos do Pix do Presidente. Verifique as regras do Firestore."
       );
     }
