@@ -1468,16 +1468,196 @@ function normalizarCompetenciaPixExportacao(valor) {
 }
 
 function tipoExportacaoPixAtual() {
+  const valorOriginal =
+    pixEv("#tipoExportacao")?.value ||
+    pixEv("#pixTipoExportacao")?.value ||
+    "habilitados";
+
   const valor =
     normalizarPixEv(
-      pixEv("#tipoExportacao")?.value ||
-      pixEv("#pixTipoExportacao")?.value ||
-      "HABILITADOS"
+      valorOriginal
+    )
+      .replace(/\s+/g, "-")
+      .toLowerCase();
+
+  const mapa = {
+    todos: {
+      chave: "todos",
+      somenteHabilitados: false,
+      semana: ""
+    },
+
+    habilitados: {
+      chave: "habilitados",
+      somenteHabilitados: true,
+      semana: ""
+    },
+
+    "habilitados-s1": {
+      chave: "habilitados-s1",
+      somenteHabilitados: true,
+      semana: "S1"
+    },
+
+    "habilitados-s2": {
+      chave: "habilitados-s2",
+      somenteHabilitados: true,
+      semana: "S2"
+    },
+
+    "habilitados-s3": {
+      chave: "habilitados-s3",
+      somenteHabilitados: true,
+      semana: "S3"
+    },
+
+    "habilitados-s4": {
+      chave: "habilitados-s4",
+      somenteHabilitados: true,
+      semana: "S4"
+    }
+  };
+
+  return (
+    mapa[valor] ||
+    mapa.habilitados
+  );
+}
+
+function rotuloTipoExportacaoPix(
+  filtro = tipoExportacaoPixAtual()
+) {
+  const rotulos = {
+    todos:
+      "Todas",
+
+    habilitados:
+      "Somente habilitados",
+
+    "habilitados-s1":
+      "Somente habilitados S1",
+
+    "habilitados-s2":
+      "Somente habilitados S2",
+
+    "habilitados-s3":
+      "Somente habilitados S3",
+
+    "habilitados-s4":
+      "Somente habilitados S4"
+  };
+
+  return (
+    rotulos[filtro.chave] ||
+    "Somente habilitados"
+  );
+}
+
+function normalizarSemanaPixExportacao(
+  valor
+) {
+  const texto =
+    normalizarPixEv(valor)
+      .replace(/\s+/g, "");
+
+  const correspondencia =
+    texto.match(/(?:SEMANA)?([1-4])/);
+
+  return correspondencia
+    ? `S${correspondencia[1]}`
+    : texto;
+}
+
+function garantirOpcoesExportacaoPix() {
+  const select =
+    pixEv("#tipoExportacao") ||
+    pixEv("#pixTipoExportacao");
+
+  if (!select) {
+    return;
+  }
+
+  /*
+   * Só troca as opções enquanto o módulo Pix estiver ativo.
+   * Assim a Campanha dos Produtivos continua independente.
+   */
+  const pixAtivo =
+    document.body.classList.contains(
+      "modulo-pix-ativo"
+    ) ||
+    pixEv("#pixPresidente.active") ||
+    pixEv('[data-module-group="pix"].open');
+
+  if (!pixAtivo) {
+    return;
+  }
+
+  const valorAtual =
+    select.value;
+
+  const opcoes = [
+    {
+      value: "habilitados",
+      label: "Somente habilitados"
+    },
+    {
+      value: "habilitados-s1",
+      label: "Somente habilitados S1"
+    },
+    {
+      value: "habilitados-s2",
+      label: "Somente habilitados S2"
+    },
+    {
+      value: "habilitados-s3",
+      label: "Somente habilitados S3"
+    },
+    {
+      value: "habilitados-s4",
+      label: "Somente habilitados S4"
+    },
+    {
+      value: "todos",
+      label: "TODAS"
+    }
+  ];
+
+  const assinaturaEsperada =
+    opcoes
+      .map(opcao => opcao.value)
+      .join("|");
+
+  const assinaturaAtual =
+    [...select.options]
+      .map(opcao => opcao.value)
+      .join("|");
+
+  if (
+    assinaturaAtual !==
+    assinaturaEsperada
+  ) {
+    select.innerHTML =
+      opcoes
+        .map(
+          opcao => `
+            <option value="${opcao.value}">
+              ${opcao.label}
+            </option>
+          `
+        )
+        .join("");
+  }
+
+  const valorValido =
+    opcoes.some(
+      opcao =>
+        opcao.value === valorAtual
     );
 
-  return valor.includes("TODOS")
-    ? "todos"
-    : "habilitados";
+  select.value =
+    valorValido
+      ? valorAtual
+      : "habilitados";
 }
 
 function tabelasPixDisponiveis() {
@@ -1693,7 +1873,7 @@ function dadosPixParaExportar() {
       competenciaPixAtiva()
     );
 
-  const tipo =
+  const filtro =
     tipoExportacaoPixAtual();
 
   const resultados = [
@@ -1813,10 +1993,26 @@ function dadosPixParaExportar() {
             item.status
           );
 
+        const semanaNormalizada =
+          normalizarSemanaPixExportacao(
+            item.semana
+          );
+
+        item.semana =
+          semanaNormalizada;
+
         if (
-          tipo === "habilitados" &&
+          filtro.somenteHabilitados &&
           statusNormalizado !==
             "HABILITADO"
+        ) {
+          return null;
+        }
+
+        if (
+          filtro.semana &&
+          semanaNormalizada !==
+            filtro.semana
         ) {
           return null;
         }
@@ -1831,7 +2027,8 @@ function dadosPixParaExportar() {
     {
       competencia:
         competenciaSelecionada,
-      tipo,
+      filtro:
+        filtro.chave,
       tabela:
         tabela.id || "sem-id"
     }
@@ -2095,11 +2292,13 @@ async function exportarPdfPixIndependente() {
   const competencia =
     competenciaPixAtiva();
 
+  const filtroExportacao =
+    tipoExportacaoPixAtual();
+
   const tipo =
-    pixEv("#tipoExportacao")
-      ?.value === "todos"
-      ? "Todos os resultados"
-      : "Somente habilitados";
+    rotuloTipoExportacaoPix(
+      filtroExportacao
+    );
 
   const documento =
     new window.jspdf.jsPDF({
@@ -3044,6 +3243,7 @@ function iniciarPixEvidencias() {
   configurarContextoPixEvidencias();
   observarTabelasPix();
   configurarExportacaoPixIndependente();
+  garantirOpcoesExportacaoPix();
   renderizarPixEvidencias();
 
   console.info(
@@ -3092,6 +3292,52 @@ document.addEventListener(
     );
   },
   true
+);
+
+
+/*
+ * Atualiza as opções do seletor ao entrar no Pix.
+ * O pequeno atraso permite que o module-switcher finalize
+ * a troca de módulo antes da leitura do estado.
+ */
+document.addEventListener(
+  "click",
+  evento => {
+    if (
+      evento.target.closest(
+        '[data-module-toggle="pix"], ' +
+        '.pix-menu-btn, ' +
+        '[data-pix-view]'
+      )
+    ) {
+      setTimeout(
+        garantirOpcoesExportacaoPix,
+        120
+      );
+    }
+  },
+  true
+);
+
+new MutationObserver(
+  () => {
+    if (
+      document.body.classList.contains(
+        "modulo-pix-ativo"
+      )
+    ) {
+      garantirOpcoesExportacaoPix();
+    }
+  }
+).observe(
+  document.body,
+  {
+    attributes: true,
+    attributeFilter: [
+      "class"
+    ],
+    subtree: false
+  }
 );
 
 window.evidenciasPix = {
