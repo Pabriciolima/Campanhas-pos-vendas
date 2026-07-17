@@ -1,0 +1,310 @@
+
+.launch-lock-control {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.launch-lock-status {
+  min-height: 42px;
+  border: 1px solid #b9dfce;
+  border-radius: 12px;
+  padding: 7px 11px;
+  background: linear-gradient(145deg, #f5fcf8, #eaf8f1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.launch-lock-status-icon {
+  width: 29px;
+  height: 29px;
+  border-radius: 9px;
+  background: #d9f2e5;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+}
+
+.launch-lock-status div {
+  display: grid;
+  gap: 1px;
+}
+
+.launch-lock-status strong {
+  color: #087344;
+  font-size: 10px;
+}
+
+.launch-lock-status small {
+  color: #557267;
+  font-size: 8px;
+}
+
+.launch-lock-button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 11px;
+  padding: 9px 14px;
+  background: linear-gradient(135deg, #ad251d, #d23e34);
+  color: #fff;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(180, 35, 24, .18);
+}
+
+.launch-lock-control.is-locked .launch-lock-status {
+  border-color: #efc3bf;
+  background: linear-gradient(145deg, #fff7f6, #ffe9e6);
+}
+
+.launch-lock-control.is-locked .launch-lock-status-icon {
+  background: #ffdcd8;
+}
+
+.launch-lock-control.is-locked .launch-lock-status strong {
+  color: #b42318;
+}
+
+.launch-lock-control.is-locked .launch-lock-status small {
+  color: #8a514c;
+}
+
+.launch-lock-control.is-locked .launch-lock-button {
+  background: linear-gradient(135deg, #087344, #0b9664);
+  box-shadow: 0 8px 18px rgba(8, 115, 68, .18);
+}
+
+.launch-lock-button:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+.launch-action-locked {
+  opacity: .45 !important;
+  cursor: not-allowed !important;
+  filter: grayscale(.28);
+}
+
+.lock-password-dialog {
+  width: min(440px, 94vw);
+  border: 0;
+  border-radius: 22px;
+  padding: 0;
+  background: transparent;
+}
+
+.lock-password-dialog::backdrop {
+  background: rgba(4, 18, 31, .68);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.lock-password-card {
+  position: relative;
+  border-radius: 22px;
+  padding: 28px;
+  background: linear-gradient(145deg, #fff, #f8fbfc);
+  box-shadow: 0 32px 95px rgba(3, 18, 31, .38);
+}
+
+.lock-password-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 5px;
+  border-radius: 22px 22px 0 0;
+  background: linear-gradient(90deg, #ad251d, #e14e43);
+}
+
+.lock-password-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: #edf2f5;
+  color: #5f707c;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.lock-password-icon {
+  width: 58px;
+  height: 58px;
+  margin-bottom: 17px;
+  border-radius: 18px;
+  background: #ffe4e1;
+  display: grid;
+  place-items: center;
+  font-size: 25px;
+}
+
+.lock-password-eyebrow {
+  color: #b42318;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.lock-password-card h2 {
+  margin: 6px 0 8px;
+  color: #102030;
+  font-size: 22px;
+}
+
+.lock-password-card > p {
+  margin: 0;
+  color: #5e707c;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.lock-password-field {
+  margin-top: 19px;
+  display: grid;
+  gap: 6px;
+}
+
+.lock-password-field > span {
+  color: #334d5c;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.lock-password-input-wrap {
+  border: 1px solid #cddae2;
+  border-radius: 11px;
+  background: #fff;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  overflow: hidden;
+}
+
+.lock-password-input-wrap:focus-within {
+  border-color: #0b8d60;
+  box-shadow: 0 0 0 3px rgba(11, 141, 96, .12);
+}
+
+.lock-password-input-wrap input {
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.lock-password-visibility {
+  border: 0;
+  border-left: 1px solid #e1e8ec;
+  padding: 0 12px;
+  background: #f5f8fa;
+  color: #46616f;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.lock-password-error {
+  margin-top: 8px !important;
+  color: #b42318 !important;
+  font-size: 10px !important;
+  font-weight: 800;
+}
+
+.lock-password-actions {
+  margin-top: 22px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.lock-secondary-button,
+.lock-primary-button {
+  border-radius: 10px;
+  padding: 10px 15px;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.lock-secondary-button {
+  border: 1px solid #d5e0e6;
+  background: #fff;
+  color: #425563;
+}
+
+.lock-primary-button {
+  border: 0;
+  background: linear-gradient(135deg, #ad251d, #d23e34);
+  color: #fff;
+}
+
+.lock-primary-button.unlock-action {
+  background: linear-gradient(135deg, #087344, #0b9664);
+}
+
+.lock-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000005;
+  width: min(390px, calc(100vw - 40px));
+  border-radius: 14px;
+  padding: 13px 16px;
+  background: #0b7a53;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.5;
+  box-shadow: 0 16px 45px rgba(7, 29, 47, .22);
+  transform: translateX(35px);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform .2s ease, opacity .2s ease;
+}
+
+.lock-toast.show {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.lock-toast.type-warning {
+  background: #9b6500;
+}
+
+.lock-toast.type-error {
+  background: #b42318;
+}
+
+@media (max-width: 760px) {
+  .launch-lock-control {
+    width: 100%;
+    margin-left: 0;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .launch-lock-button {
+    width: 100%;
+  }
+
+  .lock-password-actions {
+    flex-direction: column-reverse;
+  }
+
+  .lock-secondary-button,
+  .lock-primary-button {
+    width: 100%;
+  }
+}
