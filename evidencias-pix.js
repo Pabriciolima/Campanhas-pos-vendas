@@ -1,3 +1,4 @@
+/* VERSÃO: 2026.07.21-SEMANA-02 — Evidências por competência + semana + filial */
 import {
   supabase,
   SUPABASE_BUCKET
@@ -52,6 +53,41 @@ function pixCampoCompetencia() {
     "#formPixPresidente input[type='month']",
     "#modalPixPresidente input[type='month']"
   ]);
+}
+
+function pixCampoSemana() {
+  return pixPrimeiroElemento([
+    "#pixLancamentoSemana",
+    "#pixSemanaLancamento",
+    "#pixSemana",
+    "#semanaPixLancamento",
+    "#formPixPresidente select[id*='Semana']",
+    "#formPixPresidente select[id*='semana']",
+    "#modalPixPresidente select[id*='Semana']",
+    "#modalPixPresidente select[id*='semana']"
+  ]);
+}
+
+function normalizarSemanaPixEvidencia(valor) {
+  const texto =
+    normalizarPixEv(valor)
+      .replace(/\s+/g, "");
+
+  const correspondencia =
+    texto.match(/(?:SEMANA|S)?([1-4])/);
+
+  return correspondencia
+    ? `S${correspondencia[1]}`
+    : "";
+}
+
+function numeroSemanaPixEvidencia(valor) {
+  const semana =
+    normalizarSemanaPixEvidencia(valor);
+
+  return semana
+    ? Number(semana.replace("S", ""))
+    : 0;
 }
 
 function pixCampoFilial() {
@@ -160,6 +196,11 @@ function contextoPixAtual() {
   const competencia =
     pixCampoCompetencia()?.value || "";
 
+  const semana =
+    normalizarSemanaPixEvidencia(
+      pixCampoSemana()?.value
+    );
+
   const selectFilial =
     pixCampoFilial();
 
@@ -170,7 +211,11 @@ function contextoPixAtual() {
     selectFilial?.value ||
     "";
 
-  if (!competencia || !textoOpcao) {
+  if (
+    !competencia ||
+    !semana ||
+    !textoOpcao
+  ) {
     return null;
   }
 
@@ -195,24 +240,45 @@ function contextoPixAtual() {
     pixCampoParticipante()?.selectedOptions?.[0]?.dataset?.dn ||
     "";
 
+  dn =
+    resolverDnPixPorFilial(
+      filial,
+      dn
+    );
+
   const pastaFilial =
     `${dn || "sem-dn"}-${slugPixEv(filial)}`;
 
+  const numeroSemana =
+    numeroSemanaPixEvidencia(semana);
+
   return {
     competencia,
+    semana,
+    numeroSemana,
     dn,
     filial,
     pasta:
-      `${CONFIG_PIX_EVIDENCIAS.pastaRaiz}/${competencia}/${pastaFilial}`
+      `${CONFIG_PIX_EVIDENCIAS.pastaRaiz}/${competencia}/semana-${numeroSemana}/${pastaFilial}`
   };
 }
 
 function construirContextoPix(
   competencia,
+  semana,
   filial,
   dn = ""
 ) {
-  if (!competencia || !filial) {
+  const semanaNormalizada =
+    normalizarSemanaPixEvidencia(
+      semana
+    );
+
+  if (
+    !competencia ||
+    !semanaNormalizada ||
+    !filial
+  ) {
     return null;
   }
 
@@ -224,21 +290,34 @@ function construirContextoPix(
       /^\s*(\d+)\s*-\s*(.+?)\s*$/
     );
 
-  const dnFinal =
-    dn ||
-    (correspondencia ? correspondencia[1] : "");
-
   const filialFinal =
     correspondencia
       ? correspondencia[2].trim()
       : texto;
 
+  const dnFinal =
+    resolverDnPixPorFilial(
+      filialFinal,
+      dn ||
+      (correspondencia ? correspondencia[1] : "")
+    );
+
+  const numeroSemana =
+    numeroSemanaPixEvidencia(
+      semanaNormalizada
+    );
+
   return {
     competencia,
-    dn: dnFinal,
-    filial: filialFinal,
+    semana:
+      semanaNormalizada,
+    numeroSemana,
+    dn:
+      dnFinal,
+    filial:
+      filialFinal,
     pasta:
-      `${CONFIG_PIX_EVIDENCIAS.pastaRaiz}/${competencia}/${dnFinal || "sem-dn"}-${slugPixEv(filialFinal)}`
+      `${CONFIG_PIX_EVIDENCIAS.pastaRaiz}/${competencia}/semana-${numeroSemana}/${dnFinal || "sem-dn"}-${slugPixEv(filialFinal)}`
   };
 }
 
@@ -333,7 +412,7 @@ function garantirHtmlEvidenciasPix() {
       <div class="pix-evidence-header">
         <div>
           <p class="eyebrow">
-            Evidências da filial
+            Evidências da semana
           </p>
 
           <h3>
@@ -341,9 +420,9 @@ function garantirHtmlEvidenciasPix() {
           </h3>
 
           <p>
-            Anexe uma única vez por filial e competência.
-            Os demais lançamentos da mesma filial visualizarão
-            automaticamente as mesmas evidências.
+            As imagens são exclusivas da competência,
+            semana e filial selecionadas. Evidências de uma
+            semana não aparecem nas demais semanas.
           </p>
         </div>
 
@@ -351,7 +430,7 @@ function garantirHtmlEvidenciasPix() {
           id="pixEvidenciaContador"
           class="pix-evidence-counter"
         >
-          0/20
+          S- • 0/20
         </span>
       </div>
 
@@ -359,7 +438,7 @@ function garantirHtmlEvidenciasPix() {
         id="pixEvidenciaLegenda"
         class="pix-evidence-branch"
       >
-        Selecione competência e filial
+        Selecione competência, semana e filial
       </div>
 
       <div
@@ -384,7 +463,7 @@ function garantirHtmlEvidenciasPix() {
           </strong>
 
           <small>
-            Ou clique para selecionar JPG, PNG ou WEBP
+            JPG, PNG ou WEBP — somente para a semana selecionada
           </small>
 
           <button
@@ -435,6 +514,7 @@ function garantirHtmlEvidenciasPix() {
 
   [
     pixCampoCompetencia(),
+    pixCampoSemana(),
     pixCampoFilial(),
     pixCampoParticipante()
   ]
@@ -483,16 +563,19 @@ function renderizarPixEvidencias() {
   const legenda =
     pixEv("#pixEvidenciaLegenda");
 
+  const contexto =
+    estadoPixEvidencias.contexto;
+
   if (contador) {
     contador.textContent =
-      `${estadoPixEvidencias.arquivos.length}/${CONFIG_PIX_EVIDENCIAS.limiteArquivos}`;
+      `${contexto?.semana || "S-"} • ${estadoPixEvidencias.arquivos.length}/${CONFIG_PIX_EVIDENCIAS.limiteArquivos}`;
   }
 
   if (legenda) {
     legenda.textContent =
-      estadoPixEvidencias.contexto
-        ? `${estadoPixEvidencias.contexto.dn ? `${estadoPixEvidencias.contexto.dn} - ` : ""}${estadoPixEvidencias.contexto.filial} • ${estadoPixEvidencias.contexto.competencia}`
-        : "Selecione competência e filial";
+      contexto
+        ? `${contexto.competencia} • ${contexto.semana} • ${contexto.dn ? `${contexto.dn} - ` : ""}${contexto.filial}`
+        : "Selecione competência, semana e filial";
   }
 
   if (!galeria) {
@@ -507,7 +590,7 @@ function renderizarPixEvidencias() {
         </strong>
 
         <span>
-          As imagens desta filial aparecerão aqui.
+          As imagens desta semana e filial aparecerão aqui.
         </span>
       </div>
     `;
@@ -527,14 +610,14 @@ function renderizarPixEvidencias() {
             >
               <img
                 src="${escaparPixEv(arquivo.url)}"
-                alt="Evidência do Pix"
+                alt="Evidência do Pix ${escaparPixEv(contexto?.semana)}"
                 loading="lazy"
               />
             </button>
 
             <div class="pix-evidence-card-info">
               <span>
-                Evidência — ${escaparPixEv(estadoPixEvidencias.contexto?.filial)}
+                ${escaparPixEv(contexto?.semana)} — ${escaparPixEv(contexto?.filial)}
               </span>
 
               <button
@@ -590,7 +673,7 @@ async function carregarPixEvidencias() {
     estadoPixEvidencias.arquivos = [];
 
     mensagemPixEvidencia(
-      "Selecione competência e filial."
+      "Selecione competência, semana e filial."
     );
 
     renderizarPixEvidencias();
@@ -599,7 +682,7 @@ async function carregarPixEvidencias() {
 
   try {
     mensagemPixEvidencia(
-      "Carregando evidências...",
+      `Carregando evidências da ${contexto.semana}...`,
       "loading"
     );
 
@@ -610,8 +693,8 @@ async function carregarPixEvidencias() {
 
     mensagemPixEvidencia(
       estadoPixEvidencias.arquivos.length
-        ? `${estadoPixEvidencias.arquivos.length} evidência(s) encontrada(s).`
-        : "Nenhuma evidência cadastrada para esta filial.",
+        ? `${estadoPixEvidencias.arquivos.length} evidência(s) encontrada(s) para a ${contexto.semana}.`
+        : `Nenhuma evidência cadastrada para a ${contexto.semana} desta filial.`,
       estadoPixEvidencias.arquivos.length
         ? "success"
         : ""
@@ -776,7 +859,7 @@ async function enviarPixEvidencias(
 
   if (!contexto) {
     alert(
-      "Selecione primeiro a competência e a filial."
+      "Selecione primeiro a competência, a semana e a filial."
     );
 
     return;
@@ -851,10 +934,16 @@ async function enviarPixEvidencias(
                 "PIX_DO_PRESIDENTE",
               competencia:
                 contexto.competencia,
+              semana:
+                contexto.semana,
+              numero_semana:
+                String(contexto.numeroSemana),
               dn:
                 contexto.dn,
               filial:
-                contexto.filial
+                contexto.filial,
+              enviado_em:
+                new Date().toISOString()
             }
           }
         );
@@ -867,7 +956,7 @@ async function enviarPixEvidencias(
     await carregarPixEvidencias();
 
     mensagemPixEvidencia(
-      "Evidências enviadas com sucesso para esta filial.",
+      `Evidências enviadas com sucesso para a ${contexto.semana} desta filial.`,
       "success"
     );
 
@@ -909,7 +998,7 @@ async function enviarPixEvidencias(
 async function excluirPixEvidencia(caminho) {
   if (
     !confirm(
-      "Excluir esta evidência do Pix para toda a filial?"
+      "Excluir esta evidência da semana selecionada?"
     )
   ) {
     return;
@@ -1050,7 +1139,7 @@ function garantirModalPixEvidencias() {
               </p>
 
               <h2 id="pixEvidenceViewerTitle">
-                Evidências da filial
+                Evidências da semana
               </h2>
             </div>
 
@@ -1123,6 +1212,7 @@ function abrirImagemPix(url) {
 
 async function abrirAlbumPix(
   competencia,
+  semana,
   filial,
   dn = ""
 ) {
@@ -1131,6 +1221,7 @@ async function abrirAlbumPix(
   const contexto =
     construirContextoPix(
       competencia,
+      semana,
       filial,
       dn
     );
@@ -1147,7 +1238,7 @@ async function abrirAlbumPix(
 
   if (titulo) {
     titulo.textContent =
-      `${contexto.dn ? `${contexto.dn} - ` : ""}${contexto.filial} • ${contexto.competencia}`;
+      `${contexto.competencia} • ${contexto.semana} • ${contexto.dn ? `${contexto.dn} - ` : ""}${contexto.filial}`;
   }
 
   if (corpo) {
@@ -1179,19 +1270,20 @@ async function abrirAlbumPix(
               >
                 <img
                   src="${escaparPixEv(arquivo.url)}"
-                  alt="Evidência do Pix"
+                  alt="Evidência do Pix ${escaparPixEv(contexto.semana)}"
                   loading="lazy"
                 />
 
                 <span>
-                  Evidência — ${escaparPixEv(contexto.filial)}
+                  ${escaparPixEv(contexto.semana)} — ${escaparPixEv(contexto.filial)}
                 </span>
               </button>
             `
           ).join("")
         : `
           <div class="pix-evidence-viewer-empty">
-            Nenhuma evidência encontrada.
+            Nenhuma evidência encontrada para a
+            ${escaparPixEv(contexto.semana)}.
           </div>
         `;
 
@@ -1275,7 +1367,7 @@ function adicionarBotaoPixNaLinha(linha) {
     "mini-btn pix-evidence-row-button";
 
   botao.innerHTML =
-    "📷 Evidência";
+    `📷 Evidência ${normalizarSemanaPixEvidencia(dados.semana)}`;
 
   botao.addEventListener(
     "click",
@@ -1285,6 +1377,7 @@ function adicionarBotaoPixNaLinha(linha) {
 
       abrirAlbumPix(
         dados.competencia,
+        dados.semana,
         dados.filial
       );
     }
@@ -1374,6 +1467,7 @@ function atualizarBotoesPixEvidencia() {
 
           abrirAlbumPix(
             dados.competencia,
+            dados.semana,
             dados.filial
           );
         }
@@ -2056,7 +2150,10 @@ function nomeRelatorioPix(
     competenciaPixAtiva() ||
     "sem-competencia";
 
-  return `pix-do-presidente-${competencia}.${extensao}`;
+  const filtro =
+    tipoExportacaoPixAtual();
+
+  return `pix-do-presidente-${competencia}-${filtro.chave}.${extensao}`;
 }
 
 /* =========================================================
@@ -2064,145 +2161,187 @@ function nomeRelatorioPix(
 ========================================================= */
 
 async function buscarEvidenciasPixCompetencia(
-  competencia
+  competencia,
+  semanaFiltro = ""
 ) {
   if (!competencia) {
     return [];
   }
 
-  const pastaCompetencia =
-    `${CONFIG_PIX_EVIDENCIAS.pastaRaiz}/${competencia}`;
-
-  const {
-    data: pastas,
-    error
-  } = await supabase.storage
-    .from(SUPABASE_BUCKET)
-    .list(
-      pastaCompetencia,
-      {
-        limit: 200,
-        sortBy: {
-          column: "name",
-          order: "asc"
-        }
-      }
+  const semanaNormalizada =
+    normalizarSemanaPixEvidencia(
+      semanaFiltro
     );
 
-  if (error) {
-    throw error;
-  }
+  const semanas =
+    semanaNormalizada
+      ? [semanaNormalizada]
+      : ["S1", "S2", "S3", "S4"];
 
-  const grupos =
-    await Promise.all(
-      (pastas || [])
-        .filter(
-          item =>
-            !item.id &&
-            item.name
-        )
-        .map(
-          async pasta => {
-            const caminho =
-              `${pastaCompetencia}/${pasta.name}`;
+  const grupos = [];
 
-            const {
-              data: arquivos,
-              error: erroArquivos
-            } = await supabase.storage
-              .from(SUPABASE_BUCKET)
-              .list(
-                caminho,
-                {
-                  limit:
-                    CONFIG_PIX_EVIDENCIAS.limiteArquivos,
-                  sortBy: {
-                    column:
-                      "created_at",
-                    order:
-                      "asc"
+  for (const semana of semanas) {
+    const numeroSemana =
+      numeroSemanaPixEvidencia(
+        semana
+      );
+
+    const pastaSemana =
+      `${CONFIG_PIX_EVIDENCIAS.pastaRaiz}/${competencia}/semana-${numeroSemana}`;
+
+    const {
+      data: pastas,
+      error
+    } = await supabase.storage
+      .from(SUPABASE_BUCKET)
+      .list(
+        pastaSemana,
+        {
+          limit: 200,
+          sortBy: {
+            column: "name",
+            order: "asc"
+          }
+        }
+      );
+
+    if (error) {
+      console.warn(
+        `[PIX EVIDÊNCIAS] Não foi possível listar ${semana}:`,
+        error
+      );
+
+      continue;
+    }
+
+    const gruposSemana =
+      await Promise.all(
+        (pastas || [])
+          .filter(
+            item =>
+              !item.id &&
+              item.name
+          )
+          .map(
+            async pasta => {
+              const caminho =
+                `${pastaSemana}/${pasta.name}`;
+
+              const {
+                data: arquivos,
+                error: erroArquivos
+              } = await supabase.storage
+                .from(SUPABASE_BUCKET)
+                .list(
+                  caminho,
+                  {
+                    limit:
+                      CONFIG_PIX_EVIDENCIAS.limiteArquivos,
+                    sortBy: {
+                      column:
+                        "created_at",
+                      order:
+                        "asc"
+                    }
                   }
-                }
-              );
+                );
 
-            if (erroArquivos) {
-              throw erroArquivos;
-            }
+              if (erroArquivos) {
+                throw erroArquivos;
+              }
 
-            let dn = "";
-            let filial = "";
+              let dn = "";
+              let filial = "";
 
-            if (
-              pasta.name.startsWith(
-                "sem-dn-"
-              )
-            ) {
-              filial =
-                pasta.name
-                  .slice(
-                    "sem-dn-".length
-                  )
-                  .replace(
-                    /-/g,
-                    " "
-                  )
-                  .toUpperCase();
-            } else {
-              const partes =
-                pasta.name.split("-");
+              if (
+                pasta.name.startsWith(
+                  "sem-dn-"
+                )
+              ) {
+                filial =
+                  pasta.name
+                    .slice(
+                      "sem-dn-".length
+                    )
+                    .replace(
+                      /-/g,
+                      " "
+                    )
+                    .toUpperCase();
+              } else {
+                const partes =
+                  pasta.name.split("-");
+
+                dn =
+                  /^\d+$/.test(partes[0])
+                    ? partes.shift()
+                    : "";
+
+                filial =
+                  partes
+                    .join(" ")
+                    .toUpperCase();
+              }
 
               dn =
-                /^\d+$/.test(partes[0])
-                  ? partes.shift()
-                  : "";
+                resolverDnPixPorFilial(
+                  filial,
+                  dn
+                );
 
-              filial =
-                partes
-                  .join(" ")
-                  .toUpperCase();
-            }
-
-            dn =
-              resolverDnPixPorFilial(
+              return {
+                competencia,
+                semana,
+                numeroSemana,
+                dn,
                 filial,
-                dn
-              );
+                imagens:
+                  (arquivos || [])
+                    .filter(
+                      item =>
+                        item.id &&
+                        item.name
+                    )
+                    .map(
+                      item => {
+                        const caminhoImagem =
+                          `${caminho}/${item.name}`;
 
-            return {
-              dn,
-              filial,
-              imagens:
-                (arquivos || [])
-                  .filter(
-                    item =>
-                      item.id &&
-                      item.name
-                  )
-                  .map(
-                    item => {
-                      const caminhoImagem =
-                        `${caminho}/${item.name}`;
+                        return {
+                          nome:
+                            item.name,
+                          nomeOriginal:
+                            item.metadata?.nome_original ||
+                            item.name,
+                          caminho:
+                            caminhoImagem,
+                          url:
+                            urlPublicaPix(
+                              caminhoImagem
+                            )
+                        };
+                      }
+                    )
+              };
+            }
+          )
+      );
 
-                      return {
-                        nome:
-                          item.name,
-                        caminho:
-                          caminhoImagem,
-                        url:
-                          urlPublicaPix(
-                            caminhoImagem
-                          )
-                      };
-                    }
-                  )
-            };
-          }
-        )
+    grupos.push(
+      ...gruposSemana.filter(
+        grupo =>
+          grupo.imagens.length
+      )
     );
+  }
 
-  return grupos.filter(
-    grupo =>
-      grupo.imagens.length
+  return grupos.sort(
+    (a, b) =>
+      a.numeroSemana - b.numeroSemana ||
+      a.filial.localeCompare(
+        b.filial,
+        "pt-BR"
+      )
   );
 }
 
@@ -2492,7 +2631,8 @@ async function exportarPdfPixIndependente() {
 
   const evidencias =
     await buscarEvidenciasPixCompetencia(
-      competencia
+      competencia,
+      filtroExportacao.semana
     );
 
   for (const grupo of evidencias) {
@@ -2514,7 +2654,7 @@ async function exportarPdfPixIndependente() {
     );
 
     documento.text(
-      "EVIDÊNCIAS — PIX DO PRESIDENTE",
+      `EVIDÊNCIAS — PIX DO PRESIDENTE — ${grupo.semana}`,
       14,
       17
     );
@@ -2524,7 +2664,7 @@ async function exportarPdfPixIndependente() {
     );
 
     documento.text(
-      `Filial: ${grupo.dn ? `${grupo.dn} - ` : ""}${grupo.filial}`,
+      `Semana: ${grupo.semana} | Filial: ${grupo.dn ? `${grupo.dn} - ` : ""}${grupo.filial}`,
       14,
       26
     );
@@ -2594,7 +2734,7 @@ async function exportarPdfPixIndependente() {
       );
 
       documento.text(
-        `Evidência — ${grupo.dn ? `${grupo.dn} - ` : ""}${grupo.filial}`,
+        `${grupo.semana} — ${grupo.dn ? `${grupo.dn} - ` : ""}${grupo.filial}`,
         14,
         y
       );
@@ -2632,6 +2772,9 @@ async function exportarExcelPixIndependente() {
 
   const competencia =
     competenciaPixAtiva();
+
+  const filtroExportacao =
+    tipoExportacaoPixAtual();
 
   const workbook =
     new ExcelJS.Workbook();
@@ -2904,7 +3047,8 @@ async function exportarExcelPixIndependente() {
 
   const evidencias =
     await buscarEvidenciasPixCompetencia(
-      competencia
+      competencia,
+      filtroExportacao.semana
     );
 
   const planilhaEvidencias =
@@ -2980,7 +3124,7 @@ async function exportarExcelPixIndependente() {
     planilhaEvidencias.getCell(
       `A${linhaAtual}`
     ).value =
-      "Nenhuma evidência cadastrada para esta competência.";
+      "Nenhuma evidência cadastrada para a competência e semana selecionadas.";
   }
 
   for (const grupo of evidencias) {
@@ -2994,7 +3138,7 @@ async function exportarExcelPixIndependente() {
       );
 
     cabecalhoFilial.value =
-      `${grupo.dn ? `${grupo.dn} - ` : ""}${grupo.filial}`;
+      `${grupo.semana} — ${grupo.dn ? `${grupo.dn} - ` : ""}${grupo.filial}`;
 
     cabecalhoFilial.font = {
       bold:
@@ -3076,7 +3220,7 @@ async function exportarExcelPixIndependente() {
         linhaAtual + 8,
         colunaInicial
       ).value =
-        `Evidência — ${grupo.filial}`;
+        `${grupo.semana} — ${grupo.filial}`;
 
       planilhaEvidencias.getCell(
         linhaAtual + 8,
@@ -3201,6 +3345,7 @@ function configurarContextoPixEvidencias() {
 
   [
     pixCampoCompetencia(),
+    pixCampoSemana(),
     pixCampoFilial(),
     pixCampoParticipante()
   ]
@@ -3350,5 +3495,7 @@ window.evidenciasPix = {
   exportarExcel:
     exportarExcelPixIndependente,
   buscarPorCompetencia:
+    buscarEvidenciasPixCompetencia,
+  buscarPorCompetenciaESemana:
     buscarEvidenciasPixCompetencia
 };

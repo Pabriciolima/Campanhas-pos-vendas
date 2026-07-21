@@ -2714,3 +2714,4 @@ document.addEventListener(
     iniciarFirebasePix();
   }
 );
+window.atualizarDashboardGestorPix?.();
