@@ -394,7 +394,7 @@ const RESPONSAVEIS_PADRAO = [
   },
   {
     id: "mykaela",
-    nome: "MYKAELA",
+    nome: "Mykaela de Araújo Marques",
     regioes: [
       "FIAT PARA",
       "FIAT CENTRO OESTE"

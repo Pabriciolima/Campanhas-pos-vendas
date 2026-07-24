@@ -14,6 +14,28 @@
   <link rel="stylesheet" href="./importacao-funcionarios.css?v=20260716-01" />
   <link rel="stylesheet" href="./politicas-penalidades.css?v=20260717-01" />
   <link rel="stylesheet" href="./bloqueio-lancamentos.css?v=20260717-01" />
+
+  <style id="importacao-relatorio-botoes-fixos-css">
+    .panel-header-actions{
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-left:auto;
+    }
+
+    @media (max-width: 760px){
+      .panel-header-actions{
+        width:100%;
+        justify-content:stretch;
+      }
+
+      .panel-header-actions > button{
+        flex:1 1 150px;
+      }
+    }
+  </style>
 </head>
 
 <body>
@@ -296,9 +318,30 @@
             <p class="eyebrow">Mensuração</p>
             <h2>Lançamentos da campanha</h2>
           </div>
-          <button id="btnNovoLancamento" class="primary">
-            + Novo lançamento
-          </button>
+          <div class="panel-header-actions" id="produtivosLancamentosAcoes">
+            <button
+              type="button"
+              id="btnBaixarModeloRelatorioProdutivos"
+              class="secondary"
+              onclick="window.baixarModeloProdutivosSeguro(event)"
+            >
+              Baixar modelo
+            </button>
+
+            <button
+              type="button"
+              id="btnImportarRelatorioProdutivos"
+              class="secondary"
+              onclick="window.abrirImportacaoProdutivosSeguro(event)"
+              style="background:#0b3154;color:#fff;border-color:#0b3154"
+            >
+              Importar relatório
+            </button>
+
+            <button id="btnNovoLancamento" class="primary">
+              + Novo lançamento
+            </button>
+          </div>
         </div>
         <div class="filters">
           <select id="filtroCompetenciaLancamento">
@@ -482,9 +525,34 @@
               <p class="eyebrow">Semanas 1 a 4</p>
               <h2>Lançamentos semanais</h2>
             </div>
-            <button type="button" id="btnNovoLancamentoPix" class="primary pix-primary-button">
-              + Novo lançamento
-            </button>
+            <div class="panel-header-actions" id="pixLancamentosAcoes">
+              <button
+                type="button"
+                id="btnBaixarModeloRelatorioPix"
+                class="secondary"
+                onclick="window.baixarModeloPixSeguro(event)"
+              >
+                Baixar modelo
+              </button>
+
+              <button
+                type="button"
+                id="btnImportarRelatorioPix"
+                class="secondary"
+                onclick="window.abrirImportacaoPixSeguro(event)"
+                style="background:#0b3154;color:#fff;border-color:#0b3154"
+              >
+                Importar relatório
+              </button>
+
+              <button
+                type="button"
+                id="btnNovoLancamentoPix"
+                class="primary pix-primary-button"
+              >
+                + Novo lançamento
+              </button>
+            </div>
           </div>
           <div class="pix-filters pix-filters-4">
             <select id="pixFiltroCompetenciaLancamento">
@@ -748,7 +816,7 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
   <script src="./alerts-premium.js?v=20260716-01"></script>
   <script type="module" src="./script.js?v=20260715-07"></script>
-  <script type="module" src="./pix-presidente.js?v=20260715-07"></script>
+  <script type="module" src="./pix-presidente.js"></script>
   <script type="module" src="./importacao-funcionarios.js?v=20260716-01"></script>
   <script src="./pix-historico-individual.js?v=20260715-01"></script>
   <script type="module" src="./evidencias-produtivos.js?v=20260715-07"></script>
@@ -761,8 +829,148 @@
   <!-- Leitura de XLSX, XLS e CSV -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
+
+  <script>
+    /*
+    LOADER SEGURO DA IMPORTAÇÃO V15
+    O clique carrega o módulo diretamente e não depende de
+    addEventListener registrado anteriormente.
+    */
+    window.__importadorPromise = null;
+
+    window.__carregarImportador = async function () {
+      if (
+        window.importacaoRelatorioSistema
+      ) {
+        return window.importacaoRelatorioSistema;
+      }
+
+      if (!window.__importadorPromise) {
+        window.__importadorPromise =
+          import(
+            "./importacao-relatorio-sistema.js?v=20260723-16"
+          );
+      }
+
+      try {
+        await window.__importadorPromise;
+
+        const api =
+          window.importacaoRelatorioSistema;
+
+        if (!api) {
+          throw new Error(
+            "O módulo foi carregado, mas a API window.importacaoRelatorioSistema não foi criada."
+          );
+        }
+
+        return api;
+      } catch (erro) {
+        window.__importadorPromise = null;
+
+        console.error(
+          "[IMPORTAÇÃO] ERRO REAL AO CARREGAR:",
+          erro
+        );
+
+        const detalhe =
+          erro?.message ||
+          String(erro);
+
+        const mensagem =
+          "Não foi possível carregar a área de importação.\n\n" +
+          "Detalhe técnico: " +
+          detalhe;
+
+        if (
+          window.CampanhaUI &&
+          typeof window.CampanhaUI.alert === "function"
+        ) {
+          await window.CampanhaUI.alert(
+            mensagem,
+            {
+              tipo: "erro",
+              titulo:
+                "Falha ao abrir importação"
+            }
+          );
+        } else {
+          window.alert(mensagem);
+        }
+
+        throw erro;
+      }
+    };
+
+    window.abrirImportacaoPixSeguro =
+      async function (evento) {
+        evento?.preventDefault();
+        evento?.stopPropagation();
+
+        const botao =
+          document.querySelector(
+            "#btnImportarRelatorioPix"
+          );
+
+        const textoOriginal =
+          botao?.textContent ||
+          "Importar relatório";
+
+        try {
+          if (botao) {
+            botao.disabled = true;
+            botao.textContent =
+              "Abrindo...";
+          }
+
+          const api =
+            await window.__carregarImportador();
+
+          return api.abrirPix();
+        } finally {
+          if (botao) {
+            botao.disabled = false;
+            botao.textContent =
+              textoOriginal;
+          }
+        }
+      };
+
+    window.baixarModeloPixSeguro =
+      async function (evento) {
+        evento?.preventDefault();
+        evento?.stopPropagation();
+
+        const api =
+          await window.__carregarImportador();
+
+        return api.baixarModeloPix();
+      };
+
+    window.abrirImportacaoProdutivosSeguro =
+      async function (evento) {
+        evento?.preventDefault();
+        evento?.stopPropagation();
+
+        const api =
+          await window.__carregarImportador();
+
+        return api.abrirProdutivos();
+      };
+
+    window.baixarModeloProdutivosSeguro =
+      async function (evento) {
+        evento?.preventDefault();
+        evento?.stopPropagation();
+
+        const api =
+          await window.__carregarImportador();
+
+        return api.baixarModeloProdutivos();
+      };
+  </script>
+
   <!-- Importação integrada aos módulos de Lançamentos -->
-  <script type="module" src="./importacao-relatorio-sistema.js?v=20260722-05"></script>
 </body>
 
 </html>

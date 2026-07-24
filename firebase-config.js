@@ -1,11 +1,11 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
 
 import {
-  getFirestore
+  initializeFirestore
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
+  apiKey: "AIzaSyA5o_UhyKxxyZdLvCSCJHoOJKMbuvGygQ8",
   authDomain: "campanhasposvendas.firebaseapp.com",
   projectId: "campanhasposvendas",
   storageBucket: "campanhasposvendas.firebasestorage.app",
@@ -13,8 +13,25 @@ const firebaseConfig = {
   appId: "1:441200841775:web:8aba610f5d48efb06ba2da"
 };
 
-const app = initializeApp(firebaseConfig);
+const app = getApps().length
+  ? getApp()
+  : initializeApp(firebaseConfig);
 
-export const firestore = getFirestore(app);
+/*
+Evita falhas do canal Listen/channel em servidores locais,
+Vercel, proxies corporativos e redes que bloqueiam streaming.
+*/
+export const firestore =
+  initializeFirestore(
+    app,
+    {
+      experimentalAutoDetectLongPolling:
+        true,
+      useFetchStreams:
+        false
+    }
+  );
 
-console.log("Firebase conectado com sucesso.");
+export { app };
+
+console.info("[FIREBASE] Projeto campanhasposvendas conectado com long polling automático.");

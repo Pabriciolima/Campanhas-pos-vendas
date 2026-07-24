@@ -7,11 +7,12 @@ import {
   deleteDoc,
   doc,
   onSnapshot,
+  getDocs,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 console.info(
-  "[PIX] Versão 2026.07.14-01 carregada"
+  "[PIX] Versão 2026.07.24-04 carregada"
 );
 
 
@@ -58,6 +59,21 @@ async function pixDeleteConfirm({
 
   return window.confirm(mensagem);
 }
+
+/*
+===============================================================================
+ATUALIZAÇÃO DA IMPORTAÇÃO SEMANAL — 2026.07.23-02
+
+- O relatório semanal localiza o vendedor na base do Pix.
+- Filial, DN, cargo e nome oficial são recuperados da base.
+- Vlr. Acumulado é a meta individual.
+- Vlr. Total é o realizado individual.
+- Ticket Médio é o indicador de ticket.
+- Meta zerada resulta obrigatoriamente em NÃO HABILITADO.
+- A mesma competência + semana + funcionário é atualizada pela nova importação.
+- Outras semanas e competências continuam preservadas.
+===============================================================================
+*/
 
 /* =========================================================
    PIX DO PRESIDENTE — MÓDULO COMPLETO E ISOLADO
@@ -366,7 +382,14 @@ function calcularPix(lancamento) {
   const percentualMeta =
     meta > 0 ? realizado / meta * 100 : 0;
 
-  const atingiuMeta = percentualMeta >= 100;
+  const semMeta =
+    lancamento.semMetaIndividual === true ||
+    lancamento.semMetaIndividual === "true" ||
+    meta <= 0;
+
+  const atingiuMeta =
+    !semMeta &&
+    percentualMeta >= 100;
 
   const indicador =
     politica.metrica === "margem"
@@ -431,7 +454,11 @@ function calcularPix(lancamento) {
 
   let observacao = "";
 
-  if (!atingiuMeta && bonusNps > 0) {
+  if (semMeta) {
+    observacao =
+      lancamento.motivoNaoHabilitado ||
+      "Sem meta válida para esta semana.";
+  } else if (!atingiuMeta && bonusNps > 0) {
     observacao =
       "NPS atingido e pago mesmo sem atingir a meta semanal.";
   } else if (
@@ -475,6 +502,7 @@ function calcularPix(lancamento) {
       lancamento.dn,
     politica,
     percentualMeta,
+    semMeta,
     atingiuMeta,
     indicador,
     bonusBase,
@@ -785,6 +813,30 @@ function indicadorPixTexto(resultado) {
           }
         </b>
       </span>
+
+      ${
+        resultado.semMeta
+          ? `
+            <span class="pix-import-warning">
+              Motivo:
+              <b>
+                ${resultado.motivoNaoHabilitado || "SEM META"}
+              </b>
+            </span>
+          `
+          : ""
+      }
+
+      ${
+        resultado.origemImportacao
+          ? `
+            <span>
+              Origem:
+              <b>${resultado.origemImportacao}</b>
+            </span>
+          `
+          : ""
+      }
 
       ${
         Number(resultado.semana) === 4
@@ -1209,7 +1261,7 @@ function renderFuncionariosPix() {
   );
 
   tabela.dataset.pixRenderVersion =
-    "2026.07.14-01";
+    "2026.07.23-02";
 }
 
 function montarTabelaResultadosPix(
@@ -2624,22 +2676,101 @@ function configurarEventosPix() {
   );
 }
 
-function iniciarFirebasePix() {
+async function carregarParticipantesPixUmaVez() {
+  const snapshot =
+    await getDocs(
+      funcionariosPixRef
+    );
+
+  estadoPix.funcionarios =
+    snapshot.docs
+      .map(documento => ({
+        ...documento.data(),
+        id: documento.id
+      }))
+      .sort(
+        (a, b) =>
+          String(
+            a.nome || ""
+          ).localeCompare(
+            String(
+              b.nome || ""
+            ),
+            "pt-BR"
+          )
+      );
+
+  console.info(
+    `Firestore Pix: ${estadoPix.funcionarios.length} participante(s) carregado(s) pela leitura inicial.`
+  );
+
+  renderTudoPix();
+  renderFuncionariosPix();
+
+  return estadoPix.funcionarios;
+}
+
+async function carregarLancamentosPixUmaVez() {
+  const snapshot =
+    await getDocs(
+      lancamentosPixRef
+    );
+
+  estadoPix.lancamentos =
+    snapshot.docs.map(
+      documento => ({
+        ...documento.data(),
+        id: documento.id
+      })
+    );
+
+  console.info(
+    `Firestore Pix: ${estadoPix.lancamentos.length} lançamento(s) carregado(s) pela leitura inicial.`
+  );
+
+  renderTudoPix();
+
+  return estadoPix.lancamentos;
+}
+
+async function iniciarFirebasePix() {
+  /*
+  Primeiro executa uma leitura simples com getDocs.
+  Assim os participantes aparecem mesmo quando o canal em tempo
+  real onSnapshot estiver bloqueado pela rede ou pelo navegador.
+  */
+  try {
+    await Promise.all([
+      carregarParticipantesPixUmaVez(),
+      carregarLancamentosPixUmaVez()
+    ]);
+  } catch (erro) {
+    console.error(
+      "Erro na leitura inicial do Pix:",
+      erro
+    );
+
+    pixAlert(
+      `Não foi possível carregar os dados iniciais do Pix.
+
+${erro.message || erro}`
+    );
+  }
+
+  /*
+  Depois mantém a atualização em tempo real.
+  Se o listener falhar, os dados carregados por getDocs permanecem
+  na tela e uma nova leitura simples é tentada.
+  */
   onSnapshot(
     funcionariosPixRef,
     snapshot => {
-      console.info(
-        `Firestore Pix: ${snapshot.size} participante(s) recebido(s).`
-      );
-
       estadoPix.funcionarios =
         snapshot.docs
-          .map(
-            documento => ({
-              id: documento.id,
-              ...documento.data()
-            })
-          )
+          .map(documento => ({
+            ...documento.data(),
+            id: documento.id
+          }))
           .sort(
             (a, b) =>
               String(
@@ -2652,29 +2783,30 @@ function iniciarFirebasePix() {
               )
           );
 
+      console.info(
+        `Firestore Pix: ${estadoPix.funcionarios.length} participante(s) recebido(s) em tempo real.`
+      );
+
       renderTudoPix();
 
-      /*
-       * Renderização final obrigatória da base visual.
-       * Evita que outra renderização geral deixe a tabela vazia.
-       */
       requestAnimationFrame(
-        () => {
-          renderFuncionariosPix();
-        }
+        renderFuncionariosPix
       );
     },
-    erro => {
-      console.error(
-        "Erro ao carregar participantes do Pix:",
+    async erro => {
+      console.warn(
+        "Listener em tempo real dos participantes indisponível. Mantendo leitura simples:",
         erro
       );
 
-      pixAlert(
-        `Não foi possível carregar a Base de Participantes do Pix.
-
-${erro.message || erro}`
-      );
+      try {
+        await carregarParticipantesPixUmaVez();
+      } catch (erroLeitura) {
+        console.error(
+          "Falha também na leitura simples dos participantes:",
+          erroLeitura
+        );
+      }
     }
   );
 
@@ -2684,34 +2816,43 @@ ${erro.message || erro}`
       estadoPix.lancamentos =
         snapshot.docs.map(
           documento => ({
-            id: documento.id,
-            ...documento.data()
+            ...documento.data(),
+            id: documento.id
           })
         );
 
       renderTudoPix();
     },
-    erro => {
-      console.error(
-        "Erro ao carregar lançamentos do Pix:",
+    async erro => {
+      console.warn(
+        "Listener em tempo real dos lançamentos indisponível. Mantendo leitura simples:",
         erro
       );
 
-      pixAlert(
-        "Não foi possível carregar os lançamentos do Pix do Presidente. Verifique as regras do Firestore."
-      );
+      try {
+        await carregarLancamentosPixUmaVez();
+      } catch (erroLeitura) {
+        console.error(
+          "Falha também na leitura simples dos lançamentos:",
+          erroLeitura
+        );
+      }
     }
   );
 }
 
 document.addEventListener(
   "DOMContentLoaded",
-  () => {
+  async () => {
     atualizarSelectsPix();
     configurarEventosPix();
     abrirViewPix("dashboard");
     renderTudoPix();
-    iniciarFirebasePix();
+
+    await iniciarFirebasePix();
   }
 );
+
+window.recarregarBaseParticipantesPix =
+  carregarParticipantesPixUmaVez;
 window.atualizarDashboardGestorPix?.();

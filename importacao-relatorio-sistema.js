@@ -2,10 +2,52 @@
 ===============================================================================
 IMPORTAÇÃO INTELIGENTE DO RELATÓRIO — PIX + PRODUTIVOS
 Arquivo: importacao-relatorio-sistema.js
-Versão: 2026.07.22-09
+Versão: 2026.07.23-17
 ===============================================================================
 
 CORREÇÕES DESTA VERSÃO
+
+CORREÇÃO DO BOTÃO CONFIRMAR IMPORTAÇÃO
+
+- O botão não fica mais bloqueado apenas porque algumas linhas têm erro.
+- Havendo lançamentos válidos, o sistema permite continuar.
+- Linhas inválidas são ignoradas e continuam listadas para conferência.
+- Antes de importar parcialmente, o sistema pede confirmação.
+- O botão informa quantos lançamentos válidos serão importados.
+- O resultado final mostra quantas linhas inválidas foram descartadas.
+
+
+CORREÇÃO DE ERRO DE SINTAXE — NOMEIMPORTADO
+
+- Removida a segunda declaração de const nomeImportado dentro de
+  encontrarMelhorFuncionario().
+- O erro impedia o módulo inteiro de ser interpretado pelo navegador.
+- Mensagem corrigida: redeclaration of const nomeImportado.
+- O modal e os botões voltam a funcionar após o carregamento do arquivo.
+
+
+CORREÇÃO DEFINITIVA — BOTÕES FIXOS NO INDEX.HTML
+
+- Os botões Baixar modelo e Importar relatório agora existem diretamente
+  no HTML do Pix e dos Produtivos.
+- O JavaScript apenas vincula os eventos de clique.
+- Não depende mais de encontrar ou reconstruir .panel-header.
+- O mecanismo dinâmico foi mantido apenas como fallback.
+- A vinculação ocorre antes da criação do modal.
+- Diagnóstico disponível no console:
+  window.importacaoRelatorioSistema.diagnostico()
+
+
+CORREÇÃO DO BOTÃO DE IMPORTAÇÃO NÃO APARECENDO
+
+- O código não depende mais somente de "#pix-lancamentos .panel-header".
+- Usa como âncora principal o botão #btnNovoLancamentoPix.
+- Possui seletores alternativos para layouts diferentes.
+- Um MutationObserver recria os botões se o Pix reconstruir a tela.
+- O botão será inserido ao lado de "+ Novo lançamento".
+- Função manual disponível:
+  window.importacaoRelatorioSistema.restaurarBotoes()
+
 
 0. Corrige valores monetários resumidos em arquivos XLS antigos:
    - 283.73619 passa a 283.736,19;
@@ -46,6 +88,18 @@ CORREÇÕES DESTA VERSÃO
    - o campo "Filial do arquivo" continua disponível como fallback;
    - gera Consultores, Supervisores de Assistência e Orçamentistas por filial.
 
+
+5. Importação oficial do relatório semanal do Pix:
+   - localiza cada vendedor na coleção pix_presidente_funcionarios;
+   - usa filial, DN e cargo cadastrados na base;
+   - Vlr. Acumulado = meta individual;
+   - Vlr. Total = realizado;
+   - Ticket Médio = indicador;
+   - uma nova importação da mesma competência/semana atualiza o lançamento;
+   - lançamentos de outras semanas e competências permanecem preservados;
+   - a apuração do pix-presidente.js define automaticamente quem ganhou;
+   - vendedores sem meta ou abaixo da política ficam NÃO HABILITADOS.
+
 4. Mantém tudo que já funciona:
    - lançamento manual continua disponível;
    - política e apuração continuam no pix-presidente.js;
@@ -60,7 +114,7 @@ INDEX.HTML
 
 <script
   type="module"
-  src="./importacao-relatorio-sistema.js?v=20260722-09"
+  src="./importacao-relatorio-sistema.js?v=20260723-17"
 ></script>
 
 Carregue este arquivo depois de:
@@ -71,9 +125,14 @@ Remova apenas versões antigas da importação de lançamentos.
 ===============================================================================
 */
 
-import { firestore } from "./firebase-config.js";
+import {
+  initializeApp,
+  getApps,
+  getApp
+} from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
 
 import {
+  getFirestore,
   collection,
   getDocs,
   doc,
@@ -81,10 +140,38 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
-const VERSAO = "2026.07.22-09";
+/*
+O importador inicializa o Firebase de forma autônoma.
+Isso elimina a dependência do carregamento prévio de firebase-config.js.
+Se o app já estiver inicializado, ele reutiliza a instância existente.
+*/
+const firebaseConfigImportacao = {
+  apiKey: "AIzaSyA5o_UhyKxxyZdLvCSCJHoOJKMbuvGygQ8",
+  authDomain: "campanhasposvendas.firebaseapp.com",
+  projectId: "campanhasposvendas",
+  storageBucket: "campanhasposvendas.firebasestorage.app",
+  messagingSenderId: "441200841775",
+  appId: "1:441200841775:web:8aba610f5d48efb06ba2da"
+};
+
+const firebaseAppImportacao =
+  getApps().length
+    ? getApp()
+    : initializeApp(
+        firebaseConfigImportacao
+      );
+
+const firestore =
+  getFirestore(
+    firebaseAppImportacao
+  );
+
+const VERSAO = "2026.07.23-17";
 const TAMANHO_LOTE = 400;
 const TIMEOUT_OPERACAO = 90000;
 const DB_PRODUTIVOS = "campanha_oficina_mvp_v1";
+
+window.__IMPORTADOR_PIX_ARQUIVO_CARREGADO = true;
 
 const $ = seletor => document.querySelector(seletor);
 
@@ -346,14 +433,57 @@ function gerarIdDocumento(valor) {
 const CONFIG = {
   pix: {
     nome: "Pix do Presidente",
-    header: "#pix-lancamentos .panel-header",
+
+    /*
+    O layout atual nem sempre mantém a classe .panel-header.
+    Por isso usamos primeiro o botão real de Novo lançamento
+    como âncora e, em seguida, seletores alternativos.
+    */
+    botaoImportarFixo:
+      "#btnImportarRelatorioPix",
+    botaoModeloFixo:
+      "#btnBaixarModeloRelatorioPix",
+
+    botaoNovo: [
+      "#btnNovoLancamentoPix",
+      "[data-pix-new-launch]",
+      "#pix-lancamentos .primary"
+    ],
+
+    headers: [
+      "#pix-lancamentos .panel-header",
+      "#pix-lancamentos .panel-head",
+      "#pix-lancamentos header",
+      "#pix-lancamentos .actions",
+      "#pix-lancamentos"
+    ],
+
     funcionarios: "pix_presidente_funcionarios",
     lancamentos: "pix_presidente_lancamentos"
   },
 
   produtivos: {
     nome: "Campanha dos Produtivos",
-    header: "#lancamentos .panel-header",
+
+    botaoImportarFixo:
+      "#btnImportarRelatorioProdutivos",
+    botaoModeloFixo:
+      "#btnBaixarModeloRelatorioProdutivos",
+
+    botaoNovo: [
+      "#btnNovoLancamento",
+      "[data-new-launch]",
+      "#lancamentos .primary"
+    ],
+
+    headers: [
+      "#lancamentos .panel-header",
+      "#lancamentos .panel-head",
+      "#lancamentos header",
+      "#lancamentos .actions",
+      "#lancamentos"
+    ],
+
     funcionarios: "funcionarios"
   }
 };
@@ -385,7 +515,7 @@ const state = {
   competencia: new Date().toISOString().slice(0, 7),
   semana: 1,
   filial: "",
-  estrategia: "novos",
+  estrategia: "atualizar",
   headers: [],
   rows: [],
   brutos: [],
@@ -1198,6 +1328,12 @@ function encontrarMelhorFuncionario(
   item,
   opcoes = {}
 ) {
+  const nomeImportado =
+    normalizar(
+      item.vendedor ||
+      item.colaborador
+    );
+
   const somenteAtivos =
     funcionarios.filter(funcionario =>
       funcionario.ativo !== false &&
@@ -1215,6 +1351,24 @@ function encontrarMelhorFuncionario(
           )
         )
       );
+  }
+
+  const exatos =
+    candidatos.filter(funcionario =>
+      normalizar(funcionario.nome) ===
+        nomeImportado
+    );
+
+  if (exatos.length === 1) {
+    return {
+      status: "encontrado",
+      funcionario:
+        exatos[0],
+      pontuacao: 1,
+      segundo: null,
+      correspondencia:
+        "NOME EXATO"
+    };
   }
 
   const ranking =
@@ -1256,12 +1410,11 @@ function encontrarMelhorFuncionario(
       primeiro.funcionario.nome
     );
 
-  const nomeImportado =
-    normalizar(
-      item.vendedor ||
-      item.colaborador
-    );
-
+  /*
+  nomeImportado já foi declarado no início desta função.
+  A versão anterior o declarava novamente neste mesmo escopo,
+  gerando o erro: redeclaration of const nomeImportado.
+  */
   const correspondenciaExata =
     nomeBase === nomeImportado;
 
@@ -1325,8 +1478,13 @@ async function buscarColecao(nomeColecao) {
     );
 
   return snapshot.docs.map(documento => ({
-    id: documento.id,
-    ...documento.data()
+    ...documento.data(),
+
+    /*
+    O ID verdadeiro do documento prevalece sobre qualquer
+    campo "id" antigo salvo dentro do registro.
+    */
+    id: documento.id
   }));
 }
 
@@ -1500,9 +1658,21 @@ function gerarLancamentosPix(
     const funcionario =
       resultado.funcionario;
 
+    /*
+    A base de participantes é a fonte oficial para:
+    - filial;
+    - DN;
+    - cargo;
+    - nome usado na apuração.
+
+    A filial informada na planilha só é utilizada quando
+    o cadastro ainda não possui filial.
+    */
     const filial =
+      funcionario.filial ||
       item.filial ||
-      funcionario.filial;
+      item.filialArquivo ||
+      state.filial;
 
     const cargo =
       funcionario.cargo;
@@ -1511,8 +1681,8 @@ function gerarLancamentosPix(
       ...item,
       filial,
       dn:
-        item.dn ||
         funcionario.dn ||
+        item.dn ||
         "",
       funcionario
     };
@@ -1564,6 +1734,9 @@ function gerarLancamentosPix(
       funcionarioId:
         funcionario.id,
       nome:
+        funcionario.nome ||
+        texto(item.vendedor),
+      nomeRelatorio:
         texto(item.vendedor),
       filial,
       dn:
@@ -1620,9 +1793,15 @@ function gerarLancamentosPix(
         item.qtdPassagens,
 
       origemImportacao:
-        "RELATORIO SISTEMA",
+        "RELATORIO SISTEMA PIX",
       arquivoImportado:
-        state.arquivo?.name || ""
+        state.arquivo?.name || "",
+      abaImportada:
+        state.aba || "",
+      importadoEm:
+        new Date().toISOString(),
+      regraImportacao:
+        "VLR ACUMULADO META | VLR TOTAL REALIZADO | TICKET MEDIO INDICADOR"
     });
   });
 
@@ -1737,6 +1916,18 @@ function gerarLancamentosPix(
           metaTotal,
         realizadoSemanal:
           realizadoTotal,
+        percentualAtingimentoImportado:
+          metaTotal > 0
+            ? realizadoTotal /
+              metaTotal *
+              100
+            : 0,
+        semMetaIndividual:
+          metaTotal <= 0,
+        motivoNaoHabilitado:
+          metaTotal <= 0
+            ? "SEM META CONSOLIDADA DA FILIAL"
+            : "",
         ticketMedio:
           ticket,
 
@@ -1759,9 +1950,15 @@ function gerarLancamentosPix(
           itens.length,
 
         origemImportacao:
-          "AGREGACAO AUTOMATICA DO RELATORIO",
+          "AGREGACAO AUTOMATICA DO RELATORIO PIX",
         arquivoImportado:
-          state.arquivo?.name || ""
+          state.arquivo?.name || "",
+        abaImportada:
+          state.aba || "",
+        importadoEm:
+          new Date().toISOString(),
+        regraImportacao:
+          "META MO + PECAS | REALIZADO MO + PECAS | TICKET DA FILIAL"
       });
     });
   });
@@ -2291,20 +2488,59 @@ async function confirmarImportacao() {
     return;
   }
 
-  if (state.erros.length) {
-    await alerta(
-      "Existem erros que precisam ser corrigidos antes da importação."
-    );
+  /*
+  CORREÇÃO V17:
+  O relatório pode conter algumas linhas que não foram localizadas,
+  mas ainda possuir vários lançamentos válidos.
 
-    return;
-  }
-
+  Antes, qualquer item em state.erros bloqueava completamente o botão.
+  Agora o sistema importa somente os lançamentos válidos e mantém as
+  linhas problemáticas como avisos para conferência.
+  */
   if (!state.gerados.length) {
     await alerta(
       "Nenhum lançamento foi gerado. Verifique os nomes, filiais e cargos."
     );
 
     return;
+  }
+
+  if (state.erros.length) {
+    const mensagemParcial = [
+      `${state.gerados.length} lançamento(s) válido(s) serão importados.`,
+      `${state.erros.length} linha(s) com problema serão ignoradas.`,
+      "",
+      "Deseja continuar com a importação parcial?"
+    ].join("\n");
+
+    let continuar = true;
+
+    if (
+      window.CampanhaUI &&
+      typeof window.CampanhaUI.confirm === "function"
+    ) {
+      continuar =
+        await window.CampanhaUI.confirm(
+          mensagemParcial,
+          {
+            titulo:
+              "Importar somente linhas válidas?",
+            textoConfirmar:
+              "Continuar importação",
+            textoCancelar:
+              "Revisar arquivo"
+          }
+        );
+    } else {
+      continuar =
+        window.confirm(
+          mensagemParcial
+        );
+    }
+
+    if (!continuar) {
+      return;
+    }
   }
 
   state.processando = true;
@@ -2337,7 +2573,8 @@ async function confirmarImportacao() {
       `${resultadoFinal.criados} criado(s)`,
       `${resultadoFinal.atualizados} atualizado(s)`,
       `${resultadoFinal.ignorados} ignorado(s)`,
-      `${nomesAtualizadosFinal} nome(s) atualizado(s) na base`
+      `${nomesAtualizadosFinal} nome(s) atualizado(s) na base`,
+      `${state.erros.length} linha(s) inválida(s) não importada(s)`
     ];
 
     if (state.avisos.length) {
@@ -2853,7 +3090,31 @@ function garantirCss() {
 }
 
 function garantirModal() {
-  if ($("#irsModal")) return;
+  const modalExistente =
+    $("#irsModal");
+
+  const modalCompleto =
+    modalExistente &&
+    $("#irsTitle") &&
+    $("#irsCompetencia") &&
+    $("#irsSemana") &&
+    $("#irsFilial") &&
+    $("#irsAba") &&
+    $("#irsStrategy") &&
+    $("#irsFile") &&
+    $("#irsConfirm");
+
+  /*
+  Versões antigas podem ter deixado um modal incompleto no DOM.
+  Nesse caso ele é removido e reconstruído integralmente.
+  */
+  if (modalExistente && !modalCompleto) {
+    modalExistente.remove();
+  }
+
+  if (modalCompleto) {
+    return modalExistente;
+  }
 
   document.body.insertAdjacentHTML(
     "beforeend",
@@ -2943,11 +3204,11 @@ function garantirModal() {
 
               <select id="irsStrategy">
                 <option value="novos">
-                  Somente novos
+                  Manter existentes e importar somente novos
                 </option>
 
                 <option value="atualizar">
-                  Atualizar existentes
+                  Substituir lançamentos da mesma semana
                 </option>
               </select>
             </label>
@@ -3118,6 +3379,8 @@ function garantirModal() {
 
   $("#irsConfirm").onclick =
     confirmarImportacao;
+
+  return $("#irsModal");
 }
 
 function fecharModal(forcar = false) {
@@ -3237,6 +3500,57 @@ function renderizar() {
         </div>
       `;
 
+  if (
+    state.tipo === "pix" &&
+    state.gerados.length
+  ) {
+    const resumoGerados =
+      state.gerados
+        .slice(0, 12)
+        .map(item => `
+          <div class="irs-ok" style="margin-top:6px">
+            <strong>${escapar(item.nome)}</strong>
+            · ${escapar(item.filial)}
+            · ${escapar(item.cargo)}
+            · S${escapar(item.semana)}
+            · Meta ${escapar(
+              Number(item.metaSemanal || 0)
+                .toLocaleString(
+                  "pt-BR",
+                  {
+                    style: "currency",
+                    currency: "BRL"
+                  }
+                )
+            )}
+            · Realizado ${escapar(
+              Number(item.realizadoSemanal || 0)
+                .toLocaleString(
+                  "pt-BR",
+                  {
+                    style: "currency",
+                    currency: "BRL"
+                  }
+                )
+            )}
+          </div>
+        `)
+        .join("");
+
+    $("#irsPreview")
+      .insertAdjacentHTML(
+        "beforeend",
+        `
+          <div style="margin-top:12px">
+            <strong>
+              Lançamentos vinculados à base:
+            </strong>
+            ${resumoGerados}
+          </div>
+        `
+      );
+  }
+
   const mensagens = [
     ...state.erros.map(mensagem => ({
       tipo: "error",
@@ -3277,8 +3591,11 @@ function renderizar() {
         realizado = Vlr. M.O. + Vlr. Peças;
         ticket = Vlr. Total ÷ Qtd. Total.
         A política atual define os valores diferentes de premiação.
-        Arquivos XLS antigos com valores reduzidos são corrigidos
-        automaticamente para os valores monetários completos.
+        O nome do vendedor é localizado na base do Pix e o lançamento
+        recebe automaticamente a filial, o DN e o cargo cadastrados.
+        Ao importar novamente a mesma competência e semana, o lançamento
+        existente é atualizado. Arquivos XLS antigos com valores reduzidos
+        são corrigidos automaticamente para os valores monetários completos.
       `
       : `
         <strong>Produtivos:</strong>
@@ -3322,9 +3639,13 @@ function renderizar() {
     state.processando ||
     state.analisando;
 
+  /*
+  O botão fica disponível sempre que houver pelo menos um
+  lançamento válido. Erros de linhas específicas não bloqueiam
+  a importação dos demais registros.
+  */
   $("#irsConfirm").disabled =
     bloqueado ||
-    state.erros.length > 0 ||
     state.gerados.length === 0;
 
   $("#irsConfirm").textContent =
@@ -3333,7 +3654,12 @@ function renderizar() {
         "Importando..."
       : state.analisando
         ? "Analisando..."
-        : "Confirmar importação";
+        : (
+            state.erros.length > 0 &&
+            state.gerados.length > 0
+              ? `Importar ${state.gerados.length} válido(s)`
+              : "Confirmar importação"
+          );
 
   $("#irsCancel").disabled =
     bloqueado;
@@ -3343,79 +3669,244 @@ function renderizar() {
 }
 
 function abrir(tipo) {
-  garantirModal();
+  try {
+    const modal =
+      garantirModal();
 
-  state.tipo = tipo;
-  state.arquivo = null;
-  state.workbook = null;
-  state.aba = "";
-  state.competencia =
-    $("#competenciaGlobal")?.value ||
-    $("#pixDashboardCompetencia")?.value ||
-    new Date().toISOString().slice(0, 7);
-  state.semana = 1;
-  state.filial = "";
-  state.estrategia = "novos";
-  state.headers = [];
-  state.rows = [];
-  state.brutos = [];
-  state.gerados = [];
-  state.erros = [];
-  state.avisos = [];
-  state.reconciliacoes = [];
-  state.funcionariosCache = [];
-  state.processando = false;
-  state.analisando = false;
-  state.progresso = "";
-  state.fatorEscalaMonetaria = 1;
-  state.escalaDetectadaAutomaticamente = false;
+    if (!modal) {
+      throw new Error(
+        "O modal de importação não pôde ser criado."
+      );
+    }
 
-  $("#irsTitle").textContent =
-    `Importar relatório — ${CONFIG[tipo].nome}`;
+    state.tipo = tipo;
+    state.arquivo = null;
+    state.workbook = null;
+    state.aba = "";
+    state.competencia =
+      $("#competenciaGlobal")?.value ||
+      $("#pixDashboardCompetencia")?.value ||
+      new Date().toISOString().slice(0, 7);
+    state.semana = 1;
+    state.filial = "";
+    state.estrategia =
+      tipo === "pix"
+        ? "atualizar"
+        : "novos";
+    state.headers = [];
+    state.rows = [];
+    state.brutos = [];
+    state.gerados = [];
+    state.erros = [];
+    state.avisos = [];
+    state.reconciliacoes = [];
+    state.funcionariosCache = [];
+    state.processando = false;
+    state.analisando = false;
+    state.progresso = "";
+    state.fatorEscalaMonetaria = 1;
+    state.escalaDetectadaAutomaticamente = false;
 
-  $("#irsCompetencia").value =
-    state.competencia;
+    $("#irsTitle").textContent =
+      `Importar relatório — ${CONFIG[tipo].nome}`;
 
-  $("#irsSemana").value =
-    "1";
+    $("#irsCompetencia").value =
+      state.competencia;
 
-  $("#irsFilial").value =
-    "";
+    $("#irsSemana").value =
+      "1";
 
-  $("#irsAba").innerHTML =
-    "<option>Aguardando arquivo</option>";
+    $("#irsFilial").value =
+      "";
 
-  $("#irsStrategy").value =
-    "novos";
+    $("#irsAba").innerHTML =
+      "<option>Aguardando arquivo</option>";
 
-  $("#irsFile").value =
-    "";
+    $("#irsStrategy").value =
+      state.estrategia;
 
-  $("#irsSemanaField").hidden =
-    tipo !== "pix";
+    $("#irsFile").value =
+      "";
 
-  $("#irsDescription").textContent =
-    tipo === "pix"
-      ? "O relatório deve conter Vlr. Acumulado (meta individual), Vlr. Total (realizado), Ticket Médio, Objetivo M.O., Vlr. M.O., Objetivo Peças e Vlr. Peças."
-      : "Arquivo com faturamento e horas dos produtivos.";
+    $("#irsSemanaField").hidden =
+      tipo !== "pix";
 
-  renderizar();
+    $("#irsDescription").textContent =
+      tipo === "pix"
+        ? "O relatório deve conter Vlr. Acumulado, Vlr. Total, Ticket Médio, Objetivo M.O., Vlr. M.O., Objetivo Peças e Vlr. Peças."
+        : "Arquivo com faturamento e horas dos produtivos.";
 
-  $("#irsModal").showModal();
+    renderizar();
+
+    if (typeof modal.showModal !== "function") {
+      throw new Error(
+        "Este navegador não oferece suporte ao modal de importação."
+      );
+    }
+
+    if (!modal.open) {
+      modal.showModal();
+    }
+
+    console.info(
+      `[IMPORTAÇÃO] Modal aberto para ${tipo}.`
+    );
+
+    return true;
+  } catch (erro) {
+    console.error(
+      "[IMPORTAÇÃO] Não foi possível abrir o modal:",
+      erro
+    );
+
+    alerta(
+      erro.message ||
+      "Não foi possível abrir a área de importação."
+    );
+
+    return false;
+  }
+}
+
+function primeiroElemento(
+  seletores = []
+) {
+  for (const seletor of seletores) {
+    const elemento =
+      document.querySelector(
+        seletor
+      );
+
+    if (elemento) {
+      return elemento;
+    }
+  }
+
+  return null;
+}
+
+function localizarAreaInsercao(
+  tipo
+) {
+  const configuracao =
+    CONFIG[tipo];
+
+  const botaoNovo =
+    primeiroElemento(
+      configuracao.botaoNovo
+    );
+
+  if (botaoNovo) {
+    return {
+      botaoNovo,
+      container:
+        botaoNovo.parentElement ||
+        botaoNovo.closest(
+          ".actions, .panel-actions, .panel-header, header"
+        )
+    };
+  }
+
+  const container =
+    primeiroElemento(
+      configuracao.headers
+    );
+
+  return {
+    botaoNovo: null,
+    container
+  };
+}
+
+function vincularBotaoUmaVez(
+  botao,
+  chave,
+  acao
+) {
+  if (!botao) return false;
+
+  const atributo =
+    `irsVinculado${chave}`;
+
+  if (
+    botao.dataset[atributo] ===
+      "true"
+  ) {
+    return true;
+  }
+
+  botao.addEventListener(
+    "click",
+    acao
+  );
+
+  botao.dataset[atributo] =
+    "true";
+
+  return true;
+}
+
+function vincularBotoesFixos(
+  tipo
+) {
+  const configuracao =
+    CONFIG[tipo];
+
+  const botaoImportar =
+    document.querySelector(
+      configuracao.botaoImportarFixo
+    );
+
+  const botaoModelo =
+    document.querySelector(
+      configuracao.botaoModeloFixo
+    );
+
+  /*
+  Os cliques são tratados pela delegação global em capture.
+  Aqui apenas confirmamos a presença dos botões.
+  */
+  return Boolean(
+    botaoImportar &&
+    botaoModelo
+  );
 }
 
 function inserir(tipo) {
-  const header =
-    $(CONFIG[tipo].header);
-
-  if (!header) return false;
-
+  /*
+  CAMINHO PRINCIPAL E GARANTIDO:
+  os botões já existem no index.html e aqui apenas recebem
+  seus eventos. Assim eles não dependem da criação dinâmica.
+  */
   if (
-    header.querySelector(
-      `[data-irs="${tipo}"]`
-    )
+    vincularBotoesFixos(tipo)
   ) {
     return true;
+  }
+
+  /*
+  FALLBACK:
+  mantém compatibilidade com versões antigas do index.html.
+  */
+  const existente =
+    document.querySelector(
+      `[data-irs="${tipo}"]`
+    );
+
+  if (existente) {
+    return true;
+  }
+
+  const {
+    botaoNovo,
+    container
+  } =
+    localizarAreaInsercao(
+      tipo
+    );
+
+  if (!container) {
+    return false;
   }
 
   const wrapper =
@@ -3431,6 +3922,7 @@ function inserir(tipo) {
     <button
       type="button"
       class="irs-btn irs-model"
+      title="Baixar planilha modelo"
     >
       Baixar modelo
     </button>
@@ -3438,46 +3930,258 @@ function inserir(tipo) {
     <button
       type="button"
       class="irs-btn irs-import"
+      title="Importar relatório do sistema"
     >
       Importar relatório
     </button>
   `;
 
-  const novo =
-    header.querySelector(
-      "#btnNovoLancamentoPix,#btnNovoLancamento,.primary"
-    );
-
-  if (novo) {
-    novo.insertAdjacentElement(
+  if (
+    botaoNovo &&
+    botaoNovo.parentElement ===
+      container
+  ) {
+    botaoNovo.insertAdjacentElement(
       "beforebegin",
       wrapper
     );
   } else {
-    header.appendChild(
+    container.appendChild(
       wrapper
     );
   }
 
   wrapper
     .querySelector(".irs-model")
-    .onclick =
-      () => baixarModelo(tipo);
+    .addEventListener(
+      "click",
+      () =>
+        baixarModelo(tipo)
+    );
 
   wrapper
     .querySelector(".irs-import")
-    .onclick =
-      () => abrir(tipo);
+    .addEventListener(
+      "click",
+      () =>
+        abrir(tipo)
+    );
 
   return true;
 }
 
-function iniciar() {
-  garantirCss();
-  garantirModal();
+function observarAreaDeLancamentos() {
+  if (
+    window.__irsObserverAtivo
+  ) {
+    return;
+  }
 
+  window.__irsObserverAtivo =
+    true;
+
+  const observer =
+    new MutationObserver(() => {
+      inserir("pix");
+      inserir("produtivos");
+    });
+
+  observer.observe(
+    document.body,
+    {
+      childList: true,
+      subtree: true
+    }
+  );
+
+  window.__irsObserver =
+    observer;
+}
+
+
+function configurarCliqueGlobalImportacao() {
+  if (
+    window.__importacaoCliqueGlobalConfigurado
+  ) {
+    return;
+  }
+
+  window.__importacaoCliqueGlobalConfigurado =
+    true;
+
+  document.addEventListener(
+    "click",
+    evento => {
+      const botaoPix =
+        evento.target.closest(
+          "#btnImportarRelatorioPix"
+        );
+
+      const modeloPix =
+        evento.target.closest(
+          "#btnBaixarModeloRelatorioPix"
+        );
+
+      const botaoProdutivos =
+        evento.target.closest(
+          "#btnImportarRelatorioProdutivos"
+        );
+
+      const modeloProdutivos =
+        evento.target.closest(
+          "#btnBaixarModeloRelatorioProdutivos"
+        );
+
+      if (botaoPix) {
+        evento.preventDefault();
+        evento.stopPropagation();
+
+        try {
+          garantirCss();
+          garantirModal();
+          abrir("pix");
+        } catch (erro) {
+          console.error(
+            "[IMPORTAÇÃO] Erro no clique do botão Pix:",
+            erro
+          );
+
+          alerta(
+            erro.message ||
+            "Não foi possível abrir a importação do Pix."
+          );
+        }
+
+        return;
+      }
+
+      if (modeloPix) {
+        evento.preventDefault();
+        evento.stopPropagation();
+        baixarModelo("pix");
+        return;
+      }
+
+      if (botaoProdutivos) {
+        evento.preventDefault();
+        evento.stopPropagation();
+        abrir("produtivos");
+        return;
+      }
+
+      if (modeloProdutivos) {
+        evento.preventDefault();
+        evento.stopPropagation();
+        baixarModelo("produtivos");
+      }
+    },
+    true
+  );
+}
+
+function iniciar() {
+  /*
+  A API pública é criada antes de qualquer outra rotina.
+  Assim os botões continuam funcionais mesmo que alguma
+  inicialização secundária falhe.
+  */
+  window.importacaoRelatorioSistema = {
+    abrirPix() {
+      garantirCss();
+      garantirModal();
+      return abrir("pix");
+    },
+
+    abrirProdutivos() {
+      garantirCss();
+      garantirModal();
+      return abrir("produtivos");
+    },
+
+    baixarModeloPix() {
+      return baixarModelo("pix");
+    },
+
+    baixarModeloProdutivos() {
+      return baixarModelo("produtivos");
+    },
+
+    restaurarBotoes() {
+      return {
+        pix: inserir("pix"),
+        produtivos: inserir("produtivos")
+      };
+    },
+
+    testarModalPix() {
+      garantirCss();
+      garantirModal();
+      return abrir("pix");
+    },
+
+    diagnostico() {
+      return {
+        versao: VERSAO,
+        xlsx: Boolean(window.XLSX),
+        firestore: Boolean(firestore),
+        pixBotaoImportar: Boolean(
+          document.querySelector("#btnImportarRelatorioPix")
+        ),
+        pixBotaoModelo: Boolean(
+          document.querySelector("#btnBaixarModeloRelatorioPix")
+        ),
+        modal: Boolean(document.querySelector("#irsModal")),
+        modalCompleto: Boolean(
+          document.querySelector("#irsModal") &&
+          document.querySelector("#irsFile") &&
+          document.querySelector("#irsConfirm")
+        ),
+        cliqueGlobal: Boolean(
+          window.__importacaoCliqueGlobalConfigurado
+        )
+      };
+    },
+
+    analisar: analisarColaboradores,
+    versao: VERSAO
+  };
+
+  configurarCliqueGlobalImportacao();
+
+  try {
+    garantirCss();
+  } catch (erro) {
+    console.error(
+      "[IMPORTAÇÃO] Falha ao carregar CSS:",
+      erro
+    );
+  }
+
+  /*
+  Os botões são vinculados antes da criação do modal.
+  Portanto, mesmo se houver algum problema secundário no modal,
+  a área de importação continua visível no sistema.
+  */
   inserir("pix");
   inserir("produtivos");
+
+  try {
+    garantirModal();
+  } catch (erro) {
+    console.error(
+      "[IMPORTAÇÃO] Falha ao criar modal:",
+      erro
+    );
+  }
+
+  try {
+    observarAreaDeLancamentos();
+  } catch (erro) {
+    console.error(
+      "[IMPORTAÇÃO] Falha ao iniciar observador:",
+      erro
+    );
+  }
 
   let tentativas = 0;
 
@@ -3493,32 +4197,18 @@ function iniciar() {
 
       if (
         (pix && produtivos) ||
-        tentativas >= 30
+        tentativas >= 120
       ) {
         window.clearInterval(
           temporizador
         );
       }
-    }, 300);
+    }, 250);
 
-  window.importacaoRelatorioSistema = {
-    abrirPix() {
-      abrir("pix");
-    },
 
-    abrirProdutivos() {
-      abrir("produtivos");
-    },
-
-    analisar:
-      analisarColaboradores,
-
-    versao:
-      VERSAO
-  };
 
   console.info(
-    `[IMPORTAÇÃO INTELIGENTE] ${VERSAO}`
+    `[IMPORTAÇÃO INTELIGENTE] ${VERSAO} carregado`
   );
 }
 
