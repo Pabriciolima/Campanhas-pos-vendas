@@ -12,7 +12,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 console.info(
-  "[PIX] Versão 2026.07.24-04 carregada"
+  "[PIX] Versão 2026.07.24-06 carregada"
 );
 
 
@@ -718,6 +718,30 @@ function atualizarSelectsPix() {
     ),
     "Selecione a filial"
   );
+
+  const competenciaAtiva =
+    competenciaHistoricoPix();
+
+  [
+    "#pixFiltroCompetenciaLancamento",
+    "#pixFiltroCompetenciaApuracao"
+  ].forEach(seletor => {
+    const campo = $(seletor);
+
+    if (!campo) {
+      return;
+    }
+
+    const possuiOpcao =
+      [...campo.options].some(
+        opcao =>
+          opcao.value === competenciaAtiva
+      );
+
+    if (possuiOpcao) {
+      campo.value = competenciaAtiva;
+    }
+  });
 }
 
 function resultadosPixFiltrados(tipo) {
@@ -726,8 +750,15 @@ function resultadosPixFiltrados(tipo) {
       ? "Apuracao"
       : "Lancamento";
 
-  const competencia =
+  const competenciaAtiva =
+    competenciaHistoricoPix();
+
+  const competenciaSelecionada =
     $(`#pixFiltroCompetencia${prefixo}`)?.value || "";
+
+  const competencia =
+    competenciaSelecionada ||
+    competenciaAtiva;
 
   const filial =
     $(`#pixFiltroFilial${prefixo}`)?.value || "";
@@ -917,16 +948,40 @@ function atualizarRotuloHistoricoPix(
     texto.slice(1);
 }
 
+let sincronizacaoPixEmAndamento =
+  false;
+
+let ultimaCompetenciaSincronizadaPix =
+  "";
+
 function sincronizarCompetenciaPix(
   competencia,
   origem = "global"
 ) {
-  if (!competencia) {
+  if (
+    !competencia ||
+    sincronizacaoPixEmAndamento
+  ) {
     return;
   }
 
-  const campoGlobal =
-    $("#competenciaGlobal");
+  if (
+    ultimaCompetenciaSincronizadaPix ===
+      competencia &&
+    $("#pixFiltroCompetenciaLancamento")?.value ===
+      competencia &&
+    $("#pixFiltroCompetenciaApuracao")?.value ===
+      competencia
+  ) {
+    return;
+  }
+
+  sincronizacaoPixEmAndamento =
+    true;
+
+  try {
+    const campoGlobal =
+      $("#competenciaGlobal");
 
   const campoPix =
     $("#pixDashboardCompetencia");
@@ -946,7 +1001,37 @@ function sincronizarCompetenciaPix(
     competencia
   );
 
+  [
+    "#pixFiltroCompetenciaLancamento",
+    "#pixFiltroCompetenciaApuracao"
+  ].forEach(seletor => {
+    const campo = $(seletor);
+
+    if (campo) {
+      campo.value = competencia;
+    }
+  });
+
+  const campoModal =
+    $("#pixLancamentoCompetencia");
+
+  if (
+    campoModal &&
+    !campoModal.closest("dialog")?.open
+  ) {
+    campoModal.value = competencia;
+  }
+
+  ultimaCompetenciaSincronizadaPix =
+    competencia;
+
   renderDashboardPix();
+  renderLancamentosPix();
+  renderApuracaoPix();
+  } finally {
+    sincronizacaoPixEmAndamento =
+      false;
+  }
 }
 
 function renderDashboardPix() {
@@ -1485,15 +1570,30 @@ function renderPoliticasPix() {
 function renderTudoPix() {
   atualizarSelectsPix();
 
+  const competenciaAtiva =
+    $("#competenciaGlobal")?.value ||
+    $("#pixDashboardCompetencia")?.value ||
+    pixMesAtual();
+
   const dashboardCompetencia =
     $("#pixDashboardCompetencia");
 
   if (dashboardCompetencia) {
     dashboardCompetencia.value =
-      $("#competenciaGlobal")?.value ||
-      dashboardCompetencia.value ||
-      pixMesAtual();
+      competenciaAtiva;
   }
+
+  [
+    "#pixFiltroCompetenciaLancamento",
+    "#pixFiltroCompetenciaApuracao"
+  ].forEach(seletor => {
+    const campo = $(seletor);
+
+    if (campo) {
+      campo.value =
+        competenciaAtiva;
+    }
+  });
 
   const renderizacoes = [
     ["dashboard", renderDashboardPix],
@@ -2856,3 +2956,6 @@ document.addEventListener(
 window.recarregarBaseParticipantesPix =
   carregarParticipantesPixUmaVez;
 window.atualizarDashboardGestorPix?.();
+
+window.sincronizarCompetenciaPix =
+  sincronizarCompetenciaPix;
