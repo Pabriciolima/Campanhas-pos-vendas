@@ -25,6 +25,15 @@
       margin-left:auto;
     }
 
+    .pix-export-filial-filter {
+      min-width: 190px;
+    }
+
+    .pix-export-filial-filter select {
+      width: 100%;
+      min-width: 190px;
+    }
+
     @media (max-width: 760px){
       .panel-header-actions{
         width:100%;
@@ -33,6 +42,15 @@
 
       .panel-header-actions > button{
         flex:1 1 150px;
+      }
+
+      .pix-export-filial-filter {
+        min-width: 150px;
+        flex: 1 1 170px;
+      }
+
+      .pix-export-filial-filter select {
+        min-width: 0;
       }
     }
   </style>
@@ -210,6 +228,20 @@
               <option value="habilitados">Somente habilitados</option>
               <option value="todos">Todos os resultados</option>
             </select></label>
+
+          <label
+            id="pixFilialExportacaoLabel"
+            class="export-filter pix-export-filial-filter"
+            hidden
+          >
+            <span>Filial</span>
+            <select
+              id="pixFilialExportacao"
+              aria-label="Filtrar exportação do Pix por filial"
+            >
+              <option value="">Todas as filiais</option>
+            </select>
+          </label>
           <div class="export-buttons">
             <button type="button" id="btnExportarExcel" class="export-btn export-excel">
               <span><small>Exportar</small>Excel</span>
@@ -816,11 +848,11 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
   <script src="./alerts-premium.js?v=20260716-01"></script>
   <script type="module" src="./script.js?v=20260715-07"></script>
-  <script type="module" src="./pix-presidente.js?v=20260724-06"></script>
+  <script type="module" src="./pix-presidente.js?v=20260724-07"></script>
   <script type="module" src="./importacao-funcionarios.js?v=20260716-01"></script>
   <script src="./pix-historico-individual.js?v=20260715-01"></script>
   <script type="module" src="./evidencias-produtivos.js?v=20260715-07"></script>
-  <script type="module" src="./evidencias-pix.js?v=20260715-03"></script>
+  <script type="module" src="./evidencias-pix.js?v=20260730-03"></script>
   <script src="./module-switcher.js?v=20260715-07"></script>
   <script src="./isolamento-competencias.js?v=20260724-02"></script>
   <script src="./politicas-penalidades.js?v=20260717-01"></script>

@@ -12,7 +12,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 console.info(
-  "[PIX] Versão 2026.07.24-06 carregada"
+  "[PIX] Versão 2026.07.24-07 carregada"
 );
 
 
@@ -2484,9 +2484,43 @@ async function salvarLancamentoPix(evento) {
       );
 
     if (duplicado) {
-      pixAlert(
-        "Este participante já possui lançamento nesta competência e semana."
+      const modalLancamento =
+        $("#modalPixPresidente");
+
+      /*
+      O alerta premium não pode ser exibido por cima de outro
+      <dialog> aberto, pois ambos disputam a camada superior
+      do navegador. Isso fazia a tela parecer travada e o aviso
+      só aparecer depois que o usuário fechava o lançamento.
+
+      Agora o lançamento é fechado temporariamente, o aviso é
+      aguardado e o modal volta a abrir com todos os dados
+      preenchidos.
+      */
+      if (modalLancamento?.open) {
+        modalLancamento.close();
+      }
+
+      await pixAlert(
+        "Este participante já possui lançamento nesta competência e semana.",
+        {
+          tipo: "info",
+          titulo: "Lançamento duplicado"
+        }
       );
+
+      if (
+        modalLancamento &&
+        !modalLancamento.open
+      ) {
+        modalLancamento.showModal();
+
+        window.setTimeout(() => {
+          $("#pixLancamentoFuncionario")
+            ?.focus();
+        }, 50);
+      }
+
       return;
     }
 
@@ -2524,10 +2558,28 @@ async function salvarLancamentoPix(evento) {
     $("#modalPixPresidente").close();
   } catch (erro) {
     console.error("Erro ao salvar lançamento Pix:", erro);
-    pixAlert(
+    const modalLancamento =
+      $("#modalPixPresidente");
+
+    if (modalLancamento?.open) {
+      modalLancamento.close();
+    }
+
+    await pixAlert(
       erro.message ||
-      "Não foi possível salvar o lançamento."
+      "Não foi possível salvar o lançamento.",
+      {
+        tipo: "erro",
+        titulo: "Falha ao salvar lançamento"
+      }
     );
+
+    if (
+      modalLancamento &&
+      !modalLancamento.open
+    ) {
+      modalLancamento.showModal();
+    }
   } finally {
     if (botao) {
       botao.disabled = false;
