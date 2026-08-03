@@ -7,6 +7,8 @@ import {
   deleteDoc,
   doc,
   onSnapshot,
+  getDocs,
+  setDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
@@ -467,6 +469,20 @@ const funcionariosRef = collection(
   "funcionarios"
 );
 
+const lancamentosRef = collection(
+  firestore,
+  "produtivos_lancamentos"
+);
+
+const MIGRACAO_LANCAMENTOS_KEY =
+  "produtivos_lancamentos_migrados_fire_v1";
+
+let lancamentosFirebaseCarregados =
+  false;
+
+let migracaoLancamentosEmAndamento =
+  false;
+
 function carregarDB() {
   try {
     const salvo = localStorage.getItem(DB_KEY);
@@ -499,13 +515,22 @@ function carregarDB() {
   }
 }
 
-function salvarDB() {
+function salvarBackupLocal() {
+  /*
+   * O Firebase é a fonte oficial.
+   * O localStorage permanece apenas como cópia de segurança
+   * e como origem para a migração dos lançamentos antigos.
+   */
   localStorage.setItem(
     DB_KEY,
     JSON.stringify({
       lancamentos: db.lancamentos
     })
   );
+}
+
+function salvarDB() {
+  salvarBackupLocal();
 }
 
 function uid() {
@@ -665,6 +690,279 @@ function iniciarFuncionariosTempoReal() {
       );
     }
   );
+}
+
+
+function normalizarLancamentoFirebase(
+  documento
+) {
+  const dados =
+    documento.data();
+
+  return {
+    ...dados,
+    id:
+      documento.id
+  };
+}
+
+async function migrarLancamentosLocaisParaFirebase() {
+  if (
+    migracaoLancamentosEmAndamento ||
+    localStorage.getItem(
+      MIGRACAO_LANCAMENTOS_KEY
+    ) === "true"
+  ) {
+    return;
+  }
+
+  const salvo =
+    localStorage.getItem(
+      DB_KEY
+    );
+
+  if (!salvo) {
+    localStorage.setItem(
+      MIGRACAO_LANCAMENTOS_KEY,
+      "true"
+    );
+
+    return;
+  }
+
+  let lancamentosLocais = [];
+
+  try {
+    const dados =
+      JSON.parse(salvo);
+
+    lancamentosLocais =
+      Array.isArray(
+        dados.lancamentos
+      )
+        ? dados.lancamentos
+        : [];
+  } catch (erro) {
+    console.error(
+      "Erro ao ler lançamentos locais para migração:",
+      erro
+    );
+
+    return;
+  }
+
+  if (!lancamentosLocais.length) {
+    localStorage.setItem(
+      MIGRACAO_LANCAMENTOS_KEY,
+      "true"
+    );
+
+    return;
+  }
+
+  migracaoLancamentosEmAndamento =
+    true;
+
+  try {
+    const snapshot =
+      await getDocs(
+        lancamentosRef
+      );
+
+    const idsFirebase =
+      new Set(
+        snapshot.docs.map(
+          documento =>
+            documento.id
+        )
+      );
+
+    let migrados = 0;
+
+    for (
+      const lancamento
+      of lancamentosLocais
+    ) {
+      const id =
+        String(
+          lancamento.id ||
+          uid()
+        );
+
+      if (
+        idsFirebase.has(id)
+      ) {
+        continue;
+      }
+
+      await setDoc(
+        doc(
+          firestore,
+          "produtivos_lancamentos",
+          id
+        ),
+        {
+          ...lancamento,
+          idLocal:
+            lancamento.id ||
+            id,
+          migradoDoLocalStorage:
+            true,
+          migradoEm:
+            serverTimestamp(),
+          criadoEm:
+            serverTimestamp(),
+          atualizadoEm:
+            serverTimestamp()
+        },
+        {
+          merge: true
+        }
+      );
+
+      migrados += 1;
+    }
+
+    localStorage.setItem(
+      MIGRACAO_LANCAMENTOS_KEY,
+      "true"
+    );
+
+    if (migrados > 0) {
+      console.info(
+        `${migrados} lançamento(s) local(is) migrado(s) para o Firebase.`
+      );
+
+      toast(
+        `${migrados} lançamento(s) antigo(s) sincronizado(s)`
+      );
+    }
+  } catch (erro) {
+    console.error(
+      "Erro ao migrar lançamentos locais para o Firebase:",
+      erro
+    );
+
+    window.CampanhaUI?.alert?.(
+      "Não foi possível migrar os lançamentos que estavam neste navegador. Eles não foram apagados e uma nova tentativa será feita depois."
+    );
+  } finally {
+    migracaoLancamentosEmAndamento =
+      false;
+  }
+}
+
+function iniciarLancamentosTempoReal() {
+  onSnapshot(
+    lancamentosRef,
+
+    snapshot => {
+      db.lancamentos =
+        snapshot.docs
+          .map(
+            normalizarLancamentoFirebase
+          )
+          .sort(
+            (a, b) => {
+              const competencia =
+                String(
+                  b.competencia ||
+                  ""
+                ).localeCompare(
+                  String(
+                    a.competencia ||
+                    ""
+                  )
+                );
+
+              if (competencia !== 0) {
+                return competencia;
+              }
+
+              return String(
+                a.nome ||
+                a.funcionarioId ||
+                ""
+              ).localeCompare(
+                String(
+                  b.nome ||
+                  b.funcionarioId ||
+                  ""
+                ),
+                "pt-BR"
+              );
+            }
+          );
+
+      lancamentosFirebaseCarregados =
+        true;
+
+      salvarBackupLocal();
+      renderTudo();
+
+      console.info(
+        `${db.lancamentos.length} lançamento(s) dos Produtivos carregado(s) do Firebase.`
+      );
+    },
+
+    erro => {
+      console.error(
+        "Erro ao carregar lançamentos dos Produtivos no Firebase:",
+        erro
+      );
+
+      window.CampanhaUI?.alert?.(
+        "Não foi possível sincronizar os lançamentos dos Produtivos. Verifique a conexão e as regras do Firestore."
+      );
+    }
+  );
+}
+
+async function salvarLancamentoFirebase(
+  item
+) {
+  const id =
+    String(
+      item.id ||
+      uid()
+    );
+
+  const referencia =
+    doc(
+      firestore,
+      "produtivos_lancamentos",
+      id
+    );
+
+  const existente =
+    db.lancamentos.find(
+      lancamento =>
+        lancamento.id === id
+    );
+
+  const payload = {
+    ...item,
+    idLocal:
+      item.idLocal ||
+      id,
+    atualizadoEm:
+      serverTimestamp()
+  };
+
+  if (!existente) {
+    payload.criadoEm =
+      serverTimestamp();
+  }
+
+  await setDoc(
+    referencia,
+    payload,
+    {
+      merge: true
+    }
+  );
+
+  return id;
 }
 
 function bonusMecanicoProdutividade(
@@ -3440,18 +3738,28 @@ window.excluirLancamento =
       return;
     }
 
-    db.lancamentos =
-      db.lancamentos.filter(
-        lancamento =>
-          lancamento.id !== id
+    try {
+      await deleteDoc(
+        doc(
+          firestore,
+          "produtivos_lancamentos",
+          id
+        )
       );
 
-    salvarDB();
-    renderTudo();
+      toast(
+        "Lançamento excluído"
+      );
+    } catch (erro) {
+      console.error(
+        "Erro ao excluir lançamento no Firebase:",
+        erro
+      );
 
-    toast(
-      "Lançamento excluído"
-    );
+      await window.CampanhaUI.alert(
+        "Não foi possível excluir o lançamento. Verifique a conexão e tente novamente."
+      );
+    }
   };
 
 
@@ -4963,40 +5271,37 @@ function configurarEventos() {
     )
     .addEventListener(
       "submit",
-      evento => {
+      async evento => {
         evento.preventDefault();
 
+        const botaoSalvar =
+          evento.submitter ||
+          evento.target.querySelector(
+            'button[type="submit"]'
+          );
+
         try {
+          if (botaoSalvar) {
+            botaoSalvar.disabled =
+              true;
+
+            botaoSalvar.textContent =
+              "Salvando...";
+          }
+
           const item =
             coletarLancamentoFormulario();
 
-          const indice =
-            db.lancamentos.findIndex(
-              lancamento =>
-                lancamento.id ===
-                item.id
-            );
-
-          if (indice >= 0) {
-            db.lancamentos[
-              indice
-            ] = item;
-          } else {
-            db.lancamentos.push(
-              item
-            );
-          }
-
-          salvarDB();
+          await salvarLancamentoFirebase(
+            item
+          );
 
           evento.target
             .closest("dialog")
             .close();
 
-          renderTudo();
-
           toast(
-            "Lançamento salvo"
+            "Lançamento salvo e sincronizado"
           );
         } catch (erro) {
           console.error(
@@ -5004,7 +5309,18 @@ function configurarEventos() {
             erro
           );
 
-          window.CampanhaUI.alert(erro.message);
+          await window.CampanhaUI.alert(
+            erro.message ||
+            "Não foi possível salvar o lançamento no Firebase."
+          );
+        } finally {
+          if (botaoSalvar) {
+            botaoSalvar.disabled =
+              false;
+
+            botaoSalvar.textContent =
+              "Salvar lançamento";
+          }
         }
       }
     );
@@ -5090,9 +5406,9 @@ function configurarEventos() {
       async () => {
         const confirmou =
           await window.CampanhaUI.deleteConfirm({
-            titulo: "Limpar lançamentos locais?",
+            titulo: "Limpar todos os lançamentos compartilhados?",
             mensagem:
-              "Todos os lançamentos salvos somente neste navegador serão apagados. Esta ação não poderá ser desfeita.",
+              "Todos os lançamentos dos Produtivos salvos no Firebase serão apagados para todos os usuários. Esta ação não poderá ser desfeita.",
             textoConfirmar: "Limpar lançamentos",
             textoCancelar: "Cancelar"
           });
@@ -5101,26 +5417,63 @@ function configurarEventos() {
           return;
         }
 
-        db.lancamentos = [];
+        try {
+          const snapshot =
+            await getDocs(
+              lancamentosRef
+            );
 
-        salvarDB();
-        renderTudo();
+          for (
+            const documento
+            of snapshot.docs
+          ) {
+            await deleteDoc(
+              documento.ref
+            );
+          }
 
-        toast(
-          "Lançamentos locais apagados"
-        );
+          localStorage.removeItem(
+            DB_KEY
+          );
+
+          localStorage.setItem(
+            MIGRACAO_LANCAMENTOS_KEY,
+            "true"
+          );
+
+          toast(
+            "Lançamentos compartilhados apagados"
+          );
+        } catch (erro) {
+          console.error(
+            "Erro ao limpar lançamentos compartilhados:",
+            erro
+          );
+
+          await window.CampanhaUI.alert(
+            "Não foi possível limpar os lançamentos no Firebase."
+          );
+        }
       }
     );
 }
 
 document.addEventListener(
   "DOMContentLoaded",
-  () => {
+  async () => {
     iniciarSelects();
     garantirControlesHistorico();
     configurarEventos();
     atualizarNavegacaoHistorico();
     renderTudo();
+
     iniciarFuncionariosTempoReal();
+    iniciarLancamentosTempoReal();
+
+    /*
+     * Migra uma única vez os lançamentos antigos que estavam
+     * somente neste navegador. A cópia local não é apagada.
+     */
+    await migrarLancamentosLocaisParaFirebase();
   }
 );
