@@ -487,8 +487,13 @@ let migracaoLancamentosEmAndamento =
 const SENHA_EXCLUSAO_LANCAMENTO =
   "123321";
 
+/*
+ * O onSnapshot já mantém os lançamentos em tempo real.
+ * A antiga consulta completa a cada 15 segundos multiplicava
+ * as leituras por usuário e levou o projeto Spark ao limite diário.
+ */
 const INTERVALO_ATUALIZACAO_FIREBASE =
-  15000;
+  300000;
 
 let intervaloAtualizacaoLancamentos =
   null;
@@ -1285,10 +1290,16 @@ async function atualizarLancamentosFirebaseAgora(
 }
 
 function iniciarLancamentosTempoReal() {
+  let listenerComFalha =
+    false;
+
   onSnapshot(
     lancamentosRef,
 
     snapshot => {
+      listenerComFalha =
+        false;
+
       aplicarSnapshotLancamentos(
         snapshot,
         "tempo real"
@@ -1296,18 +1307,24 @@ function iniciarLancamentosTempoReal() {
     },
 
     erro => {
+      listenerComFalha =
+        true;
+
       console.error(
         "Erro no listener em tempo real dos lançamentos:",
         erro
       );
 
       /*
-       * Algumas redes corporativas interrompem o canal permanente.
-       * O sistema mantém uma verificação leve e periódica para que
-       * os dados apareçam sem o usuário precisar pressionar F5.
+       * Só usa getDocs como contingência quando o listener realmente
+       * falha. Não consulta a coleção inteira a cada 15 segundos.
        */
-      atualizarLancamentosFirebaseAgora(
-        "recuperação após falha do listener"
+      window.setTimeout(
+        () =>
+          atualizarLancamentosFirebaseAgora(
+            "recuperação após falha do listener"
+          ),
+        30000
       );
     }
   );
@@ -1320,11 +1337,12 @@ function iniciarLancamentosTempoReal() {
     window.setInterval(
       () => {
         if (
+          listenerComFalha &&
           document.visibilityState ===
-          "visible"
+            "visible"
         ) {
           atualizarLancamentosFirebaseAgora(
-            "verificação periódica"
+            "contingência periódica"
           );
         }
       },
@@ -1332,33 +1350,22 @@ function iniciarLancamentosTempoReal() {
     );
 
   window.addEventListener(
-    "focus",
-    () =>
-      atualizarLancamentosFirebaseAgora(
-        "retorno à janela"
-      )
-  );
-
-  window.addEventListener(
     "online",
-    () =>
-      atualizarLancamentosFirebaseAgora(
-        "conexão restabelecida"
-      )
-  );
-
-  document.addEventListener(
-    "visibilitychange",
     () => {
-      if (
-        document.visibilityState ===
-        "visible"
-      ) {
+      if (listenerComFalha) {
         atualizarLancamentosFirebaseAgora(
-          "retorno à aba"
+          "conexão restabelecida"
         );
       }
     }
+  );
+
+  window.addEventListener(
+    "produtivos:solicitar-atualizacao",
+    () =>
+      atualizarLancamentosFirebaseAgora(
+        "após importação em lote"
+      )
   );
 }
 
@@ -1408,6 +1415,98 @@ async function salvarLancamentoFirebase(
 
   return id;
 }
+
+/*
+ * API OFICIAL DOS LANÇAMENTOS DOS PRODUTIVOS
+ *
+ * O lançamento manual e a importação em lote passam obrigatoriamente
+ * por salvarLancamentoFirebase(). Assim não existem mais dois formatos
+ * diferentes de documento no Firestore.
+ */
+async function salvarMuitosLancamentosFirebase(
+  itens = [],
+  opcoes = {}
+) {
+  const lista =
+    Array.isArray(itens)
+      ? itens
+      : [];
+
+  const tamanhoGrupo =
+    Math.max(
+      1,
+      Math.min(
+        Number(
+          opcoes.tamanhoGrupo
+        ) || 15,
+        30
+      )
+    );
+
+  const ids = [];
+
+  for (
+    let inicio = 0;
+    inicio < lista.length;
+    inicio += tamanhoGrupo
+  ) {
+    const grupo =
+      lista.slice(
+        inicio,
+        inicio + tamanhoGrupo
+      );
+
+    const idsGrupo =
+      await Promise.all(
+        grupo.map(
+          item =>
+            salvarLancamentoFirebase(
+              item
+            )
+        )
+      );
+
+    ids.push(
+      ...idsGrupo
+    );
+
+    if (
+      typeof opcoes.onProgress ===
+      "function"
+    ) {
+      opcoes.onProgress({
+        processados:
+          Math.min(
+            inicio +
+              grupo.length,
+            lista.length
+          ),
+        total:
+          lista.length
+      });
+    }
+  }
+
+  return ids;
+}
+
+window.produtivosLancamentos = {
+  ...(window.produtivosLancamentos || {}),
+
+  salvar:
+    salvarLancamentoFirebase,
+
+  salvarMuitos:
+    salvarMuitosLancamentosFirebase,
+
+  obterTodos:
+    () => [
+      ...db.lancamentos
+    ],
+
+  versao:
+    "2026.08.04-FLUXO-UNICO-01"
+};
 
 function bonusMecanicoProdutividade(
   valor
@@ -6536,9 +6635,10 @@ function configurarEventos() {
           const item =
             coletarLancamentoFormulario();
 
-          await salvarLancamentoFirebase(
-            item
-          );
+          await window.produtivosLancamentos
+            .salvar(
+              item
+            );
 
           evento.target
             .closest("dialog")
