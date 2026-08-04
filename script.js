@@ -1505,7 +1505,7 @@ window.produtivosLancamentos = {
     ],
 
   versao:
-    "2026.08.04-FLUXO-UNICO-01"
+    "2026.08.04-POLITICAS-GESTORES-02"
 };
 
 function bonusMecanicoProdutividade(
@@ -1681,6 +1681,10 @@ function calcularResultadoEquipe(
       somaHorasVendidas +=
         horasVendidas;
 
+      /*
+       * Chefe e Líder recebem pelas faixas de faturamento
+       * independentemente da habilitação individual do mecânico.
+       */
       if (faturamento >= 60000) {
         qtdAcima60 += 1;
       } else if (
@@ -1798,18 +1802,17 @@ function calcularGestorAutomatico(
     funcionario.cargo ===
     "Controlador de Produtividade"
   ) {
-    if (
-      equipe.produtividadeEquipe >= 70 &&
-      equipe.eficienciaEquipe >= 80
-    ) {
-      bonusBruto =
-        bonusControladorProd(
-          equipe.produtividadeEquipe
-        ) +
-        bonusControladorEfic(
-          equipe.eficienciaEquipe
-        );
-    }
+    /*
+     * Produtividade e eficiência são KPIs independentes.
+     * Cada indicador atingido gera sua própria premiação.
+     */
+    bonusBruto =
+      bonusControladorProd(
+        equipe.produtividadeEquipe
+      ) +
+      bonusControladorEfic(
+        equipe.eficienciaEquipe
+      );
   }
 
   return {
@@ -1883,16 +1886,31 @@ function calcularGestorAutomatico(
       "Controlador de Produtividade"
         ? (
             bonusBruto > 0
-              ? "Apuração automática pelos indicadores consolidados de produtividade e eficiência da equipe"
+              ? (
+                  bonusControladorProd(
+                    equipe.produtividadeEquipe
+                  ) > 0 &&
+                  bonusControladorEfic(
+                    equipe.eficienciaEquipe
+                  ) > 0
+                    ? "Produtividade e eficiência da equipe premiadas de forma independente"
+                    : (
+                        bonusControladorProd(
+                          equipe.produtividadeEquipe
+                        ) > 0
+                          ? "Premiação gerada somente pela produtividade consolidada da equipe"
+                          : "Premiação gerada somente pela eficiência consolidada da equipe"
+                      )
+                )
               : (
                   equipe.totalMecanicos > 0
-                    ? "Indicadores consolidados da equipe abaixo das metas mínimas de 70% e 80%"
+                    ? "Nenhum dos dois KPIs atingiu a faixa mínima de premiação"
                     : "Nenhum Mecânico Produtivo lançado para calcular os indicadores da equipe"
                 )
           )
         : (
             bonusBruto > 0
-              ? "Apuração automática baseada no faturamento e nos indicadores consolidados da equipe"
+              ? "Apuração automática baseada exclusivamente no faturamento dos Mecânicos Produtivos, independentemente da habilitação individual"
               : (
                   equipe.totalMecanicos > 0
                     ? "A equipe possui lançamentos, mas nenhum mecânico atingiu faturamento mínimo de R$ 50 mil"
@@ -2086,26 +2104,46 @@ function calcularLancamento(
     ) {
       base.motivo =
         "Nenhum Mecânico Produtivo lançado para calcular os indicadores da equipe";
-    } else if (
-      base.produtividade >= 70 &&
-      base.eficiencia >= 80
-    ) {
-      base.bonusBruto =
+    } else {
+      const bonusProdutividade =
         bonusControladorProd(
           base.produtividade
-        ) +
+        );
+
+      const bonusEficiencia =
         bonusControladorEfic(
           base.eficiencia
         );
 
-      base.status =
-        "HABILITADO";
+      base.bonusBruto =
+        bonusProdutividade +
+        bonusEficiencia;
 
-      base.motivo =
-        "Meta atingida pelos indicadores consolidados da equipe";
-    } else {
-      base.motivo =
-        "Indicadores consolidados da equipe abaixo das métricas mínimas";
+      if (
+        base.bonusBruto > 0
+      ) {
+        base.status =
+          "HABILITADO";
+
+        if (
+          bonusProdutividade > 0 &&
+          bonusEficiencia > 0
+        ) {
+          base.motivo =
+            "Produtividade e eficiência premiadas de forma independente";
+        } else if (
+          bonusProdutividade > 0
+        ) {
+          base.motivo =
+            "Premiação gerada somente pela produtividade";
+        } else {
+          base.motivo =
+            "Premiação gerada somente pela eficiência";
+        }
+      } else {
+        base.motivo =
+          "Nenhum dos dois KPIs atingiu a faixa mínima de premiação";
+      }
     }
   }
 
@@ -2666,11 +2704,6 @@ function explicacaoLancamentoAutomatico(
       lancamento.totalMecanicos
     );
 
-  const habilitados =
-    numero(
-      lancamento.mecanicosHabilitados
-    );
-
   if (
     lancamento.cargo ===
     "Chefe de Oficina"
@@ -2682,15 +2715,19 @@ function explicacaoLancamentoAutomatico(
         </strong>
 
         <span>
-          Bônus formado pelos Mecânicos Produtivos
-          que atingiram as faixas de faturamento
-          de R$ 50 mil e R$ 60 mil.
+          Bônus formado exclusivamente pelas faixas
+          de faturamento dos Mecânicos Produtivos:
+          R$ 50 mil e R$ 60 mil.
+        </span>
+
+        <span>
+          A habilitação individual do mecânico não interfere
+          no pagamento do Chefe de Oficina.
         </span>
 
         <span>
           Equipe considerada:
-          ${totalMecanicos} mecânico(s),
-          ${habilitados} habilitado(s).
+          ${totalMecanicos} mecânico(s).
         </span>
       </div>
     `;
@@ -2712,9 +2749,14 @@ function explicacaoLancamentoAutomatico(
         </span>
 
         <span>
+          O cálculo considera o faturamento de todos
+          os Mecânicos Produtivos, mesmo quando não
+          estiverem habilitados individualmente.
+        </span>
+
+        <span>
           Equipe considerada:
-          ${totalMecanicos} mecânico(s),
-          ${habilitados} habilitado(s).
+          ${totalMecanicos} mecânico(s).
         </span>
       </div>
     `;
@@ -2731,9 +2773,14 @@ function explicacaoLancamentoAutomatico(
         </strong>
 
         <span>
-          Bônus calculado pela produtividade e
-          eficiência consolidadas dos Mecânicos
-          Produtivos da filial.
+          Produtividade e eficiência são avaliadas
+          como KPIs independentes.
+        </span>
+
+        <span>
+          Ao atingir apenas um indicador, recebe
+          somente a premiação daquele indicador.
+          Ao atingir os dois, recebe a soma.
         </span>
 
         <span>
@@ -3043,11 +3090,9 @@ function indicadoresTexto(
           ${numero(
             lancamento.totalMecanicos
           )}
-          mecânico(s) avaliado(s),
-          ${numero(
-            lancamento.mecanicosHabilitados
-          )}
-          habilitado(s)
+          mecânico(s) com faturamento analisado.
+          A habilitação individual não interfere
+          no bônus do Chefe ou do Líder.
         </small>
       </div>
     `;
