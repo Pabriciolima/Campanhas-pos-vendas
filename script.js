@@ -663,6 +663,9 @@ function funcionarioPorId(id) {
   );
 }
 
+window.funcionarioPorId =
+  funcionarioPorId;
+
 function cargoAutomatico(cargo) {
   return CARGOS_AUTOMATICOS.includes(
     String(cargo || "").trim()
@@ -2429,6 +2432,9 @@ function renderLancamentos() {
                   ? "lancamento-automatico"
                   : ""
               }"
+              data-evidencia-competencia="${lancamento.competencia || ""}"
+              data-evidencia-filial="${lancamento.filial || ""}"
+              data-evidencia-dn="${lancamento.dn || ""}"
             >
               <td>
                 ${lancamento.competencia}
@@ -2497,17 +2503,28 @@ function renderLancamentos() {
               </td>
 
               <td>
-                ${
-                  lancamento.automatico
-                    ? `
-                      <span
-                        class="lancamento-auto-sem-acao"
-                      >
-                        Gerado pelo sistema
-                      </span>
-                    `
-                    : `
-                      <div class="actions">
+                <div class="actions">
+                  <button
+                    type="button"
+                    class="mini-btn evidence-view-btn"
+                    data-evidencia-competencia="${lancamento.competencia || ""}"
+                    data-evidencia-filial="${lancamento.filial || ""}"
+                    data-evidencia-dn="${lancamento.dn || ""}"
+                    title="Visualizar evidências da filial"
+                  >
+                    📷 Evidências
+                  </button>
+
+                  ${
+                    lancamento.automatico
+                      ? `
+                        <span
+                          class="lancamento-auto-sem-acao"
+                        >
+                          Gerado pelo sistema
+                        </span>
+                      `
+                      : `
                         <button
                           class="mini-btn"
                           onclick="editarLancamento('${lancamento.id}')"
@@ -2521,9 +2538,9 @@ function renderLancamentos() {
                         >
                           Excluir
                         </button>
-                      </div>
-                    `
-                }
+                      `
+                  }
+                </div>
               </td>
             </tr>
           `
@@ -4769,9 +4786,14 @@ function abrirLancamento() {
     )
     .reset();
 
+  /*
+   * O lançamento recebe o ID antes do upload.
+   * Assim a evidência consegue registrar qual colaborador
+   * é o "matriz" da filial/competência.
+   */
   document.querySelector(
     "#lancamentoId"
-  ).value = "";
+  ).value = uid();
 
   document.querySelector(
     "#lancamentoCompetencia"
@@ -4793,6 +4815,13 @@ function abrirLancamento() {
       "#modalLancamento"
     )
     .showModal();
+
+  window.setTimeout(
+    () =>
+      window.evidenciasProdutivos
+        ?.atualizarContexto?.(),
+    80
+  );
 }
 
 window.editarLancamento =
@@ -4840,6 +4869,13 @@ window.editarLancamento =
         "#modalLancamento"
       )
       .showModal();
+
+    window.setTimeout(
+      () =>
+        window.evidenciasProdutivos
+          ?.atualizarContexto?.(),
+      80
+    );
   };
 
 window.excluirLancamento =
@@ -4865,6 +4901,60 @@ window.excluirLancamento =
     }
 
     try {
+      const lancamentoExcluido =
+        db.lancamentos.find(
+          item => item.id === id
+        );
+
+      if (!lancamentoExcluido) {
+        throw new Error(
+          "Lançamento não encontrado para exclusão."
+        );
+      }
+
+      const demaisLancamentosDaCasa =
+        db.lancamentos
+          .filter(
+            item =>
+              item.id !== id &&
+              item.competencia ===
+                lancamentoExcluido.competencia &&
+              item.filial ===
+                lancamentoExcluido.filial
+          )
+          .sort(
+            (a, b) =>
+              String(
+                a.nome || ""
+              ).localeCompare(
+                String(
+                  b.nome || ""
+                ),
+                "pt-BR"
+              )
+          );
+
+      /*
+       * Regras do anexo matriz:
+       * - excluir não matriz: evidência permanece;
+       * - excluir matriz com outros lançamentos: o próximo
+       *   colaborador assume a matriz;
+       * - excluir o último lançamento: evidência é removida.
+       */
+      if (
+        window.evidenciasProdutivos
+          ?.antesDeExcluirLancamento
+      ) {
+        await window.evidenciasProdutivos
+          .antesDeExcluirLancamento({
+            lancamento:
+              lancamentoExcluido,
+
+            restantes:
+              demaisLancamentosDaCasa
+          });
+      }
+
       await deleteDoc(
         doc(
           firestore,
@@ -4883,6 +4973,7 @@ window.excluirLancamento =
       );
 
       await window.CampanhaUI.alert(
+        erro.message ||
         "Não foi possível excluir o lançamento. Verifique a conexão e tente novamente."
       );
     }
@@ -5450,7 +5541,10 @@ async function exportarExcel() {
     ) {
       await window.evidenciasProdutivos.anexarAoExcel(
         livro,
-        competenciaEvidencias
+        competenciaEvidencias,
+        {
+          resultados
+        }
       );
     }
 
@@ -5926,7 +6020,10 @@ async function exportarPdf() {
     ) {
       await window.evidenciasProdutivos.anexarAoPdf(
         documento,
-        competenciaEvidencias
+        competenciaEvidencias,
+        {
+          resultados
+        }
       );
     }
 
@@ -6216,7 +6313,16 @@ function configurarEventos() {
     )
     .addEventListener(
       "change",
-      atualizarFuncionariosLancamento
+      () => {
+        atualizarFuncionariosLancamento();
+
+        window.setTimeout(
+          () =>
+            window.evidenciasProdutivos
+              ?.atualizarContexto?.(),
+          30
+        );
+      }
     );
 
   document
@@ -6225,8 +6331,16 @@ function configurarEventos() {
     )
     .addEventListener(
       "change",
-      () =>
-        renderCamposDinamicos()
+      () => {
+        renderCamposDinamicos();
+
+        window.setTimeout(
+          () =>
+            window.evidenciasProdutivos
+              ?.atualizarContexto?.(),
+          30
+        );
+      }
     );
 
   document
