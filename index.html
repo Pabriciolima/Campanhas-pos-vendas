@@ -54,6 +54,221 @@
       }
     }
   </style>
+
+  <style id="politicas-valores-css">
+    #politicas .policy-grid-values {
+      align-items: stretch;
+      gap: 20px;
+    }
+
+    #politicas .policy-card-values {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    #politicas .policy-card-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    #politicas .policy-card-heading h2 {
+      margin: 3px 0 0;
+    }
+
+    #politicas .policy-max-value {
+      flex: 0 0 auto;
+      padding: 7px 10px;
+      border: 1px solid #b9dfd1;
+      border-radius: 999px;
+      color: #087354;
+      background: #e9f7f1;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    #politicas .policy-formulas,
+    #politicas .policy-intro {
+      color: #506575;
+      line-height: 1.55;
+    }
+
+    #politicas .policy-formulas p {
+      margin: 0 0 7px;
+    }
+
+    #politicas .policy-values-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    #politicas .policy-value-block {
+      overflow: hidden;
+      border: 1px solid #dce6ec;
+      border-radius: 14px;
+      background: #fbfcfd;
+    }
+
+    #politicas .policy-value-block-full {
+      width: 100%;
+    }
+
+    #politicas .policy-value-block h3 {
+      margin: 0;
+      padding: 11px 12px;
+      color: #12324a;
+      background: #edf3f6;
+      font-size: 13px;
+    }
+
+    #politicas .policy-tier {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-top: 1px solid #e6edf1;
+      color: #536675;
+      font-size: 12px;
+    }
+
+    #politicas .policy-tier strong {
+      color: #0a2b44;
+      white-space: nowrap;
+    }
+
+    #politicas .policy-tier-highlight {
+      color: #087354;
+      background: #eff9f5;
+    }
+
+    #politicas .policy-tier-highlight strong {
+      color: #087354;
+    }
+
+    #politicas .policy-total-box {
+      display: grid;
+      gap: 4px;
+      padding: 14px;
+      border: 1px solid #b9dfd1;
+      border-radius: 14px;
+      background: #eff9f5;
+    }
+
+    #politicas .policy-total-box span {
+      color: #607380;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    #politicas .policy-total-box strong {
+      color: #087354;
+      font-size: 16px;
+    }
+
+    #politicas .policy-total-box small {
+      color: #536675;
+      line-height: 1.4;
+    }
+
+    #politicas .policy-role-payment {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    #politicas .policy-role-payment > div {
+      display: grid;
+      gap: 5px;
+      padding: 14px;
+      border: 1px solid #dce6ec;
+      border-radius: 14px;
+      background: #fbfcfd;
+    }
+
+    #politicas .policy-role-payment span {
+      color: #607380;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    #politicas .policy-role-payment strong {
+      color: #0a2b44;
+    }
+
+    #politicas .policy-role-payment small {
+      color: #607380;
+      line-height: 1.4;
+    }
+
+    #politicas .policy-example {
+      padding: 12px 14px;
+      border-left: 4px solid #0a7d5b;
+      border-radius: 8px;
+      color: #536675;
+      background: #f4f9f7;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    #politicas .policy-alert {
+      margin-top: auto;
+      padding: 14px 16px;
+      border-radius: 14px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    #politicas .policy-alert strong {
+      display: block;
+      margin-bottom: 7px;
+    }
+
+    #politicas .policy-alert ul {
+      margin: 0;
+      padding-left: 19px;
+    }
+
+    #politicas .policy-alert li + li {
+      margin-top: 5px;
+    }
+
+    #politicas .policy-alert-danger {
+      border: 1px solid #f2b9b4;
+      color: #a52820;
+      background: #fff1ef;
+    }
+
+    #politicas .policy-alert-warning {
+      border: 1px solid #f0cd82;
+      color: #795100;
+      background: #fff7e5;
+    }
+
+    @media (max-width: 1150px) {
+      #politicas .policy-values-grid,
+      #politicas .policy-role-payment {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      #politicas .policy-card-heading {
+        flex-direction: column;
+      }
+
+      #politicas .policy-max-value {
+        white-space: normal;
+      }
+    }
+  </style>
+
 </head>
 
 <body>
@@ -449,21 +664,145 @@
     </section>
 
     <section id="politicas" class="view">
-      <div class="policy-grid">
-        <article class="panel policy-card">
-          <h2>Mecânico produtivo</h2>
-          <p>Produtividade = horas trabalhadas ÷ horas disponíveis.</p>
-          <p>Eficiência = horas vendidas ÷ horas trabalhadas.</p>
+      <div class="policy-grid policy-grid-values">
+        <article class="panel policy-card policy-card-values">
+          <div class="policy-card-heading">
+            <div>
+              <p class="eyebrow">Apuração individual</p>
+              <h2>Mecânico produtivo</h2>
+            </div>
+            <span class="policy-max-value">Até R$ 2.000,00</span>
+          </div>
+
+          <div class="policy-formulas">
+            <p><strong>Produtividade</strong> = horas trabalhadas ÷ horas disponíveis.</p>
+            <p><strong>Eficiência</strong> = horas vendidas ÷ horas trabalhadas.</p>
+          </div>
+
+          <div class="policy-values-grid">
+            <div class="policy-value-block">
+              <h3>Bônus por produtividade</h3>
+              <div class="policy-tier"><span>70% a 79,99%</span><strong>R$ 600,00</strong></div>
+              <div class="policy-tier"><span>80% a 89,99%</span><strong>R$ 690,00</strong></div>
+              <div class="policy-tier"><span>90% a 99,99%</span><strong>R$ 790,00</strong></div>
+              <div class="policy-tier policy-tier-highlight"><span>100% ou mais</span><strong>R$ 1.000,00</strong></div>
+            </div>
+
+            <div class="policy-value-block">
+              <h3>Bônus por eficiência</h3>
+              <div class="policy-tier"><span>80% a 89,99%</span><strong>R$ 690,00</strong></div>
+              <div class="policy-tier"><span>90% a 99,99%</span><strong>R$ 790,00</strong></div>
+              <div class="policy-tier policy-tier-highlight"><span>100% ou mais</span><strong>R$ 1.000,00</strong></div>
+            </div>
+          </div>
+
+          <div class="policy-total-box">
+            <span>Pagamento da campanha</span>
+            <strong>Produtividade + eficiência</strong>
+            <small>O colaborador precisa atingir simultaneamente os mínimos de 70% e 80%.</small>
+          </div>
+
+          <div class="policy-alert policy-alert-danger">
+            <strong>Penalidades e bloqueios</strong>
+            <ul>
+              <li>Treinamento pendente: desconto de 50% sobre o bônus apurado.</li>
+              <li>Retrabalho, imperícia, prejuízo ou O.S. interna: inabilitação total na competência.</li>
+              <li>As horas vendidas precisam representar pelo menos 70% das horas disponíveis.</li>
+            </ul>
+          </div>
         </article>
-        <article class="panel policy-card">
-          <h2>Chefe e líder</h2>
-          <p>
-            Apuração automática conforme faturamento dos mecânicos da filial.
+
+        <article class="panel policy-card policy-card-values">
+          <div class="policy-card-heading">
+            <div>
+              <p class="eyebrow">Apuração da equipe</p>
+              <h2>Chefe e líder</h2>
+            </div>
+            <span class="policy-max-value">Valor variável</span>
+          </div>
+
+          <p class="policy-intro">
+            Apuração automática conforme o faturamento individual dos Mecânicos Produtivos elegíveis da filial.
           </p>
+
+          <div class="policy-value-block policy-value-block-full">
+            <h3>Valor gerado por mecânico</h3>
+            <div class="policy-tier"><span>De R$ 50.000,00 a R$ 59.999,99</span><strong>R$ 300,00</strong></div>
+            <div class="policy-tier policy-tier-highlight"><span>R$ 60.000,00 ou mais</span><strong>R$ 500,00</strong></div>
+          </div>
+
+          <div class="policy-role-payment">
+            <div>
+              <span>Chefe de Oficina</span>
+              <strong>100% do valor apurado</strong>
+              <small>Soma dos valores gerados pelos mecânicos elegíveis da filial.</small>
+            </div>
+            <div>
+              <span>Mecânico Líder</span>
+              <strong>50% do valor do Chefe</strong>
+              <small>Recebe metade do total calculado para o Chefe de Oficina.</small>
+            </div>
+          </div>
+
+          <div class="policy-example">
+            <strong>Exemplo:</strong>
+            dois mecânicos acima de R$ 60 mil geram R$ 1.000,00 para o Chefe e R$ 500,00 para o Líder.
+          </div>
+
+          <div class="policy-alert policy-alert-warning">
+            <strong>Penalidades e bloqueios</strong>
+            <ul>
+              <li>Treinamento individual pendente do Chefe ou Líder: inabilitação.</li>
+              <li>Equipe com menos de 95% dos treinamentos em dia: desconto de 50%.</li>
+              <li>Entram no cálculo apenas mecânicos elegíveis da mesma filial e competência.</li>
+            </ul>
+          </div>
         </article>
-        <article class="panel policy-card">
-          <h2>Controlador</h2>
-          <p>Bonificação conforme produtividade e eficiência.</p>
+
+        <article class="panel policy-card policy-card-values">
+          <div class="policy-card-heading">
+            <div>
+              <p class="eyebrow">Indicadores consolidados</p>
+              <h2>Controlador</h2>
+            </div>
+            <span class="policy-max-value">Até R$ 1.000,00</span>
+          </div>
+
+          <p class="policy-intro">
+            Bonificação calculada pela produtividade e eficiência consolidadas dos Mecânicos Produtivos da filial.
+          </p>
+
+          <div class="policy-values-grid">
+            <div class="policy-value-block">
+              <h3>Bônus por produtividade</h3>
+              <div class="policy-tier"><span>70% a 79,99%</span><strong>R$ 100,00</strong></div>
+              <div class="policy-tier"><span>80% a 89,99%</span><strong>R$ 300,00</strong></div>
+              <div class="policy-tier policy-tier-highlight"><span>90% ou mais</span><strong>R$ 500,00</strong></div>
+            </div>
+
+            <div class="policy-value-block">
+              <h3>Bônus por eficiência</h3>
+              <div class="policy-tier"><span>80% a 89,99%</span><strong>R$ 100,00</strong></div>
+              <div class="policy-tier"><span>90% a 99,99%</span><strong>R$ 300,00</strong></div>
+              <div class="policy-tier policy-tier-highlight"><span>100% ou mais</span><strong>R$ 500,00</strong></div>
+            </div>
+          </div>
+
+          <div class="policy-total-box">
+            <span>Pagamento da campanha</span>
+            <strong>Soma dos dois indicadores</strong>
+            <small>Exemplo: produtividade de 90% + eficiência de 100% = R$ 1.000,00.</small>
+          </div>
+
+          <div class="policy-alert policy-alert-warning">
+            <strong>Condições da apuração</strong>
+            <ul>
+              <li>Produtividade mínima: 70%.</li>
+              <li>Eficiência mínima: 80%.</li>
+              <li>Se um dos mínimos não for atingido, o colaborador não recebe a bonificação.</li>
+              <li>São considerados apenas os lançamentos da mesma filial e competência.</li>
+            </ul>
+          </div>
         </article>
       </div>
     </section>
@@ -860,7 +1199,7 @@
   <script type="module" src="./evidencias-pix.js?v=20260730-03"></script>
   <script src="./module-switcher.js?v=20260715-07"></script>
   <script src="./isolamento-competencias.js?v=20260724-02"></script>
-  <script src="./politicas-penalidades.js?v=20260717-01"></script>
+  <script src="./politicas-penalidades.js?v=20260804-02"></script>
   <script type="module" src="./bloqueio-lancamentos.js?v=20260717-01"></script>
   <script src="./dashboard-pix-gestor-funcional.js?v=20260721-04"></script>
   <script type="module" src="./compras-module.js?v=20260723-11"></script>

@@ -1,3 +1,18 @@
+/* =========================================================
+   PENALIDADES NAS POLÍTICAS
+   Campanha dos Produtivos + Pix do Presidente
+
+   Salve como:
+   politicas-penalidades.js
+
+   Este arquivo acrescenta penalidades apenas quando
+   o cartão ainda não possui um bloco próprio de condições.
+   Evita duplicidade na aba de Políticas dos Produtivos.
+
+   Não altera cálculos, Firebase, lançamentos, apurações
+   ou exportações.
+========================================================= */
+
 (() => {
   "use strict";
 
@@ -196,7 +211,20 @@
     }
 
     [...view.querySelectorAll(cardSelector)].forEach(card => {
-      if (card.querySelector(".policy-penalty-box")) {
+      /*
+       * A aba de Políticas dos Produtivos agora já possui
+       * os blocos completos de valores, condições e penalidades
+       * diretamente no HTML.
+       *
+       * Portanto, não devemos anexar novamente o bloco antigo.
+       * A regra continua funcionando normalmente para as políticas
+       * do Pix e para cartões antigos que ainda não tenham alertas.
+       */
+      if (
+        card.querySelector(
+          ".policy-penalty-box, .policy-alert"
+        )
+      ) {
         return;
       }
 
