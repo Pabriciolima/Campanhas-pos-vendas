@@ -7,6 +7,18 @@ Versão: 2026.07.23-17
 
 CORREÇÕES DESTA VERSÃO
 
+CORREÇÃO CRÍTICA — IMPORTAÇÃO DOS PRODUTIVOS NO FIREBASE
+
+- Corrige o falso sucesso da importação em lote.
+- A versão anterior salvava os Produtivos somente no localStorage.
+- Agora grava na coleção oficial produtivos_lancamentos.
+- Apuração, Visão Geral e Lançamentos passam a receber os dados.
+- Confirma a gravação no Firestore antes de mostrar sucesso.
+- Mantém atualização por colaborador + competência.
+- Usa writeBatch e ID determinístico para evitar duplicidades.
+
+
+
 CORREÇÃO DO BOTÃO CONFIRMAR IMPORTAÇÃO
 
 - O botão não fica mais bloqueado apenas porque algumas linhas têm erro.
@@ -469,6 +481,13 @@ const CONFIG = {
       "#btnImportarRelatorioProdutivos",
     botaoModeloFixo:
       "#btnBaixarModeloRelatorioProdutivos",
+
+    /*
+     * Coleção oficial usada pelo script.js, pela Apuração
+     * e pela Visão Geral dos Produtivos.
+     */
+    lancamentos:
+      "produtivos_lancamentos",
 
     botaoNovo: [
       "#btnNovoLancamento",
@@ -2374,109 +2393,317 @@ async function salvarPixEmLotes() {
   };
 }
 
-function carregarDbProdutivos() {
-  try {
-    return JSON.parse(
-      localStorage.getItem(
-        DB_PRODUTIVOS
-      ) ||
-      '{"lancamentos":[]}'
-    );
-  } catch {
-    return {
-      lancamentos: []
-    };
-  }
-}
-
-function uid() {
-  return crypto.randomUUID
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random()
-        .toString(36)
-        .slice(2)}`;
-}
-
-async function salvarProdutivosLocal() {
+async function salvarProdutivosFirebase() {
   state.progresso =
-    "Salvando lançamentos...";
+    "Consultando lançamentos dos Produtivos...";
   renderizar();
 
-  const db =
-    carregarDbProdutivos();
+  const nomeColecao =
+    CONFIG.produtivos.lancamentos;
 
-  if (!Array.isArray(db.lancamentos)) {
-    db.lancamentos = [];
-  }
+  const referenciaColecao =
+    collection(
+      firestore,
+      nomeColecao
+    );
+
+  /*
+   * CORREÇÃO CRÍTICA:
+   * a versão anterior salvava somente no localStorage.
+   * O restante do sistema lê a coleção produtivos_lancamentos,
+   * por isso o alerta dizia sucesso, mas Apuração e Visão Geral
+   * continuavam vazias.
+   */
+  const snapshotExistentes =
+    await comTimeout(
+      getDocs(
+        referenciaColecao
+      ),
+      TIMEOUT_OPERACAO,
+      "O Firebase demorou para consultar os lançamentos dos Produtivos."
+    );
 
   const mapaExistentes =
-    new Map(
-      db.lancamentos.map(item => [
-        chaveLancamentoProdutivo(item),
-        item
-      ])
-    );
+    new Map();
+
+  snapshotExistentes.docs.forEach(
+    documento => {
+      const item = {
+        id:
+          documento.id,
+        referencia:
+          documento.ref,
+        ...documento.data()
+      };
+
+      const chave =
+        chaveLancamentoProdutivo(
+          item
+        );
+
+      if (
+        !mapaExistentes.has(
+          chave
+        )
+      ) {
+        mapaExistentes.set(
+          chave,
+          item
+        );
+      }
+    }
+  );
+
+  const operacoes = [];
 
   let criados = 0;
   let atualizados = 0;
   let ignorados = 0;
 
-  state.gerados.forEach(registro => {
-    const chave =
-      chaveLancamentoProdutivo(registro);
-
-    const existente =
-      mapaExistentes.get(chave);
-
-    if (
-      existente &&
-      state.estrategia === "novos"
-    ) {
-      ignorados += 1;
-      return;
-    }
-
-    if (existente) {
-      const indice =
-        db.lancamentos.findIndex(
-          item =>
-            item.id === existente.id
+  state.gerados.forEach(
+    registro => {
+      const chave =
+        chaveLancamentoProdutivo(
+          registro
         );
 
-      db.lancamentos[indice] = {
-        ...existente,
+      const existente =
+        mapaExistentes.get(
+          chave
+        );
+
+      if (
+        existente &&
+        state.estrategia ===
+          "novos"
+      ) {
+        ignorados += 1;
+        return;
+      }
+
+      const dados = {
         ...registro,
-        id:
-          existente.id
+
+        competencia:
+          registro.competencia,
+        funcionarioId:
+          registro.funcionarioId,
+        nome:
+          registro.nome,
+        filial:
+          registro.filial,
+        dn:
+          registro.dn || "",
+        cargo:
+          registro.cargo,
+
+        faturamento:
+          numero(
+            registro.faturamento
+          ),
+        horasDisponiveis:
+          numero(
+            registro.horasDisponiveis
+          ),
+        horasTrabalhadas:
+          numero(
+            registro.horasTrabalhadas
+          ),
+        horasVendidas:
+          numero(
+            registro.horasVendidas
+          ),
+
+        treinamentoPendente:
+          Boolean(
+            registro.treinamentoPendente
+          ),
+        retrabalho:
+          Boolean(
+            registro.retrabalho
+          ),
+
+        origemImportacao:
+          registro.origemImportacao ||
+          "RELATORIO SISTEMA",
+        arquivoImportado:
+          registro.arquivoImportado ||
+          state.arquivo?.name ||
+          "",
+
+        atualizadoEm:
+          serverTimestamp()
       };
 
-      atualizados += 1;
-    } else {
-      const novo = {
-        ...registro,
-        id: uid()
-      };
+      if (existente) {
+        operacoes.push({
+          tipo:
+            "update",
+          referencia:
+            existente.referencia,
+          dados
+        });
 
-      db.lancamentos.push(novo);
+        atualizados += 1;
+        return;
+      }
+
+      const idDocumento =
+        gerarIdDocumento(
+          [
+            "produtivo",
+            registro.funcionarioId,
+            registro.competencia
+          ].join("|")
+        );
+
+      const referencia =
+        doc(
+          firestore,
+          nomeColecao,
+          idDocumento
+        );
+
+      operacoes.push({
+        tipo:
+          "set",
+        referencia,
+        dados: {
+          ...dados,
+          criadoEm:
+            serverTimestamp()
+        }
+      });
 
       mapaExistentes.set(
         chave,
-        novo
+        {
+          id:
+            idDocumento,
+          referencia,
+          ...registro
+        }
       );
 
       criados += 1;
     }
-  });
+  );
 
-  localStorage.setItem(
-    DB_PRODUTIVOS,
-    JSON.stringify(db)
+  const lotes =
+    dividirEmLotes(
+      operacoes,
+      TAMANHO_LOTE
+    );
+
+  for (
+    let indice = 0;
+    indice < lotes.length;
+    indice += 1
+  ) {
+    state.progresso =
+      `Salvando Produtivos no Firebase ${indice + 1}/${lotes.length}...`;
+    renderizar();
+
+    const batch =
+      writeBatch(
+        firestore
+      );
+
+    lotes[indice].forEach(
+      operacao => {
+        if (
+          operacao.tipo ===
+          "update"
+        ) {
+          batch.update(
+            operacao.referencia,
+            operacao.dados
+          );
+        } else {
+          batch.set(
+            operacao.referencia,
+            operacao.dados
+          );
+        }
+      }
+    );
+
+    await comTimeout(
+      batch.commit(),
+      TIMEOUT_OPERACAO,
+      "O Firebase demorou para salvar os lançamentos dos Produtivos."
+    );
+  }
+
+  state.progresso =
+    "Confirmando lançamentos no Firebase...";
+  renderizar();
+
+  const snapshotConfirmacao =
+    await comTimeout(
+      getDocs(
+        referenciaColecao
+      ),
+      TIMEOUT_OPERACAO,
+      "O Firebase demorou para confirmar os lançamentos."
+    );
+
+  const chavesConfirmadas =
+    new Set(
+      snapshotConfirmacao.docs.map(
+        documento =>
+          chaveLancamentoProdutivo({
+            id:
+              documento.id,
+            ...documento.data()
+          })
+      )
+    );
+
+  const naoConfirmados =
+    state.gerados.filter(
+      registro =>
+        !chavesConfirmadas.has(
+          chaveLancamentoProdutivo(
+            registro
+          )
+        )
+    );
+
+  if (
+    naoConfirmados.length
+  ) {
+    throw new Error(
+      `${naoConfirmados.length} lançamento(s) não foram confirmados na coleção ${nomeColecao}. O sistema não exibirá um falso sucesso.`
+    );
+  }
+
+  window.dispatchEvent(
+    new CustomEvent(
+      "produtivos:firebase-atualizado",
+      {
+        detail: {
+          colecao:
+            nomeColecao,
+          competencia:
+            state.competencia,
+          criados,
+          atualizados,
+          ignorados
+        }
+      }
+    )
   );
 
   return {
     criados,
     atualizados,
-    ignorados
+    ignorados,
+    confirmados:
+      state.gerados.length -
+      ignorados,
+    destino:
+      nomeColecao
   };
 }
 
@@ -2561,7 +2788,7 @@ async function confirmarImportacao() {
     resultadoFinal =
       state.tipo === "pix"
         ? await salvarPixEmLotes()
-        : await salvarProdutivosLocal();
+        : await salvarProdutivosFirebase();
 
     state.progresso =
       "Concluído!";
@@ -2574,7 +2801,10 @@ async function confirmarImportacao() {
       `${resultadoFinal.atualizados} atualizado(s)`,
       `${resultadoFinal.ignorados} ignorado(s)`,
       `${nomesAtualizadosFinal} nome(s) atualizado(s) na base`,
-      `${state.erros.length} linha(s) inválida(s) não importada(s)`
+      `${state.erros.length} linha(s) inválida(s) não importada(s)`,
+      state.tipo === "produtivos"
+        ? `Destino confirmado: ${resultadoFinal.destino}`
+        : "Destino confirmado: pix_presidente_lancamentos"
     ];
 
     if (state.avisos.length) {
