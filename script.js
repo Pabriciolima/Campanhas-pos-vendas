@@ -432,7 +432,8 @@ const CARGOS = [
 
 const CARGOS_AUTOMATICOS = [
   "Chefe de Oficina",
-  "Mecânico Líder"
+  "Mecânico Líder",
+  "Controlador de Produtividade"
 ];
 
 const DB_KEY = "campanha_oficina_mvp_v1";
@@ -481,6 +482,18 @@ let lancamentosFirebaseCarregados =
   false;
 
 let migracaoLancamentosEmAndamento =
+  false;
+
+const SENHA_EXCLUSAO_LANCAMENTO =
+  "123321";
+
+const INTERVALO_ATUALIZACAO_FIREBASE =
+  15000;
+
+let intervaloAtualizacaoLancamentos =
+  null;
+
+let carregamentoManualLancamentosEmAndamento =
   false;
 
 function carregarDB() {
@@ -619,6 +632,25 @@ function mesAtual() {
     .slice(0, 7);
 }
 
+function mesAnterior() {
+  const agora =
+    new Date();
+
+  const data =
+    new Date(
+      agora.getFullYear(),
+      agora.getMonth() - 1,
+      1
+    );
+
+  return [
+    data.getFullYear(),
+    String(
+      data.getMonth() + 1
+    ).padStart(2, "0")
+  ].join("-");
+}
+
 function filialPorNome(nome) {
   return FILIAIS.find(
     filial => filial.unidade === nome
@@ -635,6 +667,311 @@ function cargoAutomatico(cargo) {
   return CARGOS_AUTOMATICOS.includes(
     String(cargo || "").trim()
   );
+}
+
+
+function solicitarSenhaExclusao() {
+  return new Promise(resolve => {
+    const existente =
+      document.querySelector(
+        "#modalSenhaExclusaoProdutivos"
+      );
+
+    existente?.remove();
+
+    const overlay =
+      document.createElement("div");
+
+    overlay.id =
+      "modalSenhaExclusaoProdutivos";
+
+    overlay.innerHTML = `
+      <div class="senha-exclusao-backdrop">
+        <div
+          class="senha-exclusao-card"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="senhaExclusaoTitulo"
+        >
+          <button
+            type="button"
+            class="senha-exclusao-fechar"
+            aria-label="Fechar"
+          >
+            ×
+          </button>
+
+          <div class="senha-exclusao-icone">
+            🔐
+          </div>
+
+          <small>
+            SEGURANÇA
+          </small>
+
+          <h2 id="senhaExclusaoTitulo">
+            Autorizar exclusão
+          </h2>
+
+          <p>
+            Informe a senha administrativa para excluir este lançamento.
+          </p>
+
+          <label>
+            Senha
+            <input
+              type="password"
+              id="senhaExclusaoProdutivos"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="Digite a senha"
+              maxlength="20"
+            >
+          </label>
+
+          <div
+            id="senhaExclusaoErro"
+            class="senha-exclusao-erro"
+            hidden
+          >
+            Senha incorreta.
+          </div>
+
+          <div class="senha-exclusao-acoes">
+            <button
+              type="button"
+              class="senha-exclusao-cancelar"
+            >
+              Cancelar
+            </button>
+
+            <button
+              type="button"
+              class="senha-exclusao-confirmar"
+            >
+              Autorizar
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (
+      !document.querySelector(
+        "#senhaExclusaoProdutivosCss"
+      )
+    ) {
+      const style =
+        document.createElement("style");
+
+      style.id =
+        "senhaExclusaoProdutivosCss";
+
+      style.textContent = `
+        .senha-exclusao-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 1000000;
+          display: grid;
+          place-items: center;
+          padding: 20px;
+          background: rgba(4, 20, 35, .74);
+          backdrop-filter: blur(8px);
+        }
+
+        .senha-exclusao-card {
+          position: relative;
+          width: min(420px, 100%);
+          padding: 28px;
+          border-radius: 22px;
+          background: #fff;
+          box-shadow: 0 30px 80px rgba(0, 0, 0, .35);
+          border-top: 4px solid #c62828;
+        }
+
+        .senha-exclusao-card small {
+          display: block;
+          margin-top: 14px;
+          color: #a71919;
+          font-weight: 800;
+          letter-spacing: .12em;
+        }
+
+        .senha-exclusao-card h2 {
+          margin: 8px 0;
+          color: #102234;
+        }
+
+        .senha-exclusao-card p {
+          margin: 0 0 18px;
+          color: #607080;
+          line-height: 1.45;
+        }
+
+        .senha-exclusao-card label {
+          display: grid;
+          gap: 7px;
+          color: #34495e;
+          font-weight: 700;
+        }
+
+        .senha-exclusao-card input {
+          width: 100%;
+          box-sizing: border-box;
+          padding: 13px 14px;
+          border: 1px solid #cbd7e3;
+          border-radius: 12px;
+          outline: none;
+          font-size: 16px;
+        }
+
+        .senha-exclusao-card input:focus {
+          border-color: #c62828;
+          box-shadow: 0 0 0 3px rgba(198, 40, 40, .12);
+        }
+
+        .senha-exclusao-icone {
+          width: 54px;
+          height: 54px;
+          display: grid;
+          place-items: center;
+          border-radius: 16px;
+          background: #ffe6e6;
+          font-size: 25px;
+        }
+
+        .senha-exclusao-fechar {
+          position: absolute;
+          top: 14px;
+          right: 14px;
+          width: 36px;
+          height: 36px;
+          border: 0;
+          border-radius: 50%;
+          background: #eef3f6;
+          font-size: 22px;
+          cursor: pointer;
+        }
+
+        .senha-exclusao-erro {
+          margin-top: 10px;
+          color: #c62828;
+          font-weight: 700;
+        }
+
+        .senha-exclusao-acoes {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          margin-top: 22px;
+        }
+
+        .senha-exclusao-acoes button {
+          min-height: 42px;
+          padding: 0 18px;
+          border-radius: 11px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .senha-exclusao-cancelar {
+          border: 1px solid #cbd7e3;
+          background: #fff;
+          color: #33485b;
+        }
+
+        .senha-exclusao-confirmar {
+          border: 0;
+          background: #c62828;
+          color: #fff;
+        }
+      `;
+
+      document.head.appendChild(
+        style
+      );
+    }
+
+    document.body.appendChild(
+      overlay
+    );
+
+    const input =
+      overlay.querySelector(
+        "#senhaExclusaoProdutivos"
+      );
+
+    const erro =
+      overlay.querySelector(
+        "#senhaExclusaoErro"
+      );
+
+    const concluir =
+      resultado => {
+        overlay.remove();
+        resolve(resultado);
+      };
+
+    const validar = () => {
+      if (
+        input.value ===
+        SENHA_EXCLUSAO_LANCAMENTO
+      ) {
+        concluir(true);
+        return;
+      }
+
+      erro.hidden = false;
+      input.value = "";
+      input.focus();
+    };
+
+    overlay
+      .querySelector(
+        ".senha-exclusao-confirmar"
+      )
+      .addEventListener(
+        "click",
+        validar
+      );
+
+    overlay
+      .querySelector(
+        ".senha-exclusao-cancelar"
+      )
+      .addEventListener(
+        "click",
+        () => concluir(false)
+      );
+
+    overlay
+      .querySelector(
+        ".senha-exclusao-fechar"
+      )
+      .addEventListener(
+        "click",
+        () => concluir(false)
+      );
+
+    input.addEventListener(
+      "keydown",
+      evento => {
+        if (evento.key === "Enter") {
+          evento.preventDefault();
+          validar();
+        }
+
+        if (evento.key === "Escape") {
+          concluir(false);
+        }
+      }
+    );
+
+    window.setTimeout(
+      () => input.focus(),
+      50
+    );
+  });
 }
 
 function toast(mensagem) {
@@ -852,68 +1189,172 @@ async function migrarLancamentosLocaisParaFirebase() {
   }
 }
 
+function ordenarLancamentosFirebase(
+  lancamentos
+) {
+  return lancamentos.sort(
+    (a, b) => {
+      const competencia =
+        String(
+          b.competencia ||
+          ""
+        ).localeCompare(
+          String(
+            a.competencia ||
+            ""
+          )
+        );
+
+      if (competencia !== 0) {
+        return competencia;
+      }
+
+      return String(
+        a.nome ||
+        a.funcionarioId ||
+        ""
+      ).localeCompare(
+        String(
+          b.nome ||
+          b.funcionarioId ||
+          ""
+        ),
+        "pt-BR"
+      );
+    }
+  );
+}
+
+function aplicarSnapshotLancamentos(
+  snapshot,
+  origem = "tempo real"
+) {
+  db.lancamentos =
+    ordenarLancamentosFirebase(
+      snapshot.docs.map(
+        normalizarLancamentoFirebase
+      )
+    );
+
+  lancamentosFirebaseCarregados =
+    true;
+
+  salvarBackupLocal();
+  renderTudo();
+
+  console.info(
+    `${db.lancamentos.length} lançamento(s) dos Produtivos atualizado(s) pelo Firebase — ${origem}.`
+  );
+}
+
+async function atualizarLancamentosFirebaseAgora(
+  origem = "verificação automática"
+) {
+  if (
+    carregamentoManualLancamentosEmAndamento ||
+    !navigator.onLine
+  ) {
+    return;
+  }
+
+  carregamentoManualLancamentosEmAndamento =
+    true;
+
+  try {
+    const snapshot =
+      await getDocs(
+        lancamentosRef
+      );
+
+    aplicarSnapshotLancamentos(
+      snapshot,
+      origem
+    );
+  } catch (erro) {
+    console.warn(
+      "Atualização complementar dos lançamentos indisponível:",
+      erro
+    );
+  } finally {
+    carregamentoManualLancamentosEmAndamento =
+      false;
+  }
+}
+
 function iniciarLancamentosTempoReal() {
   onSnapshot(
     lancamentosRef,
 
     snapshot => {
-      db.lancamentos =
-        snapshot.docs
-          .map(
-            normalizarLancamentoFirebase
-          )
-          .sort(
-            (a, b) => {
-              const competencia =
-                String(
-                  b.competencia ||
-                  ""
-                ).localeCompare(
-                  String(
-                    a.competencia ||
-                    ""
-                  )
-                );
-
-              if (competencia !== 0) {
-                return competencia;
-              }
-
-              return String(
-                a.nome ||
-                a.funcionarioId ||
-                ""
-              ).localeCompare(
-                String(
-                  b.nome ||
-                  b.funcionarioId ||
-                  ""
-                ),
-                "pt-BR"
-              );
-            }
-          );
-
-      lancamentosFirebaseCarregados =
-        true;
-
-      salvarBackupLocal();
-      renderTudo();
-
-      console.info(
-        `${db.lancamentos.length} lançamento(s) dos Produtivos carregado(s) do Firebase.`
+      aplicarSnapshotLancamentos(
+        snapshot,
+        "tempo real"
       );
     },
 
     erro => {
       console.error(
-        "Erro ao carregar lançamentos dos Produtivos no Firebase:",
+        "Erro no listener em tempo real dos lançamentos:",
         erro
       );
 
-      window.CampanhaUI?.alert?.(
-        "Não foi possível sincronizar os lançamentos dos Produtivos. Verifique a conexão e as regras do Firestore."
+      /*
+       * Algumas redes corporativas interrompem o canal permanente.
+       * O sistema mantém uma verificação leve e periódica para que
+       * os dados apareçam sem o usuário precisar pressionar F5.
+       */
+      atualizarLancamentosFirebaseAgora(
+        "recuperação após falha do listener"
       );
+    }
+  );
+
+  window.clearInterval(
+    intervaloAtualizacaoLancamentos
+  );
+
+  intervaloAtualizacaoLancamentos =
+    window.setInterval(
+      () => {
+        if (
+          document.visibilityState ===
+          "visible"
+        ) {
+          atualizarLancamentosFirebaseAgora(
+            "verificação periódica"
+          );
+        }
+      },
+      INTERVALO_ATUALIZACAO_FIREBASE
+    );
+
+  window.addEventListener(
+    "focus",
+    () =>
+      atualizarLancamentosFirebaseAgora(
+        "retorno à janela"
+      )
+  );
+
+  window.addEventListener(
+    "online",
+    () =>
+      atualizarLancamentosFirebaseAgora(
+        "conexão restabelecida"
+      )
+  );
+
+  document.addEventListener(
+    "visibilitychange",
+    () => {
+      if (
+        document.visibilityState ===
+        "visible"
+      ) {
+        atualizarLancamentosFirebaseAgora(
+          "retorno à aba"
+        );
+      }
     }
   );
 }
@@ -1041,7 +1482,14 @@ function calcularResultadoEquipe(
   competencia,
   filial
 ) {
-  const mecanicosUnicos = new Map();
+  /*
+   * A equipe é consolidada por mecânico.
+   * Caso exista mais de um lançamento do mesmo colaborador
+   * no mesmo mês, é utilizado o registro mais recente/maior,
+   * evitando duplicidade no cálculo dos gestores.
+   */
+  const mecanicosUnicos =
+    new Map();
 
   db.lancamentos
     .filter(lancamento => {
@@ -1054,27 +1502,37 @@ function calcularResultadoEquipe(
       );
     })
     .forEach(lancamento => {
-      const faturamento = numero(
-        lancamento.faturamento
-      );
+      const chave =
+        String(
+          lancamento.funcionarioId ||
+          lancamento.nome ||
+          lancamento.id
+        );
 
-      const faturamentoAnterior =
+      const atual =
         mecanicosUnicos.get(
-          lancamento.funcionarioId
-        ) || 0;
+          chave
+        );
+
+      const faturamento =
+        numero(
+          lancamento.faturamento
+        );
 
       /*
-       * Caso exista mais de um lançamento
-       * para o mesmo mecânico no mesmo mês,
-       * considera o maior faturamento.
+       * Preserva a regra anterior:
+       * quando há duplicidade, prioriza o maior faturamento.
        */
       if (
+        !atual ||
         faturamento >
-        faturamentoAnterior
+          numero(
+            atual.faturamento
+          )
       ) {
         mecanicosUnicos.set(
-          lancamento.funcionarioId,
-          faturamento
+          chave,
+          lancamento
         );
       }
     });
@@ -1082,8 +1540,45 @@ function calcularResultadoEquipe(
   let qtdFaixa50 = 0;
   let qtdAcima60 = 0;
 
+  let somaHorasDisponiveis = 0;
+  let somaHorasTrabalhadas = 0;
+  let somaHorasVendidas = 0;
+
+  let mecanicosHabilitados = 0;
+
+  const nomesMecanicos = [];
+
   mecanicosUnicos.forEach(
-    faturamento => {
+    lancamento => {
+      const faturamento =
+        numero(
+          lancamento.faturamento
+        );
+
+      const horasDisponiveis =
+        numero(
+          lancamento.horasDisponiveis
+        );
+
+      const horasTrabalhadas =
+        numero(
+          lancamento.horasTrabalhadas
+        );
+
+      const horasVendidas =
+        numero(
+          lancamento.horasVendidas
+        );
+
+      somaHorasDisponiveis +=
+        horasDisponiveis;
+
+      somaHorasTrabalhadas +=
+        horasTrabalhadas;
+
+      somaHorasVendidas +=
+        horasVendidas;
+
       if (faturamento >= 60000) {
         qtdAcima60 += 1;
       } else if (
@@ -1091,8 +1586,55 @@ function calcularResultadoEquipe(
       ) {
         qtdFaixa50 += 1;
       }
+
+      const resultadoMecanico =
+        calcularLancamento(
+          lancamento
+        );
+
+      if (
+        resultadoMecanico.status ===
+        "HABILITADO"
+      ) {
+        mecanicosHabilitados += 1;
+      }
+
+      nomesMecanicos.push(
+        resultadoMecanico.nome ||
+        lancamento.nome ||
+        "Mecânico não identificado"
+      );
     }
   );
+
+  /*
+   * Indicadores consolidados da equipe.
+   *
+   * Produtividade:
+   * soma das horas trabalhadas ÷ soma das horas disponíveis.
+   *
+   * Eficiência:
+   * soma das horas vendidas ÷ soma das horas trabalhadas.
+   *
+   * Essa forma é mais auditável do que uma média simples
+   * das porcentagens individuais, pois preserva o peso real
+   * das horas de cada mecânico.
+   */
+  const produtividadeEquipe =
+    somaHorasDisponiveis > 0
+      ? (
+          somaHorasTrabalhadas /
+          somaHorasDisponiveis
+        ) * 100
+      : 0;
+
+  const eficienciaEquipe =
+    somaHorasTrabalhadas > 0
+      ? (
+          somaHorasVendidas /
+          somaHorasTrabalhadas
+        ) * 100
+      : 0;
 
   const bonusChefe =
     qtdFaixa50 * 300 +
@@ -1101,9 +1643,21 @@ function calcularResultadoEquipe(
   return {
     totalMecanicos:
       mecanicosUnicos.size,
+
+    mecanicosHabilitados,
+
     qtdFaixa50,
     qtdAcima60,
-    bonusChefe
+    bonusChefe,
+
+    somaHorasDisponiveis,
+    somaHorasTrabalhadas,
+    somaHorasVendidas,
+
+    produtividadeEquipe,
+    eficienciaEquipe,
+
+    nomesMecanicos
   };
 }
 
@@ -1120,11 +1674,41 @@ function calcularGestorAutomatico(
   const bonusChefe =
     equipe.bonusChefe;
 
-  const bonusBruto =
+  let bonusBruto = 0;
+
+  if (
+    funcionario.cargo ===
+    "Chefe de Oficina"
+  ) {
+    bonusBruto =
+      bonusChefe;
+  }
+
+  if (
     funcionario.cargo ===
     "Mecânico Líder"
-      ? bonusChefe / 2
-      : bonusChefe;
+  ) {
+    bonusBruto =
+      bonusChefe / 2;
+  }
+
+  if (
+    funcionario.cargo ===
+    "Controlador de Produtividade"
+  ) {
+    if (
+      equipe.produtividadeEquipe >= 70 &&
+      equipe.eficienciaEquipe >= 80
+    ) {
+      bonusBruto =
+        bonusControladorProd(
+          equipe.produtividadeEquipe
+        ) +
+        bonusControladorEfic(
+          equipe.eficienciaEquipe
+        );
+    }
+  }
 
   return {
     id: `automatico-${funcionario.id}-${competencia}`,
@@ -1142,9 +1726,26 @@ function calcularGestorAutomatico(
 
     cargo: funcionario.cargo,
 
-    produtividade: 0,
+    produtividade:
+      equipe.produtividadeEquipe,
 
-    eficiencia: 0,
+    eficiencia:
+      equipe.eficienciaEquipe,
+
+    produtividadeEquipe:
+      equipe.produtividadeEquipe,
+
+    eficienciaEquipe:
+      equipe.eficienciaEquipe,
+
+    horasDisponiveisEquipe:
+      equipe.somaHorasDisponiveis,
+
+    horasTrabalhadasEquipe:
+      equipe.somaHorasTrabalhadas,
+
+    horasVendidasEquipe:
+      equipe.somaHorasVendidas,
 
     qtdFaixa50:
       equipe.qtdFaixa50,
@@ -1154,6 +1755,15 @@ function calcularGestorAutomatico(
 
     totalMecanicos:
       equipe.totalMecanicos,
+
+    mecanicosHabilitados:
+      equipe.mecanicosHabilitados,
+
+    nomesMecanicos:
+      equipe.nomesMecanicos,
+
+    indicadorOrigem:
+      "EQUIPE_MECANICOS",
 
     bonusBruto,
 
@@ -1167,9 +1777,26 @@ function calcularGestorAutomatico(
         : "NÃO HABILITADO",
 
     motivo:
-      bonusBruto > 0
-        ? "Apuração automática baseada no faturamento da equipe"
-        : "Nenhum mecânico atingiu faturamento mínimo de R$ 50 mil",
+      funcionario.cargo ===
+      "Controlador de Produtividade"
+        ? (
+            bonusBruto > 0
+              ? "Apuração automática pelos indicadores consolidados de produtividade e eficiência da equipe"
+              : (
+                  equipe.totalMecanicos > 0
+                    ? "Indicadores consolidados da equipe abaixo das metas mínimas de 70% e 80%"
+                    : "Nenhum Mecânico Produtivo lançado para calcular os indicadores da equipe"
+                )
+          )
+        : (
+            bonusBruto > 0
+              ? "Apuração automática baseada no faturamento e nos indicadores consolidados da equipe"
+              : (
+                  equipe.totalMecanicos > 0
+                    ? "A equipe possui lançamentos, mas nenhum mecânico atingiu faturamento mínimo de R$ 50 mil"
+                    : "Nenhum mecânico produtivo lançado para a filial nesta competência"
+                )
+          ),
 
     automatico: true
   };
@@ -1306,17 +1933,58 @@ function calcularLancamento(
     base.cargo ===
     "Controlador de Produtividade"
   ) {
-    base.produtividade =
-      numero(
-        lancamento.produtividadeInformada
+    const equipe =
+      calcularResultadoEquipe(
+        base.competencia,
+        base.filial
       );
+
+    /*
+     * O Controlador é avaliado pelo resultado consolidado
+     * dos Mecânicos Produtivos da mesma filial e competência.
+     * Os campos informados manualmente permanecem no documento
+     * apenas para compatibilidade histórica, mas não são mais
+     * usados como fonte oficial do cálculo.
+     */
+    base.produtividade =
+      equipe.produtividadeEquipe;
 
     base.eficiencia =
-      numero(
-        lancamento.eficienciaInformada
-      );
+      equipe.eficienciaEquipe;
+
+    base.produtividadeEquipe =
+      equipe.produtividadeEquipe;
+
+    base.eficienciaEquipe =
+      equipe.eficienciaEquipe;
+
+    base.horasDisponiveisEquipe =
+      equipe.somaHorasDisponiveis;
+
+    base.horasTrabalhadasEquipe =
+      equipe.somaHorasTrabalhadas;
+
+    base.horasVendidasEquipe =
+      equipe.somaHorasVendidas;
+
+    base.totalMecanicos =
+      equipe.totalMecanicos;
+
+    base.mecanicosHabilitados =
+      equipe.mecanicosHabilitados;
+
+    base.nomesMecanicos =
+      equipe.nomesMecanicos;
+
+    base.indicadorOrigem =
+      "EQUIPE_MECANICOS";
 
     if (
+      equipe.totalMecanicos === 0
+    ) {
+      base.motivo =
+        "Nenhum Mecânico Produtivo lançado para calcular os indicadores da equipe";
+    } else if (
       base.produtividade >= 70 &&
       base.eficiencia >= 80
     ) {
@@ -1328,10 +1996,14 @@ function calcularLancamento(
           base.eficiencia
         );
 
-      base.status = "HABILITADO";
+      base.status =
+        "HABILITADO";
+
+      base.motivo =
+        "Meta atingida pelos indicadores consolidados da equipe";
     } else {
       base.motivo =
-        "Métricas mínimas não atingidas";
+        "Indicadores consolidados da equipe abaixo das métricas mínimas";
     }
   }
 
@@ -1499,11 +2171,41 @@ function iniciarSelects() {
 }
 
 function renderTudo() {
-  renderFuncionarios();
-  renderLancamentos();
-  renderApuracao();
-  renderDashboard();
-  atualizarFiltrosCompetencia();
+  const etapas = [
+    [
+      "funcionários",
+      renderFuncionarios
+    ],
+    [
+      "lançamentos",
+      renderLancamentos
+    ],
+    [
+      "apuração",
+      renderApuracao
+    ],
+    [
+      "visão geral",
+      renderDashboard
+    ],
+    [
+      "filtros de competência",
+      atualizarFiltrosCompetencia
+    ]
+  ];
+
+  etapas.forEach(
+    ([nome, renderizar]) => {
+      try {
+        renderizar();
+      } catch (erro) {
+        console.error(
+          `Erro ao renderizar ${nome}:`,
+          erro
+        );
+      }
+    }
+  );
 }
 
 function renderFuncionarios() {
@@ -1671,15 +2373,13 @@ function renderLancamentos() {
       "#filtroCargoLancamento"
     ).value;
 
+  /*
+   * Usa a mesma fonte consolidada da Visão Geral e da Apuração.
+   * Assim Chefe, Líder e Controlador cadastrados na filial
+   * também aparecem automaticamente na área de Lançamentos.
+   */
   const lista =
-    db.lancamentos
-      .filter(
-        lancamento =>
-          !cargoAutomatico(
-            lancamento.cargo
-          )
-      )
-      .map(calcularLancamento)
+    obterResultadosCampanha()
       .filter(lancamento => {
         return (
           (!competencia ||
@@ -1694,7 +2394,28 @@ function renderLancamentos() {
             lancamento.cargo ===
               cargo)
         );
-      });
+      })
+      .sort(
+        (a, b) => {
+          if (
+            Boolean(a.automatico) !==
+            Boolean(b.automatico)
+          ) {
+            return a.automatico
+              ? 1
+              : -1;
+          }
+
+          return String(
+            a.nome || ""
+          ).localeCompare(
+            String(
+              b.nome || ""
+            ),
+            "pt-BR"
+          );
+        }
+      );
 
   document.querySelector(
     "#tabelaLancamentos"
@@ -1702,7 +2423,13 @@ function renderLancamentos() {
     ? lista
         .map(
           lancamento => `
-            <tr>
+            <tr
+              class="${
+                lancamento.automatico
+                  ? "lancamento-automatico"
+                  : ""
+              }"
+            >
               <td>
                 ${lancamento.competencia}
               </td>
@@ -1715,6 +2442,19 @@ function renderLancamentos() {
                 <strong>
                   ${lancamento.nome}
                 </strong>
+
+                ${
+                  lancamento.automatico
+                    ? `
+                      <br>
+                      <span
+                        class="lancamento-auto-badge"
+                      >
+                        Automático
+                      </span>
+                    `
+                    : ""
+                }
               </td>
 
               <td>
@@ -1725,6 +2465,14 @@ function renderLancamentos() {
                 ${indicadoresTexto(
                   lancamento
                 )}
+
+                ${
+                  lancamento.automatico
+                    ? explicacaoLancamentoAutomatico(
+                        lancamento
+                      )
+                    : ""
+                }
               </td>
 
               <td>
@@ -1749,21 +2497,33 @@ function renderLancamentos() {
               </td>
 
               <td>
-                <div class="actions">
-                  <button
-                    class="mini-btn"
-                    onclick="editarLancamento('${lancamento.id}')"
-                  >
-                    Editar
-                  </button>
+                ${
+                  lancamento.automatico
+                    ? `
+                      <span
+                        class="lancamento-auto-sem-acao"
+                      >
+                        Gerado pelo sistema
+                      </span>
+                    `
+                    : `
+                      <div class="actions">
+                        <button
+                          class="mini-btn"
+                          onclick="editarLancamento('${lancamento.id}')"
+                        >
+                          Editar
+                        </button>
 
-                  <button
-                    class="mini-btn delete"
-                    onclick="excluirLancamento('${lancamento.id}')"
-                  >
-                    Excluir
-                  </button>
-                </div>
+                        <button
+                          class="mini-btn delete"
+                          onclick="excluirLancamento('${lancamento.id}')"
+                        >
+                          Excluir
+                        </button>
+                      </div>
+                    `
+                }
               </td>
             </tr>
           `
@@ -1779,6 +2539,181 @@ function renderLancamentos() {
           </td>
         </tr>
       `;
+}
+
+
+function explicacaoLancamentoAutomatico(
+  lancamento
+) {
+  const totalMecanicos =
+    numero(
+      lancamento.totalMecanicos
+    );
+
+  const habilitados =
+    numero(
+      lancamento.mecanicosHabilitados
+    );
+
+  if (
+    lancamento.cargo ===
+    "Chefe de Oficina"
+  ) {
+    return `
+      <div class="lancamento-auto-explicacao">
+        <strong>
+          Lançado automaticamente
+        </strong>
+
+        <span>
+          Bônus formado pelos Mecânicos Produtivos
+          que atingiram as faixas de faturamento
+          de R$ 50 mil e R$ 60 mil.
+        </span>
+
+        <span>
+          Equipe considerada:
+          ${totalMecanicos} mecânico(s),
+          ${habilitados} habilitado(s).
+        </span>
+      </div>
+    `;
+  }
+
+  if (
+    lancamento.cargo ===
+    "Mecânico Líder"
+  ) {
+    return `
+      <div class="lancamento-auto-explicacao">
+        <strong>
+          Lançado automaticamente
+        </strong>
+
+        <span>
+          O Líder recebe metade do bônus calculado
+          para o Chefe de Oficina da mesma filial.
+        </span>
+
+        <span>
+          Equipe considerada:
+          ${totalMecanicos} mecânico(s),
+          ${habilitados} habilitado(s).
+        </span>
+      </div>
+    `;
+  }
+
+  if (
+    lancamento.cargo ===
+    "Controlador de Produtividade"
+  ) {
+    return `
+      <div class="lancamento-auto-explicacao">
+        <strong>
+          Lançado automaticamente
+        </strong>
+
+        <span>
+          Bônus calculado pela produtividade e
+          eficiência consolidadas dos Mecânicos
+          Produtivos da filial.
+        </span>
+
+        <span>
+          Equipe considerada:
+          ${totalMecanicos} mecânico(s).
+        </span>
+      </div>
+    `;
+  }
+
+  return "";
+}
+
+function garantirCssLancamentosAutomaticos() {
+  if (
+    document.querySelector(
+      "#cssLancamentosAutomaticos"
+    )
+  ) {
+    return;
+  }
+
+  const style =
+    document.createElement("style");
+
+  style.id =
+    "cssLancamentosAutomaticos";
+
+  style.textContent = `
+    #tabelaLancamentos
+      tr.lancamento-automatico {
+      background:
+        linear-gradient(
+          90deg,
+          rgba(12, 126, 94, .065),
+          rgba(12, 126, 94, .018)
+        );
+    }
+
+    #tabelaLancamentos
+      tr.lancamento-automatico td {
+      vertical-align: top;
+      border-top:
+        1px solid rgba(12, 126, 94, .16);
+      border-bottom:
+        1px solid rgba(12, 126, 94, .10);
+    }
+
+    #tabelaLancamentos
+      tr.lancamento-automatico:hover {
+      background:
+        rgba(12, 126, 94, .075);
+    }
+
+    .lancamento-auto-badge {
+      display: inline-flex;
+      margin-top: 5px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #e1f3ec;
+      color: #087255;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .lancamento-auto-explicacao {
+      display: grid;
+      gap: 4px;
+      margin-top: 9px;
+      max-width: 490px;
+      color: #536979;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .lancamento-auto-explicacao strong {
+      color: #087255;
+    }
+
+    .lancamento-auto-sem-acao {
+      display: inline-flex;
+      padding: 6px 9px;
+      border-radius: 9px;
+      background: #eef4f6;
+      color: #647786;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+  `;
+
+  document.head.appendChild(
+    style
+  );
 }
 
 function indicadoresTexto(
@@ -1860,7 +2795,7 @@ function indicadoresTexto(
     return `
       <div class="indicadores-detalhados">
         <span>
-          Produtividade:
+          Produtividade da equipe:
           <strong>
             ${pct(
               lancamento.produtividade
@@ -1868,14 +2803,50 @@ function indicadoresTexto(
           </strong>
         </span>
 
+        <small>
+          ${numero(
+            lancamento.horasTrabalhadasEquipe
+          )
+            .toFixed(2)
+            .replace(".", ",")}h trabalhadas
+          ÷
+          ${numero(
+            lancamento.horasDisponiveisEquipe
+          )
+            .toFixed(2)
+            .replace(".", ",")}h disponíveis
+        </small>
+
         <span>
-          Eficiência:
+          Eficiência da equipe:
           <strong>
             ${pct(
               lancamento.eficiencia
             )}
           </strong>
         </span>
+
+        <small>
+          ${numero(
+            lancamento.horasVendidasEquipe
+          )
+            .toFixed(2)
+            .replace(".", ",")}h vendidas
+          ÷
+          ${numero(
+            lancamento.horasTrabalhadasEquipe
+          )
+            .toFixed(2)
+            .replace(".", ",")}h trabalhadas
+        </small>
+
+        <small>
+          Base:
+          ${numero(
+            lancamento.totalMecanicos
+          )}
+          mecânico(s) avaliado(s)
+        </small>
       </div>
     `;
   }
@@ -1888,7 +2859,53 @@ function indicadoresTexto(
     return `
       <div class="indicadores-detalhados">
         <span>
-          R$ 50 mil a R$ 59.999,99:
+          Produtividade da equipe:
+          <strong>
+            ${pct(
+              lancamento.produtividade
+            )}
+          </strong>
+        </span>
+
+        <small>
+          ${numero(
+            lancamento.horasTrabalhadasEquipe
+          )
+            .toFixed(2)
+            .replace(".", ",")}h trabalhadas
+          ÷
+          ${numero(
+            lancamento.horasDisponiveisEquipe
+          )
+            .toFixed(2)
+            .replace(".", ",")}h disponíveis
+        </small>
+
+        <span>
+          Eficiência da equipe:
+          <strong>
+            ${pct(
+              lancamento.eficiencia
+            )}
+          </strong>
+        </span>
+
+        <small>
+          ${numero(
+            lancamento.horasVendidasEquipe
+          )
+            .toFixed(2)
+            .replace(".", ",")}h vendidas
+          ÷
+          ${numero(
+            lancamento.horasTrabalhadasEquipe
+          )
+            .toFixed(2)
+            .replace(".", ",")}h trabalhadas
+        </small>
+
+        <span>
+          Mecânicos de R$ 50 mil a R$ 59.999,99:
           <strong>
             ${numero(
               lancamento.qtdFaixa50
@@ -1897,13 +2914,25 @@ function indicadoresTexto(
         </span>
 
         <span>
-          R$ 60 mil ou mais:
+          Mecânicos de R$ 60 mil ou mais:
           <strong>
             ${numero(
               lancamento.qtdAcima60
             )}
           </strong>
         </span>
+
+        <small>
+          Base:
+          ${numero(
+            lancamento.totalMecanicos
+          )}
+          mecânico(s) avaliado(s),
+          ${numero(
+            lancamento.mecanicosHabilitados
+          )}
+          habilitado(s)
+        </small>
       </div>
     `;
   }
@@ -2022,16 +3051,72 @@ function renderApuracao() {
                   ${item.cargo}
                 </td>
 
-                <td>
-                  ${pct(
-                    item.produtividade
-                  )}
+                <td
+                  title="${
+                    item.indicadorOrigem ===
+                    "EQUIPE_MECANICOS"
+                      ? (
+                          `${numero(
+                            item.horasTrabalhadasEquipe
+                          ).toFixed(2)}h trabalhadas ÷ ` +
+                          `${numero(
+                            item.horasDisponiveisEquipe
+                          ).toFixed(2)}h disponíveis`
+                        )
+                      : "Indicador individual"
+                  }"
+                >
+                  <strong>
+                    ${pct(
+                      item.produtividade
+                    )}
+                  </strong>
+
+                  ${
+                    item.indicadorOrigem ===
+                    "EQUIPE_MECANICOS"
+                      ? `
+                        <br>
+                        <small>
+                          equipe
+                        </small>
+                      `
+                      : ""
+                  }
                 </td>
 
-                <td>
-                  ${pct(
-                    item.eficiencia
-                  )}
+                <td
+                  title="${
+                    item.indicadorOrigem ===
+                    "EQUIPE_MECANICOS"
+                      ? (
+                          `${numero(
+                            item.horasVendidasEquipe
+                          ).toFixed(2)}h vendidas ÷ ` +
+                          `${numero(
+                            item.horasTrabalhadasEquipe
+                          ).toFixed(2)}h trabalhadas`
+                        )
+                      : "Indicador individual"
+                  }"
+                >
+                  <strong>
+                    ${pct(
+                      item.eficiencia
+                    )}
+                  </strong>
+
+                  ${
+                    item.indicadorOrigem ===
+                    "EQUIPE_MECANICOS"
+                      ? `
+                        <br>
+                        <small>
+                          equipe
+                        </small>
+                      `
+                      : ""
+                  }
                 </td>
 
                 <td>
@@ -2854,15 +3939,51 @@ function renderHistoricoMensal(
                 </td>
 
                 <td>
-                  ${pct(
-                    resultado.produtividade
-                  )}
+                  <strong>
+                    ${pct(
+                      resultado.produtividade
+                    )}
+                  </strong>
+
+                  ${
+                    resultado.indicadorOrigem ===
+                    "EQUIPE_MECANICOS"
+                      ? `
+                        <br>
+                        <small>
+                          Equipe ·
+                          ${numero(
+                            resultado.totalMecanicos
+                          )}
+                          mecânico(s)
+                        </small>
+                      `
+                      : ""
+                  }
                 </td>
 
                 <td>
-                  ${pct(
-                    resultado.eficiencia
-                  )}
+                  <strong>
+                    ${pct(
+                      resultado.eficiencia
+                    )}
+                  </strong>
+
+                  ${
+                    resultado.indicadorOrigem ===
+                    "EQUIPE_MECANICOS"
+                      ? `
+                        <br>
+                        <small>
+                          Equipe ·
+                          ${numero(
+                            resultado.totalMecanicos
+                          )}
+                          mecânico(s)
+                        </small>
+                      `
+                      : ""
+                  }
                 </td>
 
                 <td>
@@ -3655,9 +4776,7 @@ function abrirLancamento() {
   document.querySelector(
     "#lancamentoCompetencia"
   ).value =
-    document.querySelector(
-      "#competenciaGlobal"
-    ).value || mesAtual();
+    mesAnterior();
 
   document.querySelector(
     "#lancamentoFuncionario"
@@ -3725,6 +4844,13 @@ window.editarLancamento =
 
 window.excluirLancamento =
   async id => {
+    const senhaAutorizada =
+      await solicitarSenhaExclusao();
+
+    if (!senhaAutorizada) {
+      return;
+    }
+
     const confirmou =
       await window.CampanhaUI.deleteConfirm({
         titulo: "Excluir lançamento?",
@@ -5015,10 +6141,14 @@ function configurarEventos() {
       "#competenciaGlobal"
     );
 
+  /*
+   * A Campanha dos Produtivos é normalmente lançada no mês
+   * seguinte ao mês apurado. Por isso, ao abrir o módulo,
+   * a competência padrão é sempre o mês anterior.
+   */
   competenciaGlobal.value =
     limitarCompetenciaHistorico(
-      competenciaGlobal.value ||
-      mesAtual()
+      mesAnterior()
     );
 
   competenciaGlobal.min =
@@ -5404,6 +6534,13 @@ function configurarEventos() {
     .addEventListener(
       "click",
       async () => {
+        const senhaAutorizada =
+          await solicitarSenhaExclusao();
+
+        if (!senhaAutorizada) {
+          return;
+        }
+
         const confirmou =
           await window.CampanhaUI.deleteConfirm({
             titulo: "Limpar todos os lançamentos compartilhados?",
@@ -5463,12 +6600,17 @@ document.addEventListener(
   async () => {
     iniciarSelects();
     garantirControlesHistorico();
+    garantirCssLancamentosAutomaticos();
     configurarEventos();
     atualizarNavegacaoHistorico();
     renderTudo();
 
     iniciarFuncionariosTempoReal();
     iniciarLancamentosTempoReal();
+
+    await atualizarLancamentosFirebaseAgora(
+      "carregamento inicial"
+    );
 
     /*
      * Migra uma única vez os lançamentos antigos que estavam
