@@ -1505,7 +1505,7 @@ window.produtivosLancamentos = {
     ],
 
   versao:
-    "2026.08.04-POLITICAS-GESTORES-02"
+    "2026.08.04-FATURAMENTO-GESTORES-SEGURO-05"
 };
 
 function bonusMecanicoProdutividade(
@@ -3244,6 +3244,48 @@ function renderApuracao() {
                       `
                       : ""
                   }
+
+                  ${
+                    (
+                      item.cargo ===
+                        "Chefe de Oficina" ||
+                      item.cargo ===
+                        "Mecânico Líder"
+                    )
+                      ? `
+                        <div style="margin-top:6px;padding-top:6px;border-top:1px solid #dbe6ec;line-height:1.35;">
+                          <small style="display:block;color:#536675;white-space:normal;">
+                            R$ 50 mil a R$ 59.999,99
+                          </small>
+
+                          <strong style="display:block;margin-top:2px;color:#082b48;">
+                            ${numero(item.qtdFaixa50)} mecânico(s)
+                          </strong>
+
+                          <small style="display:block;color:#087354;white-space:normal;">
+                            ${numero(item.qtdFaixa50)}
+                            ×
+                            ${
+                              item.cargo ===
+                              "Chefe de Oficina"
+                                ? moeda(300)
+                                : moeda(150)
+                            }
+                            =
+                            ${moeda(
+                              numero(item.qtdFaixa50) *
+                              (
+                                item.cargo ===
+                                "Chefe de Oficina"
+                                  ? 300
+                                  : 150
+                              )
+                            )}
+                          </small>
+                        </div>
+                      `
+                      : ""
+                  }
                 </td>
 
                 <td
@@ -3275,6 +3317,48 @@ function renderApuracao() {
                         <small>
                           equipe
                         </small>
+                      `
+                      : ""
+                  }
+
+                  ${
+                    (
+                      item.cargo ===
+                        "Chefe de Oficina" ||
+                      item.cargo ===
+                        "Mecânico Líder"
+                    )
+                      ? `
+                        <div style="margin-top:6px;padding-top:6px;border-top:1px solid #dbe6ec;line-height:1.35;">
+                          <small style="display:block;color:#536675;white-space:normal;">
+                            R$ 60 mil ou mais
+                          </small>
+
+                          <strong style="display:block;margin-top:2px;color:#082b48;">
+                            ${numero(item.qtdAcima60)} mecânico(s)
+                          </strong>
+
+                          <small style="display:block;color:#087354;white-space:normal;">
+                            ${numero(item.qtdAcima60)}
+                            ×
+                            ${
+                              item.cargo ===
+                              "Chefe de Oficina"
+                                ? moeda(500)
+                                : moeda(250)
+                            }
+                            =
+                            ${moeda(
+                              numero(item.qtdAcima60) *
+                              (
+                                item.cargo ===
+                                "Chefe de Oficina"
+                                  ? 500
+                                  : 250
+                              )
+                            )}
+                          </small>
+                        </div>
                       `
                       : ""
                   }
