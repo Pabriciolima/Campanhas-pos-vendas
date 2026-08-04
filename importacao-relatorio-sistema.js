@@ -2,7 +2,7 @@
 ===============================================================================
 IMPORTAÇÃO INTELIGENTE DO RELATÓRIO — PIX + PRODUTIVOS
 Arquivo: importacao-relatorio-sistema.js
-Versão: 2026.07.23-17
+Versão: 2026.08.04-19
 ===============================================================================
 
 CORREÇÕES DESTA VERSÃO
@@ -178,7 +178,7 @@ const firestore =
     firebaseAppImportacao
   );
 
-const VERSAO = "2026.07.23-17";
+const VERSAO = "2026.08.04-19";
 const TAMANHO_LOTE = 400;
 const TIMEOUT_OPERACAO = 90000;
 const DB_PRODUTIVOS = "campanha_oficina_mvp_v1";
@@ -2407,13 +2407,6 @@ async function salvarProdutivosFirebase() {
       nomeColecao
     );
 
-  /*
-   * CORREÇÃO CRÍTICA:
-   * a versão anterior salvava somente no localStorage.
-   * O restante do sistema lê a coleção produtivos_lancamentos,
-   * por isso o alerta dizia sucesso, mas Apuração e Visão Geral
-   * continuavam vazias.
-   */
   const snapshotExistentes =
     await comTimeout(
       getDocs(
@@ -2423,171 +2416,284 @@ async function salvarProdutivosFirebase() {
       "O Firebase demorou para consultar os lançamentos dos Produtivos."
     );
 
-  const mapaExistentes =
-    new Map();
-
-  snapshotExistentes.docs.forEach(
-    documento => {
-      const item = {
+  const existentes =
+    snapshotExistentes.docs.map(
+      documento => ({
         id:
           documento.id,
         referencia:
           documento.ref,
         ...documento.data()
-      };
+      })
+    );
 
-      const chave =
-        chaveLancamentoProdutivo(
-          item
-        );
+  const mapaExistentes =
+    new Map();
 
-      if (
-        !mapaExistentes.has(
-          chave
-        )
-      ) {
-        mapaExistentes.set(
-          chave,
-          item
-        );
-      }
+  existentes.forEach(item => {
+    const chave =
+      chaveLancamentoProdutivo(
+        item
+      );
+
+    if (
+      !mapaExistentes.has(
+        chave
+      )
+    ) {
+      mapaExistentes.set(
+        chave,
+        item
+      );
     }
-  );
+  });
+
+  const funcionariosPorId =
+    new Map(
+      state.funcionariosCache.map(
+        funcionario => [
+          String(
+            funcionario.id
+          ),
+          funcionario
+        ]
+      )
+    );
 
   const operacoes = [];
+  const registrosEsperados =
+    [];
 
   let criados = 0;
   let atualizados = 0;
   let ignorados = 0;
 
-  state.gerados.forEach(
-    registro => {
-      const chave =
-        chaveLancamentoProdutivo(
-          registro
-        );
+  state.gerados.forEach(registro => {
+    const funcionario =
+      funcionariosPorId.get(
+        String(
+          registro.funcionarioId
+        )
+      );
 
-      const existente =
-        mapaExistentes.get(
-          chave
-        );
+    /*
+     * Usa os dados oficiais do cadastro.
+     * Isso impede que espaço, acento, abreviação ou cargo vindo
+     * da planilha faça o lançamento desaparecer dos filtros.
+     */
+    const cargoOficial =
+      texto(
+        funcionario?.cargo ||
+        registro.cargo
+      );
 
-      if (
-        existente &&
-        state.estrategia ===
-          "novos"
-      ) {
-        ignorados += 1;
-        return;
-      }
+    const filialOficial =
+      texto(
+        registro.filial ||
+        funcionario?.filial
+      );
 
-      const dados = {
-        ...registro,
+    const dnOficial =
+      texto(
+        registro.dn ||
+        funcionario?.dn
+      );
 
-        competencia:
-          registro.competencia,
-        funcionarioId:
-          registro.funcionarioId,
-        nome:
-          registro.nome,
-        filial:
-          registro.filial,
-        dn:
-          registro.dn || "",
-        cargo:
-          registro.cargo,
+    const nomeOficial =
+      texto(
+        funcionario?.nome ||
+        registro.nome
+      );
 
-        faturamento:
-          numero(
-            registro.faturamento
-          ),
-        horasDisponiveis:
-          numero(
-            registro.horasDisponiveis
-          ),
-        horasTrabalhadas:
-          numero(
-            registro.horasTrabalhadas
-          ),
-        horasVendidas:
-          numero(
-            registro.horasVendidas
-          ),
+    const chave =
+      [
+        registro.funcionarioId,
+        registro.competencia
+      ].join("|");
 
-        treinamentoPendente:
-          Boolean(
-            registro.treinamentoPendente
-          ),
-        retrabalho:
-          Boolean(
-            registro.retrabalho
-          ),
+    const existente =
+      mapaExistentes.get(
+        chave
+      );
 
-        origemImportacao:
-          registro.origemImportacao ||
-          "RELATORIO SISTEMA",
-        arquivoImportado:
-          registro.arquivoImportado ||
-          state.arquivo?.name ||
-          "",
+    const horasDisponiveis =
+      numero(
+        registro.horasDisponiveis
+      );
 
-        atualizadoEm:
-          serverTimestamp()
-      };
+    const horasTrabalhadas =
+      numero(
+        registro.horasTrabalhadas
+      );
 
-      if (existente) {
-        operacoes.push({
-          tipo:
-            "update",
-          referencia:
-            existente.referencia,
-          dados
-        });
+    const horasVendidas =
+      numero(
+        registro.horasVendidas
+      );
 
-        atualizados += 1;
-        return;
-      }
+    const payload = {
+      ...registro,
 
-      const idDocumento =
-        gerarIdDocumento(
-          [
-            "produtivo",
-            registro.funcionarioId,
-            registro.competencia
-          ].join("|")
-        );
+      /*
+       * Estrutura idêntica à usada pelo lançamento manual.
+       */
+      funcionarioId:
+        String(
+          registro.funcionarioId
+        ),
+      competencia:
+        texto(
+          registro.competencia
+        ),
+      nome:
+        nomeOficial,
+      filial:
+        filialOficial,
+      dn:
+        dnOficial,
+      cargo:
+        cargoOficial,
 
-      const referencia =
-        doc(
-          firestore,
-          nomeColecao,
-          idDocumento
-        );
+      faturamento:
+        numero(
+          registro.faturamento
+        ),
+      horasDisponiveis,
+      horasTrabalhadas,
+      horasVendidas,
 
+      treinamentoPendente:
+        Boolean(
+          registro.treinamentoPendente
+        ),
+
+      /*
+       * O script principal avalia osPrejuizo.
+       * Mantemos retrabalho para compatibilidade histórica.
+       */
+      retrabalho:
+        Boolean(
+          registro.retrabalho
+        ),
+      osPrejuizo:
+        Boolean(
+          registro.retrabalho ||
+          registro.osPrejuizo
+        ),
+
+      automatico:
+        false,
+
+      origemImportacao:
+        "RELATORIO SISTEMA",
+      arquivoImportado:
+        state.arquivo?.name ||
+        registro.arquivoImportado ||
+        "",
+      abaImportada:
+        state.aba ||
+        registro.abaImportada ||
+        "",
+
+      atualizadoEm:
+        serverTimestamp()
+    };
+
+    /*
+     * Para Produtivos, uma nova importação da mesma competência
+     * precisa corrigir o documento existente. Não ignoramos um
+     * registro antigo só porque a opção visual diz "manter".
+     * Outros colaboradores e outros meses permanecem intactos.
+     */
+    if (existente) {
       operacoes.push({
         tipo:
           "set",
-        referencia,
+        referencia:
+          existente.referencia,
         dados: {
-          ...dados,
-          criadoEm:
-            serverTimestamp()
+          ...payload,
+          idLocal:
+            existente.idLocal ||
+            existente.id
         }
       });
 
-      mapaExistentes.set(
+      registrosEsperados.push({
         chave,
-        {
-          id:
-            idDocumento,
-          referencia,
-          ...registro
-        }
+        funcionarioId:
+          payload.funcionarioId,
+        competencia:
+          payload.competencia,
+        filial:
+          payload.filial,
+        cargo:
+          payload.cargo,
+        horasDisponiveis,
+        horasTrabalhadas,
+        horasVendidas
+      });
+
+      atualizados += 1;
+      return;
+    }
+
+    const idDocumento =
+      gerarIdDocumento(
+        [
+          "produtivo",
+          payload.funcionarioId,
+          payload.competencia
+        ].join("|")
       );
 
-      criados += 1;
-    }
-  );
+    const referencia =
+      doc(
+        firestore,
+        nomeColecao,
+        idDocumento
+      );
+
+    operacoes.push({
+      tipo:
+        "set",
+      referencia,
+      dados: {
+        ...payload,
+        idLocal:
+          idDocumento,
+        criadoEm:
+          serverTimestamp()
+      }
+    });
+
+    registrosEsperados.push({
+      chave,
+      funcionarioId:
+        payload.funcionarioId,
+      competencia:
+        payload.competencia,
+      filial:
+        payload.filial,
+      cargo:
+        payload.cargo,
+      horasDisponiveis,
+      horasTrabalhadas,
+      horasVendidas
+    });
+
+    mapaExistentes.set(
+      chave,
+      {
+        id:
+          idDocumento,
+        referencia,
+        ...payload
+      }
+    );
+
+    criados += 1;
+  });
 
   const lotes =
     dividirEmLotes(
@@ -2611,20 +2717,17 @@ async function salvarProdutivosFirebase() {
 
     lotes[indice].forEach(
       operacao => {
-        if (
-          operacao.tipo ===
-          "update"
-        ) {
-          batch.update(
-            operacao.referencia,
-            operacao.dados
-          );
-        } else {
-          batch.set(
-            operacao.referencia,
-            operacao.dados
-          );
-        }
+        /*
+         * set com merge corrige documentos antigos incompletos
+         * sem remover campos históricos ainda utilizados.
+         */
+        batch.set(
+          operacao.referencia,
+          operacao.dados,
+          {
+            merge: true
+          }
+        );
       }
     );
 
@@ -2636,7 +2739,7 @@ async function salvarProdutivosFirebase() {
   }
 
   state.progresso =
-    "Confirmando lançamentos no Firebase...";
+    "Validando os dados que serão exibidos...";
   renderizar();
 
   const snapshotConfirmacao =
@@ -2648,35 +2751,227 @@ async function salvarProdutivosFirebase() {
       "O Firebase demorou para confirmar os lançamentos."
     );
 
-  const chavesConfirmadas =
-    new Set(
-      snapshotConfirmacao.docs.map(
-        documento =>
-          chaveLancamentoProdutivo({
-            id:
-              documento.id,
-            ...documento.data()
-          })
+  const confirmados =
+    snapshotConfirmacao.docs.map(
+      documento => ({
+        id:
+          documento.id,
+        ...documento.data()
+      })
+    );
+
+  const mapaConfirmados =
+    new Map(
+      confirmados.map(
+        item => [
+          chaveLancamentoProdutivo(
+            item
+          ),
+          item
+        ]
       )
     );
 
-  const naoConfirmados =
-    state.gerados.filter(
-      registro =>
-        !chavesConfirmadas.has(
-          chaveLancamentoProdutivo(
-            registro
-          )
-        )
-    );
+  const divergencias = [];
+
+  registrosEsperados.forEach(
+    esperado => {
+      const salvo =
+        mapaConfirmados.get(
+          esperado.chave
+        );
+
+      if (!salvo) {
+        divergencias.push(
+          `${esperado.funcionarioId}: documento não localizado`
+        );
+        return;
+      }
+
+      const camposInvalidos = [];
+
+      if (
+        texto(
+          salvo.competencia
+        ) !==
+        esperado.competencia
+      ) {
+        camposInvalidos.push(
+          "competência"
+        );
+      }
+
+      if (
+        texto(
+          salvo.filial
+        ) !==
+        esperado.filial
+      ) {
+        camposInvalidos.push(
+          "filial"
+        );
+      }
+
+      if (
+        texto(
+          salvo.cargo
+        ) !==
+        esperado.cargo
+      ) {
+        camposInvalidos.push(
+          "cargo"
+        );
+      }
+
+      if (
+        numero(
+          salvo.horasDisponiveis
+        ) !==
+        esperado.horasDisponiveis
+      ) {
+        camposInvalidos.push(
+          "horas disponíveis"
+        );
+      }
+
+      if (
+        numero(
+          salvo.horasTrabalhadas
+        ) !==
+        esperado.horasTrabalhadas
+      ) {
+        camposInvalidos.push(
+          "horas trabalhadas"
+        );
+      }
+
+      if (
+        numero(
+          salvo.horasVendidas
+        ) !==
+        esperado.horasVendidas
+      ) {
+        camposInvalidos.push(
+          "horas vendidas"
+        );
+      }
+
+      if (
+        camposInvalidos.length
+      ) {
+        divergencias.push(
+          `${salvo.nome || esperado.funcionarioId}: ${camposInvalidos.join(", ")}`
+        );
+      }
+    }
+  );
 
   if (
-    naoConfirmados.length
+    divergencias.length
   ) {
     throw new Error(
-      `${naoConfirmados.length} lançamento(s) não foram confirmados na coleção ${nomeColecao}. O sistema não exibirá um falso sucesso.`
+      [
+        "O Firebase recebeu os documentos, mas alguns campos não foram confirmados corretamente:",
+        ...divergencias.slice(
+          0,
+          10
+        )
+      ].join("\n")
     );
   }
+
+  /*
+   * Mantém também o backup local utilizado pelo script principal.
+   * O Firebase continua sendo a fonte oficial.
+   */
+  try {
+    const chaveLocal =
+      "campanha_oficina_mvp_v1";
+
+    const atualLocal =
+      JSON.parse(
+        localStorage.getItem(
+          chaveLocal
+        ) ||
+        '{"lancamentos":[]}'
+      );
+
+    const mapaLocal =
+      new Map(
+        (
+          Array.isArray(
+            atualLocal.lancamentos
+          )
+            ? atualLocal.lancamentos
+            : []
+        ).map(
+          item => [
+            chaveLancamentoProdutivo(
+              item
+            ),
+            item
+          ]
+        )
+      );
+
+    confirmados.forEach(
+      item => {
+        mapaLocal.set(
+          chaveLancamentoProdutivo(
+            item
+          ),
+          item
+        );
+      }
+    );
+
+    localStorage.setItem(
+      chaveLocal,
+      JSON.stringify({
+        ...atualLocal,
+        lancamentos:
+          [...mapaLocal.values()]
+      })
+    );
+  } catch (erroBackup) {
+    console.warn(
+      "Não foi possível atualizar o backup local:",
+      erroBackup
+    );
+  }
+
+  /*
+   * Posiciona os filtros na competência importada antes da
+   * atualização automática das telas.
+   */
+  [
+    "#filtroCompetenciaLancamento",
+    "#filtroCompetenciaApuracao",
+    "#filtroCompetenciaHistorico"
+  ].forEach(
+    seletor => {
+      const campo =
+        document.querySelector(
+          seletor
+        );
+
+      if (!campo) {
+        return;
+      }
+
+      campo.value =
+        state.competencia;
+
+      campo.dispatchEvent(
+        new Event(
+          "change",
+          {
+            bubbles: true
+          }
+        )
+      );
+    }
+  );
 
   window.dispatchEvent(
     new CustomEvent(
@@ -2689,7 +2984,9 @@ async function salvarProdutivosFirebase() {
             state.competencia,
           criados,
           atualizados,
-          ignorados
+          ignorados,
+          confirmados:
+            registrosEsperados.length
         }
       }
     )
@@ -2700,8 +2997,7 @@ async function salvarProdutivosFirebase() {
     atualizados,
     ignorados,
     confirmados:
-      state.gerados.length -
-      ignorados,
+      registrosEsperados.length,
     destino:
       nomeColecao
   };
@@ -2866,9 +3162,13 @@ async function confirmarImportacao() {
       state.tipo ===
       "produtivos"
     ) {
+      /*
+       * Aguarda o listener do Firebase e depois recarrega
+       * mantendo a competência importada no backup local.
+       */
       window.setTimeout(() => {
         window.location.reload();
-      }, 900);
+      }, 2200);
     }
   } catch (erro) {
     console.error(
