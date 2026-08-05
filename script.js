@@ -1505,7 +1505,7 @@ window.produtivosLancamentos = {
     ],
 
   versao:
-    "2026.08.04-FATURAMENTO-GESTORES-SEGURO-05"
+    "2026.08.05-FILTRO-DASHBOARD-PRODUTIVOS-06"
 };
 
 function bonusMecanicoProdutividade(
@@ -4274,6 +4274,167 @@ function renderHistoricoMensal(
         `;
 }
 
+function obterValorFiltroDashboardProdutivos(
+  seletor
+) {
+  return (
+    document.querySelector(
+      seletor
+    )?.value ||
+    ""
+  );
+}
+
+function preencherFiltroDashboardProdutivos(
+  elemento,
+  itens,
+  rotuloPadrao
+) {
+  if (!elemento) {
+    return;
+  }
+
+  const valorAtual =
+    elemento.value;
+
+  elemento.innerHTML = [
+    `<option value="">${rotuloPadrao}</option>`,
+
+    ...itens.map(
+      item => `
+        <option value="${item.value}">
+          ${item.label}
+        </option>
+      `
+    )
+  ].join("");
+
+  if (
+    itens.some(
+      item =>
+        item.value ===
+        valorAtual
+    )
+  ) {
+    elemento.value =
+      valorAtual;
+  }
+}
+
+function atualizarFiltrosDashboardProdutivos(
+  resultadosCompetencia
+) {
+  const filtroDn =
+    document.querySelector(
+      "#filtroDnDashboardProdutivos"
+    );
+
+  const filtroFilial =
+    document.querySelector(
+      "#filtroFilialDashboardProdutivos"
+    );
+
+  if (
+    !filtroDn ||
+    !filtroFilial
+  ) {
+    return;
+  }
+
+  const dns =
+    [
+      ...new Set(
+        resultadosCompetencia
+          .map(
+            item =>
+              String(
+                item.dn || ""
+              ).trim()
+          )
+          .filter(Boolean)
+      )
+    ].sort(
+      (a, b) =>
+        a.localeCompare(
+          b,
+          "pt-BR",
+          {
+            numeric: true
+          }
+        )
+    );
+
+  preencherFiltroDashboardProdutivos(
+    filtroDn,
+    dns.map(
+      dn => ({
+        value: dn,
+        label: dn
+      })
+    ),
+    "Todos"
+  );
+
+  const dnSelecionado =
+    filtroDn.value;
+
+  const filiais =
+    [
+      ...new Map(
+        resultadosCompetencia
+          .filter(
+            item =>
+              !dnSelecionado ||
+              String(
+                item.dn || ""
+              ).trim() ===
+                dnSelecionado
+          )
+          .map(
+            item => [
+              String(
+                item.filial || ""
+              ).trim(),
+              {
+                filial:
+                  String(
+                    item.filial || ""
+                  ).trim(),
+                dn:
+                  String(
+                    item.dn || ""
+                  ).trim()
+              }
+            ]
+          )
+          .filter(
+            ([filial]) =>
+              Boolean(filial)
+          )
+      ).values()
+    ].sort(
+      (a, b) =>
+        a.filial.localeCompare(
+          b.filial,
+          "pt-BR"
+        )
+    );
+
+  preencherFiltroDashboardProdutivos(
+    filtroFilial,
+    filiais.map(
+      item => ({
+        value: item.filial,
+        label:
+          item.dn
+            ? `${item.dn} - ${item.filial}`
+            : item.filial
+      })
+    ),
+    "Todas"
+  );
+}
+
 function renderDashboard() {
   const campoCompetencia =
     document.querySelector(
@@ -4293,11 +4454,49 @@ function renderDashboard() {
   campoCompetencia.value =
     competencia;
 
-  const lista =
+  const resultadosCompetencia =
     obterResultadosCampanha().filter(
       resultado =>
         resultado.competencia ===
         competencia
+    );
+
+  atualizarFiltrosDashboardProdutivos(
+    resultadosCompetencia
+  );
+
+  const dnSelecionado =
+    obterValorFiltroDashboardProdutivos(
+      "#filtroDnDashboardProdutivos"
+    );
+
+  const filialSelecionada =
+    obterValorFiltroDashboardProdutivos(
+      "#filtroFilialDashboardProdutivos"
+    );
+
+  const lista =
+    resultadosCompetencia.filter(
+      resultado => {
+        const atendeDn =
+          !dnSelecionado ||
+          String(
+            resultado.dn || ""
+          ).trim() ===
+            dnSelecionado;
+
+        const atendeFilial =
+          !filialSelecionada ||
+          String(
+            resultado.filial || ""
+          ).trim() ===
+            filialSelecionada;
+
+        return (
+          atendeDn &&
+          atendeFilial
+        );
+      }
     );
 
   const total =
@@ -4325,8 +4524,32 @@ function renderDashboard() {
       "Funcionários ativos",
 
       db.funcionarios.filter(
-        funcionario =>
-          funcionario.ativo
+        funcionario => {
+          if (
+            !funcionario.ativo
+          ) {
+            return false;
+          }
+
+          const atendeDn =
+            !dnSelecionado ||
+            String(
+              funcionario.dn || ""
+            ).trim() ===
+              dnSelecionado;
+
+          const atendeFilial =
+            !filialSelecionada ||
+            String(
+              funcionario.filial || ""
+            ).trim() ===
+              filialSelecionada;
+
+          return (
+            atendeDn &&
+            atendeFilial
+          );
+        }
       ).length
     ],
 
@@ -6498,6 +6721,38 @@ function configurarEventos() {
         atualizarNavegacaoHistorico();
         renderDashboard();
       }
+    );
+
+
+  const filtroDnDashboardProdutivos =
+    document.querySelector(
+      "#filtroDnDashboardProdutivos"
+    );
+
+  const filtroFilialDashboardProdutivos =
+    document.querySelector(
+      "#filtroFilialDashboardProdutivos"
+    );
+
+  filtroDnDashboardProdutivos
+    ?.addEventListener(
+      "change",
+      () => {
+        if (
+          filtroFilialDashboardProdutivos
+        ) {
+          filtroFilialDashboardProdutivos.value =
+            "";
+        }
+
+        renderDashboard();
+      }
+    );
+
+  filtroFilialDashboardProdutivos
+    ?.addEventListener(
+      "change",
+      renderDashboard
     );
 
 

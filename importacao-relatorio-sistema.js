@@ -157,7 +157,7 @@ firebase-config.js. Isso evita duas inicializações diferentes do
 Firestore e mantém o long polling usado pelo restante do sistema.
 */
 
-const VERSAO = "2026.08.04-21";
+const VERSAO = "2026.08.04-22";
 const TAMANHO_LOTE = 400;
 const TIMEOUT_OPERACAO = 90000;
 const DB_PRODUTIVOS = "campanha_oficina_mvp_v1";
@@ -3138,6 +3138,16 @@ function garantirCss() {
         gap:6px
       }
 
+      /*
+       * O campo Semana continua existindo internamente para o Pix,
+       * mas fica totalmente oculto na importação mensal dos Produtivos.
+       * O !important impede que display:grid da classe .irs-field
+       * sobrescreva o atributo hidden.
+       */
+      .irs-field[hidden]{
+        display:none !important
+      }
+
       .irs-field span{
         font-size:.7rem;
         font-weight:800;
@@ -3987,8 +3997,27 @@ function abrir(tipo) {
     $("#irsFile").value =
       "";
 
-    $("#irsSemanaField").hidden =
+    const campoSemana =
+      $("#irsSemanaField");
+
+    const ocultarSemana =
       tipo !== "pix";
+
+    /*
+     * Produtivos são mensais: o campo Semana não aparece.
+     * Pix continua semanal e mantém o seletor normalmente.
+     *
+     * A propriedade hidden e o estilo inline são usados juntos
+     * apenas como proteção visual. Nenhuma regra de processamento,
+     * salvamento ou cálculo foi removida.
+     */
+    campoSemana.hidden =
+      ocultarSemana;
+
+    campoSemana.style.display =
+      ocultarSemana
+        ? "none"
+        : "";
 
     $("#irsDescription").textContent =
       tipo === "pix"

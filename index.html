@@ -423,7 +423,42 @@
     </nav>
 
     <div class="sidebar-footer">
-      <small>Dados sincronizados com o sistema</small>
+      <button
+        type="button"
+        id="btnAbrirSobreSistema"
+        class="developer-card"
+        aria-label="Abrir informações sobre o sistema e o desenvolvedor"
+        title="Sobre o sistema"
+      >
+        <span class="developer-card-glow" aria-hidden="true"></span>
+
+        <span class="developer-avatar" aria-hidden="true">
+          <span>PL</span>
+        </span>
+
+        <span class="developer-info">
+          <span class="developer-kicker">Desenvolvido por</span>
+
+          <strong class="developer-name">Pabricio Lima</strong>
+
+          <span class="developer-role">
+            Analista de Negócios &amp; Tecnologia
+          </span>
+
+          <span class="developer-meta">
+            <span class="developer-badge">Developer</span>
+            <span class="developer-version">Enterprise • v2.0</span>
+          </span>
+        </span>
+
+        <span class="developer-arrow" aria-hidden="true">›</span>
+      </button>
+
+      <div class="sidebar-system-status">
+        <span class="sidebar-status-dot" aria-hidden="true"></span>
+        <small>Dados sincronizados com o sistema</small>
+      </div>
+
       <button id="btnLimparTudo" class="danger-link">
         Limpar lançamentos locais
       </button>
@@ -472,6 +507,36 @@
     <!-- CAMPANHA DOS PRODUTIVOS -->
     <section id="dashboard" class="view active">
       <div class="cards" id="dashboardCards"></div>
+
+      <article
+        class="panel produtivos-dashboard-filter-panel"
+        aria-label="Filtros da visão geral dos Produtivos"
+      >
+        <div class="produtivos-dashboard-filters">
+          <label>
+            <span>DN</span>
+
+            <select
+              id="filtroDnDashboardProdutivos"
+              aria-label="Filtrar visão geral dos Produtivos por DN"
+            >
+              <option value="">Todos</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Filial</span>
+
+            <select
+              id="filtroFilialDashboardProdutivos"
+              aria-label="Filtrar visão geral dos Produtivos por filial"
+            >
+              <option value="">Todas</option>
+            </select>
+          </label>
+        </div>
+      </article>
+
       <div class="grid-2">
         <article class="panel">
           <div class="panel-header">
@@ -1185,13 +1250,80 @@
     </form>
   </dialog>
 
+
+  <!-- SOBRE O SISTEMA — AUTORIA -->
+  <dialog id="modalSobreSistema" class="about-system-dialog">
+    <article class="about-system-card">
+      <button
+        type="button"
+        id="btnFecharSobreSistema"
+        class="about-system-close"
+        aria-label="Fechar informações sobre o sistema"
+      >
+        ×
+      </button>
+
+      <div class="about-system-hero">
+        <div class="about-system-logo" aria-hidden="true">
+          PL
+        </div>
+
+        <div>
+          <p class="about-system-eyebrow">Sistema corporativo</p>
+          <h2>Sistema de Campanhas Pós-Vendas</h2>
+          <p class="about-system-subtitle">
+            Gestão integrada de campanhas, apurações e indicadores.
+          </p>
+        </div>
+      </div>
+
+      <div class="about-system-content">
+        <section class="about-developer-section">
+          <span class="about-label">Desenvolvido por</span>
+          <h3>Pabricio Lima</h3>
+          <p>Analista de Negócios &amp; Tecnologia</p>
+
+          <div class="about-tags">
+            <span>Developer</span>
+            <span>Enterprise Edition</span>
+            <span>Versão 2.0</span>
+          </div>
+        </section>
+
+        <section class="about-technology-section">
+          <span class="about-label">Tecnologias do projeto</span>
+
+          <div class="about-technology-grid">
+            <span>HTML5</span>
+            <span>CSS3</span>
+            <span>JavaScript</span>
+            <span>Firebase</span>
+            <span>Supabase</span>
+            <span>Excel &amp; PDF</span>
+          </div>
+        </section>
+
+        <footer class="about-system-footer">
+          <div>
+            <strong>Grupo Mônaco</strong>
+            <span>Sistema desenvolvido para operação interna.</span>
+          </div>
+
+          <small>
+            © 2026 Pabricio Lima. Todos os direitos reservados.
+          </small>
+        </footer>
+      </div>
+    </article>
+  </dialog>
+
   <div id="toast" class="toast"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
   <script src="./alerts-premium.js?v=20260716-01"></script>
-  <script type="module" src="./script.js?v=20260804-23"></script>
+  <script type="module" src="./script.js?v=20260805-27"></script>
   <script type="module" src="./pix-presidente.js?v=20260724-07"></script>
   <script type="module" src="./importacao-funcionarios.js?v=20260716-01"></script>
   <script src="./pix-historico-individual.js?v=20260715-01"></script>
@@ -1345,6 +1477,65 @@
 
         return api.baixarModeloProdutivos();
       };
+  </script>
+
+  <script>
+    /*
+     * Card de autoria e modal "Sobre o Sistema".
+     * Código isolado: não interfere nos módulos, filtros ou cálculos.
+     */
+    (() => {
+      const botaoAbrir =
+        document.getElementById(
+          "btnAbrirSobreSistema"
+        );
+
+      const modal =
+        document.getElementById(
+          "modalSobreSistema"
+        );
+
+      const botaoFechar =
+        document.getElementById(
+          "btnFecharSobreSistema"
+        );
+
+      if (
+        !botaoAbrir ||
+        !modal ||
+        !botaoFechar
+      ) {
+        return;
+      }
+
+      botaoAbrir.addEventListener(
+        "click",
+        () => {
+          if (
+            typeof modal.showModal ===
+            "function"
+          ) {
+            modal.showModal();
+          }
+        }
+      );
+
+      botaoFechar.addEventListener(
+        "click",
+        () => modal.close()
+      );
+
+      modal.addEventListener(
+        "click",
+        evento => {
+          if (
+            evento.target === modal
+          ) {
+            modal.close();
+          }
+        }
+      );
+    })();
   </script>
 
   <!-- Importação integrada aos módulos de Lançamentos -->
