@@ -157,7 +157,7 @@ firebase-config.js. Isso evita duas inicializações diferentes do
 Firestore e mantém o long polling usado pelo restante do sistema.
 */
 
-const VERSAO = "2026.08.04-22";
+const VERSAO = "2026.08.06-31";
 const TAMANHO_LOTE = 400;
 const TIMEOUT_OPERACAO = 90000;
 const DB_PRODUTIVOS = "campanha_oficina_mvp_v1";
@@ -214,6 +214,37 @@ function numero(valor) {
   return Number.isFinite(convertido)
     ? convertido
     : 0;
+}
+
+
+function numeroPercentual(
+  valor
+) {
+  const convertido =
+    numero(
+      valor
+    );
+
+  /*
+   * O Excel armazena 17,20% internamente como 0,172.
+   * Já uma célula em formato Geral pode chegar como 17,20.
+   *
+   * Esta função aceita os dois formatos:
+   *   0,172  -> 17,20
+   *   17,20  -> 17,20
+   *   0,496  -> 49,60
+   *   49,60  -> 49,60
+   */
+  if (
+    convertido !== 0 &&
+    Math.abs(
+      convertido
+    ) <= 1
+  ) {
+    return convertido * 100;
+  }
+
+  return convertido;
 }
 
 
@@ -349,9 +380,15 @@ function competenciaNormalizada(valor) {
   return "";
 }
 
-function alerta(mensagem) {
+function alerta(
+  mensagem,
+  opcoes = {}
+) {
   if (window.CampanhaUI?.alert) {
-    return window.CampanhaUI.alert(mensagem);
+    return window.CampanhaUI.alert(
+      mensagem,
+      opcoes
+    );
   }
 
   window.alert(mensagem);
@@ -523,6 +560,7 @@ const state = {
   reconciliacoes: [],
   funcionariosCache: [],
   lancamentosCache: [],
+  participantesParaCriar: [],
   processando: false,
   analisando: false,
   progresso: "",
@@ -652,6 +690,46 @@ function mapaPix() {
     ticketPecas: localizarColuna([
       "Ticket Médio Peças",
       "Ticket Medio Pecas"
+    ]),
+
+    metaSemanal: localizarColuna([
+      "Meta semanal",
+      "Meta Semanal"
+    ]),
+
+    realizadoSemanal: localizarColuna([
+      "Realizado semanal",
+      "Realizado Semanal"
+    ]),
+
+    margem: localizarColuna([
+      "Margem realizada (%)",
+      "Margem realizada",
+      "Margem"
+    ]),
+
+    bonusFuncao: localizarColuna([
+      "Bônus semanal da função",
+      "Bonus semanal da funcao",
+      "Bônus da função",
+      "Bonus da funcao"
+    ]),
+
+    metaNps: localizarColuna([
+      "Meta de NPS",
+      "Meta NPS"
+    ]),
+
+    realizadoNps: localizarColuna([
+      "NPS realizado",
+      "Realizado NPS"
+    ]),
+
+    osAberta: localizarColuna([
+      "O.S. em aberto (%)",
+      "OS em aberto (%)",
+      "O.S. em aberto",
+      "OS em aberto"
     ])
   };
 }
@@ -730,6 +808,182 @@ function mapaProdutivos() {
 function processarPix() {
   const mapa = mapaPix();
   const erros = [];
+
+  const modeloDireto =
+    mapa.metaSemanal >= 0 &&
+    mapa.realizadoSemanal >= 0;
+
+  /*
+   * NOVO MODELO DIRETO:
+   * usa os mesmos campos do lançamento manual.
+   *
+   * Ticket, margem, NPS e O.S. são opcionais. Campo vazio
+   * vira zero e não bloqueia a importação.
+   */
+  if (modeloDireto) {
+    const brutos = [];
+
+    if (mapa.vendedor < 0) {
+      erros.push(
+        'A coluna "Vendedor" não foi encontrada.'
+      );
+    }
+
+    if (erros.length) {
+      return {
+        brutos,
+        erros
+      };
+    }
+
+    state.rows.forEach(
+      (linha, indice) => {
+        const vendedor =
+          texto(
+            valorLinha(
+              linha,
+              mapa.vendedor
+            )
+          );
+
+        if (!vendedor) {
+          return;
+        }
+
+        /*
+         * Ignora textos auxiliares colocados abaixo da área de dados
+         * no próprio modelo. Apenas linhas de participantes reais
+         * seguem para análise.
+         */
+        const vendedorNormalizado =
+          normalizar(
+            vendedor
+          );
+
+        const linhaInstrucao =
+          vendedorNormalizado.startsWith(
+            "INSTRUCOES"
+          ) ||
+          vendedorNormalizado ===
+            "CAMPO" ||
+          [
+            "VENDEDOR",
+            "TICKET MEDIO",
+            "MARGEM REALIZADA",
+            "META NPS REALIZADO",
+            "O S EM ABERTO",
+            "CAMPOS VAZIOS"
+          ].includes(
+            vendedorNormalizado
+          );
+
+        if (linhaInstrucao) {
+          return;
+        }
+
+        brutos.push({
+          modeloDireto:
+            true,
+          linha:
+            indice + 2,
+          vendedor,
+          cargoArquivo:
+            texto(
+              valorLinha(
+                linha,
+                mapa.cargo
+              )
+            ),
+          filialArquivo:
+            texto(
+              valorLinha(
+                linha,
+                mapa.filial
+              )
+            ),
+          filial:
+            texto(
+              valorLinha(
+                linha,
+                mapa.filial
+              )
+            ) ||
+            state.filial,
+          dn:
+            texto(
+              valorLinha(
+                linha,
+                mapa.dn
+              )
+            ),
+          metaSemanal:
+            numero(
+              valorLinha(
+                linha,
+                mapa.metaSemanal
+              )
+            ),
+          realizadoSemanal:
+            numero(
+              valorLinha(
+                linha,
+                mapa.realizadoSemanal
+              )
+            ),
+          ticketMedio:
+            numero(
+              valorLinha(
+                linha,
+                mapa.ticket
+              )
+            ),
+          margem:
+            numeroPercentual(
+              valorLinha(
+                linha,
+                mapa.margem
+              )
+            ),
+          bonusFuncao:
+            numero(
+              valorLinha(
+                linha,
+                mapa.bonusFuncao
+              )
+            ),
+          metaNps:
+            numero(
+              valorLinha(
+                linha,
+                mapa.metaNps
+              )
+            ),
+          realizadoNps:
+            numero(
+              valorLinha(
+                linha,
+                mapa.realizadoNps
+              )
+            ),
+          osAbertaPercentual:
+            numeroPercentual(
+              valorLinha(
+                linha,
+                mapa.osAberta
+              )
+            )
+        });
+      }
+    );
+
+    return {
+      brutos,
+      erros,
+      avisos: [
+        "Modelo direto identificado. Campos opcionais vazios serão importados como zero."
+      ]
+    };
+  }
 
   [
     [mapa.vendedor, "Vendedor"],
@@ -873,16 +1127,34 @@ function processarProdutivos() {
       return;
     }
 
+    const competenciaArquivo =
+      competenciaNormalizada(
+        valorLinha(
+          linha,
+          mapa.competencia
+        )
+      );
+
     const item = {
       linha: indice + 2,
+
+      /*
+       * PRODUTIVOS SÃO MENSAIS:
+       * a competência selecionada no modal é a fonte oficial.
+       *
+       * A planilha enviada por São Luís possuía:
+       * 2026-07, 2026-08, 2026-09, 2026-10, 2026-12,
+       * 2026-13, 2026-14 e 2026-16.
+       *
+       * A confirmação consultava somente 2026-07; por isso apenas
+       * a primeira linha era localizada e as outras sete apareciam
+       * como "não confirmadas".
+       */
       competencia:
-        competenciaNormalizada(
-          valorLinha(
-            linha,
-            mapa.competencia
-          )
-        ) ||
         state.competencia,
+
+      competenciaArquivo,
+
       dn: texto(
         valorLinha(
           linha,
@@ -971,9 +1243,43 @@ function processarProdutivos() {
     brutos.push(item);
   });
 
+  const competenciasArquivo =
+    [
+      ...new Set(
+        brutos
+          .map(
+            item =>
+              item.competenciaArquivo
+          )
+          .filter(Boolean)
+      )
+    ];
+
+  const competenciasDivergentes =
+    competenciasArquivo.filter(
+      competencia =>
+        competencia !==
+        state.competencia
+    );
+
+  const avisos = [];
+
+  if (
+    competenciasDivergentes.length
+  ) {
+    avisos.push(
+      [
+        "A coluna Competência da planilha possuía meses diferentes ou inválidos.",
+        `Todos os lançamentos foram ajustados automaticamente para ${state.competencia}, conforme a competência selecionada no importador.`,
+        `Valores encontrados no arquivo: ${competenciasArquivo.join(", ")}.`
+      ].join(" ")
+    );
+  }
+
   return {
     brutos,
-    erros
+    erros,
+    avisos
   };
 }
 
@@ -986,7 +1292,14 @@ function processar() {
   state.brutos = resultado.brutos;
   state.gerados = [];
   state.erros = resultado.erros;
-  state.avisos = [];
+  state.avisos =
+    Array.isArray(
+      resultado.avisos
+    )
+      ? [
+          ...resultado.avisos
+        ]
+      : [];
 
   if (
     state.tipo === "pix" &&
@@ -1601,10 +1914,226 @@ function agruparPorFilial(itens) {
   return grupos;
 }
 
+function gerarLancamentosPixDireto(
+  brutos,
+  funcionarios
+) {
+  const gerados = [];
+  const avisos = [];
+  const erros = [];
+  const reconciliacoes = [];
+
+  brutos.forEach(item => {
+    const resultado =
+      encontrarMelhorFuncionario(
+        funcionarios,
+        item
+      );
+
+    let funcionario =
+      resultado.funcionario;
+
+    if (
+      resultado.status ===
+      "nao_encontrado"
+    ) {
+      const criacao =
+        criarParticipanteTemporarioPix(
+          item
+        );
+
+      if (!criacao.participante) {
+        erros.push(
+          criacao.erro
+        );
+
+        return;
+      }
+
+      funcionario =
+        criacao.participante;
+
+      funcionarios.push(
+        funcionario
+      );
+
+      state.participantesParaCriar.push(
+        funcionario
+      );
+
+      avisos.push(
+        `Linha ${item.linha}: "${funcionario.nome}" será cadastrado automaticamente na base do Pix.`
+      );
+    }
+
+    if (
+      resultado.status ===
+      "ambiguo"
+    ) {
+      erros.push(
+        `Linha ${item.linha}: correspondência ambígua para "${item.vendedor}".`
+      );
+      return;
+    }
+
+    if (!funcionario) {
+      erros.push(
+        `Linha ${item.linha}: não foi possível definir o participante "${item.vendedor}".`
+      );
+
+      return;
+    }
+
+    const meta =
+      numero(
+        item.metaSemanal
+      );
+
+    const realizado =
+      numero(
+        item.realizadoSemanal
+      );
+
+    gerados.push({
+      competencia:
+        state.competencia,
+      semana:
+        Number(
+          state.semana
+        ),
+      funcionarioId:
+        funcionario.id,
+      nome:
+        funcionario.nome ||
+        item.vendedor,
+      nomeRelatorio:
+        item.vendedor,
+      filial:
+        filialCanonicaPix(
+          funcionario.filial ||
+          item.filial ||
+          item.filialArquivo ||
+          state.filial,
+          funcionario.dn ||
+          item.dn ||
+          "",
+          funcionarios
+        ),
+      dn:
+        limparEspacosPix(
+          funcionario.dn ||
+          item.dn ||
+          ""
+        ),
+      cargo:
+        funcionario.cargo ||
+        item.cargoArquivo ||
+        "",
+
+      metaSemanal:
+        meta,
+      realizadoSemanal:
+        realizado,
+      percentualAtingimentoImportado:
+        meta > 0
+          ? realizado / meta * 100
+          : 0,
+      semMetaIndividual:
+        meta <= 0,
+      motivoNaoHabilitado:
+        meta <= 0
+          ? "SEM META SEMANAL INFORMADA"
+          : "",
+
+      ticketMedio:
+        numero(
+          item.ticketMedio
+        ),
+      margem:
+        numeroPercentual(
+          item.margem
+        ),
+      metaNps:
+        numero(
+          item.metaNps
+        ),
+      realizadoNps:
+        numero(
+          item.realizadoNps
+        ),
+      osAbertaPercentual:
+        numeroPercentual(
+          item.osAbertaPercentual
+        ),
+
+      bonusBaseImportado:
+        numero(
+          item.bonusFuncao
+        ),
+
+      origemImportacao:
+        "MODELO DIRETO PIX",
+      arquivoImportado:
+        state.arquivo?.name ||
+        "",
+      abaImportada:
+        state.aba ||
+        "",
+      importadoEm:
+        new Date().toISOString(),
+      regraImportacao:
+        "MESMOS CAMPOS DO LANCAMENTO MANUAL"
+    });
+
+    if (
+      deveAtualizarNome(
+        funcionario.nome,
+        item.vendedor,
+        resultado.pontuacao
+      )
+    ) {
+      reconciliacoes.push({
+        funcionarioId:
+          funcionario.id,
+        nomeAnterior:
+          funcionario.nome,
+        nomeNovo:
+          item.vendedor,
+        filial:
+          funcionario.filial,
+        cargo:
+          funcionario.cargo,
+        pontuacao:
+          resultado.pontuacao
+      });
+    }
+  });
+
+  return {
+    gerados,
+    avisos,
+    erros,
+    reconciliacoes
+  };
+}
+
 function gerarLancamentosPix(
   brutos,
   funcionarios
 ) {
+  if (
+    brutos.some(
+      item =>
+        item.modeloDireto ===
+        true
+    )
+  ) {
+    return gerarLancamentosPixDireto(
+      brutos,
+      funcionarios
+    );
+  }
+
   const gerados = [];
   const avisos = [];
   const erros = [];
@@ -2093,6 +2622,305 @@ function gerarLancamentosProdutivos(
   };
 }
 
+const FILIAIS_CANONICAS_PIX = [
+  { dn: "4700", filial: "ANANINDEUA" },
+  { dn: "4731", filial: "SÃO LUÍS" },
+  { dn: "1960", filial: "BACABAL" },
+  { dn: "4756", filial: "MACAPÁ" },
+  { dn: "4730", filial: "TERESINA" },
+  { dn: "4730", filial: "URUÇUÍ" },
+  { dn: "1928", filial: "SINOP" },
+  { dn: "4738", filial: "CUIABÁ" },
+  { dn: "4738", filial: "ÁGUA BOA" },
+  { dn: "4774", filial: "RONDONÓPOLIS" },
+  { dn: "4977", filial: "PORTO VELHO" },
+  { dn: "4977", filial: "JI-PARANÁ" },
+  { dn: "1970", filial: "VILHENA" }
+];
+
+function limparEspacosPix(valor) {
+  return String(valor || "")
+    .replace(/\u00A0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function filialCanonicaPix(
+  filial,
+  dn,
+  funcionarios = []
+) {
+  const filialLimpa =
+    limparEspacosPix(
+      filial
+    );
+
+  const dnLimpo =
+    limparEspacosPix(
+      dn
+    );
+
+  const existente =
+    funcionarios.find(
+      funcionario =>
+        normalizar(
+          limparEspacosPix(
+            funcionario.filial
+          )
+        ) ===
+          normalizar(
+            filialLimpa
+          ) &&
+        (
+          !dnLimpo ||
+          limparEspacosPix(
+            funcionario.dn
+          ) ===
+            dnLimpo
+        )
+    );
+
+  if (existente?.filial) {
+    return limparEspacosPix(
+      existente.filial
+    );
+  }
+
+  const oficial =
+    FILIAIS_CANONICAS_PIX.find(
+      item =>
+        normalizar(
+          item.filial
+        ) ===
+          normalizar(
+            filialLimpa
+          ) &&
+        (
+          !dnLimpo ||
+          item.dn ===
+            dnLimpo
+        )
+    );
+
+  if (oficial) {
+    return oficial.filial;
+  }
+
+  return filialLimpa.toUpperCase();
+}
+
+function dadosMinimosParticipantePix(
+  item
+) {
+  const dn =
+    limparEspacosPix(
+      item.dn
+    );
+
+  const filial =
+    filialCanonicaPix(
+      item.filial ||
+      item.filialArquivo ||
+      state.filial,
+      dn,
+      state.funcionariosCache
+    );
+
+  return {
+    nome:
+      limparEspacosPix(
+        item.vendedor
+      ),
+    cargo:
+      limparEspacosPix(
+        item.cargoArquivo
+      ),
+    filial,
+    dn
+  };
+}
+
+function validarParticipanteNovoPix(
+  item
+) {
+  const dados =
+    dadosMinimosParticipantePix(
+      item
+    );
+
+  const faltantes = [];
+
+  if (!dados.nome) {
+    faltantes.push(
+      "Vendedor"
+    );
+  }
+
+  if (!dados.cargo) {
+    faltantes.push(
+      "Cargo"
+    );
+  }
+
+  if (!dados.filial) {
+    faltantes.push(
+      "Filial"
+    );
+  }
+
+  if (!dados.dn) {
+    faltantes.push(
+      "DN"
+    );
+  }
+
+  return {
+    valido:
+      faltantes.length === 0,
+    faltantes,
+    dados
+  };
+}
+
+function criarParticipanteTemporarioPix(
+  item
+) {
+  const validacao =
+    validarParticipanteNovoPix(
+      item
+    );
+
+  if (!validacao.valido) {
+    return {
+      participante:
+        null,
+      erro:
+        `Linha ${item.linha}: "${item.vendedor}" não está cadastrado e não pôde ser criado porque faltam: ${validacao.faltantes.join(", ")}.`
+    };
+  }
+
+  const dados =
+    validacao.dados;
+
+  const id =
+    gerarIdDocumento(
+      [
+        "pix-participante",
+        dados.nome,
+        dados.filial,
+        dados.dn
+      ].join("|")
+    );
+
+  return {
+    participante: {
+      id,
+      nome:
+        dados.nome,
+      cargo:
+        dados.cargo,
+      filial:
+        dados.filial,
+      dn:
+        dados.dn,
+      ativo:
+        true,
+      criadoPorImportacao:
+        true
+    },
+    erro:
+      ""
+  };
+}
+
+async function salvarParticipantesNovosPix(
+  participantes
+) {
+  const unicos =
+    [
+      ...new Map(
+        participantes.map(
+          participante => [
+            participante.id,
+            participante
+          ]
+        )
+      ).values()
+    ];
+
+  if (!unicos.length) {
+    return 0;
+  }
+
+  const lotes =
+    dividirEmLotes(
+      unicos,
+      TAMANHO_LOTE
+    );
+
+  let criados = 0;
+
+  for (
+    let indice = 0;
+    indice < lotes.length;
+    indice += 1
+  ) {
+    state.progresso =
+      `Criando participantes ${indice + 1}/${lotes.length}...`;
+
+    renderizar();
+
+    const batch =
+      writeBatch(
+        firestore
+      );
+
+    lotes[indice].forEach(
+      participante => {
+        batch.set(
+          doc(
+            firestore,
+            CONFIG.pix.funcionarios,
+            participante.id
+          ),
+          {
+            nome:
+              participante.nome,
+            cargo:
+              participante.cargo,
+            filial:
+              participante.filial,
+            dn:
+              participante.dn,
+            ativo:
+              true,
+            criadoPorImportacao:
+              true,
+            criadoEm:
+              serverTimestamp(),
+            atualizadoEm:
+              serverTimestamp()
+          },
+          {
+            merge:
+              true
+          }
+        );
+
+        criados += 1;
+      }
+    );
+
+    await comTimeout(
+      batch.commit(),
+      TIMEOUT_OPERACAO,
+      "O Firebase demorou para criar os participantes do Pix."
+    );
+  }
+
+  return criados;
+}
+
 async function analisarColaboradores() {
   if (
     state.analisando ||
@@ -2102,6 +2930,7 @@ async function analisarColaboradores() {
   }
 
   state.analisando = true;
+  state.participantesParaCriar = [];
   state.progresso =
     "Analisando colaboradores...";
   renderizar();
@@ -2243,6 +3072,69 @@ async function atualizarNomesBase(
   return atualizados;
 }
 
+function valorComparavelPix(
+  valor
+) {
+  return Math.round(
+    numero(
+      valor
+    ) * 10000
+  ) / 10000;
+}
+
+function lancamentoPixEhIgual(
+  existente,
+  novo
+) {
+  const camposTexto = [
+    "funcionarioId",
+    "competencia",
+    "nome",
+    "filial",
+    "dn",
+    "cargo"
+  ];
+
+  const camposNumero = [
+    "semana",
+    "metaSemanal",
+    "realizadoSemanal",
+    "ticketMedio",
+    "margem",
+    "metaNps",
+    "realizadoNps",
+    "osAbertaPercentual",
+    "bonusBaseImportado"
+  ];
+
+  const textosIguais =
+    camposTexto.every(
+      campo =>
+        normalizar(
+          existente?.[campo]
+        ) ===
+        normalizar(
+          novo?.[campo]
+        )
+    );
+
+  const numerosIguais =
+    camposNumero.every(
+      campo =>
+        valorComparavelPix(
+          existente?.[campo]
+        ) ===
+        valorComparavelPix(
+          novo?.[campo]
+        )
+    );
+
+  return (
+    textosIguais &&
+    numerosIguais
+  );
+}
+
 async function salvarPixEmLotes() {
   state.progresso =
     "Carregando lançamentos existentes...";
@@ -2275,12 +3167,24 @@ async function salvarPixEmLotes() {
 
     if (
       existente &&
-      state.estrategia === "novos"
+      lancamentoPixEhIgual(
+        existente,
+        registro
+      )
     ) {
       ignorados += 1;
+
+      state.avisos.push(
+        `"${registro.nome}" foi ignorado porque já possui o mesmo lançamento em ${registro.competencia}, S${registro.semana}.`
+      );
+
       return;
     }
 
+    /*
+     * Se já existe, mas algum valor mudou, sempre atualiza com
+     * a informação mais recente do arquivo importado.
+     */
     if (existente) {
       operacoes.push({
         tipo: "update",
@@ -2796,6 +3700,18 @@ async function confirmarImportacao() {
   let mensagemSucesso = "";
 
   try {
+    let participantesCriadosFinal = 0;
+
+    if (
+      state.tipo ===
+      "pix"
+    ) {
+      participantesCriadosFinal =
+        await salvarParticipantesNovosPix(
+          state.participantesParaCriar
+        );
+    }
+
     nomesAtualizadosFinal =
       await atualizarNomesBase(
         state.reconciliacoes
@@ -2806,6 +3722,9 @@ async function confirmarImportacao() {
         ? await salvarPixEmLotes()
         : await salvarProdutivosFirebase();
 
+    resultadoFinal.participantesCriados =
+      participantesCriadosFinal;
+
     state.progresso =
       "Concluído!";
     renderizar();
@@ -2815,7 +3734,8 @@ async function confirmarImportacao() {
       "",
       `${resultadoFinal.criados} criado(s)`,
       `${resultadoFinal.atualizados} atualizado(s)`,
-      `${resultadoFinal.ignorados} ignorado(s)`,
+      `${resultadoFinal.ignorados} duplicado(s) idêntico(s) ignorado(s)`,
+      `${resultadoFinal.participantesCriados || 0} participante(s) criado(s) automaticamente`,
       `${nomesAtualizadosFinal} nome(s) atualizado(s) na base`,
       `${state.erros.length} linha(s) inválida(s) não importada(s)`,
       state.tipo === "produtivos"
@@ -2874,7 +3794,15 @@ async function confirmarImportacao() {
     */
     window.setTimeout(() => {
       void alerta(
-        mensagemSucesso
+        mensagemSucesso,
+        {
+          tipo:
+            "success",
+          titulo:
+            "Importação concluída",
+          rotulo:
+            "Concluído"
+        }
       );
     }, 80);
 
@@ -2909,6 +3837,13 @@ async function confirmarImportacao() {
     state.progresso = "";
     renderizar();
 
+    /*
+     * Fecha a pré-visualização antes de abrir a mensagem.
+     * Assim o gerente não precisa fechar manualmente o modal
+     * para conseguir enxergar o erro.
+     */
+    fecharModal(true);
+
     await alerta(
       [
         "A importação não foi concluída.",
@@ -2916,8 +3851,18 @@ async function confirmarImportacao() {
         erro.message ||
           "Erro desconhecido.",
         "",
-        "O botão foi liberado para uma nova tentativa."
-      ].join("\n")
+        "Revise o arquivo e tente novamente."
+      ].join("\n"),
+      {
+        tipo:
+          "error",
+        titulo:
+          "Importação não concluída",
+        rotulo:
+          "Erro",
+        textoConfirmar:
+          "Entendi"
+      }
     );
   } finally {
     /*
@@ -2934,78 +3879,199 @@ async function confirmarImportacao() {
    MODELOS
 ========================================================================== */
 
+const MODELO_PIX_DROPDOWNS_BASE64 =
+  "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";
+
+function base64ParaBlob(
+  conteudoBase64,
+  tipoMime
+) {
+  const binario =
+    window.atob(
+      conteudoBase64
+    );
+
+  const tamanhoBloco =
+    1024;
+
+  const partes = [];
+
+  for (
+    let inicio = 0;
+    inicio < binario.length;
+    inicio += tamanhoBloco
+  ) {
+    const bloco =
+      binario.slice(
+        inicio,
+        inicio + tamanhoBloco
+      );
+
+    const bytes =
+      new Uint8Array(
+        bloco.length
+      );
+
+    for (
+      let indice = 0;
+      indice < bloco.length;
+      indice += 1
+    ) {
+      bytes[indice] =
+        bloco.charCodeAt(
+          indice
+        );
+    }
+
+    partes.push(
+      bytes
+    );
+  }
+
+  return new Blob(
+    partes,
+    {
+      type:
+        tipoMime
+    }
+  );
+}
+
+function baixarBlob(
+  blob,
+  nomeArquivo
+) {
+  const url =
+    URL.createObjectURL(
+      blob
+    );
+
+  const link =
+    document.createElement(
+      "a"
+    );
+
+  link.href =
+    url;
+
+  link.download =
+    nomeArquivo;
+
+  link.style.display =
+    "none";
+
+  document.body.appendChild(
+    link
+  );
+
+  link.click();
+
+  link.remove();
+
+  window.setTimeout(
+    () =>
+      URL.revokeObjectURL(
+        url
+      ),
+    1500
+  );
+}
+
 function baixarModelo(tipo) {
+  /*
+   * PIX DO PRESIDENTE
+   *
+   * O arquivo XLSX com dropdowns está incorporado diretamente
+   * neste JavaScript. Portanto, não depende de existir um arquivo
+   * separado na pasta do projeto e não gera erro 404.
+   */
+  if (
+    tipo ===
+    "pix"
+  ) {
+    try {
+      const arquivo =
+        base64ParaBlob(
+          MODELO_PIX_DROPDOWNS_BASE64,
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+
+      baixarBlob(
+        arquivo,
+        "MODELO-IMPORTACAO-PIX-COMPATIVEL.xlsx"
+      );
+
+      return;
+    } catch (erro) {
+      console.error(
+        "Erro ao gerar o modelo do Pix:",
+        erro
+      );
+
+      void alerta(
+        "Não foi possível gerar o modelo de importação do Pix.",
+        {
+          tipo:
+            "error",
+          titulo:
+            "Falha ao baixar modelo",
+          rotulo:
+            "Erro"
+        }
+      );
+
+      return;
+    }
+  }
+
+  /*
+   * PRODUTIVOS
+   *
+   * Mantém exatamente o modelo atual gerado por JavaScript.
+   */
   if (!window.XLSX) {
     alerta(
-      "A biblioteca XLSX não foi carregada."
+      "A biblioteca XLSX não foi carregada.",
+      {
+        tipo:
+          "error",
+        titulo:
+          "Modelo indisponível",
+        rotulo:
+          "Erro"
+      }
     );
 
     return;
   }
 
-  const cabecalhos =
-    tipo === "pix"
-      ? [
-          "Vendedor",
-          "Cargo",
-          "Filial",
-          "DN",
-          "Vlr. Acumulado",
-          "Vlr. Total",
-          "Ticket Médio",
-          "Objetivo M.O.",
-          "Vlr. M.O.",
-          "Objetivo Peças",
-          "Vlr. Peças",
-          "Qtd. Total",
-          "Qtd. Passagens",
-          "Ticket Médio Peças"
-        ]
-      : [
-          "Competencia",
-          "DN",
-          "Filial",
-          "Colaborador",
-          "Cargo",
-          "Faturamento",
-          "Horas Disponiveis",
-          "Horas Trabalhadas",
-          "Horas Vendidas",
-          "Treinamento Pendente",
-          "Retrabalho"
-        ];
+  const cabecalhos = [
+    "Competencia",
+    "DN",
+    "Filial",
+    "Colaborador",
+    "Cargo",
+    "Faturamento",
+    "Horas Disponiveis",
+    "Horas Trabalhadas",
+    "Horas Vendidas",
+    "Treinamento Pendente",
+    "Retrabalho"
+  ];
 
-  const exemplo =
-    tipo === "pix"
-      ? [
-          "PABRICIO LIMA MACIEL",
-          "Consultor Técnico",
-          "ANANINDEUA",
-          "4700",
-          283736.19,
-          301719.24,
-          4437.05,
-          64000,
-          99379.54,
-          160000,
-          202339.70,
-          68,
-          60,
-          2975.58
-        ]
-      : [
-          "2026-07",
-          "4700",
-          "ANANINDEUA",
-          "PABRICIO LIMA MACIEL",
-          "Mecânico Produtivo",
-          65000,
-          176,
-          150,
-          145,
-          "NÃO",
-          "NÃO"
-        ];
+  const exemplo = [
+    "2026-07",
+    "4700",
+    "ANANINDEUA",
+    "PABRICIO LIMA MACIEL",
+    "Mecânico Produtivo",
+    65000,
+    176,
+    150,
+    145,
+    "NÃO",
+    "NÃO"
+  ];
 
   const planilha =
     XLSX.utils.aoa_to_sheet([
@@ -3019,16 +4085,12 @@ function baixarModelo(tipo) {
   XLSX.utils.book_append_sheet(
     livro,
     planilha,
-    tipo === "pix"
-      ? "RELATORIO SISTEMA"
-      : "PRODUTIVOS"
+    "PRODUTIVOS"
   );
 
   XLSX.writeFile(
     livro,
-    tipo === "pix"
-      ? "modelo-relatorio-pix.xlsx"
-      : "modelo-importacao-produtivos.xlsx"
+    "modelo-importacao-produtivos.xlsx"
   );
 }
 

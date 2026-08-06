@@ -12,7 +12,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 console.info(
-  "[PIX] Versão 2026.07.24-07 carregada"
+  "[PIX] Versão 2026.07.24-06 carregada"
 );
 
 
@@ -305,10 +305,20 @@ function pixBonusFaixa(politica, valor) {
 
 function normalizarTextoPix(valor) {
   return String(valor ?? "")
+    .replace(/\u00A0/g, " ")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
     .trim()
     .toUpperCase();
+}
+
+function cargoSemNpsEOsPix(cargo) {
+  return normalizarTextoPix(
+    cargo
+  ) === normalizarTextoPix(
+    "Consultor Peças Balcão"
+  );
 }
 
 function funcionarioPixAtivo(funcionario) {
@@ -428,7 +438,13 @@ function calcularPix(lancamento) {
     metaNps > 0 &&
     realizadoNps >= metaNps;
 
+  const semAvaliacaoNpsEOs =
+    cargoSemNpsEOsPix(
+      cargo
+    );
+
   const bonusNps =
+    !semAvaliacaoNpsEOs &&
     Number(lancamento.semana) === 4 &&
     atingiuNps
       ? politica.bonusNps
@@ -438,9 +454,14 @@ function calcularPix(lancamento) {
     bonusBase + bonusFaixa + bonusNps;
 
   const osAberta =
-    pixNumero(lancamento.osAbertaPercentual);
+    semAvaliacaoNpsEOs
+      ? 0
+      : pixNumero(
+          lancamento.osAbertaPercentual
+        );
 
   const aplicaPenalidade =
+    !semAvaliacaoNpsEOs &&
     Number(lancamento.semana) === 4 &&
     osAberta > LIMITE_OS_ABERTA;
 
@@ -507,11 +528,26 @@ function calcularPix(lancamento) {
     indicador,
     bonusBase,
     bonusFaixa,
-    metaNps,
-    realizadoNps,
-    percentualNps,
-    atingiuNps,
+    metaNps:
+      semAvaliacaoNpsEOs
+        ? 0
+        : metaNps,
+    realizadoNps:
+      semAvaliacaoNpsEOs
+        ? 0
+        : realizadoNps,
+    percentualNps:
+      semAvaliacaoNpsEOs
+        ? 0
+        : percentualNps,
+    atingiuNps:
+      semAvaliacaoNpsEOs
+        ? false
+        : atingiuNps,
     bonusNps,
+    osAbertaPercentual:
+      osAberta,
+    semAvaliacaoNpsEOs,
     subtotal,
     penalidade,
     bonusFinal,
@@ -625,15 +661,66 @@ function competenciasPix() {
 }
 
 function filiaisParticipantesPix() {
+  const filiaisUnicas =
+    new Map();
+
+  participantesPix().forEach(
+    funcionario => {
+      const filialOriginal =
+        String(
+          funcionario.filial || ""
+        )
+          .replace(
+            /\u00A0/g,
+            " "
+          )
+          .replace(
+            /\s+/g,
+            " "
+          )
+          .trim();
+
+      if (!filialOriginal) {
+        return;
+      }
+
+      const chave =
+        normalizarTextoPix(
+          filialOriginal
+        );
+
+      if (
+        !filiaisUnicas.has(
+          chave
+        )
+      ) {
+        const filialOficial =
+          FILIAIS_PIX.find(
+            item =>
+              normalizarTextoPix(
+                item.unidade
+              ) ===
+                chave
+          );
+
+        filiaisUnicas.set(
+          chave,
+          filialOficial?.unidade ||
+          filialOriginal.toUpperCase()
+        );
+      }
+    }
+  );
+
   return [
-    ...new Set(
-      participantesPix().map(
-        funcionario => funcionario.filial
+    ...filiaisUnicas.values()
+  ].sort(
+    (a, b) =>
+      a.localeCompare(
+        b,
+        "pt-BR"
       )
-    )
-  ]
-    .filter(Boolean)
-    .sort();
+  );
 }
 
 function atualizarSelectsPix() {
@@ -744,6 +831,55 @@ function atualizarSelectsPix() {
   });
 }
 
+function normalizarCompetenciaPix(
+  valor
+) {
+  const textoCompetencia =
+    String(
+      valor || ""
+    )
+      .trim()
+      .replace(
+        "/",
+        "-"
+      );
+
+  const correspondencia =
+    textoCompetencia.match(
+      /(\d{4})\D?(\d{1,2})/
+    );
+
+  if (!correspondencia) {
+    return textoCompetencia;
+  }
+
+  return (
+    correspondencia[1] +
+    "-" +
+    String(
+      Number(
+        correspondencia[2]
+      )
+    ).padStart(
+      2,
+      "0"
+    )
+  );
+}
+
+function normalizarSemanaPix(
+  valor
+) {
+  const numeroSemana =
+    String(
+      valor || ""
+    ).match(
+      /[1-4]/
+    )?.[0];
+
+  return numeroSemana || "";
+}
+
 function resultadosPixFiltrados(tipo) {
   const prefixo =
     tipo === "apuracao"
@@ -757,49 +893,147 @@ function resultadosPixFiltrados(tipo) {
     $(`#pixFiltroCompetencia${prefixo}`)?.value || "";
 
   const competencia =
-    competenciaSelecionada ||
-    competenciaAtiva;
+    normalizarCompetenciaPix(
+      competenciaSelecionada ||
+      competenciaAtiva
+    );
 
   const filial =
-    $(`#pixFiltroFilial${prefixo}`)?.value || "";
+    normalizarTextoPix(
+      $(`#pixFiltroFilial${prefixo}`)?.value || ""
+    );
 
   const cargo =
-    $(`#pixFiltroCargo${prefixo}`)?.value || "";
+    normalizarTextoPix(
+      $(`#pixFiltroCargo${prefixo}`)?.value || ""
+    );
 
   const semana =
-    $(`#pixFiltroSemana${prefixo}`)?.value || "";
+    normalizarSemanaPix(
+      $(`#pixFiltroSemana${prefixo}`)?.value || ""
+    );
 
   const status =
     tipo === "apuracao"
-      ? $("#pixFiltroStatusApuracao")?.value || ""
+      ? normalizarTextoPix(
+          $("#pixFiltroStatusApuracao")?.value || ""
+        )
       : "";
 
-  return estadoPix.lancamentos
-    .map(calcularPix)
-    .filter(
-      resultado =>
-        (!competencia ||
-          resultado.competencia === competencia) &&
-        (!filial ||
-          resultado.filial === filial) &&
-        (!cargo ||
-          resultado.cargo === cargo) &&
-        (!semana ||
-          String(resultado.semana) === semana) &&
-        (!status ||
-          resultado.status === status)
-    )
-    .sort(
-      (a, b) =>
-        String(b.competencia).localeCompare(
-          String(a.competencia)
-        ) ||
-        Number(a.semana) - Number(b.semana) ||
-        String(a.nome).localeCompare(
-          String(b.nome),
-          "pt-BR"
-        )
-    );
+  /*
+   * Os filtros agora comparam versões normalizadas.
+   *
+   * Isso permite localizar registros antigos ou importados com:
+   * - SÃO LUÍS / SAO LUIS;
+   * - espaços invisíveis;
+   * - espaços extras;
+   * - Semana 4 / S4 / 4;
+   * - 2026-7 / 2026-07;
+   * - pequenas diferenças de acentuação no cargo.
+   */
+  const resultados =
+    estadoPix.lancamentos
+      .map(
+        calcularPix
+      )
+      .filter(
+        resultado => {
+          const competenciaResultado =
+            normalizarCompetenciaPix(
+              resultado.competencia
+            );
+
+          const filialResultado =
+            normalizarTextoPix(
+              resultado.filial
+            );
+
+          const cargoResultado =
+            normalizarTextoPix(
+              resultado.cargo
+            );
+
+          const semanaResultado =
+            normalizarSemanaPix(
+              resultado.semana
+            );
+
+          const statusResultado =
+            normalizarTextoPix(
+              resultado.status
+            );
+
+          return (
+            (
+              !competencia ||
+              competenciaResultado ===
+                competencia
+            ) &&
+            (
+              !filial ||
+              filialResultado ===
+                filial
+            ) &&
+            (
+              !cargo ||
+              cargoResultado ===
+                cargo
+            ) &&
+            (
+              !semana ||
+              semanaResultado ===
+                semana
+            ) &&
+            (
+              !status ||
+              statusResultado ===
+                status
+            )
+          );
+        }
+      )
+      .sort(
+        (a, b) =>
+          String(
+            b.competencia
+          ).localeCompare(
+            String(
+              a.competencia
+            )
+          ) ||
+          Number(
+            a.semana
+          ) -
+          Number(
+            b.semana
+          ) ||
+          String(
+            a.nome
+          ).localeCompare(
+            String(
+              b.nome
+            ),
+            "pt-BR"
+          )
+      );
+
+  console.info(
+    "[PIX FILTROS]",
+    {
+      tipo,
+      competencia,
+      filial,
+      cargo,
+      semana,
+      status,
+      totalBanco:
+        estadoPix.lancamentos.length,
+      encontrados:
+        resultados.length
+    }
+  );
+
+  return resultados;
 }
 
 function pixCardsHtml(itens) {
@@ -870,7 +1104,10 @@ function indicadorPixTexto(resultado) {
       }
 
       ${
-        Number(resultado.semana) === 4
+        Number(resultado.semana) === 4 &&
+        !cargoSemNpsEOsPix(
+          resultado.cargo
+        )
           ? `
             <span>
               NPS:
@@ -2147,7 +2384,12 @@ function renderCamposLancamentoPix(dados = {}) {
     </label>
 
     ${
-      semana === 4 && politica.bonusNps > 0
+      semana === 4 &&
+      politica.bonusNps > 0 &&
+      !cargoSemNpsEOsPix(
+        funcionario?.cargo ||
+        dados.cargo
+      )
         ? `
           <label>
             Meta de NPS
@@ -2189,7 +2431,11 @@ function renderCamposLancamentoPix(dados = {}) {
     }
 
     ${
-      semana === 4
+      semana === 4 &&
+      !cargoSemNpsEOsPix(
+        funcionario?.cargo ||
+        dados.cargo
+      )
         ? `
           <label>
             O.S. em aberto (%)
@@ -2309,17 +2555,44 @@ function coletarLancamentoPix() {
         ? pixNumero($("#pixMargem")?.value)
         : 0,
     metaNps:
-      $("#pixMetaNps")
-        ? pixNumero($("#pixMetaNps").value)
-        : 0,
+      cargoSemNpsEOsPix(
+        funcionario?.cargo ||
+        ""
+      )
+        ? 0
+        : (
+            $("#pixMetaNps")
+              ? pixNumero(
+                  $("#pixMetaNps").value
+                )
+              : 0
+          ),
     realizadoNps:
-      $("#pixRealizadoNps")
-        ? pixNumero($("#pixRealizadoNps").value)
-        : 0,
+      cargoSemNpsEOsPix(
+        funcionario?.cargo ||
+        ""
+      )
+        ? 0
+        : (
+            $("#pixRealizadoNps")
+              ? pixNumero(
+                  $("#pixRealizadoNps").value
+                )
+              : 0
+          ),
     osAbertaPercentual:
-      $("#pixOsAberta")
-        ? pixNumero($("#pixOsAberta").value)
-        : 0
+      cargoSemNpsEOsPix(
+        funcionario?.cargo ||
+        ""
+      )
+        ? 0
+        : (
+            $("#pixOsAberta")
+              ? pixNumero(
+                  $("#pixOsAberta").value
+                )
+              : 0
+          )
   };
 }
 
@@ -2484,43 +2757,9 @@ async function salvarLancamentoPix(evento) {
       );
 
     if (duplicado) {
-      const modalLancamento =
-        $("#modalPixPresidente");
-
-      /*
-      O alerta premium não pode ser exibido por cima de outro
-      <dialog> aberto, pois ambos disputam a camada superior
-      do navegador. Isso fazia a tela parecer travada e o aviso
-      só aparecer depois que o usuário fechava o lançamento.
-
-      Agora o lançamento é fechado temporariamente, o aviso é
-      aguardado e o modal volta a abrir com todos os dados
-      preenchidos.
-      */
-      if (modalLancamento?.open) {
-        modalLancamento.close();
-      }
-
-      await pixAlert(
-        "Este participante já possui lançamento nesta competência e semana.",
-        {
-          tipo: "info",
-          titulo: "Lançamento duplicado"
-        }
+      pixAlert(
+        "Este participante já possui lançamento nesta competência e semana."
       );
-
-      if (
-        modalLancamento &&
-        !modalLancamento.open
-      ) {
-        modalLancamento.showModal();
-
-        window.setTimeout(() => {
-          $("#pixLancamentoFuncionario")
-            ?.focus();
-        }, 50);
-      }
-
       return;
     }
 
@@ -2558,28 +2797,10 @@ async function salvarLancamentoPix(evento) {
     $("#modalPixPresidente").close();
   } catch (erro) {
     console.error("Erro ao salvar lançamento Pix:", erro);
-    const modalLancamento =
-      $("#modalPixPresidente");
-
-    if (modalLancamento?.open) {
-      modalLancamento.close();
-    }
-
-    await pixAlert(
+    pixAlert(
       erro.message ||
-      "Não foi possível salvar o lançamento.",
-      {
-        tipo: "erro",
-        titulo: "Falha ao salvar lançamento"
-      }
+      "Não foi possível salvar o lançamento."
     );
-
-    if (
-      modalLancamento &&
-      !modalLancamento.open
-    ) {
-      modalLancamento.showModal();
-    }
   } finally {
     if (botao) {
       botao.disabled = false;

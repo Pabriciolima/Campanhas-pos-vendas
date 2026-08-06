@@ -1,4 +1,8 @@
-/* VERSÃO: 2026.07.30-FILTRO-FILIAL-03 — Evidências por competência + semana + filial */
+
+/*
+ * VERSÃO: 2026.08.06-ORDENACAO-FINANCEIRO-01
+ */
+/* VERSÃO: 2026.07.21-SEMANA-02 — Evidências por competência + semana + filial */
 import {
   supabase,
   SUPABASE_BUCKET
@@ -1561,178 +1565,6 @@ function normalizarCompetenciaPixExportacao(valor) {
   return texto;
 }
 
-
-/* =========================================================
-   FILTRO DE FILIAL EXCLUSIVO DA EXPORTAÇÃO DO PIX
-========================================================= */
-
-function filialExportacaoPixAtual() {
-  return String(
-    pixEv("#pixFilialExportacao")?.value ||
-    ""
-  ).trim();
-}
-
-function rotuloFilialExportacaoPix() {
-  return (
-    filialExportacaoPixAtual() ||
-    "Todas as filiais"
-  );
-}
-
-function filiaisPixDisponiveisParaExportacao() {
-  const filiais =
-    new Set();
-
-  [
-    "#pixFiltroFilialFuncionario",
-    "#pixFiltroFilialLancamento",
-    "#pixFiltroFilialApuracao",
-    "#pixLancamentoFilial"
-  ].forEach(
-    seletor => {
-      const campo =
-        pixEv(seletor);
-
-      if (!campo) {
-        return;
-      }
-
-      [...campo.options]
-        .forEach(
-          opcao => {
-            const texto =
-              String(
-                opcao.value ||
-                opcao.textContent ||
-                ""
-              )
-                .replace(
-                  /^\s*\d+\s*-\s*/,
-                  ""
-                )
-                .trim();
-
-            const normalizado =
-              normalizarPixEv(texto);
-
-            if (
-              texto &&
-              !normalizado.includes(
-                "TODAS AS FILIAIS"
-              ) &&
-              !normalizado.includes(
-                "SELECIONE"
-              )
-            ) {
-              filiais.add(texto);
-            }
-          }
-        );
-    }
-  );
-
-  tabelasPixDisponiveis()
-    .forEach(
-      tabela => {
-        const mapa =
-          mapaCabecalhoPix(
-            tabela
-          );
-
-        [
-          ...tabela.querySelectorAll(
-            "tbody tr"
-          )
-        ].forEach(
-          linha => {
-            const celulas =
-              [...linha.children];
-
-            const filial =
-              celulas[
-                mapa.filial ?? 2
-              ]
-                ?.textContent
-                ?.replace(
-                  /\s+/g,
-                  " "
-                )
-                ?.trim() ||
-              "";
-
-            if (
-              filial &&
-              !normalizarPixEv(filial)
-                .includes("NENHUM")
-            ) {
-              filiais.add(filial);
-            }
-          }
-        );
-      }
-    );
-
-  return [...filiais]
-    .sort(
-      (a, b) =>
-        a.localeCompare(
-          b,
-          "pt-BR"
-        )
-    );
-}
-
-function atualizarFiltroFilialExportacaoPix() {
-  const label =
-    pixEv(
-      "#pixFilialExportacaoLabel"
-    );
-
-  const select =
-    pixEv(
-      "#pixFilialExportacao"
-    );
-
-  if (!label || !select) {
-    return;
-  }
-
-  const pixAtivo =
-    moduloPixAtivo();
-
-  label.hidden =
-    !pixAtivo;
-
-  if (!pixAtivo) {
-    return;
-  }
-
-  const valorAtual =
-    select.value;
-
-  const filiais =
-    filiaisPixDisponiveisParaExportacao();
-
-  select.innerHTML = [
-    `<option value="">Todas as filiais</option>`,
-    ...filiais.map(
-      filial => `
-        <option value="${escaparPixEv(filial)}">
-          ${escaparPixEv(filial)}
-        </option>
-      `
-    )
-  ].join("");
-
-  select.value =
-    filiais.includes(
-      valorAtual
-    )
-      ? valorAtual
-      : "";
-}
-
 function tipoExportacaoPixAtual() {
   const valorOriginal =
     pixEv("#tipoExportacao")?.value ||
@@ -1749,49 +1581,36 @@ function tipoExportacaoPixAtual() {
   const mapa = {
     todos: {
       chave: "todos",
-      status: "",
       somenteHabilitados: false,
       semana: ""
     },
 
     habilitados: {
       chave: "habilitados",
-      status: "HABILITADO",
       somenteHabilitados: true,
-      semana: ""
-    },
-
-    "nao-habilitados": {
-      chave: "nao-habilitados",
-      status: "NAO HABILITADO",
-      somenteHabilitados: false,
       semana: ""
     },
 
     "habilitados-s1": {
       chave: "habilitados-s1",
-      status: "HABILITADO",
       somenteHabilitados: true,
       semana: "S1"
     },
 
     "habilitados-s2": {
       chave: "habilitados-s2",
-      status: "HABILITADO",
       somenteHabilitados: true,
       semana: "S2"
     },
 
     "habilitados-s3": {
       chave: "habilitados-s3",
-      status: "HABILITADO",
       somenteHabilitados: true,
       semana: "S3"
     },
 
     "habilitados-s4": {
       chave: "habilitados-s4",
-      status: "HABILITADO",
       somenteHabilitados: true,
       semana: "S4"
     }
@@ -1812,9 +1631,6 @@ function rotuloTipoExportacaoPix(
 
     habilitados:
       "Somente habilitados",
-
-    "nao-habilitados":
-      "Somente não habilitados",
 
     "habilitados-s1":
       "Somente habilitados S1",
@@ -1881,10 +1697,6 @@ function garantirOpcoesExportacaoPix() {
     {
       value: "habilitados",
       label: "Somente habilitados"
-    },
-    {
-      value: "nao-habilitados",
-      label: "Somente não habilitados"
     },
     {
       value: "habilitados-s1",
@@ -2162,11 +1974,6 @@ function dadosPixParaExportar() {
   const filtro =
     tipoExportacaoPixAtual();
 
-  const filialSelecionada =
-    normalizarPixEv(
-      filialExportacaoPixAtual()
-    );
-
   const resultados = [
     ...tbody.querySelectorAll("tr")
   ]
@@ -2293,21 +2100,9 @@ function dadosPixParaExportar() {
           semanaNormalizada;
 
         if (
-          filialSelecionada &&
-          normalizarPixEv(
-            item.filial
-          ) !==
-            filialSelecionada
-        ) {
-          return null;
-        }
-
-        if (
-          filtro.status &&
-          normalizarPixEv(
-            statusNormalizado
-          ) !==
-            filtro.status
+          filtro.somenteHabilitados &&
+          statusNormalizado !==
+            "HABILITADO"
         ) {
           return null;
         }
@@ -2332,11 +2127,59 @@ function dadosPixParaExportar() {
         competenciaSelecionada,
       filtro:
         filtro.chave,
-      filial:
-        filialExportacaoPixAtual() ||
-        "todas",
       tabela:
         tabela.id || "sem-id"
+    }
+  );
+
+  /*
+   * ORDEM PARA PAGAMENTO DO FINANCEIRO
+   *
+   * A exportação em PDF e Excel passa a seguir:
+   * 1. Filial em ordem alfabética;
+   * 2. Cargo em ordem alfabética;
+   * 3. Colaborador em ordem alfabética.
+   *
+   * A ordenação afeta somente a apresentação dos relatórios.
+   * Nenhum cálculo, filtro, lançamento, evidência ou dado do
+   * Firebase/Supabase é alterado.
+   */
+  resultados.sort(
+    (a, b) => {
+      const comparar =
+        (
+          primeiro,
+          segundo
+        ) =>
+          String(
+            primeiro || ""
+          ).localeCompare(
+            String(
+              segundo || ""
+            ),
+            "pt-BR",
+            {
+              sensitivity:
+                "base",
+              numeric:
+                true
+            }
+          );
+
+      return (
+        comparar(
+          a.filial,
+          b.filial
+        ) ||
+        comparar(
+          a.cargo,
+          b.cargo
+        ) ||
+        comparar(
+          a.colaborador,
+          b.colaborador
+        )
+      );
     }
   );
 
@@ -2365,16 +2208,7 @@ function nomeRelatorioPix(
   const filtro =
     tipoExportacaoPixAtual();
 
-  const filial =
-    slugPixEv(
-      filialExportacaoPixAtual() ||
-      "todas-filiais"
-    );
-
-  return (
-    `pix-do-presidente-${competencia}-` +
-    `${filial}-${filtro.chave}.${extensao}`
-  );
+  return `pix-do-presidente-${competencia}-${filtro.chave}.${extensao}`;
 }
 
 /* =========================================================
@@ -2383,8 +2217,7 @@ function nomeRelatorioPix(
 
 async function buscarEvidenciasPixCompetencia(
   competencia,
-  semanaFiltro = "",
-  filialFiltro = ""
+  semanaFiltro = ""
 ) {
   if (!competencia) {
     return [];
@@ -2557,28 +2390,14 @@ async function buscarEvidenciasPixCompetencia(
     );
   }
 
-  const filialNormalizada =
-    normalizarPixEv(
-      filialFiltro
-    );
-
-  return grupos
-    .filter(
-      grupo =>
-        !filialNormalizada ||
-        normalizarPixEv(
-          grupo.filial
-        ) ===
-          filialNormalizada
-    )
-    .sort(
-      (a, b) =>
-        a.numeroSemana - b.numeroSemana ||
-        a.filial.localeCompare(
-          b.filial,
-          "pt-BR"
-        )
-    );
+  return grupos.sort(
+    (a, b) =>
+      a.numeroSemana - b.numeroSemana ||
+      a.filial.localeCompare(
+        b.filial,
+        "pt-BR"
+      )
+  );
 }
 
 function imagemRemotaParaDataPix(url) {
@@ -2730,7 +2549,7 @@ async function exportarPdfPixIndependente() {
   );
 
   documento.text(
-    `Competência: ${competenciaExibicaoPix(competencia)} | Filial: ${rotuloFilialExportacaoPix()}`,
+    `Competência: ${competenciaExibicaoPix(competencia)}`,
     12,
     23
   );
@@ -2868,8 +2687,7 @@ async function exportarPdfPixIndependente() {
   const evidencias =
     await buscarEvidenciasPixCompetencia(
       competencia,
-      filtroExportacao.semana,
-      filialExportacaoPixAtual()
+      filtroExportacao.semana
     );
 
   for (const grupo of evidencias) {
@@ -2907,7 +2725,7 @@ async function exportarPdfPixIndependente() {
     );
 
     documento.text(
-      `Competência: ${competenciaExibicaoPix(competencia)} | Filial: ${rotuloFilialExportacaoPix()}`,
+      `Competência: ${competenciaExibicaoPix(competencia)}`,
       14,
       33
     );
@@ -3102,7 +2920,7 @@ async function exportarExcelPixIndependente() {
   planilha.getCell(
     "A3"
   ).value =
-    `Competência: ${competenciaExibicaoPix(competencia)} | Filial: ${rotuloFilialExportacaoPix()}`;
+    `Competência: ${competenciaExibicaoPix(competencia)}`;
 
   planilha.getCell(
     "A3"
@@ -3285,8 +3103,7 @@ async function exportarExcelPixIndependente() {
   const evidencias =
     await buscarEvidenciasPixCompetencia(
       competencia,
-      filtroExportacao.semana,
-      filialExportacaoPixAtual()
+      filtroExportacao.semana
     );
 
   const planilhaEvidencias =
@@ -3627,7 +3444,6 @@ function iniciarPixEvidencias() {
   observarTabelasPix();
   configurarExportacaoPixIndependente();
   garantirOpcoesExportacaoPix();
-  atualizarFiltroFilialExportacaoPix();
   renderizarPixEvidencias();
 
   console.info(
@@ -3654,22 +3470,6 @@ if (
 document.addEventListener(
   "click",
   evento => {
-    if (
-      evento.target.closest(
-        '[data-module-toggle="pix"], ' +
-        '[data-pix-view], ' +
-        '.pix-menu-btn'
-      )
-    ) {
-      window.setTimeout(
-        () => {
-          garantirOpcoesExportacaoPix();
-          atualizarFiltroFilialExportacaoPix();
-        },
-        80
-      );
-    }
-
     const abriuModalPix =
       evento.target.closest(
         "#btnNovoLancamentoPix, " +
@@ -3754,24 +3554,3 @@ window.evidenciasPix = {
   buscarPorCompetenciaESemana:
     buscarEvidenciasPixCompetencia
 };
-
-document.addEventListener(
-  "change",
-  evento => {
-    if (
-      evento.target.matches(
-        [
-          "#pixFiltroFilialFuncionario",
-          "#pixFiltroFilialLancamento",
-          "#pixFiltroFilialApuracao",
-          "#pixLancamentoFilial"
-        ].join(",")
-      )
-    ) {
-      window.setTimeout(
-        atualizarFiltroFilialExportacaoPix,
-        50
-      );
-    }
-  }
-);
