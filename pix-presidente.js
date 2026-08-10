@@ -1,3 +1,13 @@
+/*
+ * VERSÃO: 2026.08.08-PIX-DESLIGAMENTO-SEGURO-v12
+ * Exclusão de participante vira desligamento lógico com senha.
+ * Histórico de lançamentos é preservado integralmente.
+ */
+/*
+ * VERSÃO: 2026.08.06-PIX-MOTIVO-NAO-HABILITADO-v11
+ * Exibe o motivo abaixo do status somente para não habilitados,
+ * tanto em Lançamentos quanto em Apuração.
+ */
 import { firestore } from "./firebase-config.js";
 
 import {
@@ -14,6 +24,10 @@ import {
 console.info(
   "[PIX] Versão 2026.07.24-06 carregada"
 );
+
+const SENHA_EXCLUSAO_PARTICIPANTE_PIX =
+  "123321";
+
 
 
 /* =========================================================
@@ -230,6 +244,359 @@ const lancamentosPixRef = collection(
   firestore,
   "pix_presidente_lancamentos"
 );
+
+
+function solicitarSenhaExclusaoParticipantePix() {
+  return new Promise(
+    resolve => {
+      const existente =
+        document.querySelector(
+          "#modalSenhaExclusaoParticipantePix"
+        );
+
+      if (existente) {
+        existente.remove();
+      }
+
+      const modal =
+        document.createElement(
+          "div"
+        );
+
+      modal.id =
+        "modalSenhaExclusaoParticipantePix";
+
+      modal.innerHTML = `
+        <div
+          class="pix-senha-participante-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pixSenhaParticipanteTitulo"
+        >
+          <div
+            class="pix-senha-participante-card"
+          >
+            <button
+              type="button"
+              class="pix-senha-participante-fechar"
+              aria-label="Fechar"
+            >
+              ×
+            </button>
+
+            <div
+              class="pix-senha-participante-icone"
+            >
+              🔐
+            </div>
+
+            <small>
+              SEGURANÇA
+            </small>
+
+            <h2
+              id="pixSenhaParticipanteTitulo"
+            >
+              Confirmar desligamento
+            </h2>
+
+            <p>
+              Informe a senha administrativa para remover
+              o participante da base ativa sem apagar o histórico.
+            </p>
+
+            <label>
+              Senha
+              <input
+                type="password"
+                autocomplete="off"
+                inputmode="numeric"
+                placeholder="Digite a senha"
+                class="pix-senha-participante-input"
+              />
+            </label>
+
+            <div
+              class="pix-senha-participante-erro"
+              hidden
+            >
+              Senha incorreta.
+            </div>
+
+            <div
+              class="pix-senha-participante-acoes"
+            >
+              <button
+                type="button"
+                class="pix-senha-participante-cancelar"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                class="pix-senha-participante-confirmar"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const estilo =
+        document.createElement(
+          "style"
+        );
+
+      estilo.textContent = `
+        #modalSenhaExclusaoParticipantePix {
+          position: fixed;
+          inset: 0;
+          z-index: 999999;
+        }
+
+        .pix-senha-participante-backdrop {
+          position: absolute;
+          inset: 0;
+          display: grid;
+          place-items: center;
+          padding: 20px;
+          background: rgba(5, 22, 38, .70);
+          backdrop-filter: blur(7px);
+        }
+
+        .pix-senha-participante-card {
+          position: relative;
+          width: min(430px, 100%);
+          padding: 30px;
+          border-radius: 24px;
+          background: #ffffff;
+          box-shadow: 0 28px 80px rgba(0, 0, 0, .28);
+          color: #102236;
+        }
+
+        .pix-senha-participante-card small {
+          display: block;
+          margin-top: 14px;
+          color: #07835d;
+          font-size: 10px;
+          font-weight: 900;
+          letter-spacing: .16em;
+        }
+
+        .pix-senha-participante-card h2 {
+          margin: 7px 0 8px;
+          font-size: 24px;
+          line-height: 1.15;
+        }
+
+        .pix-senha-participante-card p {
+          margin: 0 0 20px;
+          color: #5e7183;
+          font-size: 13px;
+          line-height: 1.6;
+        }
+
+        .pix-senha-participante-card label {
+          display: grid;
+          gap: 7px;
+          color: #42576a;
+          font-size: 12px;
+          font-weight: 800;
+        }
+
+        .pix-senha-participante-input {
+          width: 100%;
+          min-height: 46px;
+          box-sizing: border-box;
+          padding: 0 13px;
+          border: 1px solid #cfdae3;
+          border-radius: 11px;
+          outline: none;
+          font: inherit;
+        }
+
+        .pix-senha-participante-input:focus {
+          border-color: #0a9468;
+          box-shadow: 0 0 0 3px rgba(10, 148, 104, .12);
+        }
+
+        .pix-senha-participante-icone {
+          width: 58px;
+          height: 58px;
+          display: grid;
+          place-items: center;
+          border-radius: 18px;
+          background: #e3f7ef;
+          font-size: 25px;
+        }
+
+        .pix-senha-participante-fechar {
+          position: absolute;
+          top: 18px;
+          right: 18px;
+          width: 35px;
+          height: 35px;
+          border: 0;
+          border-radius: 50%;
+          background: #eff4f7;
+          color: #627586;
+          font-size: 22px;
+          cursor: pointer;
+        }
+
+        .pix-senha-participante-erro {
+          margin-top: 10px;
+          color: #c92e2e;
+          font-size: 12px;
+          font-weight: 800;
+        }
+
+        .pix-senha-participante-acoes {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          margin-top: 22px;
+        }
+
+        .pix-senha-participante-acoes button {
+          min-height: 42px;
+          padding: 0 18px;
+          border-radius: 10px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .pix-senha-participante-cancelar {
+          border: 1px solid #d5dfe6;
+          background: #ffffff;
+          color: #263d50;
+        }
+
+        .pix-senha-participante-confirmar {
+          border: 0;
+          background: #078d63;
+          color: #ffffff;
+          box-shadow: 0 10px 24px rgba(7, 141, 99, .22);
+        }
+      `;
+
+      modal.appendChild(
+        estilo
+      );
+
+      document.body.appendChild(
+        modal
+      );
+
+      const input =
+        modal.querySelector(
+          ".pix-senha-participante-input"
+        );
+
+      const erro =
+        modal.querySelector(
+          ".pix-senha-participante-erro"
+        );
+
+      const finalizar =
+        resultado => {
+          modal.remove();
+          resolve(
+            resultado
+          );
+        };
+
+      const validar =
+        () => {
+          const senha =
+            String(
+              input?.value || ""
+            );
+
+          if (
+            senha !==
+            SENHA_EXCLUSAO_PARTICIPANTE_PIX
+          ) {
+            if (erro) {
+              erro.hidden = false;
+            }
+
+            input?.focus();
+            input?.select();
+            return;
+          }
+
+          finalizar(
+            true
+          );
+        };
+
+      modal
+        .querySelector(
+          ".pix-senha-participante-confirmar"
+        )
+        ?.addEventListener(
+          "click",
+          validar
+        );
+
+      modal
+        .querySelector(
+          ".pix-senha-participante-cancelar"
+        )
+        ?.addEventListener(
+          "click",
+          () =>
+            finalizar(
+              false
+            )
+        );
+
+      modal
+        .querySelector(
+          ".pix-senha-participante-fechar"
+        )
+        ?.addEventListener(
+          "click",
+          () =>
+            finalizar(
+              false
+            )
+        );
+
+      input?.addEventListener(
+        "keydown",
+        evento => {
+          if (
+            evento.key ===
+            "Enter"
+          ) {
+            evento.preventDefault();
+            validar();
+          }
+
+          if (
+            evento.key ===
+            "Escape"
+          ) {
+            finalizar(
+              false
+            );
+          }
+        }
+      );
+
+      window.setTimeout(
+        () =>
+          input?.focus(),
+        30
+      );
+    }
+  );
+}
+
 
 function $(seletor) {
   return document.querySelector(seletor);
@@ -1471,7 +1838,14 @@ function renderFuncionariosPix() {
     );
 
   const lista =
-    participantesPix().filter(
+    participantesPix()
+      .filter(
+        funcionario =>
+          funcionarioPixAtivo(
+            funcionario
+          )
+      )
+      .filter(
       funcionario => {
         const texto =
           normalizarTextoPix(
@@ -1534,6 +1908,7 @@ function renderFuncionariosPix() {
                       type="button"
                       class="mini-btn delete"
                       data-pix-func-delete="${funcionario.id}"
+                      title="Remover da base ativa preservando todo o histórico"
                     >
                       Excluir
                     </button>
@@ -1583,7 +1958,7 @@ function renderFuncionariosPix() {
   );
 
   tabela.dataset.pixRenderVersion =
-    "2026.07.23-02";
+    "2026.08.06-11-MOTIVO-STATUS";
 }
 
 function montarTabelaResultadosPix(
@@ -1614,16 +1989,50 @@ function montarTabelaResultadosPix(
               </td>
               <td><strong>${pixMoeda(resultado.bonusFinal)}</strong></td>
               <td>
-                <span
-                  class="badge ${
-                    resultado.status === "HABILITADO"
-                      ? "ok"
-                      : "no"
-                  }"
-                  title="${resultado.observacao}"
+                <div
+                  class="pix-status-com-motivo"
+                  style="
+                    display:flex;
+                    flex-direction:column;
+                    align-items:flex-start;
+                    gap:5px;
+                    min-width:126px;
+                  "
                 >
-                  ${resultado.status}
-                </span>
+                  <span
+                    class="badge ${
+                      resultado.status === "HABILITADO"
+                        ? "ok"
+                        : "no"
+                    }"
+                    title="${resultado.observacao}"
+                  >
+                    ${resultado.status}
+                  </span>
+
+                  ${
+                    resultado.status !== "HABILITADO"
+                      ? `
+                        <small
+                          class="pix-motivo-nao-habilitado"
+                          title="${resultado.observacao}"
+                          style="
+                            display:block;
+                            max-width:190px;
+                            color:#a52a2a;
+                            font-size:10px;
+                            font-weight:700;
+                            line-height:1.35;
+                            white-space:normal;
+                            overflow-wrap:anywhere;
+                          "
+                        >
+                          Motivo: ${resultado.observacao}
+                        </small>
+                      `
+                      : ""
+                  }
+                </div>
               </td>
               ${
                 comAcoes
@@ -2101,38 +2510,157 @@ ${erro.message || erro}`
 }
 
 async function excluirFuncionarioPix(id) {
+  const funcionario =
+    estadoPix.funcionarios.find(
+      item =>
+        item.id === id
+    );
+
+  if (!funcionario) {
+    await pixAlert(
+      "Participante não encontrado."
+    );
+
+    return;
+  }
+
+  /*
+   * REGRA DE DESLIGAMENTO:
+   *
+   * O participante NÃO é apagado fisicamente do Firestore.
+   * Apenas fica inativo e desaparece da base ativa e dos
+   * novos lançamentos.
+   *
+   * Os lançamentos já existentes continuam intactos e,
+   * portanto, permanecem nos históricos dos meses anteriores,
+   * PDFs, Excel, apuração e auditoria.
+   */
   const possuiLancamentos =
     estadoPix.lancamentos.some(
       lancamento =>
         lancamento.funcionarioId === id
     );
 
-  if (possuiLancamentos) {
-    pixAlert(
-      "Este participante possui lançamentos. Exclua-os primeiro ou deixe-o inativo."
-    );
-    return;
-  }
-
-  const confirmou = await pixDeleteConfirm({
-    titulo: "Excluir participante?",
-    mensagem:
-      "O participante será removido da base do Pix do Presidente. Esta ação não poderá ser desfeita.",
-    textoConfirmar: "Excluir participante",
-    textoCancelar: "Cancelar"
-  });
+  const confirmou =
+    await pixDeleteConfirm({
+      titulo:
+        "Desligar participante?",
+      mensagem:
+        possuiLancamentos
+          ? `Este participante possui histórico de lançamentos. Ele será removido apenas da base ativa; todo o histórico anterior será preservado.`
+          : `O participante será removido da base ativa. O cadastro continuará preservado internamente para auditoria.`,
+      textoConfirmar:
+        "Continuar",
+      textoCancelar:
+        "Cancelar"
+    });
 
   if (!confirmou) {
     return;
   }
 
+  const senhaValida =
+    await solicitarSenhaExclusaoParticipantePix();
+
+  if (!senhaValida) {
+    return;
+  }
+
   try {
-    await deleteDoc(
-      doc(firestore, "pix_presidente_funcionarios", id)
+    const competenciaDesligamento =
+      $("#competenciaGlobal")?.value ||
+      pixMesAtual();
+
+    await updateDoc(
+      doc(
+        firestore,
+        "pix_presidente_funcionarios",
+        id
+      ),
+      {
+        ativo:
+          false,
+        desligado:
+          true,
+        desligadoEm:
+          serverTimestamp(),
+        desligadoCompetencia:
+          competenciaDesligamento,
+        motivoDesligamento:
+          "REMOVIDO DA BASE ATIVA",
+        atualizadoEm:
+          serverTimestamp()
+      }
+    );
+
+    /*
+     * Atualização imediata da tela.
+     * O onSnapshot continuará sendo a fonte oficial do banco,
+     * mas esta atualização evita qualquer sensação de atraso.
+     */
+    const indice =
+      estadoPix.funcionarios.findIndex(
+        item =>
+          item.id === id
+      );
+
+    if (indice >= 0) {
+      estadoPix.funcionarios[
+        indice
+      ] = {
+        ...estadoPix.funcionarios[
+          indice
+        ],
+        ativo:
+          false,
+        desligado:
+          true,
+        desligadoCompetencia:
+          competenciaDesligamento
+      };
+    }
+
+    renderFuncionariosPix();
+    atualizarSelectsPix();
+
+    await pixAlert(
+      [
+        "Participante removido da base ativa com sucesso.",
+        "",
+        possuiLancamentos
+          ? "O histórico de lançamentos anteriores foi preservado."
+          : "O cadastro foi mantido internamente para auditoria.",
+        "",
+        "Ele não aparecerá mais para novos lançamentos."
+      ].join(
+        "\n"
+      ),
+      {
+        tipo:
+          "success",
+        titulo:
+          "Participante desligado",
+        rotulo:
+          "Concluído"
+      }
     );
   } catch (erro) {
-    console.error("Erro ao excluir participante:", erro);
-    pixAlert("Não foi possível excluir o participante.");
+    console.error(
+      "Erro ao desligar participante:",
+      erro
+    );
+
+    await pixAlert(
+      "Não foi possível desligar o participante.",
+      {
+        tipo:
+          "error",
+        titulo:
+          "Falha ao desligar",
+        rotulo:
+          "Erro"
+      }
+    );
   }
 }
 

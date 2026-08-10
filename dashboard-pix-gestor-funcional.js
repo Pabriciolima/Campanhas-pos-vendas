@@ -1,7 +1,71 @@
+/*
+ * AJUSTE 2026.08.09-06
+ * - Remove a faixa visual interna do dashboard do Pix.
+ * - Remove o botão interno de PDF dessa faixa.
+ * - Mantém os controles superiores oficiais do sistema.
+ * - Dashboard passa a respeitar estritamente a competência selecionada.
+ * - Atualiza sozinho quando as tabelas do Pix terminarem de carregar.
+ * - Nenhuma regra de cálculo, lançamento ou banco foi alterada.
+ */
+/*
+ * AJUSTE 2026.08.09-05
+ * - Dashboard do Pix atualiza automaticamente ao trocar o mês.
+ * - Botão manual "Atualizar painel" removido.
+ * - Exportar PDF mantido.
+ * - Nenhuma regra de cálculo ou banco alterada.
+ */
+/*
+=========================================================
+DASHBOARD LEVE E FUNCIONAL — PIX DO PRESIDENTE
+VISÃO GERAL DO GESTOR
+Versão: 2026.07.21-04
+=========================================================
+
+CORREÇÕES DESTA VERSÃO
+
+1. Usa o container REAL da sua tela:
+   #pix-dashboard
+
+2. Lê os resultados já calculados na tabela:
+   #pixTabelaApuracao
+
+3. Aguarda o Firebase terminar de carregar os lançamentos.
+   A tentativa é limitada e para automaticamente.
+
+4. Não usa MutationObserver.
+
+5. Não altera:
+   - Firebase;
+   - localStorage;
+   - estadoPix;
+   - lançamentos;
+   - participantes;
+   - tabelas existentes.
+
+6. Não apaga nem substitui dados.
+
+=========================================================
+INSTALAÇÃO
+=========================================================
+
+REMOVA do index.html qualquer dashboard anterior:
+
+dashboard-pix-executivo.js
+dashboard-pix-gestor-passivo.js
+
+Deixe somente esta versão, depois de pix-presidente.js:
+
+<script
+  src="./dashboard-pix-gestor-funcional.js?v=20260809-05"
+></script>
+
+=========================================================
+*/
+
 (function () {
   "use strict";
 
-  const VERSAO = "2026.07.21-04";
+  const VERSAO = "2026.08.09-06";
 
   const CONFIG = {
     container: "#pix-dashboard",
@@ -37,10 +101,98 @@
 
   function normalizar(valor) {
     return texto(valor)
+      .replace(/[\u200B-\u200D\uFEFF]/g, "")
+      .replace(/\u00A0/g, " ")
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toUpperCase()
       .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function nomeCanonicoDashboardPix(
+    valor,
+    campo
+  ) {
+    const chave =
+      normalizar(
+        valor
+      );
+
+    if (
+      campo ===
+      "filial"
+    ) {
+      const filiaisOficiais = {
+        "AGUA BOA":
+          "ÁGUA BOA",
+        "ANANINDEUA":
+          "ANANINDEUA",
+        "BACABAL":
+          "BACABAL",
+        "CUIABA":
+          "CUIABÁ",
+        "JI PARANA":
+          "JI-PARANÁ",
+        "JIPARANA":
+          "JI-PARANÁ",
+        "MACAPA":
+          "MACAPÁ",
+        "PORTO VELHO":
+          "PORTO VELHO",
+        "RONDONOPOLIS":
+          "RONDONÓPOLIS",
+        "SAO LUIS":
+          "SÃO LUÍS",
+        "SINOP":
+          "SINOP",
+        "TERESINA":
+          "TERESINA",
+        "URUCUI":
+          "URUÇUÍ",
+        "VILHENA":
+          "VILHENA"
+      };
+
+      return (
+        filiaisOficiais[
+          chave
+        ] ||
+        texto(
+          valor
+        )
+          .replace(
+            /[\u200B-\u200D\uFEFF]/g,
+            ""
+          )
+          .replace(
+            /\u00A0/g,
+            " "
+          )
+          .replace(
+            /\s+/g,
+            " "
+          )
+          .trim()
+          .toUpperCase()
+      );
+    }
+
+    return texto(
+      valor
+    )
+      .replace(
+        /[\u200B-\u200D\uFEFF]/g,
+        ""
+      )
+      .replace(
+        /\u00A0/g,
+        " "
+      )
+      .replace(
+        /\s+/g,
+        " "
+      )
       .trim();
   }
 
@@ -82,6 +234,35 @@
 
   function formatarMoeda(valor) {
     return moeda.format(numero(valor));
+  }
+
+  function competenciaNormalizada(
+    valor
+  ) {
+    const resultado =
+      texto(valor)
+        .replace("/", "-")
+        .trim();
+
+    const match =
+      resultado.match(
+        /(\d{4})\D?(\d{1,2})/
+      );
+
+    if (!match) {
+      return resultado;
+    }
+
+    return (
+      match[1] +
+      "-" +
+      String(
+        Number(match[2])
+      ).padStart(
+        2,
+        "0"
+      )
+    );
   }
 
   function semanaNormalizada(valor) {
@@ -228,6 +409,15 @@
         Os fallbacks abaixo só são usados caso
         algum título do cabeçalho seja diferente.
         */
+        const competencia =
+          competenciaNormalizada(
+            obter(
+              mapa.competencia !== undefined
+                ? mapa.competencia
+                : 0
+            )
+          );
+
         const semana = semanaNormalizada(
           obter(
             mapa.semana !== undefined
@@ -284,6 +474,7 @@
         }
 
         resultados.push({
+          competencia,
           semana,
           nome,
           filial,
@@ -312,7 +503,25 @@
   }
 
   function aplicarFiltros(dados) {
+    const competenciaSelecionada =
+      competenciaNormalizada(
+        $(CONFIG.competencia)?.value ||
+        $("#competenciaGlobal")?.value ||
+        ""
+      );
+
     return dados.filter(item => {
+      if (
+        competenciaSelecionada &&
+        item.competencia &&
+        competenciaNormalizada(
+          item.competencia
+        ) !==
+          competenciaSelecionada
+      ) {
+        return false;
+      }
+
       if (
         estado.semana &&
         item.semana !== estado.semana
@@ -347,16 +556,51 @@
     );
   }
 
-  function valoresUnicos(dados, campo) {
+  function valoresUnicos(
+    dados,
+    campo
+  ) {
+    const valores =
+      new Map();
+
+    dados.forEach(
+      item => {
+        const valorOriginal =
+          item?.[campo];
+
+        const chave =
+          normalizar(
+            valorOriginal
+          );
+
+        if (!chave) {
+          return;
+        }
+
+        if (
+          !valores.has(
+            chave
+          )
+        ) {
+          valores.set(
+            chave,
+            nomeCanonicoDashboardPix(
+              valorOriginal,
+              campo
+            )
+          );
+        }
+      }
+    );
+
     return [
-      ...new Set(
-        dados
-          .map(item => texto(item[campo]))
-          .filter(Boolean)
-      )
+      ...valores.values()
     ].sort(
       (a, b) =>
-        a.localeCompare(b, "pt-BR")
+        a.localeCompare(
+          b,
+          "pt-BR"
+        )
     );
   }
 
@@ -765,40 +1009,6 @@
         id="dashboardPixGestorFuncional"
         class="pix-gestor-funcional"
       >
-        <header class="pix-gestor-cabecalho">
-          <div>
-            <small>
-              VISÃO GERAL DO GESTOR
-            </small>
-
-            <h2>
-              Investimento por semana
-            </h2>
-
-            <p id="pixGestorPeriodo">
-              Aguardando os dados do Firebase...
-            </p>
-          </div>
-
-          <div class="pix-gestor-acoes">
-            <button
-              type="button"
-              class="pix-gestor-botao"
-              id="pixGestorAtualizar"
-            >
-              Atualizar painel
-            </button>
-
-            <button
-              type="button"
-              class="pix-gestor-botao"
-              id="pixGestorPdf"
-            >
-              Exportar PDF
-            </button>
-          </div>
-        </header>
-
         <div class="pix-gestor-filtros">
           <div class="pix-gestor-campo">
             <label for="pixGestorSemana">
@@ -1182,19 +1392,6 @@
         </div>
       `;
 
-      const competencia = texto(
-        $(CONFIG.competencia)?.value
-      );
-
-      const periodo = $(
-        "#pixGestorPeriodo"
-      );
-
-      if (periodo) {
-        periodo.textContent =
-          `Competência ${competencia || "atual"} · ${todos.length} lançamento(s) carregado(s)`;
-      }
-
       const rodape = $(
         "#pixGestorRodape"
       );
@@ -1278,6 +1475,40 @@
     );
   }
 
+  function atualizarDashboardPixPelaCompetencia() {
+    /*
+     * O seletor de competência do Pix é sincronizado pelo
+     * pix-presidente.js quando o usuário usa as setas do
+     * histórico mensal.
+     *
+     * Esta função apenas aguarda essa sincronização terminar
+     * e renderiza o dashboard automaticamente, sem exigir
+     * clique em "Atualizar painel".
+     */
+    window.setTimeout(
+      () => {
+        renderizar();
+      },
+      30
+    );
+
+    window.setTimeout(
+      () => {
+        observarAtualizacaoDasTabelasPix();
+        renderizar();
+      },
+      180
+    );
+
+    window.setTimeout(
+      () => {
+        observarAtualizacaoDasTabelasPix();
+        renderizar();
+      },
+      450
+    );
+  }
+
   function configurarEventos() {
     const dashboard = $(
       "#dashboardPixGestorFuncional"
@@ -1292,17 +1523,39 @@
 
     dashboard.dataset.eventos = "true";
 
-    $("#pixGestorAtualizar")
+    $("#pixDashboardCompetencia")
       ?.addEventListener(
-        "click",
-        renderizar
+        "change",
+        atualizarDashboardPixPelaCompetencia
       );
 
-    $("#pixGestorPdf")
+    $("#competenciaGlobal")
       ?.addEventListener(
-        "click",
-        () => window.print()
+        "change",
+        () => {
+          if (
+            document.body.classList.contains(
+              "modulo-pix-ativo"
+            )
+          ) {
+            atualizarDashboardPixPelaCompetencia();
+          }
+        }
       );
+
+    [
+      "#btnMesAnterior",
+      "#btnMesSeguinte"
+    ].forEach(
+      seletor =>
+        $(seletor)
+          ?.addEventListener(
+            "click",
+            atualizarDashboardPixPelaCompetencia
+          )
+    );
+
+    observarAtualizacaoDasTabelasPix();
 
     $("#pixGestorSemana")
       ?.addEventListener(
@@ -1331,12 +1584,81 @@
         "change",
         evento => {
           estado.filial =
-            evento.target.value;
+            nomeCanonicoDashboardPix(
+              evento.target.value,
+              "filial"
+            );
 
           renderizar();
         }
       );
   }
+
+  let timerTabelaPix =
+    null;
+
+  function observarAtualizacaoDasTabelasPix() {
+    const tabelas =
+      [
+        resolverTabela(
+          CONFIG.tabelaApuracao
+        ),
+        resolverTabela(
+          CONFIG.tabelaLancamentos
+        )
+      ].filter(Boolean);
+
+    if (!tabelas.length) {
+      return;
+    }
+
+    tabelas.forEach(
+      tabela => {
+        if (
+          tabela.dataset.pixGestorObserver ===
+          "true"
+        ) {
+          return;
+        }
+
+        tabela.dataset.pixGestorObserver =
+          "true";
+
+        const observador =
+          new MutationObserver(
+            () => {
+              if (timerTabelaPix) {
+                clearTimeout(
+                  timerTabelaPix
+                );
+              }
+
+              timerTabelaPix =
+                window.setTimeout(
+                  () => {
+                    renderizar();
+                  },
+                  80
+                );
+            }
+          );
+
+        observador.observe(
+          tabela,
+          {
+            childList: true,
+            subtree: true,
+            characterData: true
+          }
+        );
+      }
+    );
+  }
+
+  document.addEventListener(
+    "pix:competencia-alterada",
+    atualizarDashboardPixPelaCompetencia
+  );
 
   /*
   Atualiza quando o usuário abre a Visão Geral.

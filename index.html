@@ -16,13 +16,13 @@
   <link rel="stylesheet" href="./bloqueio-lancamentos.css?v=20260717-01" />
 
   <style id="importacao-relatorio-botoes-fixos-css">
-    .panel-header-actions{
-      display:flex;
-      align-items:center;
-      justify-content:flex-end;
-      gap:8px;
-      flex-wrap:wrap;
-      margin-left:auto;
+    .panel-header-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-left: auto;
     }
 
     .pix-export-filial-filter {
@@ -34,14 +34,14 @@
       min-width: 190px;
     }
 
-    @media (max-width: 760px){
-      .panel-header-actions{
-        width:100%;
-        justify-content:stretch;
+    @media (max-width: 760px) {
+      .panel-header-actions {
+        width: 100%;
+        justify-content: stretch;
       }
 
-      .panel-header-actions > button{
-        flex:1 1 150px;
+      .panel-header-actions>button {
+        flex: 1 1 150px;
       }
 
       .pix-export-filial-filter {
@@ -183,7 +183,7 @@
       gap: 12px;
     }
 
-    #politicas .policy-role-payment > div {
+    #politicas .policy-role-payment>div {
       display: grid;
       gap: 5px;
       padding: 14px;
@@ -235,7 +235,7 @@
       padding-left: 19px;
     }
 
-    #politicas .policy-alert li + li {
+    #politicas .policy-alert li+li {
       margin-top: 5px;
     }
 
@@ -252,6 +252,7 @@
     }
 
     @media (max-width: 1150px) {
+
       #politicas .policy-values-grid,
       #politicas .policy-role-payment {
         grid-template-columns: 1fr;
@@ -423,13 +424,8 @@
     </nav>
 
     <div class="sidebar-footer">
-      <button
-        type="button"
-        id="btnAbrirSobreSistema"
-        class="developer-card"
-        aria-label="Abrir informações sobre o sistema e o desenvolvedor"
-        title="Sobre o sistema"
-      >
+      <button type="button" id="btnAbrirSobreSistema" class="developer-card"
+        aria-label="Abrir informações sobre o sistema e o desenvolvedor" title="Sobre o sistema">
         <span class="developer-card-glow" aria-hidden="true"></span>
 
         <span class="developer-avatar" aria-hidden="true">
@@ -479,16 +475,9 @@
               <option value="todos">Todos os resultados</option>
             </select></label>
 
-          <label
-            id="pixFilialExportacaoLabel"
-            class="export-filter pix-export-filial-filter"
-            hidden
-          >
+          <label id="pixFilialExportacaoLabel" class="export-filter pix-export-filial-filter" hidden>
             <span>Filial</span>
-            <select
-              id="pixFilialExportacao"
-              aria-label="Filtrar exportação do Pix por filial"
-            >
+            <select id="pixFilialExportacao" aria-label="Filtrar exportação por filial">
               <option value="">Todas as filiais</option>
             </select>
           </label>
@@ -508,18 +497,12 @@
     <section id="dashboard" class="view active">
       <div class="cards" id="dashboardCards"></div>
 
-      <article
-        class="panel produtivos-dashboard-filter-panel"
-        aria-label="Filtros da visão geral dos Produtivos"
-      >
+      <article class="panel produtivos-dashboard-filter-panel" aria-label="Filtros da visão geral dos Produtivos">
         <div class="produtivos-dashboard-filters">
           <label>
             <span>DN</span>
 
-            <select
-              id="filtroDnDashboardProdutivos"
-              aria-label="Filtrar visão geral dos Produtivos por DN"
-            >
+            <select id="filtroDnDashboardProdutivos" aria-label="Filtrar visão geral dos Produtivos por DN">
               <option value="">Todos</option>
             </select>
           </label>
@@ -527,10 +510,7 @@
           <label>
             <span>Filial</span>
 
-            <select
-              id="filtroFilialDashboardProdutivos"
-              aria-label="Filtrar visão geral dos Produtivos por filial"
-            >
+            <select id="filtroFilialDashboardProdutivos" aria-label="Filtrar visão geral dos Produtivos por filial">
               <option value="">Todas</option>
             </select>
           </label>
@@ -631,22 +611,14 @@
             <h2>Lançamentos da campanha</h2>
           </div>
           <div class="panel-header-actions" id="produtivosLancamentosAcoes">
-            <button
-              type="button"
-              id="btnBaixarModeloRelatorioProdutivos"
-              class="secondary"
-              onclick="window.baixarModeloProdutivosSeguro(event)"
-            >
+            <button type="button" id="btnBaixarModeloRelatorioProdutivos" class="secondary"
+              onclick="window.baixarModeloProdutivosSeguro(event)">
               Baixar modelo
             </button>
 
-            <button
-              type="button"
-              id="btnImportarRelatorioProdutivos"
-              class="secondary"
+            <button type="button" id="btnImportarRelatorioProdutivos" class="secondary"
               onclick="window.abrirImportacaoProdutivosSeguro(event)"
-              style="background:#0b3154;color:#fff;border-color:#0b3154"
-            >
+              style="background:#0b3154;color:#fff;border-color:#0b3154">
               Importar relatório
             </button>
 
@@ -787,13 +759,15 @@
           </div>
 
           <p class="policy-intro">
-            Apuração automática conforme o faturamento individual de todos os Mecânicos Produtivos da filial, independentemente da habilitação individual.
+            Apuração automática conforme o faturamento individual de todos os Mecânicos Produtivos da filial,
+            independentemente da habilitação individual.
           </p>
 
           <div class="policy-value-block policy-value-block-full">
             <h3>Valor gerado por mecânico</h3>
             <div class="policy-tier"><span>De R$ 50.000,00 a R$ 59.999,99</span><strong>R$ 300,00</strong></div>
-            <div class="policy-tier policy-tier-highlight"><span>R$ 60.000,00 ou mais</span><strong>R$ 500,00</strong></div>
+            <div class="policy-tier policy-tier-highlight"><span>R$ 60.000,00 ou mais</span><strong>R$ 500,00</strong>
+            </div>
           </div>
 
           <div class="policy-role-payment">
@@ -819,7 +793,8 @@
             <ul>
               <li>Treinamento individual pendente do Chefe ou Líder: inabilitação.</li>
               <li>Equipe com menos de 95% dos treinamentos em dia: desconto de 50%.</li>
-              <li>Entram no cálculo todos os Mecânicos Produtivos da mesma filial e competência que atingirem as faixas de faturamento, mesmo quando não estiverem habilitados individualmente.</li>
+              <li>Entram no cálculo todos os Mecânicos Produtivos da mesma filial e competência que atingirem as faixas
+                de faturamento, mesmo quando não estiverem habilitados individualmente.</li>
             </ul>
           </div>
         </article>
@@ -856,7 +831,8 @@
           <div class="policy-total-box">
             <span>Pagamento da campanha</span>
             <strong>Soma dos KPIs atingidos</strong>
-            <small>Exemplo: produtividade de 90% paga R$ 500,00; eficiência de 100% paga R$ 500,00. Se atingir os dois, recebe R$ 1.000,00.</small>
+            <small>Exemplo: produtividade de 90% paga R$ 500,00; eficiência de 100% paga R$ 500,00. Se atingir os dois,
+              recebe R$ 1.000,00.</small>
           </div>
 
           <div class="policy-alert policy-alert-warning">
@@ -864,7 +840,8 @@
             <ul>
               <li>Produtividade mínima: 70%.</li>
               <li>Eficiência mínima: 80%.</li>
-              <li>Cada KPI é independente: atingir produtividade gera o bônus de produtividade; atingir eficiência gera o bônus de eficiência.</li>
+              <li>Cada KPI é independente: atingir produtividade gera o bônus de produtividade; atingir eficiência gera
+                o bônus de eficiência.</li>
               <li>São considerados apenas os lançamentos da mesma filial e competência.</li>
             </ul>
           </div>
@@ -962,30 +939,18 @@
               <h2>Lançamentos semanais</h2>
             </div>
             <div class="panel-header-actions" id="pixLancamentosAcoes">
-              <button
-                type="button"
-                id="btnBaixarModeloRelatorioPix"
-                class="secondary"
-                onclick="window.baixarModeloPixSeguro(event)"
-              >
+              <button type="button" id="btnBaixarModeloRelatorioPix" class="secondary"
+                onclick="window.baixarModeloPixSeguro(event)">
                 Baixar modelo
               </button>
 
-              <button
-                type="button"
-                id="btnImportarRelatorioPix"
-                class="secondary"
+              <button type="button" id="btnImportarRelatorioPix" class="secondary"
                 onclick="window.abrirImportacaoPixSeguro(event)"
-                style="background:#0b3154;color:#fff;border-color:#0b3154"
-              >
+                style="background:#0b3154;color:#fff;border-color:#0b3154">
                 Importar relatório
               </button>
 
-              <button
-                type="button"
-                id="btnNovoLancamentoPix"
-                class="primary pix-primary-button"
-              >
+              <button type="button" id="btnNovoLancamentoPix" class="primary pix-primary-button">
                 + Novo lançamento
               </button>
             </div>
@@ -1166,12 +1131,8 @@
             <strong>Arraste as imagens para cá</strong>
             <small>JPG, PNG ou WEBP</small>
 
-            <button
-              type="button"
-              id="btnSelecionarEvidencia"
-              class="evidence-select-button"
-              aria-controls="evidenciaInput"
-            >
+            <button type="button" id="btnSelecionarEvidencia" class="evidence-select-button"
+              aria-controls="evidenciaInput">
               Selecionar imagens
             </button>
           </div>
@@ -1254,12 +1215,8 @@
   <!-- SOBRE O SISTEMA — AUTORIA -->
   <dialog id="modalSobreSistema" class="about-system-dialog">
     <article class="about-system-card">
-      <button
-        type="button"
-        id="btnFecharSobreSistema"
-        class="about-system-close"
-        aria-label="Fechar informações sobre o sistema"
-      >
+      <button type="button" id="btnFecharSobreSistema" class="about-system-close"
+        aria-label="Fechar informações sobre o sistema">
         ×
       </button>
 
@@ -1323,7 +1280,7 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
   <script src="./alerts-premium.js?v=20260716-01"></script>
-  <script type="module" src="./script.js?v=20260805-27"></script>
+  <script type="module" src="./script.js?v=20260806-32"></script>
   <script type="module" src="./pix-presidente.js?v=20260724-07"></script>
   <script type="module" src="./importacao-funcionarios.js?v=20260716-01"></script>
   <script src="./pix-historico-individual.js?v=20260715-01"></script>
@@ -1335,6 +1292,9 @@
   <script type="module" src="./bloqueio-lancamentos.js?v=20260717-01"></script>
   <script src="./dashboard-pix-gestor-funcional.js?v=20260721-04"></script>
   <script type="module" src="./compras-module.js?v=20260723-11"></script>
+  <script type="module" src="./auditoria-campanhas.js?v=20260808-01"></script>
+  <script type="module" src="./comparativo-mensal-campanhas.js?v=20260808-01"></script>
+
   <!-- Leitura de XLSX, XLS e CSV -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 

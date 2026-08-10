@@ -1,3 +1,8 @@
+/*
+ * VERSÃO: 2026.08.06-32
+ * Filtro de exportação dos Produtivos por filial.
+ * Lista todas as filiais individualmente e preserva as funções existentes.
+ */
 import { firestore } from "./firebase-config.js";
 
 import {
@@ -4436,6 +4441,8 @@ function atualizarFiltrosDashboardProdutivos(
 }
 
 function renderDashboard() {
+  preencherFiliaisExportacaoProdutivos();
+
   const campoCompetencia =
     document.querySelector(
       "#competenciaGlobal"
@@ -5469,6 +5476,218 @@ function obterCompetenciaExportacao() {
   );
 }
 
+function normalizarFilialExportacaoProdutivos(
+  valor
+) {
+  return String(
+    valor || ""
+  )
+    .replace(
+      /[\u200B-\u200D\uFEFF]/g,
+      ""
+    )
+    .replace(
+      /\u00A0/g,
+      " "
+    )
+    .normalize(
+      "NFD"
+    )
+    .replace(
+      /[\u0300-\u036f]/g,
+      ""
+    )
+    .replace(
+      /\s+/g,
+      " "
+    )
+    .trim()
+    .toUpperCase();
+}
+
+function obterFilialExportacaoProdutivos() {
+  return (
+    document.querySelector(
+      "#pixFilialExportacao"
+    )?.value ||
+    ""
+  );
+}
+
+function preencherFiliaisExportacaoProdutivos() {
+  const select =
+    document.querySelector(
+      "#pixFilialExportacao"
+    );
+
+  const label =
+    document.querySelector(
+      "#pixFilialExportacaoLabel"
+    );
+
+  if (!select) {
+    return;
+  }
+
+  const valorAnterior =
+    select.value;
+
+  /*
+   * A lista é construída com a base oficial FILIAIS.
+   * Também aproveita filiais encontradas nos lançamentos,
+   * evitando que uma unidade existente no banco fique fora.
+   */
+  const mapa =
+    new Map();
+
+  FILIAIS.forEach(
+    item => {
+      const filial =
+        String(
+          item.unidade || ""
+        ).trim();
+
+      const chave =
+        normalizarFilialExportacaoProdutivos(
+          filial
+        );
+
+      if (
+        chave &&
+        !mapa.has(
+          chave
+        )
+      ) {
+        mapa.set(
+          chave,
+          {
+            filial,
+            dn:
+              String(
+                item.dn || ""
+              ).trim()
+          }
+        );
+      }
+    }
+  );
+
+  obterResultadosCampanha()
+    .forEach(
+      resultado => {
+        const filial =
+          String(
+            resultado.filial || ""
+          )
+            .replace(
+              /[\u200B-\u200D\uFEFF]/g,
+              ""
+            )
+            .replace(
+              /\u00A0/g,
+              " "
+            )
+            .replace(
+              /\s+/g,
+              " "
+            )
+            .trim();
+
+        const chave =
+          normalizarFilialExportacaoProdutivos(
+            filial
+          );
+
+        if (
+          !chave ||
+          mapa.has(
+            chave
+          )
+        ) {
+          return;
+        }
+
+        mapa.set(
+          chave,
+          {
+            filial,
+            dn:
+              String(
+                resultado.dn || ""
+              ).trim()
+          }
+        );
+      }
+    );
+
+  const filiais =
+    [
+      ...mapa.values()
+    ].sort(
+      (a, b) =>
+        a.filial.localeCompare(
+          b.filial,
+          "pt-BR",
+          {
+            sensitivity:
+              "base",
+            numeric:
+              true
+          }
+        )
+    );
+
+  select.innerHTML = [
+    '<option value="">Todas as filiais</option>',
+    ...filiais.map(
+      item => `
+        <option value="${item.filial}">
+          ${
+            item.dn
+              ? `${item.dn} - ${item.filial}`
+              : item.filial
+          }
+        </option>
+      `
+    )
+  ].join("");
+
+  const valorAnteriorNormalizado =
+    normalizarFilialExportacaoProdutivos(
+      valorAnterior
+    );
+
+  const opcaoAnterior =
+    [
+      ...select.options
+    ].find(
+      opcao =>
+        normalizarFilialExportacaoProdutivos(
+          opcao.value
+        ) ===
+          valorAnteriorNormalizado
+    );
+
+  select.value =
+    opcaoAnterior?.value ||
+    "";
+
+  /*
+   * O campo é compartilhado no topo. No módulo dos
+   * Produtivos ele também precisa ficar disponível.
+   */
+  if (
+    label &&
+    document.body.classList.contains(
+      "modulo-produtivos-ativo"
+    )
+  ) {
+    label.hidden =
+      false;
+  }
+}
+
+
 function formatarCompetencia(competencia) {
   if (!competencia) {
     return "Todas";
@@ -5515,6 +5734,25 @@ function obterResultadosParaExportacao() {
         resultado.status ===
         "HABILITADO"
     );
+  }
+
+  const filialSelecionada =
+    obterFilialExportacaoProdutivos();
+
+  if (filialSelecionada) {
+    const filialNormalizada =
+      normalizarFilialExportacaoProdutivos(
+        filialSelecionada
+      );
+
+    resultados =
+      resultados.filter(
+        resultado =>
+          normalizarFilialExportacaoProdutivos(
+            resultado.filial
+          ) ===
+            filialNormalizada
+      );
   }
 
   return resultados.sort((a, b) => {
@@ -5663,11 +5901,17 @@ function adicionarCabecalhoExcel(planilha, resultados) {
   };
 
   const tipo = planilha.getCell("G3");
+  const filialExportacao =
+    obterFilialExportacaoProdutivos();
+
   tipo.value =
     `Exportação: ${
       obterTipoExportacao() === "habilitados"
         ? "Somente habilitados"
         : "Todos os resultados"
+    } | Filial: ${
+      filialExportacao ||
+      "Todas as filiais"
     }`;
   tipo.fill = {
     type: "pattern",
@@ -6019,7 +6263,12 @@ async function exportarExcel() {
         type:
           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
       }),
-      `campanha-${competencia}-${tipo}.xlsx`
+      `campanha-${competencia}-${tipo}-${
+        limparNomeArquivo(
+          obterFilialExportacaoProdutivos() ||
+          "todas-as-filiais"
+        )
+      }.xlsx`
     );
 
     toast(
@@ -6491,7 +6740,12 @@ async function exportarPdf() {
         : "todos";
 
     documento.save(
-      `campanha-${competencia}-${tipo}.pdf`
+      `campanha-${competencia}-${tipo}-${
+        limparNomeArquivo(
+          obterFilialExportacaoProdutivos() ||
+          "todas-as-filiais"
+        )
+      }.pdf`
     );
 
     toast(
@@ -6723,6 +6977,29 @@ function configurarEventos() {
       }
     );
 
+
+  preencherFiliaisExportacaoProdutivos();
+
+  const filialExportacaoProdutivos =
+    document.querySelector(
+      "#pixFilialExportacao"
+    );
+
+  filialExportacaoProdutivos
+    ?.addEventListener(
+      "change",
+      () => {
+        /*
+         * O filtro é aplicado no momento da exportação.
+         * Não altera os cards ou a visão geral.
+         */
+        console.info(
+          "[PRODUTIVOS EXPORTAÇÃO] Filial selecionada:",
+          filialExportacaoProdutivos.value ||
+          "Todas as filiais"
+        );
+      }
+    );
 
   const filtroDnDashboardProdutivos =
     document.querySelector(

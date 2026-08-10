@@ -1,3 +1,8 @@
+/*
+ * VERSÃO: 2026.08.06-03
+ * Exportação do Pix respeita Semana + Filial selecionadas no topo.
+ * Evidências também seguem exatamente a filial selecionada.
+ */
 
 /*
  * VERSÃO: 2026.08.06-ORDENACAO-FINANCEIRO-01
@@ -1651,6 +1656,62 @@ function rotuloTipoExportacaoPix(
   );
 }
 
+function filialExportacaoPixAtual() {
+  const select =
+    pixEv(
+      "#pixFilialExportacao"
+    );
+
+  const valor =
+    select?.value ||
+    "";
+
+  return String(
+    valor
+  )
+    .replace(
+      /[\u200B-\u200D\uFEFF]/g,
+      ""
+    )
+    .replace(
+      /\u00A0/g,
+      " "
+    )
+    .replace(
+      /^\s*\d+\s*-\s*/,
+      ""
+    )
+    .replace(
+      /\s+/g,
+      " "
+    )
+    .trim();
+}
+
+function filialExportacaoPixNormalizada() {
+  return normalizarPixEv(
+    filialExportacaoPixAtual()
+  );
+}
+
+function grupoEvidenciaPertenceFilialPix(
+  grupo
+) {
+  const filialSelecionada =
+    filialExportacaoPixNormalizada();
+
+  if (!filialSelecionada) {
+    return true;
+  }
+
+  return (
+    normalizarPixEv(
+      grupo?.filial
+    ) ===
+    filialSelecionada
+  );
+}
+
 function normalizarSemanaPixExportacao(
   valor
 ) {
@@ -2115,6 +2176,19 @@ function dadosPixParaExportar() {
           return null;
         }
 
+        const filialSelecionada =
+          filialExportacaoPixNormalizada();
+
+        if (
+          filialSelecionada &&
+          normalizarPixEv(
+            item.filial
+          ) !==
+            filialSelecionada
+        ) {
+          return null;
+        }
+
         return item;
       }
     )
@@ -2127,6 +2201,9 @@ function dadosPixParaExportar() {
         competenciaSelecionada,
       filtro:
         filtro.chave,
+      filial:
+        filialExportacaoPixAtual() ||
+        "Todas as filiais",
       tabela:
         tabela.id || "sem-id"
     }
@@ -2208,7 +2285,26 @@ function nomeRelatorioPix(
   const filtro =
     tipoExportacaoPixAtual();
 
-  return `pix-do-presidente-${competencia}-${filtro.chave}.${extensao}`;
+  const filial =
+    filialExportacaoPixAtual();
+
+  const sufixoFilial =
+    filial
+      ? `-${normalizarPixEv(
+          filial
+        )
+          .toLowerCase()
+          .replace(
+            /[^a-z0-9]+/g,
+            "-"
+          )
+          .replace(
+            /^-|-$/g,
+            ""
+          )}`
+      : "-todas-as-filiais";
+
+  return `pix-do-presidente-${competencia}-${filtro.chave}${sufixoFilial}.${extensao}`;
 }
 
 /* =========================================================
@@ -2555,7 +2651,10 @@ async function exportarPdfPixIndependente() {
   );
 
   documento.text(
-    `Exportação: ${tipo}`,
+    `Exportação: ${tipo} | Filial: ${
+      filialExportacaoPixAtual() ||
+      "Todas as filiais"
+    }`,
     12,
     29
   );
@@ -2685,9 +2784,13 @@ async function exportarPdfPixIndependente() {
   });
 
   const evidencias =
-    await buscarEvidenciasPixCompetencia(
-      competencia,
-      filtroExportacao.semana
+    (
+      await buscarEvidenciasPixCompetencia(
+        competencia,
+        filtroExportacao.semana
+      )
+    ).filter(
+      grupoEvidenciaPertenceFilialPix
     );
 
   for (const grupo of evidencias) {
@@ -2920,7 +3023,10 @@ async function exportarExcelPixIndependente() {
   planilha.getCell(
     "A3"
   ).value =
-    `Competência: ${competenciaExibicaoPix(competencia)}`;
+    `Competência: ${competenciaExibicaoPix(competencia)} | Filial: ${
+      filialExportacaoPixAtual() ||
+      "Todas as filiais"
+    }`;
 
   planilha.getCell(
     "A3"
@@ -3101,9 +3207,13 @@ async function exportarExcelPixIndependente() {
   };
 
   const evidencias =
-    await buscarEvidenciasPixCompetencia(
-      competencia,
-      filtroExportacao.semana
+    (
+      await buscarEvidenciasPixCompetencia(
+        competencia,
+        filtroExportacao.semana
+      )
+    ).filter(
+      grupoEvidenciaPertenceFilialPix
     );
 
   const planilhaEvidencias =
@@ -3554,3 +3664,409 @@ window.evidenciasPix = {
   buscarPorCompetenciaESemana:
     buscarEvidenciasPixCompetencia
 };
+
+
+/* =========================================================
+   BARRA HORIZONTAL SUPERIOR — APURAÇÃO DO PIX
+   Versão: 2026.08.06-01
+
+   Esta implementação é adicional:
+   - não substitui funções existentes;
+   - não altera cálculos, filtros ou exportações;
+   - mantém a barra original inferior;
+   - cria uma segunda barra sincronizada acima da tabela.
+========================================================= */
+
+function garantirEstiloBarraSuperiorPix() {
+  if (
+    document.querySelector(
+      "#pixBarraHorizontalSuperiorStyle"
+    )
+  ) {
+    return;
+  }
+
+  const estilo =
+    document.createElement(
+      "style"
+    );
+
+  estilo.id =
+    "pixBarraHorizontalSuperiorStyle";
+
+  estilo.textContent = `
+    .pix-scroll-superior {
+      display: none;
+      width: 100%;
+      height: 18px;
+      margin: 0 0 8px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      border: 1px solid #d8e2ea;
+      border-radius: 8px;
+      background: #f5f8fa;
+      scrollbar-color: #647b8d #e7edf2;
+      scrollbar-width: auto;
+    }
+
+    .pix-scroll-superior.ativo {
+      display: block;
+    }
+
+    .pix-scroll-superior-conteudo {
+      height: 1px;
+      min-width: 100%;
+      pointer-events: none;
+    }
+
+    .pix-scroll-superior::-webkit-scrollbar {
+      height: 13px;
+    }
+
+    .pix-scroll-superior::-webkit-scrollbar-track {
+      border-radius: 8px;
+      background: #e7edf2;
+    }
+
+    .pix-scroll-superior::-webkit-scrollbar-thumb {
+      border: 3px solid #e7edf2;
+      border-radius: 999px;
+      background: #647b8d;
+    }
+
+    .pix-scroll-superior::-webkit-scrollbar-thumb:hover {
+      background: #38556c;
+    }
+  `;
+
+  document.head.appendChild(
+    estilo
+  );
+}
+
+function localizarTabelaApuracaoPixCompleta() {
+  const corpo =
+    document.querySelector(
+      "#pixTabelaApuracao"
+    );
+
+  if (!corpo) {
+    return null;
+  }
+
+  return corpo.closest(
+    "table"
+  );
+}
+
+function configurarBarraHorizontalSuperiorPix() {
+  garantirEstiloBarraSuperiorPix();
+
+  const tabela =
+    localizarTabelaApuracaoPixCompleta();
+
+  if (!tabela) {
+    return;
+  }
+
+  const envoltorio =
+    tabela.closest(
+      ".table-wrap"
+    ) ||
+    tabela.parentElement;
+
+  if (!envoltorio) {
+    return;
+  }
+
+  let barra =
+    envoltorio.querySelector(
+      ":scope > .pix-scroll-superior"
+    );
+
+  if (!barra) {
+    barra =
+      document.createElement(
+        "div"
+      );
+
+    barra.className =
+      "pix-scroll-superior";
+
+    barra.setAttribute(
+      "role",
+      "scrollbar"
+    );
+
+    barra.setAttribute(
+      "aria-label",
+      "Rolagem horizontal superior da tabela de apuração do Pix"
+    );
+
+    const conteudo =
+      document.createElement(
+        "div"
+      );
+
+    conteudo.className =
+      "pix-scroll-superior-conteudo";
+
+    barra.appendChild(
+      conteudo
+    );
+
+    envoltorio.insertBefore(
+      barra,
+      tabela
+    );
+  }
+
+  const conteudo =
+    barra.querySelector(
+      ".pix-scroll-superior-conteudo"
+    );
+
+  if (!conteudo) {
+    return;
+  }
+
+  const atualizarDimensoes =
+    () => {
+      const larguraTabela =
+        Math.max(
+          tabela.scrollWidth,
+          tabela.offsetWidth
+        );
+
+      conteudo.style.width =
+        `${larguraTabela}px`;
+
+      const possuiRolagem =
+        larguraTabela >
+        envoltorio.clientWidth + 2;
+
+      barra.classList.toggle(
+        "ativo",
+        possuiRolagem
+      );
+
+      barra.setAttribute(
+        "aria-valuemin",
+        "0"
+      );
+
+      barra.setAttribute(
+        "aria-valuemax",
+        String(
+          Math.max(
+            0,
+            larguraTabela -
+            envoltorio.clientWidth
+          )
+        )
+      );
+
+      barra.setAttribute(
+        "aria-valuenow",
+        String(
+          Math.round(
+            envoltorio.scrollLeft
+          )
+        )
+      );
+
+      if (
+        Math.abs(
+          barra.scrollLeft -
+          envoltorio.scrollLeft
+        ) > 1
+      ) {
+        barra.scrollLeft =
+          envoltorio.scrollLeft;
+      }
+    };
+
+  if (
+    barra.dataset.pixScrollBound !==
+    "true"
+  ) {
+    barra.dataset.pixScrollBound =
+      "true";
+
+    let sincronizandoPelaBarra =
+      false;
+
+    let sincronizandoPelaTabela =
+      false;
+
+    barra.addEventListener(
+      "scroll",
+      () => {
+        if (sincronizandoPelaTabela) {
+          return;
+        }
+
+        sincronizandoPelaBarra =
+          true;
+
+        envoltorio.scrollLeft =
+          barra.scrollLeft;
+
+        barra.setAttribute(
+          "aria-valuenow",
+          String(
+            Math.round(
+              barra.scrollLeft
+            )
+          )
+        );
+
+        requestAnimationFrame(
+          () => {
+            sincronizandoPelaBarra =
+              false;
+          }
+        );
+      },
+      {
+        passive: true
+      }
+    );
+
+    envoltorio.addEventListener(
+      "scroll",
+      () => {
+        if (sincronizandoPelaBarra) {
+          return;
+        }
+
+        sincronizandoPelaTabela =
+          true;
+
+        barra.scrollLeft =
+          envoltorio.scrollLeft;
+
+        barra.setAttribute(
+          "aria-valuenow",
+          String(
+            Math.round(
+              envoltorio.scrollLeft
+            )
+          )
+        );
+
+        requestAnimationFrame(
+          () => {
+            sincronizandoPelaTabela =
+              false;
+          }
+        );
+      },
+      {
+        passive: true
+      }
+    );
+
+    const observadorTabela =
+      new MutationObserver(
+        atualizarDimensoes
+      );
+
+    observadorTabela.observe(
+      tabela,
+      {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        attributes: true
+      }
+    );
+
+    if (
+      "ResizeObserver" in window
+    ) {
+      const observadorTamanho =
+        new ResizeObserver(
+          atualizarDimensoes
+        );
+
+      observadorTamanho.observe(
+        tabela
+      );
+
+      observadorTamanho.observe(
+        envoltorio
+      );
+    }
+
+    window.addEventListener(
+      "resize",
+      atualizarDimensoes,
+      {
+        passive: true
+      }
+    );
+  }
+
+  requestAnimationFrame(
+    atualizarDimensoes
+  );
+}
+
+function iniciarBarraHorizontalSuperiorPix() {
+  configurarBarraHorizontalSuperiorPix();
+
+  const observadorPagina =
+    new MutationObserver(
+      () => {
+        configurarBarraHorizontalSuperiorPix();
+      }
+    );
+
+  observadorPagina.observe(
+    document.body,
+    {
+      childList: true,
+      subtree: true
+    }
+  );
+
+  document.addEventListener(
+    "click",
+    evento => {
+      if (
+        evento.target.closest(
+          '[data-pix-view="apuracao"], ' +
+          '[data-module="pix"], ' +
+          '#pix-apuracao, ' +
+          '#pixTabelaApuracao'
+        )
+      ) {
+        window.setTimeout(
+          configurarBarraHorizontalSuperiorPix,
+          80
+        );
+      }
+    },
+    true
+  );
+
+  console.info(
+    "[PIX APURAÇÃO] Barra horizontal superior ativada."
+  );
+}
+
+if (
+  document.readyState ===
+  "loading"
+) {
+  document.addEventListener(
+    "DOMContentLoaded",
+    iniciarBarraHorizontalSuperiorPix,
+    {
+      once: true
+    }
+  );
+} else {
+  iniciarBarraHorizontalSuperiorPix();
+}
