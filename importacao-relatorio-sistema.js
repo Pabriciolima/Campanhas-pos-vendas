@@ -1,4 +1,15 @@
 /*
+ * AJUSTE v32 — COMPETÊNCIA PADRÃO DA IMPORTAÇÃO
+ * Data: 17/08/2026
+ *
+ * - Pix do Presidente abre no mês atual.
+ * - Produtivos abre no mês anterior.
+ * - O usuário continua podendo trocar a competência manualmente.
+ * - Nenhuma lógica de leitura, validação, cálculo, duplicidade,
+ *   reconciliação, Firebase ou importação foi removida.
+ */
+
+/*
 ===============================================================================
 IMPORTAÇÃO INTELIGENTE DO RELATÓRIO — PIX + PRODUTIVOS
 Arquivo: importacao-relatorio-sistema.js
@@ -157,7 +168,7 @@ firebase-config.js. Isso evita duas inicializações diferentes do
 Firestore e mantém o long polling usado pelo restante do sistema.
 */
 
-const VERSAO = "2026.08.06-31";
+const VERSAO = "2026.08.17-32";
 const TAMANHO_LOTE = 400;
 const TIMEOUT_OPERACAO = 90000;
 const DB_PRODUTIVOS = "campanha_oficina_mvp_v1";
@@ -351,6 +362,71 @@ function booleano(valor) {
     "X",
     "PENDENTE"
   ].includes(normalizar(valor));
+}
+
+/*
+===============================================================================
+COMPETÊNCIA PADRÃO DA IMPORTAÇÃO — 2026.08.17
+===============================================================================
+
+PIX DO PRESIDENTE:
+- abre por padrão sempre no mês atual.
+
+PRODUTIVOS:
+- abre por padrão sempre no mês anterior.
+
+O campo continua totalmente editável. Se o usuário precisar lançar outra
+competência, basta selecionar outro mês no próprio modal antes de importar.
+===============================================================================
+*/
+
+function competenciaMesAtualImportacao() {
+  const agora = new Date();
+
+  return (
+    String(
+      agora.getFullYear()
+    ) +
+    "-" +
+    String(
+      agora.getMonth() + 1
+    ).padStart(
+      2,
+      "0"
+    )
+  );
+}
+
+function competenciaMesAnteriorImportacao() {
+  const agora = new Date();
+
+  const anterior =
+    new Date(
+      agora.getFullYear(),
+      agora.getMonth() - 1,
+      1
+    );
+
+  return (
+    String(
+      anterior.getFullYear()
+    ) +
+    "-" +
+    String(
+      anterior.getMonth() + 1
+    ).padStart(
+      2,
+      "0"
+    )
+  );
+}
+
+function competenciaPadraoImportacao(
+  tipo
+) {
+  return tipo === "pix"
+    ? competenciaMesAtualImportacao()
+    : competenciaMesAnteriorImportacao();
 }
 
 function competenciaNormalizada(valor) {
@@ -5014,10 +5090,19 @@ function abrir(tipo) {
     state.arquivo = null;
     state.workbook = null;
     state.aba = "";
+    /*
+     * Competência padrão por módulo:
+     *
+     * Pix do Presidente -> mês atual.
+     * Produtivos        -> mês anterior.
+     *
+     * Esta escolha acontece apenas ao ABRIR a importação.
+     * O usuário continua podendo alterar o campo normalmente.
+     */
     state.competencia =
-      $("#competenciaGlobal")?.value ||
-      $("#pixDashboardCompetencia")?.value ||
-      new Date().toISOString().slice(0, 7);
+      competenciaPadraoImportacao(
+        tipo
+      );
     state.semana = 1;
     state.filial = "";
     state.estrategia =
