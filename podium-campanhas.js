@@ -1,3 +1,27 @@
+
+/*
+ * AJUSTE 2026.08.19-09 — RANKING JUSTO POR SUPERAÇÃO DA META
+ *
+ * Mantém todo o módulo anterior: Firebase somente leitura, filtros,
+ * pódio geral/filial, bandeiras oficiais, motion, elegibilidade e exclusões.
+ *
+ * NOVA REGRA:
+ * 1) Ranking principal = maior percentual de atingimento/superação da meta.
+ * 2) Empate no percentual = maior Ticket Médio.
+ * 3) Persistindo o empate = maior realizado e, por fim, ordem alfabética.
+ * 4) O valor principal do card passa a ser a SUPERAÇÃO DA META.
+ * 5) Meta e realizado ficam abaixo, em tamanho menor.
+ *
+ * PIX:
+ * - percentual = soma do realizado mensal / soma da meta mensal.
+ * - ticket de desempate = média dos tickets das semanas válidas.
+ *
+ * PRODUTIVOS:
+ * - quando houver meta monetária individual no documento, usa meta x faturamento.
+ * - quando não houver meta monetária, usa o atingimento técnico da campanha
+ *   (Produtividade 70%, Eficiência 80% e HV/HD 70%), sem inventar meta em reais.
+ * - ticket médio só é usado no desempate quando existir no registro.
+ */
 /*
  * MOTION PREMIUM v06
  * Inspirado em padrões de motion design observados no Jitter:
@@ -30,7 +54,7 @@ import {
   onSnapshot
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
-const PODIUM_VERSAO = "2026.08.18-08";
+const PODIUM_VERSAO = "2026.08.19-10";
 
 const estado = {
   funcionariosProdutivos: [],
@@ -223,109 +247,510 @@ function produtivoBateuMeta(item) {
   );
 }
 
+
+function percentualSeguro(valor) {
+  const n = numero(valor);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function metaMonetariaProdutivo(item) {
+  return numero(
+    item.metaIndividual ??
+    item.metaFaturamento ??
+    item.metaMensal ??
+    item.objetivoMensal ??
+    item.objetivo ??
+    item.meta ??
+    0
+  );
+}
+
+function ticketMedioRegistro(item) {
+  return numero(
+    item.ticketMedio ??
+    item.ticketMedioMensal ??
+    item.ticket ??
+    0
+  );
+}
+
+function dadosTecnicosProdutivo(item) {
+  const hd = numero(
+    item.horasDisponiveis ??
+    item.horasDisponivel
+  );
+
+  const ht = numero(
+    item.horasTrabalhadas ??
+    item.horasTrabalhada
+  );
+
+  const hv = numero(
+    item.horasVendidas ??
+    item.horasCobradas
+  );
+
+  const produtividade =
+    numero(item.produtividade) ||
+    (
+      hd > 0
+        ? (ht / hd) * 100
+        : 0
+    );
+
+  const eficiencia =
+    numero(item.eficiencia) ||
+    (
+      ht > 0
+        ? (hv / ht) * 100
+        : 0
+    );
+
+  const relacaoVendidaDisponivel =
+    hd > 0
+      ? (hv / hd) * 100
+      : 0;
+
+  /*
+   * O colaborador precisa cumprir os três critérios.
+   * Para o ranking técnico, usamos o menor atingimento relativo
+   * entre eles; assim ninguém sobe no pódio por estourar apenas
+   * um indicador e ficar no limite dos demais.
+   */
+  const atingimentos = [
+    produtividade > 0
+      ? produtividade / 70 * 100
+      : 0,
+    eficiencia > 0
+      ? eficiencia / 80 * 100
+      : 0,
+    relacaoVendidaDisponivel > 0
+      ? relacaoVendidaDisponivel / 70 * 100
+      : 0
+  ];
+
+  const atingimento =
+    Math.min(
+      ...atingimentos
+    );
+
+  return {
+    produtividade,
+    eficiencia,
+    relacaoVendidaDisponivel,
+    atingimento:
+      Number.isFinite(atingimento)
+        ? atingimento
+        : 0
+  };
+}
+
+function compararRankingJusto(a, b) {
+  const diferencaPercentual =
+    numero(b.percentualAtingimento) -
+    numero(a.percentualAtingimento);
+
+  /*
+   * Consideramos empate quando a diferença é inferior
+   * a 0,005 ponto percentual, evitando ruído de casas decimais.
+   */
+  if (
+    Math.abs(
+      diferencaPercentual
+    ) >= 0.005
+  ) {
+    return diferencaPercentual;
+  }
+
+  const diferencaTicket =
+    numero(b.ticketMedioDesempate) -
+    numero(a.ticketMedioDesempate);
+
+  if (
+    Math.abs(
+      diferencaTicket
+    ) >= 0.005
+  ) {
+    return diferencaTicket;
+  }
+
+  const diferencaRealizado =
+    numero(b.faturamento) -
+    numero(a.faturamento);
+
+  if (
+    Math.abs(
+      diferencaRealizado
+    ) >= 0.005
+  ) {
+    return diferencaRealizado;
+  }
+
+  return String(
+    a.nome
+  ).localeCompare(
+    String(
+      b.nome
+    ),
+    "pt-BR"
+  );
+}
+
 function rankingProdutivos(competencia, filial = "") {
-  const filialChave = normalizar(filial);
-  const mapa = new Map();
+  const filialChave =
+    normalizar(
+      filial
+    );
+
+  const mapa =
+    new Map();
 
   estado.lancamentosProdutivos
-    .filter(item => texto(item.competencia) === competencia)
-    .forEach(item => {
-      const pessoa = dadosPessoa(item, estado.funcionariosProdutivos);
-
-      if (cargoExcluido(pessoa.cargo)) return;
-      if (filialChave && normalizar(pessoa.filial) !== filialChave) return;
-
-      const faturamento = numero(
-        item.faturamento ??
-        item.faturamentoIndividual ??
-        item.realizado ??
-        item.realizadoMensal
-      );
-
-      if (faturamento <= 0) return;
-      if (!produtivoBateuMeta(item)) return;
-
-      const chave =
-        texto(item.funcionarioId) ||
-        `${normalizar(pessoa.nome)}::${normalizar(pessoa.filial)}`;
-
-      const atual = mapa.get(chave) || {
-        ...pessoa,
-        faturamento: 0,
-        metaMensal: 0
-      };
-
-      // Produtivos é mensal: evita inflar em caso de documento duplicado.
-      atual.faturamento = Math.max(atual.faturamento, faturamento);
-      mapa.set(chave, atual);
-    });
-
-  return [...mapa.values()]
-    .sort((a, b) =>
-      b.faturamento - a.faturamento ||
-      String(a.nome).localeCompare(String(b.nome), "pt-BR")
+    .filter(
+      item =>
+        texto(
+          item.competencia
+        ) === competencia
     )
-    .slice(0, 3);
-}
+    .forEach(
+      item => {
+        const pessoa =
+          dadosPessoa(
+            item,
+            estado.funcionariosProdutivos
+          );
 
+        if (
+          cargoExcluido(
+            pessoa.cargo
+          )
+        ) {
+          return;
+        }
+
+        if (
+          filialChave &&
+          normalizar(
+            pessoa.filial
+          ) !== filialChave
+        ) {
+          return;
+        }
+
+        const faturamento =
+          numero(
+            item.faturamento ??
+            item.faturamentoIndividual ??
+            item.realizado ??
+            item.realizadoMensal
+          );
+
+        if (
+          faturamento <= 0
+        ) {
+          return;
+        }
+
+        if (
+          !produtivoBateuMeta(
+            item
+          )
+        ) {
+          return;
+        }
+
+        const metaMonetaria =
+          metaMonetariaProdutivo(
+            item
+          );
+
+        const ticket =
+          ticketMedioRegistro(
+            item
+          );
+
+        const tecnico =
+          dadosTecnicosProdutivo(
+            item
+          );
+
+        const chave =
+          texto(
+            item.funcionarioId
+          ) ||
+          `${normalizar(
+            pessoa.nome
+          )}::${normalizar(
+            pessoa.filial
+          )}`;
+
+        const atual =
+          mapa.get(
+            chave
+          ) || {
+            ...pessoa,
+            faturamento: 0,
+            metaMensal: 0,
+            percentualAtingimento: 0,
+            percentualSuperacao: 0,
+            ticketMedioDesempate: 0,
+            tipoMetaPodium:
+              metaMonetaria > 0
+                ? "monetaria"
+                : "tecnica",
+            produtividade: 0,
+            eficiencia: 0,
+            relacaoVendidaDisponivel: 0
+          };
+
+        /*
+         * Produtivos é mensal.
+         * Mantemos apenas o registro de maior faturamento,
+         * como a versão anterior já fazia para evitar duplicidade.
+         */
+        if (
+          faturamento >=
+          atual.faturamento
+        ) {
+          atual.faturamento =
+            faturamento;
+
+          atual.ticketMedioDesempate =
+            ticket;
+
+          if (
+            metaMonetaria > 0
+          ) {
+            atual.tipoMetaPodium =
+              "monetaria";
+
+            atual.metaMensal =
+              metaMonetaria;
+
+            atual.percentualAtingimento =
+              faturamento /
+              metaMonetaria *
+              100;
+          } else {
+            atual.tipoMetaPodium =
+              "tecnica";
+
+            atual.metaMensal =
+              0;
+
+            atual.produtividade =
+              tecnico.produtividade;
+
+            atual.eficiencia =
+              tecnico.eficiencia;
+
+            atual.relacaoVendidaDisponivel =
+              tecnico.relacaoVendidaDisponivel;
+
+            atual.percentualAtingimento =
+              tecnico.atingimento;
+          }
+
+          atual.percentualSuperacao =
+            Math.max(
+              0,
+              atual.percentualAtingimento -
+              100
+            );
+        }
+
+        mapa.set(
+          chave,
+          atual
+        );
+      }
+    );
+
+  return [
+    ...mapa.values()
+  ]
+    .filter(
+      item =>
+        numero(
+          item.percentualAtingimento
+        ) >= 100
+    )
+    .sort(
+      compararRankingJusto
+    )
+    .slice(
+      0,
+      3
+    );
+}
 function rankingPix(competencia, filial = "") {
-  const filialChave = normalizar(filial);
-  const mapa = new Map();
+  const filialChave =
+    normalizar(
+      filial
+    );
+
+  const mapa =
+    new Map();
 
   estado.lancamentosPix
-    .filter(item => texto(item.competencia) === competencia)
-    .forEach(item => {
-      const pessoa = dadosPessoa(item, estado.funcionariosPix);
+    .filter(
+      item =>
+        texto(
+          item.competencia
+        ) === competencia
+    )
+    .forEach(
+      item => {
+        const pessoa =
+          dadosPessoa(
+            item,
+            estado.funcionariosPix
+          );
 
-      if (cargoExcluido(pessoa.cargo)) return;
-      if (filialChave && normalizar(pessoa.filial) !== filialChave) return;
+        if (
+          cargoExcluido(
+            pessoa.cargo
+          )
+        ) {
+          return;
+        }
 
-      const meta = numero(
-        item.metaSemanal ??
-        item.meta ??
-        item.valorAcumulado
-      );
+        if (
+          filialChave &&
+          normalizar(
+            pessoa.filial
+          ) !== filialChave
+        ) {
+          return;
+        }
 
-      const realizado = numero(
-        item.realizadoSemanal ??
-        item.realizado ??
-        item.valorTotal
-      );
+        const meta =
+          numero(
+            item.metaSemanal ??
+            item.meta ??
+            item.valorAcumulado
+          );
 
-      const chave =
-        texto(item.funcionarioId) ||
-        `${normalizar(pessoa.nome)}::${normalizar(pessoa.filial)}`;
+        const realizado =
+          numero(
+            item.realizadoSemanal ??
+            item.realizado ??
+            item.valorTotal
+          );
 
-      const atual = mapa.get(chave) || {
-        ...pessoa,
-        faturamento: 0,
-        metaMensal: 0,
-        semanas: new Set()
-      };
+        const ticket =
+          ticketMedioRegistro(
+            item
+          );
 
-      const semana = String(item.semana ?? texto(item.id));
+        const chave =
+          texto(
+            item.funcionarioId
+          ) ||
+          `${normalizar(
+            pessoa.nome
+          )}::${normalizar(
+            pessoa.filial
+          )}`;
 
-      if (!atual.semanas.has(semana)) {
-        atual.semanas.add(semana);
-        atual.faturamento += realizado;
-        atual.metaMensal += meta;
+        const atual =
+          mapa.get(
+            chave
+          ) || {
+            ...pessoa,
+            faturamento: 0,
+            metaMensal: 0,
+            percentualAtingimento: 0,
+            percentualSuperacao: 0,
+            ticketMedioDesempate: 0,
+            ticketSoma: 0,
+            ticketQtd: 0,
+            semanas: new Set(),
+            tipoMetaPodium: "monetaria"
+          };
+
+        const semana =
+          String(
+            item.semana ??
+            texto(
+              item.id
+            )
+          );
+
+        /*
+         * Continua protegendo contra duplicidade semanal,
+         * exatamente como a versão anterior.
+         */
+        if (
+          !atual.semanas.has(
+            semana
+          )
+        ) {
+          atual.semanas.add(
+            semana
+          );
+
+          atual.faturamento +=
+            realizado;
+
+          atual.metaMensal +=
+            meta;
+
+          if (
+            ticket > 0
+          ) {
+            atual.ticketSoma +=
+              ticket;
+
+            atual.ticketQtd +=
+              1;
+          }
+        }
+
+        atual.ticketMedioDesempate =
+          atual.ticketQtd > 0
+            ? atual.ticketSoma /
+              atual.ticketQtd
+            : 0;
+
+        atual.percentualAtingimento =
+          atual.metaMensal > 0
+            ? atual.faturamento /
+              atual.metaMensal *
+              100
+            : 0;
+
+        atual.percentualSuperacao =
+          Math.max(
+            0,
+            atual.percentualAtingimento -
+            100
+          );
+
+        mapa.set(
+          chave,
+          atual
+        );
       }
+    );
 
-      mapa.set(chave, atual);
-    });
-
-  return [...mapa.values()]
-    .filter(item =>
-      item.metaMensal > 0 &&
-      item.faturamento >= item.metaMensal
+  return [
+    ...mapa.values()
+  ]
+    .filter(
+      item =>
+        item.metaMensal > 0 &&
+        item.faturamento >=
+          item.metaMensal
     )
-    .sort((a, b) =>
-      b.faturamento - a.faturamento ||
-      String(a.nome).localeCompare(String(b.nome), "pt-BR")
+    .sort(
+      compararRankingJusto
     )
-    .slice(0, 3);
+    .slice(
+      0,
+      3
+    );
 }
-
 function filiaisDisponiveis(tipo, competencia) {
   const lancamentos =
     tipo === "pix" ? estado.lancamentosPix : estado.lancamentosProdutivos;
@@ -355,9 +780,18 @@ function coroaSvg(classe) {
 
 function card(pessoa, posicao) {
   const cfg = {
-    1: { classe: "ouro", titulo: "1º LUGAR" },
-    2: { classe: "prata", titulo: "2º LUGAR" },
-    3: { classe: "bronze", titulo: "3º LUGAR" }
+    1: {
+      classe: "ouro",
+      titulo: "1º LUGAR"
+    },
+    2: {
+      classe: "prata",
+      titulo: "2º LUGAR"
+    },
+    3: {
+      classe: "bronze",
+      titulo: "3º LUGAR"
+    }
   }[posicao];
 
   if (!pessoa) {
@@ -371,40 +805,189 @@ function card(pessoa, posicao) {
     `;
   }
 
-  const percentual =
-    pessoa.metaMensal > 0
-      ? (pessoa.faturamento / pessoa.metaMensal) * 100
-      : 0;
+  const atingimento =
+    numero(
+      pessoa.percentualAtingimento
+    );
+
+  const superacao =
+    Math.max(
+      0,
+      numero(
+        pessoa.percentualSuperacao
+      )
+    );
+
+  const percentualFormatado =
+    superacao
+      .toFixed(1)
+      .replace(
+        ".",
+        ","
+      );
+
+  const atingimentoFormatado =
+    atingimento
+      .toFixed(1)
+      .replace(
+        ".",
+        ","
+      );
+
+  const ticket =
+    numero(
+      pessoa.ticketMedioDesempate
+    );
+
+  const detalheMeta =
+    pessoa.tipoMetaPodium ===
+    "tecnica"
+      ? `
+        <div class="podium-meta podium-meta-tecnica">
+          <div>
+            <small>META TÉCNICA</small>
+            <strong>
+              Prod. 70% · Efic. 80% · HV/HD 70%
+            </strong>
+          </div>
+          <div>
+            <small>REALIZADO</small>
+            <strong>
+              Prod. ${numero(pessoa.produtividade).toFixed(1).replace(".", ",")}%
+              · Efic. ${numero(pessoa.eficiencia).toFixed(1).replace(".", ",")}%
+              · HV/HD ${numero(pessoa.relacaoVendidaDisponivel).toFixed(1).replace(".", ",")}%
+            </strong>
+          </div>
+        </div>
+      `
+      : `
+        <div class="podium-meta podium-meta-financeira">
+          <div>
+            <small>META</small>
+            <strong>
+              ${moeda.format(
+                pessoa.metaMensal
+              )}
+            </strong>
+          </div>
+
+          <span
+            class="podium-meta-seta"
+            aria-hidden="true"
+          >
+            →
+          </span>
+
+          <div>
+            <small>REALIZADO</small>
+            <strong>
+              ${moeda.format(
+                pessoa.faturamento
+              )}
+            </strong>
+          </div>
+        </div>
+      `;
 
   return `
     <article class="podium-card podium-${cfg.classe}">
-      <div class="podium-brilho" aria-hidden="true"></div>${podiumBandeiraEstado(pessoa.filial)}
-      <div class="podium-coroa-wrap">${coroaSvg(cfg.classe)}</div>
-      <span class="podium-posicao">${cfg.titulo}</span>
-      <h3>${escapar(pessoa.nome)}</h3>
-      <p>${escapar(pessoa.cargo || "Colaborador")}</p>
+      <div class="podium-brilho" aria-hidden="true"></div>
+
+      ${podiumBandeiraEstado(
+        pessoa.filial
+      )}
+
+      <div class="podium-coroa-wrap">
+        ${coroaSvg(
+          cfg.classe
+        )}
+      </div>
+
+      <span class="podium-posicao">
+        ${cfg.titulo}
+      </span>
+
+      <h3>
+        ${escapar(
+          pessoa.nome
+        )}
+      </h3>
+
+      <p>
+        ${escapar(
+          pessoa.cargo ||
+          "Colaborador"
+        )}
+      </p>
+
       <div class="podium-filial">
-        ${escapar(pessoa.filial || "—")}
-        ${pessoa.dn ? ` · DN ${escapar(pessoa.dn)}` : ""}
+        ${escapar(
+          pessoa.filial ||
+          "—"
+        )}
+
+        ${
+          pessoa.dn
+            ? ` · DN ${escapar(
+                pessoa.dn
+              )}`
+            : ""
+        }
       </div>
-      <div class="podium-valor">
-        <small>FATURAMENTO DO MÊS</small>
-        <strong>${moeda.format(pessoa.faturamento)}</strong>
+
+      <div class="podium-superacao">
+        <small>
+          SUPERAÇÃO DA META
+        </small>
+
+        <strong>
+          +${percentualFormatado}%
+        </strong>
+
+        <span>
+          ${atingimentoFormatado}% de atingimento
+        </span>
       </div>
+
+      ${detalheMeta}
+
       ${
-        pessoa.metaMensal > 0
-          ? `<div class="podium-meta">
-               Meta: <strong>${moeda.format(pessoa.metaMensal)}</strong>
-               <span>${percentual.toFixed(1).replace(".", ",")}%</span>
-             </div>`
-          : `<div class="podium-meta podium-meta-ok">
-               <strong>✓ Meta da campanha atingida</strong>
-             </div>`
+        ticket > 0
+          ? `
+            <div
+              class="podium-desempate"
+              title="Usado apenas quando houver empate no percentual de atingimento"
+            >
+              Critério de desempate · Ticket médio:
+              <strong>
+                ${moeda.format(
+                  ticket
+                )}
+              </strong>
+            </div>
+          `
+          : ""
       }
+
+      <!--
+        Compatibilidade com o módulo de homenagem já instalado:
+        mantém o realizado disponível no mesmo seletor antigo,
+        porém sem exibi-lo como destaque visual.
+      -->
+      <div
+        class="podium-valor podium-valor-compat"
+        aria-hidden="true"
+      >
+        <small>REALIZADO</small>
+        <strong>
+          ${moeda.format(
+            pessoa.faturamento
+          )}
+        </strong>
+      </div>
     </article>
   `;
 }
-
 function garantirEstilos() {
   if ($("#podiumCampanhasCss")) return;
 
@@ -645,6 +1228,113 @@ function garantirEstilos() {
       font-size:9px;
       font-weight:800
     }
+    /* ==========================================================
+       RANKING JUSTO v09 — percentual em destaque
+       ========================================================== */
+    .podium-superacao{
+      width:100%;
+      margin-top:auto;
+      padding:18px 10px 14px;
+      border-top:1px solid #e6edf1;
+      text-align:center
+    }
+    .podium-superacao small{
+      display:block;
+      margin-bottom:7px;
+      color:#81919d;
+      font-size:8px;
+      font-weight:950;
+      letter-spacing:.13em
+    }
+    .podium-superacao strong{
+      display:block;
+      color:#087956;
+      font-size:36px;
+      font-weight:950;
+      line-height:.95;
+      letter-spacing:-.045em;
+      text-shadow:0 8px 20px rgba(8,121,86,.10)
+    }
+    .podium-superacao span{
+      display:block;
+      margin-top:7px;
+      color:#718592;
+      font-size:9px;
+      font-weight:800
+    }
+    .podium-ouro .podium-superacao strong{
+      color:#a77800;
+      font-size:42px;
+      text-shadow:0 9px 22px rgba(167,120,0,.13)
+    }
+    .podium-meta-financeira{
+      display:grid!important;
+      grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+      align-items:center;
+      gap:9px;
+      text-align:left
+    }
+    .podium-meta-financeira>div{
+      min-width:0
+    }
+    .podium-meta-financeira small,
+    .podium-meta-tecnica small{
+      display:block;
+      margin-bottom:3px;
+      color:#84949f;
+      font-size:7px;
+      font-weight:900;
+      letter-spacing:.08em
+    }
+    .podium-meta-financeira strong{
+      display:block;
+      overflow:hidden;
+      color:#345266;
+      font-size:10px;
+      font-weight:900;
+      text-overflow:ellipsis;
+      white-space:nowrap
+    }
+    .podium-meta-financeira>div:last-child{
+      text-align:right
+    }
+    .podium-meta-seta{
+      color:#9aabb5;
+      font-size:13px;
+      font-weight:900
+    }
+    .podium-meta-tecnica{
+      display:grid!important;
+      grid-template-columns:1fr;
+      gap:7px;
+      text-align:left
+    }
+    .podium-meta-tecnica strong{
+      display:block;
+      color:#345266;
+      font-size:8px;
+      font-weight:850;
+      line-height:1.35
+    }
+    .podium-desempate{
+      width:100%;
+      margin-top:8px;
+      padding:7px 9px;
+      border:1px dashed #dfe8ec;
+      border-radius:9px;
+      background:rgba(249,251,252,.86);
+      color:#84949e;
+      font-size:7.5px;
+      line-height:1.3
+    }
+    .podium-desempate strong{
+      color:#526a79;
+      font-weight:900
+    }
+    .podium-valor-compat{
+      display:none!important
+    }
+
     .podium-valor{
       width:100%;
       margin-top:auto;
@@ -708,6 +1398,127 @@ function garantirEstilos() {
     .podium-card:hover .podium-bandeira-estado{transform:translateY(-3px) rotate(1.5deg) scale(1.045);box-shadow:0 17px 34px rgba(17,42,61,.18)}
     @keyframes podiumFlagReveal{0%{opacity:0;transform:translate(13px,-11px) rotate(5deg) scale(.74)}65%{opacity:1;transform:translate(-2px,2px) rotate(-1deg) scale(1.04)}100%{opacity:1;transform:translate(0,0) rotate(0) scale(1)}}
     @media(max-width:720px){.podium-bandeira-estado{top:14px;right:14px;width:50px;height:36px}}
+
+    /* ==========================================================
+       V10 — CAMPEÃO EM DESTAQUE
+       O 1º lugar precisa dominar visualmente o pódio no desktop,
+       sem prejudicar a leitura mobile.
+       ========================================================== */
+    @media (min-width: 721px){
+      .podium-grid{
+        align-items:end;
+        padding-top:54px;
+      }
+
+      .podium-card{
+        min-height:330px;
+      }
+
+      .podium-card.podium-ouro{
+        min-height:392px;
+        margin-top:-34px;
+        padding-top:54px;
+        border-width:2px;
+        transform:scale(1.035);
+        transform-origin:center bottom;
+        z-index:12;
+        box-shadow:
+          0 30px 70px rgba(169,123,0,.20),
+          0 10px 26px rgba(17,42,61,.10),
+          0 0 0 5px rgba(214,165,20,.055);
+      }
+
+      .podium-card.podium-ouro:hover{
+        transform:translateY(-7px) scale(1.045);
+      }
+
+      .podium-ouro .podium-coroa-wrap{
+        width:78px;
+        height:78px;
+        top:-39px;
+        box-shadow:
+          0 18px 38px rgba(169,123,0,.20),
+          0 5px 14px rgba(17,42,61,.12);
+      }
+
+      .podium-ouro .podium-coroa-wrap svg{
+        width:54px;
+        height:54px;
+      }
+
+      .podium-ouro .podium-posicao{
+        padding:7px 14px;
+        font-size:9px;
+        letter-spacing:.10em;
+      }
+
+      .podium-ouro h3{
+        margin-top:12px;
+        font-size:17px;
+        line-height:1.15;
+      }
+
+      .podium-ouro p{
+        font-size:10px;
+      }
+
+      .podium-ouro .podium-filial{
+        margin-top:13px;
+        padding:6px 10px;
+        font-size:9px;
+      }
+
+      .podium-ouro .podium-superacao{
+        margin-top:auto;
+        padding-top:22px;
+        padding-bottom:18px;
+      }
+
+      .podium-ouro .podium-superacao small{
+        font-size:9px;
+      }
+
+      .podium-ouro .podium-superacao strong{
+        font-size:52px;
+        line-height:.92;
+      }
+
+      .podium-ouro .podium-superacao span{
+        margin-top:9px;
+        font-size:10px;
+      }
+
+      .podium-ouro .podium-meta{
+        padding:11px 12px;
+      }
+
+      .podium-ouro .podium-meta-financeira strong{
+        font-size:11px;
+      }
+
+      .podium-ouro .podium-bandeira-estado{
+        top:20px;
+        right:20px;
+        width:64px;
+        height:46px;
+      }
+    }
+
+    @media (max-width: 720px){
+      .podium-card.podium-ouro{
+        order:-1;
+        min-height:360px;
+        border-width:2px;
+        box-shadow:
+          0 24px 54px rgba(169,123,0,.18),
+          0 8px 20px rgba(17,42,61,.09);
+      }
+
+      .podium-ouro .podium-superacao strong{
+        font-size:44px;
+      }
+    }
+
 
     /* ==========================================================
        MOTION PREMIUM v06 — inspirado em princípios de motion UI:
@@ -937,6 +1748,10 @@ function garantirEstilos() {
       .podium-controles{grid-template-columns:1fr}
       .podium-head h2{font-size:20px}
       .podium-card{padding-left:16px;padding-right:16px}
+      .podium-superacao strong{font-size:34px}
+      .podium-ouro .podium-superacao strong{font-size:38px}
+      .podium-meta-financeira{grid-template-columns:1fr auto 1fr}
+      .podium-meta-financeira strong{font-size:9px}
       .podium-valor strong{font-size:20px}
       .podium-ouro .podium-valor strong{font-size:23px}
     }
@@ -964,7 +1779,7 @@ function htmlPainel(tipo) {
         <div>
           <div class="podium-eyebrow">RECONHECIMENTO · ${modulo}</div>
           <h2>${titulo}</h2>
-          <p>Top 3 de faturamento que atingiram a meta · ${escapar(competencia)}</p>
+          <p>Top 3 por percentual de superação da meta · desempate por Ticket Médio · ${escapar(competencia)}</p>
         </div>
         <div class="podium-controles">
           <select data-podium-modo="${tipo}">
@@ -986,7 +1801,7 @@ function htmlPainel(tipo) {
         ${card(ranking[2], 3)}
       </div>
       <div class="podium-legenda">
-        Somente colaboradores com resultado individual participam. Gerentes, Supervisores, Coordenadores, Orçamentistas e cargos cujo cálculo depende da equipe ficam fora. O ranking considera o faturamento do mês selecionado.
+        Somente colaboradores com resultado individual participam. Gerentes, Supervisores, Coordenadores, Orçamentistas e cargos cujo cálculo depende da equipe ficam fora. O ranking é definido pelo maior percentual de atingimento da meta; em caso de empate, vence o maior Ticket Médio.
       </div>
     </section>
   `;
