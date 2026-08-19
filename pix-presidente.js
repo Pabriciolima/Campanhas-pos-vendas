@@ -1,4 +1,17 @@
 /*
+ * PATCH 2026.08.19 — COERÊNCIA DE CAMPOS + TRAVA DE BONIFICAÇÃO
+ * Mantém todas as funções anteriores.
+ *
+ * - Consultor Técnico NÃO usa O.S. em aberto.
+ * - O.S. em aberto só é exigida na S4 para cargos que realmente usam esse indicador.
+ * - Ticket/Margem obrigatórios vazios impedem qualquer bonificação.
+ * - O.S. obrigatória vazia impede qualquer bonificação até ser informada.
+ * - NPS continua exclusivo da S4 e apenas para cargos com bônus de NPS.
+ * - "0" informado é aceito; campo vazio é diferente de zero.
+ * - Lançamentos antigos manuais continuam compatíveis.
+ * - Importações passam a registrar flags de presença dos campos.
+ */
+/*
  * VERSÃO: 2026.08.08-PIX-DESLIGAMENTO-SEGURO-v12
  * Exclusão de participante vira desligamento lógico com senha.
  * Histórico de lançamentos é preservado integralmente.
@@ -680,12 +693,185 @@ function normalizarTextoPix(valor) {
     .toUpperCase();
 }
 
-function cargoSemNpsEOsPix(cargo) {
-  return normalizarTextoPix(
-    cargo
-  ) === normalizarTextoPix(
-    "Consultor Peças Balcão"
+function cargoUsaNpsPix(cargo) {
+  const politica =
+    pixPolitica(cargo);
+
+  return Boolean(
+    politica &&
+    pixNumero(
+      politica.bonusNps
+    ) > 0
   );
+}
+
+function cargoUsaOsPix(cargo) {
+  const c =
+    normalizarTextoPix(
+      cargo
+    );
+
+  /*
+   * REGRA OFICIAL DE O.S.:
+   * Consultor Técnico NÃO usa O.S.
+   * Peças e Orçamentista também não usam O.S.
+   *
+   * A informação de O.S. em aberto fica restrita aos
+   * cargos de gestão/assistência em que ela interfere
+   * na penalidade do fechamento da S4.
+   */
+  return (
+    c === normalizarTextoPix(
+      "Supervisor de Assistência"
+    ) ||
+    c === normalizarTextoPix(
+      "Supervisor Pós-vendas"
+    ) ||
+    c === normalizarTextoPix(
+      "Coordenador"
+    ) ||
+    c === normalizarTextoPix(
+      "Gerente"
+    )
+  );
+}
+
+/*
+ * Mantido por compatibilidade com qualquer trecho antigo
+ * que ainda faça referência ao nome anterior.
+ */
+function cargoSemNpsEOsPix(cargo) {
+  return (
+    !cargoUsaNpsPix(cargo) &&
+    !cargoUsaOsPix(cargo)
+  );
+}
+
+function campoPixRealmenteInformado(
+  lancamento,
+  campo,
+  flag
+) {
+  /*
+   * Novos registros usam flag explícita:
+   * true  = usuário/arquivo informou o campo
+   * false = campo estava vazio
+   */
+  if (
+    lancamento?.[flag] === true ||
+    lancamento?.[flag] === "true"
+  ) {
+    return true;
+  }
+
+  if (
+    lancamento?.[flag] === false ||
+    lancamento?.[flag] === "false"
+  ) {
+    return false;
+  }
+
+  const valor =
+    lancamento?.[campo];
+
+  const origem =
+    normalizarTextoPix(
+      lancamento?.origemImportacao ||
+      lancamento?.regraImportacao ||
+      ""
+    );
+
+  const veioDeImportacao =
+    origem.includes("RELATORIO") ||
+    origem.includes("IMPORT") ||
+    origem.includes("MODELO DIRETO");
+
+  /*
+   * Compatibilidade com histórico:
+   * - registro manual antigo: se o campo existe, preservamos como válido;
+   * - importação antiga: zero sem flag é tratado como pendente, pois
+   *   antes o importador convertia vazio em 0.
+   */
+  if (
+    veioDeImportacao &&
+    (
+      valor === undefined ||
+      valor === null ||
+      valor === "" ||
+      pixNumero(valor) === 0
+    )
+  ) {
+    return false;
+  }
+
+  return !(
+    valor === undefined ||
+    valor === null ||
+    (
+      typeof valor === "string" &&
+      valor.trim() === ""
+    )
+  );
+}
+
+function pendenciasCriticasPix(
+  lancamento,
+  politica,
+  cargo
+) {
+  const pendencias = [];
+
+  if (!politica) {
+    return pendencias;
+  }
+
+  if (
+    politica.metrica === "margem"
+  ) {
+    if (
+      !campoPixRealmenteInformado(
+        lancamento,
+        "margem",
+        "margemInformada"
+      )
+    ) {
+      pendencias.push(
+        "Margem realizada não informada"
+      );
+    }
+  } else {
+    if (
+      !campoPixRealmenteInformado(
+        lancamento,
+        "ticketMedio",
+        "ticketMedioInformado"
+      )
+    ) {
+      pendencias.push(
+        "Ticket médio não informado"
+      );
+    }
+  }
+
+  if (
+    Number(
+      lancamento?.semana
+    ) === 4 &&
+    cargoUsaOsPix(
+      cargo
+    ) &&
+    !campoPixRealmenteInformado(
+      lancamento,
+      "osAbertaPercentual",
+      "osAbertaInformada"
+    )
+  ) {
+    pendencias.push(
+      "O.S. em aberto não informada"
+    );
+  }
+
+  return pendencias;
 }
 
 function funcionarioPixAtivo(funcionario) {
@@ -748,16 +934,29 @@ function calcularPix(lancamento) {
       bonusNps: 0,
       penalidade: 0,
       bonusFinal: 0,
+      dadosCriticosCompletos: false,
+      dadosCriticosPendentes: [
+        "Cargo não pertence ao Pix do Presidente"
+      ],
       status: "NÃO HABILITADO",
       observacao: "Cargo não pertence ao Pix do Presidente."
     };
   }
 
-  const meta = pixNumero(lancamento.metaSemanal);
-  const realizado = pixNumero(lancamento.realizadoSemanal);
+  const meta =
+    pixNumero(
+      lancamento.metaSemanal
+    );
+
+  const realizado =
+    pixNumero(
+      lancamento.realizadoSemanal
+    );
 
   const percentualMeta =
-    meta > 0 ? realizado / meta * 100 : 0;
+    meta > 0
+      ? realizado / meta * 100
+      : 0;
 
   const semMeta =
     lancamento.semMetaIndividual === true ||
@@ -770,31 +969,65 @@ function calcularPix(lancamento) {
 
   const indicador =
     politica.metrica === "margem"
-      ? pixNumero(lancamento.margem)
-      : pixNumero(lancamento.ticketMedio);
+      ? pixNumero(
+          lancamento.margem
+        )
+      : pixNumero(
+          lancamento.ticketMedio
+        );
+
+  /*
+   * TRAVA FINANCEIRA:
+   * se faltar um campo que influencia a bonificação/penalidade,
+   * o lançamento permanece registrado, porém não paga nada.
+   */
+  const dadosCriticosPendentes =
+    pendenciasCriticasPix(
+      lancamento,
+      politica,
+      cargo
+    );
+
+  const dadosCriticosCompletos =
+    dadosCriticosPendentes.length === 0;
 
   const bonusBase =
-    atingiuMeta ? politica.bonusBase : 0;
+    atingiuMeta &&
+    dadosCriticosCompletos
+      ? politica.bonusBase
+      : 0;
 
   const bonusFaixa =
-    atingiuMeta
-      ? pixBonusFaixa(politica, indicador)
+    atingiuMeta &&
+    dadosCriticosCompletos
+      ? pixBonusFaixa(
+          politica,
+          indicador
+        )
       : 0;
 
   /*
-   * NPS é mensal e entra no fechamento da Semana 4.
-   * Ele não depende da meta semanal, mas depende do atingimento
-   * da própria meta de NPS informada pelo usuário.
+   * NPS é mensal e entra somente no fechamento da Semana 4.
+   * Ele só aparece nos cargos cuja política possui bônus de NPS.
    */
-  const metaNps =
-    pixNumero(
-      lancamento.metaNps
+  const usaNps =
+    cargoUsaNpsPix(
+      cargo
     );
 
+  const metaNps =
+    usaNps
+      ? pixNumero(
+          lancamento.metaNps
+        )
+      : 0;
+
   const realizadoNps =
-    pixNumero(
-      lancamento.realizadoNps
-    );
+    usaNps
+      ? pixNumero(
+          lancamento.realizadoNps
+        )
+      : 0;
 
   const percentualNps =
     metaNps > 0
@@ -802,34 +1035,42 @@ function calcularPix(lancamento) {
       : 0;
 
   const atingiuNps =
+    usaNps &&
     metaNps > 0 &&
     realizadoNps >= metaNps;
 
-  const semAvaliacaoNpsEOs =
-    cargoSemNpsEOsPix(
-      cargo
-    );
-
   const bonusNps =
-    !semAvaliacaoNpsEOs &&
-    Number(lancamento.semana) === 4 &&
-    atingiuNps
+    Number(
+      lancamento.semana
+    ) === 4 &&
+    atingiuNps &&
+    dadosCriticosCompletos
       ? politica.bonusNps
       : 0;
 
   const subtotal =
-    bonusBase + bonusFaixa + bonusNps;
+    bonusBase +
+    bonusFaixa +
+    bonusNps;
+
+  const usaOs =
+    Number(
+      lancamento.semana
+    ) === 4 &&
+    cargoUsaOsPix(
+      cargo
+    );
 
   const osAberta =
-    semAvaliacaoNpsEOs
-      ? 0
-      : pixNumero(
+    usaOs
+      ? pixNumero(
           lancamento.osAbertaPercentual
-        );
+        )
+      : 0;
 
   const aplicaPenalidade =
-    !semAvaliacaoNpsEOs &&
-    Number(lancamento.semana) === 4 &&
+    usaOs &&
+    dadosCriticosCompletos &&
     osAberta > LIMITE_OS_ABERTA;
 
   const penalidade =
@@ -838,11 +1079,21 @@ function calcularPix(lancamento) {
       : 0;
 
   const bonusFinal =
-    Math.max(0, subtotal - penalidade);
+    dadosCriticosCompletos
+      ? Math.max(
+          0,
+          subtotal - penalidade
+        )
+      : 0;
 
   let observacao = "";
 
-  if (semMeta) {
+  if (!dadosCriticosCompletos) {
+    observacao =
+      `INFORMAÇÃO PENDENTE: ${dadosCriticosPendentes.join(
+        " • "
+      )}. Sem bonificação até o preenchimento.`;
+  } else if (semMeta) {
     observacao =
       lancamento.motivoNaoHabilitado ||
       "Sem meta válida para esta semana.";
@@ -850,6 +1101,7 @@ function calcularPix(lancamento) {
     observacao =
       "NPS atingido e pago mesmo sem atingir a meta semanal.";
   } else if (
+    usaNps &&
     Number(lancamento.semana) === 4 &&
     metaNps > 0 &&
     !atingiuNps
@@ -893,33 +1145,25 @@ function calcularPix(lancamento) {
     semMeta,
     atingiuMeta,
     indicador,
+    dadosCriticosPendentes,
+    dadosCriticosCompletos,
     bonusBase,
     bonusFaixa,
-    metaNps:
-      semAvaliacaoNpsEOs
-        ? 0
-        : metaNps,
-    realizadoNps:
-      semAvaliacaoNpsEOs
-        ? 0
-        : realizadoNps,
-    percentualNps:
-      semAvaliacaoNpsEOs
-        ? 0
-        : percentualNps,
-    atingiuNps:
-      semAvaliacaoNpsEOs
-        ? false
-        : atingiuNps,
+    metaNps,
+    realizadoNps,
+    percentualNps,
+    atingiuNps,
     bonusNps,
     osAbertaPercentual:
       osAberta,
-    semAvaliacaoNpsEOs,
+    usaNps,
+    usaOs,
     subtotal,
     penalidade,
     bonusFinal,
     status:
-      bonusFinal > 0
+      bonusFinal > 0 &&
+      dadosCriticosCompletos
         ? "HABILITADO"
         : "NÃO HABILITADO",
     observacao
@@ -2914,7 +3158,7 @@ function renderCamposLancamentoPix(dados = {}) {
     ${
       semana === 4 &&
       politica.bonusNps > 0 &&
-      !cargoSemNpsEOsPix(
+      cargoUsaNpsPix(
         funcionario?.cargo ||
         dados.cargo
       )
@@ -2960,7 +3204,7 @@ function renderCamposLancamentoPix(dados = {}) {
 
     ${
       semana === 4 &&
-      !cargoSemNpsEOsPix(
+      cargoUsaOsPix(
         funcionario?.cargo ||
         dados.cargo
       )
@@ -3039,7 +3283,12 @@ function coletarLancamentoPix() {
       $("#pixLancamentoFuncionario")?.value
     );
 
-  if (!funcionario || !participantePixValido(funcionario)) {
+  if (
+    !funcionario ||
+    !participantePixValido(
+      funcionario
+    )
+  ) {
     throw new Error(
       "Selecione um participante válido do Pix do Presidente."
     );
@@ -3061,66 +3310,150 @@ function coletarLancamentoPix() {
       cargoPolitica
     );
 
+  const semana =
+    Number(
+      $("#pixLancamentoSemana").value
+    );
+
+  const campoTicket =
+    $("#pixTicketMedio");
+
+  const campoMargem =
+    $("#pixMargem");
+
+  const campoMetaNps =
+    $("#pixMetaNps");
+
+  const campoRealizadoNps =
+    $("#pixRealizadoNps");
+
+  const campoOs =
+    $("#pixOsAberta");
+
+  const usaNps =
+    semana === 4 &&
+    cargoUsaNpsPix(
+      funcionario.cargo
+    );
+
+  const usaOs =
+    semana === 4 &&
+    cargoUsaOsPix(
+      funcionario.cargo
+    );
+
   return {
-    id: $("#pixLancamentoId").value || "",
-    competencia: $("#pixLancamentoCompetencia").value,
-    semana: Number($("#pixLancamentoSemana").value),
-    funcionarioId: funcionario.id,
-    nome: funcionario.nome,
-    filial: funcionario.filial,
-    dn: funcionario.dn,
-    cargo: funcionario.cargo,
+    id:
+      $("#pixLancamentoId").value ||
+      "",
+
+    competencia:
+      $("#pixLancamentoCompetencia").value,
+
+    semana,
+
+    funcionarioId:
+      funcionario.id,
+
+    nome:
+      funcionario.nome,
+
+    filial:
+      funcionario.filial,
+
+    dn:
+      funcionario.dn,
+
+    cargo:
+      funcionario.cargo,
+
     metaSemanal:
-      pixNumero($("#pixMetaSemanal")?.value),
+      pixNumero(
+        $("#pixMetaSemanal")?.value
+      ),
+
     realizadoSemanal:
-      pixNumero($("#pixRealizadoSemanal")?.value),
+      pixNumero(
+        $("#pixRealizadoSemanal")?.value
+      ),
+
     ticketMedio:
       politica.metrica === "ticket"
-        ? pixNumero($("#pixTicketMedio")?.value)
+        ? pixNumero(
+            campoTicket?.value
+          )
         : 0,
+
+    ticketMedioInformado:
+      politica.metrica === "ticket"
+        ? Boolean(
+            campoTicket?.value?.trim()
+          )
+        : true,
+
     margem:
       politica.metrica === "margem"
-        ? pixNumero($("#pixMargem")?.value)
-        : 0,
-    metaNps:
-      cargoSemNpsEOsPix(
-        funcionario?.cargo ||
-        ""
-      )
-        ? 0
-        : (
-            $("#pixMetaNps")
-              ? pixNumero(
-                  $("#pixMetaNps").value
-                )
-              : 0
-          ),
-    realizadoNps:
-      cargoSemNpsEOsPix(
-        funcionario?.cargo ||
-        ""
-      )
-        ? 0
-        : (
-            $("#pixRealizadoNps")
-              ? pixNumero(
-                  $("#pixRealizadoNps").value
-                )
-              : 0
-          ),
-    osAbertaPercentual:
-      cargoSemNpsEOsPix(
-        funcionario?.cargo ||
-        ""
-      )
-        ? 0
-        : (
-            $("#pixOsAberta")
-              ? pixNumero(
-                  $("#pixOsAberta").value
-                )
-              : 0
+        ? pixNumero(
+            campoMargem?.value
           )
+        : 0,
+
+    margemInformada:
+      politica.metrica === "margem"
+        ? Boolean(
+            String(
+              campoMargem?.value ?? ""
+            ).trim()
+          )
+        : true,
+
+    metaNps:
+      usaNps
+        ? pixNumero(
+            campoMetaNps?.value
+          )
+        : 0,
+
+    metaNpsInformada:
+      usaNps
+        ? Boolean(
+            String(
+              campoMetaNps?.value ?? ""
+            ).trim()
+          )
+        : true,
+
+    realizadoNps:
+      usaNps
+        ? pixNumero(
+            campoRealizadoNps?.value
+          )
+        : 0,
+
+    realizadoNpsInformado:
+      usaNps
+        ? Boolean(
+            String(
+              campoRealizadoNps?.value ?? ""
+            ).trim()
+          )
+        : true,
+
+    osAbertaPercentual:
+      usaOs
+        ? pixNumero(
+            campoOs?.value
+          )
+        : 0,
+
+    osAbertaInformada:
+      usaOs
+        ? Boolean(
+            String(
+              campoOs?.value ?? ""
+            ).trim()
+          )
+        : true
   };
 }
 

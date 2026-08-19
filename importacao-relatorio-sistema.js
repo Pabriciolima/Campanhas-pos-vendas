@@ -1,4 +1,18 @@
 /*
+ * AJUSTE v33 — PRESENÇA REAL DOS CAMPOS DO PIX
+ * Data: 19/08/2026
+ *
+ * IMPORTANTE:
+ * - Este arquivo parte da versão COMPLETA v32 enviada pelo usuário.
+ * - Nenhuma rotina existente de leitura, reconciliação, Firebase,
+ *   duplicidade, Produtivos, modelo, modal ou persistência foi removida.
+ * - O objetivo é somente diferenciar "campo vazio" de "valor zero"
+ *   nos indicadores do Pix.
+ * - Isso permite que o pix-presidente.js impeça bonificação quando
+ *   faltar um campo crítico que influencia bônus ou penalidade.
+ */
+
+/*
  * AJUSTE v32 — COMPETÊNCIA PADRÃO DA IMPORTAÇÃO
  * Data: 17/08/2026
  *
@@ -168,7 +182,7 @@ firebase-config.js. Isso evita duas inicializações diferentes do
 Firestore e mantém o long polling usado pelo restante do sistema.
 */
 
-const VERSAO = "2026.08.17-32";
+const VERSAO = "2026.08.19-33";
 const TAMANHO_LOTE = 400;
 const TIMEOUT_OPERACAO = 90000;
 const DB_PRODUTIVOS = "campanha_oficina_mvp_v1";
@@ -1013,6 +1027,15 @@ function processarPix() {
                 mapa.ticket
               )
             ),
+          ticketMedioInformado:
+            mapa.ticket >= 0 &&
+            texto(
+              valorLinha(
+                linha,
+                mapa.ticket
+              )
+            ) !== "",
+
           margem:
             numeroPercentual(
               valorLinha(
@@ -1020,6 +1043,15 @@ function processarPix() {
                 mapa.margem
               )
             ),
+          margemInformada:
+            mapa.margem >= 0 &&
+            texto(
+              valorLinha(
+                linha,
+                mapa.margem
+              )
+            ) !== "",
+
           bonusFuncao:
             numero(
               valorLinha(
@@ -1027,6 +1059,7 @@ function processarPix() {
                 mapa.bonusFuncao
               )
             ),
+
           metaNps:
             numero(
               valorLinha(
@@ -1034,6 +1067,15 @@ function processarPix() {
                 mapa.metaNps
               )
             ),
+          metaNpsInformada:
+            mapa.metaNps >= 0 &&
+            texto(
+              valorLinha(
+                linha,
+                mapa.metaNps
+              )
+            ) !== "",
+
           realizadoNps:
             numero(
               valorLinha(
@@ -1041,13 +1083,30 @@ function processarPix() {
                 mapa.realizadoNps
               )
             ),
+          realizadoNpsInformado:
+            mapa.realizadoNps >= 0 &&
+            texto(
+              valorLinha(
+                linha,
+                mapa.realizadoNps
+              )
+            ) !== "",
+
           osAbertaPercentual:
             numeroPercentual(
               valorLinha(
                 linha,
                 mapa.osAberta
               )
-            )
+            ),
+          osAbertaInformada:
+            mapa.osAberta >= 0 &&
+            texto(
+              valorLinha(
+                linha,
+                mapa.osAberta
+              )
+            ) !== ""
         });
       }
     );
@@ -1056,7 +1115,7 @@ function processarPix() {
       brutos,
       erros,
       avisos: [
-        "Modelo direto identificado. Campos opcionais vazios serão importados como zero."
+        "Modelo direto identificado. Campos vazios continuam sendo importados, mas agora ficam marcados como PENDENTES para que não gerem bonificação indevida."
       ]
     };
   }
@@ -2125,22 +2184,36 @@ function gerarLancamentosPixDireto(
         numero(
           item.ticketMedio
         ),
+      ticketMedioInformado:
+        item.ticketMedioInformado === true,
+
       margem:
         numeroPercentual(
           item.margem
         ),
+      margemInformada:
+        item.margemInformada === true,
+
       metaNps:
         numero(
           item.metaNps
         ),
+      metaNpsInformada:
+        item.metaNpsInformada === true,
+
       realizadoNps:
         numero(
           item.realizadoNps
         ),
+      realizadoNpsInformado:
+        item.realizadoNpsInformado === true,
+
       osAbertaPercentual:
         numeroPercentual(
           item.osAbertaPercentual
         ),
+      osAbertaInformada:
+        item.osAbertaInformada === true,
 
       bonusBaseImportado:
         numero(
@@ -2366,11 +2439,24 @@ function gerarLancamentosPix(
           : "",
       ticketMedio:
         item.ticketMedio,
+      ticketMedioInformado:
+        true,
 
+      /*
+       * O relatório padrão do sistema não fornece estes campos.
+       * As flags evitam confundir ausência com valor zero.
+       *
+       * Consultor Técnico não usa O.S., portanto a O.S. é marcada
+       * como "não aplicável / resolvida" para não criar pendência falsa.
+       */
       margem: 0,
+      margemInformada: true,
       metaNps: 0,
+      metaNpsInformada: false,
       realizadoNps: 0,
+      realizadoNpsInformado: false,
       osAbertaPercentual: 0,
+      osAbertaInformada: true,
 
       valorAcumuladoMeta:
         item.valorAcumulado,
@@ -2533,11 +2619,28 @@ function gerarLancamentosPix(
             : "",
         ticketMedio:
           ticket,
+        ticketMedioInformado:
+          ticket > 0,
 
         margem: 0,
+        margemInformada: true,
         metaNps: 0,
+        metaNpsInformada: false,
         realizadoNps: 0,
+        realizadoNpsInformado: false,
         osAbertaPercentual: 0,
+
+        /*
+         * O relatório do sistema não possui O.S.
+         * Supervisor de Assistência precisa informar O.S. manualmente na S4.
+         * Orçamentista não usa O.S., então não deve receber alerta indevido.
+         */
+        osAbertaInformada:
+          !CARGOS.supervisor.includes(
+            normalizar(
+              responsavel.cargo
+            )
+          ),
 
         fatorEscalaImportacao:
           state.fatorEscalaMonetaria,
@@ -3183,6 +3286,14 @@ function lancamentoPixEhIgual(
     "bonusBaseImportado"
   ];
 
+  const camposBooleanosPresenca = [
+    "ticketMedioInformado",
+    "margemInformada",
+    "metaNpsInformada",
+    "realizadoNpsInformado",
+    "osAbertaInformada"
+  ];
+
   const textosIguais =
     camposTexto.every(
       campo =>
@@ -3205,9 +3316,38 @@ function lancamentoPixEhIgual(
         )
     );
 
+  const presencasIguais =
+    camposBooleanosPresenca.every(
+      campo => {
+        const valorNovo =
+          novo?.[campo];
+
+        /*
+         * Registros antigos podem não possuir as flags.
+         * Se o novo registro também não trouxer flag, não alteramos
+         * a lógica histórica. Quando a flag existe no novo arquivo,
+         * ela passa a fazer parte da comparação.
+         */
+        if (
+          valorNovo === undefined ||
+          valorNovo === null
+        ) {
+          return true;
+        }
+
+        return Boolean(
+          existente?.[campo]
+        ) ===
+        Boolean(
+          valorNovo
+        );
+      }
+    );
+
   return (
     textosIguais &&
-    numerosIguais
+    numerosIguais &&
+    presencasIguais
   );
 }
 
