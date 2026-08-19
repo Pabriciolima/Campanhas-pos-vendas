@@ -1,3 +1,21 @@
+/*
+ * BLOQUEIO GLOBAL v02 — PROGRAMAÇÃO AUTOMÁTICA
+ * - Mantém bloqueio/liberação manual com senha 123321.
+ * - Adiciona programação de bloqueio + desbloqueio no horário de Belém/PA.
+ * - Programação é salva no Firebase e vale para Produtivos e Pix em qualquer máquina.
+ * - O estado é calculado ao abrir o sistema e atualizado a cada 10 segundos.
+ * - Ação manual cancela uma programação ativa para evitar conflito.
+ * - Nenhuma lógica de lançamentos existente foi alterada.
+ */
+
+/* =========================================================
+   BLOQUEIO GLOBAL DE LANÇAMENTOS
+   Campanha dos Produtivos + Pix do Presidente
+
+   Salve como: bloqueio-lancamentos.js
+   Senha: 123321
+========================================================= */
+
 import { firestore } from "./firebase-config.js";
 import {
   doc,
@@ -18,10 +36,21 @@ import {
   );
 
   const estado = {
+    bloqueadoManual: false,
     bloqueado: false,
     carregando: true,
-    salvando: false
+    salvando: false,
+
+    programacao: {
+      ativa: false,
+      bloquearEmEpoch: 0,
+      liberarEmEpoch: 0,
+      timezone: "America/Belem"
+    }
   };
+
+  const TIMEZONE_OPERACAO =
+    "America/Belem";
 
   const MODULOS = {
     produtivos: "#lancamentos",
@@ -79,11 +108,118 @@ import {
           </form>
         </dialog>
 
+        <dialog id="modalProgramacaoBloqueio" class="lock-schedule-dialog">
+          <form id="formProgramacaoBloqueio" class="lock-schedule-card" method="dialog">
+            <button
+              type="button"
+              id="fecharModalProgramacaoBloqueio"
+              class="lock-password-close"
+              aria-label="Fechar"
+            >×</button>
+
+            <div class="lock-schedule-hero">
+              <div class="lock-schedule-icon">⏱</div>
+              <div>
+                <span class="lock-password-eyebrow">AUTOMAÇÃO DE ACESSO</span>
+                <h2>Programar bloqueio</h2>
+                <p>
+                  Defina quando os lançamentos serão bloqueados e liberados
+                  automaticamente para todos os usuários.
+                </p>
+              </div>
+            </div>
+
+            <div id="resumoProgramacaoAtual" class="lock-schedule-current" hidden></div>
+
+            <div class="lock-schedule-grid">
+              <label class="lock-schedule-field">
+                <span>Bloquear em</span>
+                <input
+                  type="datetime-local"
+                  id="programarBloquearEm"
+                  step="60"
+                  required
+                />
+                <small>Início automático do bloqueio.</small>
+              </label>
+
+              <label class="lock-schedule-field">
+                <span>Desbloquear em</span>
+                <input
+                  type="datetime-local"
+                  id="programarLiberarEm"
+                  step="60"
+                  required
+                />
+                <small>Liberação automática dos lançamentos.</small>
+              </label>
+            </div>
+
+            <div class="lock-schedule-info">
+              <strong>Horário de referência: Belém/PA</strong>
+              <span>
+                A programação fica salva no Firebase e vale para Produtivos e
+                Pix do Presidente em qualquer máquina.
+              </span>
+            </div>
+
+            <label class="lock-password-field">
+              <span>Senha para confirmar</span>
+              <div class="lock-password-input-wrap">
+                <input
+                  type="password"
+                  id="senhaProgramacaoBloqueio"
+                  autocomplete="new-password"
+                  inputmode="numeric"
+                  maxlength="20"
+                  placeholder="Digite a senha"
+                />
+              </div>
+            </label>
+
+            <p
+              id="erroProgramacaoBloqueio"
+              class="lock-password-error"
+              hidden
+            ></p>
+
+            <div class="lock-schedule-actions">
+              <button
+                type="button"
+                id="cancelarProgramacaoExistente"
+                class="lock-danger-outline-button"
+                hidden
+              >
+                Cancelar programação
+              </button>
+
+              <div class="lock-schedule-actions-right">
+                <button
+                  type="button"
+                  id="cancelarModalProgramacao"
+                  class="lock-secondary-button"
+                >
+                  Fechar
+                </button>
+
+                <button
+                  type="submit"
+                  id="salvarProgramacaoBloqueio"
+                  class="lock-schedule-save"
+                >
+                  Salvar programação
+                </button>
+              </div>
+            </div>
+          </form>
+        </dialog>
+
         <div id="toastBloqueioLancamentos" class="lock-toast" aria-live="polite"></div>
       `
     );
 
     configurarModal();
+    configurarModalProgramacao();
   }
 
   let resolverModal = null;
@@ -153,6 +289,368 @@ import {
     });
   }
 
+
+  function dataLocalInputParaEpochBelem(valor) {
+    if (!valor) return 0;
+
+    /*
+     * O datetime-local não contém timezone.
+     * Fixamos a operação em Belém/PA (UTC-03:00),
+     * garantindo o mesmo instante para todas as filiais.
+     */
+    const iso = `${valor}:00-03:00`;
+    const epoch = new Date(iso).getTime();
+
+    return Number.isFinite(epoch)
+      ? epoch
+      : 0;
+  }
+
+  function epochParaInputBelem(epoch) {
+    if (!epoch) return "";
+
+    const data = new Date(
+      Number(epoch) - (3 * 60 * 60 * 1000)
+    );
+
+    const pad = valor =>
+      String(valor).padStart(2, "0");
+
+    return [
+      data.getUTCFullYear(),
+      "-",
+      pad(data.getUTCMonth() + 1),
+      "-",
+      pad(data.getUTCDate()),
+      "T",
+      pad(data.getUTCHours()),
+      ":",
+      pad(data.getUTCMinutes())
+    ].join("");
+  }
+
+  function formatarEpoch(epoch) {
+    if (!epoch) return "—";
+
+    try {
+      return new Intl.DateTimeFormat(
+        "pt-BR",
+        {
+          timeZone: TIMEZONE_OPERACAO,
+          dateStyle: "short",
+          timeStyle: "short"
+        }
+      ).format(new Date(Number(epoch)));
+    } catch (_) {
+      return new Date(Number(epoch))
+        .toLocaleString("pt-BR");
+    }
+  }
+
+  function calcularEstadoEfetivo() {
+    const agora = Date.now();
+    const programacao = estado.programacao;
+
+    if (
+      !programacao.ativa ||
+      !programacao.bloquearEmEpoch ||
+      !programacao.liberarEmEpoch
+    ) {
+      return {
+        bloqueado: estado.bloqueadoManual,
+        fase: "manual"
+      };
+    }
+
+    if (agora < programacao.bloquearEmEpoch) {
+      return {
+        bloqueado: estado.bloqueadoManual,
+        fase: "aguardando"
+      };
+    }
+
+    if (agora < programacao.liberarEmEpoch) {
+      return {
+        bloqueado: true,
+        fase: "bloqueio-programado"
+      };
+    }
+
+    return {
+      bloqueado: false,
+      fase: "concluida"
+    };
+  }
+
+  function sincronizarEstadoEfetivo() {
+    const anterior = estado.bloqueado;
+    const efetivo = calcularEstadoEfetivo();
+
+    estado.bloqueado = efetivo.bloqueado;
+    estado.faseProgramacao = efetivo.fase;
+
+    atualizarVisual();
+
+    if (
+      anterior !== estado.bloqueado &&
+      !estado.carregando
+    ) {
+      mostrarToast(
+        estado.bloqueado
+          ? "Bloqueio programado ativado automaticamente."
+          : "Lançamentos liberados automaticamente pela programação.",
+        "success"
+      );
+    }
+  }
+
+  function atualizarResumoProgramacaoModal() {
+    const resumo = $("#resumoProgramacaoAtual");
+    const cancelar = $("#cancelarProgramacaoExistente");
+
+    if (!resumo || !cancelar) return;
+
+    if (!estado.programacao.ativa) {
+      resumo.hidden = true;
+      cancelar.hidden = true;
+      return;
+    }
+
+    resumo.hidden = false;
+    cancelar.hidden = false;
+
+    resumo.innerHTML = `
+      <span>PROGRAMAÇÃO ATIVA</span>
+      <strong>
+        ${formatarEpoch(estado.programacao.bloquearEmEpoch)}
+        <b>→</b>
+        ${formatarEpoch(estado.programacao.liberarEmEpoch)}
+      </strong>
+      <small>
+        ${estado.faseProgramacao === "bloqueio-programado"
+          ? "Bloqueio automático em andamento."
+          : estado.faseProgramacao === "concluida"
+            ? "Programação concluída; lançamentos liberados."
+            : "Aguardando o horário de bloqueio."}
+      </small>
+    `;
+  }
+
+  function abrirModalProgramacao() {
+    garantirEstrutura();
+
+    const dialog = $("#modalProgramacaoBloqueio");
+    const bloquear = $("#programarBloquearEm");
+    const liberar = $("#programarLiberarEm");
+    const senha = $("#senhaProgramacaoBloqueio");
+    const erro = $("#erroProgramacaoBloqueio");
+
+    const agora = Date.now();
+    const inicioPadrao =
+      estado.programacao.ativa
+        ? estado.programacao.bloquearEmEpoch
+        : agora + (30 * 60 * 1000);
+
+    const fimPadrao =
+      estado.programacao.ativa
+        ? estado.programacao.liberarEmEpoch
+        : inicioPadrao + (12 * 60 * 60 * 1000);
+
+    bloquear.value = epochParaInputBelem(inicioPadrao);
+    liberar.value = epochParaInputBelem(fimPadrao);
+
+    senha.value = "";
+    erro.hidden = true;
+    erro.textContent = "";
+
+    atualizarResumoProgramacaoModal();
+
+    dialog.showModal();
+  }
+
+  function fecharModalProgramacao() {
+    const dialog = $("#modalProgramacaoBloqueio");
+    if (dialog?.open) dialog.close();
+  }
+
+  async function salvarProgramacao(evento) {
+    evento.preventDefault();
+
+    if (estado.salvando) return;
+
+    const senha = $("#senhaProgramacaoBloqueio").value;
+    const erro = $("#erroProgramacaoBloqueio");
+
+    if (senha !== SENHA_DIRETOR) {
+      erro.textContent = "Senha incorreta.";
+      erro.hidden = false;
+      $("#senhaProgramacaoBloqueio").focus();
+      return;
+    }
+
+    const bloquearEmEpoch =
+      dataLocalInputParaEpochBelem(
+        $("#programarBloquearEm").value
+      );
+
+    const liberarEmEpoch =
+      dataLocalInputParaEpochBelem(
+        $("#programarLiberarEm").value
+      );
+
+    if (!bloquearEmEpoch || !liberarEmEpoch) {
+      erro.textContent =
+        "Informe a data e o horário de bloqueio e desbloqueio.";
+      erro.hidden = false;
+      return;
+    }
+
+    if (liberarEmEpoch <= bloquearEmEpoch) {
+      erro.textContent =
+        "O desbloqueio precisa ocorrer depois do horário de bloqueio.";
+      erro.hidden = false;
+      return;
+    }
+
+    try {
+      estado.salvando = true;
+      atualizarVisual();
+
+      /*
+       * Ao criar uma nova programação, o estado manual fica liberado
+       * até a chegada do horário programado.
+       */
+      await setDoc(
+        CONFIG_REF,
+        {
+          bloqueado: false,
+          programacao: {
+            ativa: true,
+            bloquearEmEpoch,
+            liberarEmEpoch,
+            timezone: TIMEZONE_OPERACAO,
+            criadoEm: serverTimestamp(),
+            criadoPor: "DIRETOR"
+          },
+          atualizadoEm: serverTimestamp(),
+          atualizadoPor: "DIRETOR"
+        },
+        { merge: true }
+      );
+
+      fecharModalProgramacao();
+
+      mostrarToast(
+        `Programação salva: bloqueio em ${formatarEpoch(bloquearEmEpoch)} e liberação em ${formatarEpoch(liberarEmEpoch)}.`
+      );
+    } catch (erroSalvar) {
+      console.error(
+        "Erro ao salvar programação de bloqueio:",
+        erroSalvar
+      );
+
+      erro.textContent =
+        "Não foi possível salvar a programação. Verifique as permissões do Firestore.";
+      erro.hidden = false;
+    } finally {
+      estado.salvando = false;
+      atualizarVisual();
+    }
+  }
+
+  async function cancelarProgramacao() {
+    if (estado.salvando) return;
+
+    const senha = $("#senhaProgramacaoBloqueio").value;
+    const erro = $("#erroProgramacaoBloqueio");
+
+    if (senha !== SENHA_DIRETOR) {
+      erro.textContent =
+        "Digite a senha 123321 para cancelar a programação.";
+      erro.hidden = false;
+      $("#senhaProgramacaoBloqueio").focus();
+      return;
+    }
+
+    try {
+      estado.salvando = true;
+
+      await setDoc(
+        CONFIG_REF,
+        {
+          programacao: {
+            ativa: false,
+            bloquearEmEpoch: 0,
+            liberarEmEpoch: 0,
+            timezone: TIMEZONE_OPERACAO,
+            canceladoEm: serverTimestamp(),
+            canceladoPor: "DIRETOR"
+          },
+          atualizadoEm: serverTimestamp(),
+          atualizadoPor: "DIRETOR"
+        },
+        { merge: true }
+      );
+
+      fecharModalProgramacao();
+
+      mostrarToast(
+        "Programação automática cancelada."
+      );
+    } catch (erroCancelar) {
+      console.error(
+        "Erro ao cancelar programação:",
+        erroCancelar
+      );
+
+      erro.textContent =
+        "Não foi possível cancelar a programação.";
+      erro.hidden = false;
+    } finally {
+      estado.salvando = false;
+      atualizarVisual();
+    }
+  }
+
+  function configurarModalProgramacao() {
+    $("#fecharModalProgramacaoBloqueio")
+      ?.addEventListener(
+        "click",
+        fecharModalProgramacao
+      );
+
+    $("#cancelarModalProgramacao")
+      ?.addEventListener(
+        "click",
+        fecharModalProgramacao
+      );
+
+    $("#formProgramacaoBloqueio")
+      ?.addEventListener(
+        "submit",
+        salvarProgramacao
+      );
+
+    $("#cancelarProgramacaoExistente")
+      ?.addEventListener(
+        "click",
+        cancelarProgramacao
+      );
+
+    $("#modalProgramacaoBloqueio")
+      ?.addEventListener(
+        "click",
+        evento => {
+          if (
+            evento.target ===
+            $("#modalProgramacaoBloqueio")
+          ) {
+            fecharModalProgramacao();
+          }
+        }
+      );
+  }
+
   function mostrarToast(mensagem, tipo = "success") {
     const toast = $("#toastBloqueioLancamentos");
     if (!toast) return;
@@ -189,6 +687,16 @@ import {
         </div>
       </div>
 
+      <button
+        type="button"
+        class="launch-lock-schedule-button"
+        data-lock-schedule
+        title="Programar bloqueio e desbloqueio automáticos"
+      >
+        <span>◷</span>
+        Programar
+      </button>
+
       <button type="button" class="launch-lock-button" data-lock-toggle>
         Bloquear lançamentos
       </button>
@@ -204,7 +712,20 @@ import {
       header.appendChild(controle);
     }
 
-    controle.querySelector("[data-lock-toggle]").addEventListener("click", alternarBloqueio);
+    controle
+      .querySelector("[data-lock-schedule]")
+      .addEventListener(
+        "click",
+        abrirModalProgramacao
+      );
+
+    controle
+      .querySelector("[data-lock-toggle]")
+      .addEventListener(
+        "click",
+        alternarBloqueio
+      );
+
     atualizarVisual();
   }
 
@@ -224,10 +745,23 @@ import {
 
       const novoEstado = !estado.bloqueado;
 
+      /*
+       * Uma ação manual tem prioridade e encerra qualquer programação
+       * existente para evitar que o sistema volte a bloquear/desbloquear
+       * logo após a decisão do diretor.
+       */
       await setDoc(
         CONFIG_REF,
         {
           bloqueado: novoEstado,
+          programacao: {
+            ativa: false,
+            bloquearEmEpoch: 0,
+            liberarEmEpoch: 0,
+            timezone: TIMEZONE_OPERACAO,
+            canceladoEm: serverTimestamp(),
+            canceladoPor: "DIRETOR"
+          },
           atualizadoEm: serverTimestamp(),
           atualizadoPor: "DIRETOR"
         },
@@ -295,9 +829,42 @@ import {
       $("[data-lock-title]", controle).textContent = estado.bloqueado
         ? "Lançamentos bloqueados"
         : "Lançamentos liberados";
-      $("[data-lock-description]", controle).textContent = estado.bloqueado
-        ? "Inclusão, edição e exclusão bloqueadas"
-        : "Inclusão e edição permitidas";
+      const programacao = estado.programacao;
+
+      $("[data-lock-description]", controle).textContent =
+        estado.faseProgramacao === "bloqueio-programado"
+          ? `Programado até ${formatarEpoch(programacao.liberarEmEpoch)}`
+          : estado.faseProgramacao === "aguardando"
+            ? `Bloqueio em ${formatarEpoch(programacao.bloquearEmEpoch)}`
+            : estado.faseProgramacao === "concluida"
+              ? `Programação concluída às ${formatarEpoch(programacao.liberarEmEpoch)}`
+              : estado.bloqueado
+                ? "Inclusão, edição e exclusão bloqueadas"
+                : "Inclusão e edição permitidas";
+
+      controle.classList.toggle(
+        "has-schedule",
+        Boolean(programacao.ativa)
+      );
+
+      const botaoProgramar =
+        $("[data-lock-schedule]", controle);
+
+      if (botaoProgramar) {
+        botaoProgramar.classList.toggle(
+          "is-active",
+          Boolean(programacao.ativa)
+        );
+
+        botaoProgramar.innerHTML =
+          programacao.ativa
+            ? "<span>◷</span> Agendado"
+            : "<span>◷</span> Programar";
+
+        botaoProgramar.disabled =
+          estado.carregando ||
+          estado.salvando;
+      }
 
       const botao = $("[data-lock-toggle]", controle);
       botao.textContent = estado.carregando
@@ -352,6 +919,12 @@ import {
       if (!snapshot.exists()) {
         await setDoc(CONFIG_REF, {
           bloqueado: false,
+          programacao: {
+            ativa: false,
+            bloquearEmEpoch: 0,
+            liberarEmEpoch: 0,
+            timezone: TIMEZONE_OPERACAO
+          },
           criadoEm: serverTimestamp(),
           atualizadoEm: serverTimestamp()
         });
@@ -360,9 +933,42 @@ import {
       onSnapshot(
         CONFIG_REF,
         documento => {
-          estado.bloqueado = Boolean(documento.data()?.bloqueado);
-          estado.carregando = false;
-          atualizarVisual();
+          const dados =
+            documento.data() || {};
+
+          estado.bloqueadoManual =
+            Boolean(
+              dados.bloqueado
+            );
+
+          const programacao =
+            dados.programacao || {};
+
+          estado.programacao = {
+            ativa:
+              Boolean(
+                programacao.ativa
+              ),
+            bloquearEmEpoch:
+              Number(
+                programacao.bloquearEmEpoch ||
+                0
+              ),
+            liberarEmEpoch:
+              Number(
+                programacao.liberarEmEpoch ||
+                0
+              ),
+            timezone:
+              programacao.timezone ||
+              TIMEZONE_OPERACAO
+          };
+
+          estado.carregando =
+            false;
+
+          sincronizarEstadoEfetivo();
+          atualizarResumoProgramacaoModal();
         },
         erro => {
           console.error("Erro ao acompanhar bloqueio:", erro);
@@ -403,18 +1009,54 @@ import {
         ) {
           setTimeout(() => {
             instalarControles();
-            atualizarVisual();
+            sincronizarEstadoEfetivo();
           }, 120);
         }
       },
       true
     );
 
+    /*
+     * Não é necessário um servidor ficar "rodando" no momento exato.
+     * A programação é persistida no Firebase e cada cliente calcula
+     * o estado correto ao abrir o sistema. Enquanto estiver aberto,
+     * este relógio atualiza a transição automaticamente.
+     */
+    window.setInterval(
+      sincronizarEstadoEfetivo,
+      10000
+    );
+
+    document.addEventListener(
+      "visibilitychange",
+      () => {
+        if (!document.hidden) {
+          sincronizarEstadoEfetivo();
+        }
+      }
+    );
+
+    window.addEventListener(
+      "focus",
+      sincronizarEstadoEfetivo
+    );
+
     window.bloqueioLancamentos = {
       get bloqueado() {
         return estado.bloqueado;
       },
-      atualizar: atualizarVisual
+
+      get programacao() {
+        return {
+          ...estado.programacao
+        };
+      },
+
+      atualizar:
+        sincronizarEstadoEfetivo,
+
+      abrirProgramacao:
+        abrirModalProgramacao
     };
   }
 

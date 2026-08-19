@@ -1,3 +1,7 @@
+/* =========================================================
+   BLOQUEIO GLOBAL DE LANÇAMENTOS
+   Salve como: bloqueio-lancamentos.css
+========================================================= */
 
 .launch-lock-control {
   margin-left: auto;
@@ -305,6 +309,288 @@
 
   .lock-secondary-button,
   .lock-primary-button {
+    width: 100%;
+  }
+}
+
+
+/* =========================================================
+   PROGRAMAÇÃO AUTOMÁTICA — BLOQUEIO v02
+========================================================= */
+
+.launch-lock-schedule-button {
+  min-height: 42px;
+  border: 1px solid #cbd9e1;
+  border-radius: 11px;
+  padding: 9px 13px;
+  background: linear-gradient(145deg, #ffffff, #f3f7f9);
+  color: #17384f;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 7px 17px rgba(18, 47, 67, .07);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.launch-lock-schedule-button:hover {
+  transform: translateY(-1px);
+  border-color: #9fb8c7;
+  box-shadow: 0 10px 23px rgba(18, 47, 67, .11);
+}
+
+.launch-lock-schedule-button.is-active {
+  border-color: #e5c76f;
+  background: linear-gradient(145deg, #fffdf4, #fff5cf);
+  color: #8c6200;
+}
+
+.launch-lock-schedule-button.is-active span {
+  animation: lockSchedulePulse 1.7s ease-in-out infinite;
+}
+
+.launch-lock-schedule-button:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+@keyframes lockSchedulePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .55; transform: scale(.92); }
+}
+
+.lock-schedule-dialog {
+  width: min(720px, 94vw);
+  border: 0;
+  padding: 0;
+  border-radius: 24px;
+  background: transparent;
+}
+
+.lock-schedule-dialog::backdrop {
+  background: rgba(4, 18, 31, .72);
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
+}
+
+.lock-schedule-card {
+  position: relative;
+  padding: 28px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(8, 139, 95, .10), transparent 33%),
+    linear-gradient(145deg, #fff, #f8fbfc);
+  color: #102b3e;
+  box-shadow: 0 34px 100px rgba(3, 18, 31, .42);
+}
+
+.lock-schedule-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 5px;
+  border-radius: 24px 24px 0 0;
+  background: linear-gradient(90deg, #0a7d59, #0ca879);
+}
+
+.lock-schedule-hero {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 15px;
+  padding-right: 38px;
+}
+
+.lock-schedule-icon {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #e6f7ef, #d6f1e5);
+  color: #087750;
+  font-size: 24px;
+  box-shadow: inset 0 0 0 1px rgba(8, 119, 80, .08);
+}
+
+.lock-schedule-hero h2 {
+  margin: 5px 0 6px;
+  font-size: 23px;
+}
+
+.lock-schedule-hero p {
+  margin: 0;
+  color: #607481;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.lock-schedule-current {
+  margin-top: 18px;
+  padding: 13px 15px;
+  border: 1px solid #ecd99f;
+  border-radius: 13px;
+  background: linear-gradient(145deg, #fffdf5, #fff7dc);
+  display: grid;
+  gap: 4px;
+}
+
+.lock-schedule-current > span {
+  color: #9a6b00;
+  font-size: 8px;
+  font-weight: 950;
+  letter-spacing: .12em;
+}
+
+.lock-schedule-current strong {
+  color: #654700;
+  font-size: 12px;
+}
+
+.lock-schedule-current strong b {
+  padding: 0 7px;
+  color: #b08a28;
+}
+
+.lock-schedule-current small {
+  color: #806d39;
+  font-size: 9px;
+}
+
+.lock-schedule-grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.lock-schedule-field {
+  display: grid;
+  gap: 6px;
+}
+
+.lock-schedule-field > span {
+  color: #324f61;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.lock-schedule-field input {
+  min-height: 46px;
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid #cddae2;
+  border-radius: 11px;
+  padding: 0 12px;
+  background: #fff;
+  color: #17384f;
+  font: inherit;
+  font-size: 12px;
+  outline: 0;
+}
+
+.lock-schedule-field input:focus {
+  border-color: #0b8d60;
+  box-shadow: 0 0 0 3px rgba(11, 141, 96, .12);
+}
+
+.lock-schedule-field small {
+  color: #7c8d98;
+  font-size: 8px;
+}
+
+.lock-schedule-info {
+  margin-top: 14px;
+  padding: 11px 13px;
+  border-radius: 12px;
+  background: #eef6f8;
+  color: #5d7482;
+  display: grid;
+  gap: 3px;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.lock-schedule-info strong {
+  color: #284b60;
+}
+
+.lock-schedule-actions {
+  margin-top: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.lock-schedule-actions-right {
+  margin-left: auto;
+  display: flex;
+  gap: 9px;
+}
+
+.lock-schedule-save,
+.lock-danger-outline-button {
+  border-radius: 10px;
+  padding: 10px 15px;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.lock-schedule-save {
+  border: 0;
+  background: linear-gradient(135deg, #087344, #0b9664);
+  color: #fff;
+  box-shadow: 0 9px 20px rgba(8, 115, 68, .16);
+}
+
+.lock-danger-outline-button {
+  border: 1px solid #efc2be;
+  background: #fff7f6;
+  color: #b42318;
+}
+
+.launch-lock-control.has-schedule .launch-lock-status {
+  border-color: #e7d18e;
+  background: linear-gradient(145deg, #fffef9, #fff8df);
+}
+
+@media (max-width: 760px) {
+  .lock-schedule-card {
+    padding: 22px 17px;
+  }
+
+  .lock-schedule-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .lock-schedule-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lock-schedule-actions,
+  .lock-schedule-actions-right {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .lock-schedule-actions-right {
+    margin-left: 0;
+  }
+
+  .lock-schedule-save,
+  .lock-danger-outline-button,
+  .lock-schedule-actions-right .lock-secondary-button {
+    width: 100%;
+  }
+
+  .launch-lock-schedule-button {
     width: 100%;
   }
 }
