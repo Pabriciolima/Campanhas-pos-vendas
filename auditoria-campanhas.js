@@ -1,4 +1,16 @@
 /*
+ * AUDITORIA PREMIUM v09 — EXPORTAÇÕES EXECUTIVAS
+ * - PDF redesenhado em formato de relatório de auditoria, não mais tabela crua.
+ * - Excel agora possui: Resumo, Eventos e Alterações detalhadas.
+ * - Criações exibem os dados inseridos quando o log possui snapshot "depois".
+ * - Alterações exibem claramente ANTES → DEPOIS.
+ * - Inclui módulo, competência, semana, DN, filial, cargo, autor, dispositivo,
+ *   IP, sessão, documento, ID do log, origem/importação e horário.
+ * - Exportações continuam respeitando os filtros atuais da auditoria.
+ * - Não altera gravação, cálculo, Firebase, Produtivos ou Pix do Presidente.
+ */
+
+/*
  * AUDITORIA PREMIUM v08 — 19/08/2026
  * Interface de leitura humana: ação clara, antes → depois, contexto e dados técnicos.
  * Mantém senha, Firebase, histórico, filtros, Excel e PDF.
@@ -76,7 +88,7 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
-const AUDITORIA_VERSAO = "2026.08.19-08";
+const AUDITORIA_VERSAO = "2026.08.19-09";
 const COLECAO_AUDITORIA = "auditoria_campanhas";
 
 const FONTES_AUDITORIA = [
@@ -2796,71 +2808,365 @@ function nomeArquivoAuditoria(
     .replace(/[^a-z0-9]+/g, "-")}-${data}.${extensao}`;
 }
 
-function linhasAuditoriaExportacao() {
-  const linhas = [];
 
-  logsAuditoriaFiltrados()
-    .forEach(log => {
-      const alteracoes =
-        Array.isArray(log.alteracoes) &&
-        log.alteracoes.length
-          ? log.alteracoes
-          : [
-              {
-                campo: "—",
-                antes: "—",
-                depois: "—"
-              }
-            ];
+function filtrosAuditoriaExportacao() {
+  const modulo =
+    document.querySelector(
+      "#auditoriaFiltroModulo"
+    )?.value || "";
 
-      alteracoes.forEach(item => {
-        linhas.push({
+  const acao =
+    document.querySelector(
+      "#auditoriaFiltroAcao"
+    )?.value || "";
+
+  const filial =
+    document.querySelector(
+      "#auditoriaFiltroFilial"
+    )?.value || "";
+
+  const dataInicio =
+    document.querySelector(
+      "#auditoriaDataInicio"
+    )?.value || "";
+
+  const dataFim =
+    document.querySelector(
+      "#auditoriaDataFim"
+    )?.value || "";
+
+  const busca =
+    document.querySelector(
+      "#auditoriaBusca"
+    )?.value || "";
+
+  return {
+    modulo:
+      modulo
+        ? rotuloModulo(modulo)
+        : "Todos os módulos",
+
+    acao:
+      acao ||
+      "Todas as ações",
+
+    filial:
+      filial ||
+      "Todas as filiais",
+
+    dataInicio:
+      dataInicio ||
+      "Sem data inicial",
+
+    dataFim:
+      dataFim ||
+      "Sem data final",
+
+    busca:
+      busca ||
+      "Sem termo de busca"
+  };
+}
+
+function resumoAuditoriaExportacao(logs) {
+  const total =
+    logs.length;
+
+  const contar =
+    acao =>
+      logs.filter(
+        log =>
+          normalizar(
+            log.acao
+          ) ===
+          normalizar(
+            acao
+          )
+      ).length;
+
+  return {
+    total,
+    criacoes:
+      contar(
+        "CRIAÇÃO"
+      ),
+    alteracoes:
+      contar(
+        "ALTERAÇÃO"
+      ),
+    importacoes:
+      contar(
+        "IMPORTAÇÃO"
+      ),
+    exclusoes:
+      contar(
+        "EXCLUSÃO"
+      ),
+    desligamentos:
+      contar(
+        "DESLIGAMENTO"
+      ),
+    sessoes:
+      contar(
+        "SESSÃO DE EDIÇÃO"
+      ),
+    filiais:
+      new Set(
+        logs
+          .map(
+            log =>
+              texto(
+                log.filial
+              )
+          )
+          .filter(
+            Boolean
+          )
+      ).size,
+    colaboradores:
+      new Set(
+        logs
+          .map(
+            log =>
+              texto(
+                log.nomeRegistro
+              )
+          )
+          .filter(
+            Boolean
+          )
+      ).size
+  };
+}
+
+function eventoAuditoriaExportacao(log) {
+  const leitura =
+    descreverAcaoAuditoria(
+      log
+    );
+
+  const alteracoes =
+    resumoAlteracoesAuditoria(
+      log
+    );
+
+  const data =
+    formatarData(
+      log.registradoEm ||
+      log.registradoEmEpoch ||
+      log.registradoEmCliente
+    );
+
+  return {
+    data,
+    modulo:
+      rotuloModulo(
+        log.modulo
+      ),
+    acao:
+      log.acao ||
+      "",
+    competencia:
+      log.competencia ||
+      "",
+    semana:
+      log.semana
+        ? `S${log.semana}`
+        : "",
+    dn:
+      log.dn ||
+      "",
+    filial:
+      log.filial ||
+      "",
+    colaborador:
+      log.nomeRegistro ||
+      "",
+    cargo:
+      log.cargo ||
+      "",
+    titulo:
+      leitura.titulo ||
+      "",
+    descricao:
+      leitura.descricao ||
+      "",
+    resumo:
+      log.resumo ||
+      "",
+    autor:
+      log.autorNome ||
+      "Usuário do sistema",
+    dispositivo:
+      log.autorDispositivo ||
+      "",
+    ip:
+      log.autorIp ||
+      "",
+    sessao:
+      log.sessaoEdicaoId ||
+      "",
+    documento:
+      log.documentoId ||
+      "",
+    logId:
+      log.auditoriaId ||
+      log.id ||
+      "",
+    colecao:
+      log.colecaoOrigem ||
+      "",
+    arquivo:
+      log.arquivoImportado ||
+      "",
+    origemImportacao:
+      log.origemImportacao ||
+      "",
+    dataEventoOrigem:
+      log.dataEventoOrigem
+        ? formatarData(
+            log.dataEventoOrigem
+          )
+        : "",
+    alteracoes
+  };
+}
+
+function dadosAuditoriaExportacao() {
+  const logs =
+    logsAuditoriaFiltrados();
+
+  const eventos =
+    logs.map(
+      eventoAuditoriaExportacao
+    );
+
+  const alteracoes = [];
+
+  eventos.forEach(
+    evento => {
+      if (
+        evento.alteracoes.length
+      ) {
+        evento.alteracoes.forEach(
+          item => {
+            alteracoes.push({
+              data:
+                evento.data,
+              modulo:
+                evento.modulo,
+              acao:
+                evento.acao,
+              competencia:
+                evento.competencia,
+              semana:
+                evento.semana,
+              dn:
+                evento.dn,
+              filial:
+                evento.filial,
+              colaborador:
+                evento.colaborador,
+              cargo:
+                evento.cargo,
+              campo:
+                item.rotulo ||
+                "Campo",
+              antes:
+                item.antes ??
+                "—",
+              depois:
+                item.depois ??
+                "—",
+              autor:
+                evento.autor,
+              dispositivo:
+                evento.dispositivo,
+              ip:
+                evento.ip,
+              sessao:
+                evento.sessao,
+              documento:
+                evento.documento,
+              logId:
+                evento.logId
+            });
+          }
+        );
+      } else {
+        alteracoes.push({
           data:
-            formatarData(
-              log.registradoEm ||
-              log.registradoEmCliente
-            ),
+            evento.data,
           modulo:
-            rotuloModulo(log.modulo),
+            evento.modulo,
           acao:
-            log.acao || "",
+            evento.acao,
           competencia:
-            log.competencia || "",
+            evento.competencia,
           semana:
-            log.semana || "",
+            evento.semana,
           dn:
-            log.dn || "",
+            evento.dn,
           filial:
-            log.filial || "",
+            evento.filial,
           colaborador:
-            log.nomeRegistro || "",
+            evento.colaborador,
           cargo:
-            log.cargo || "",
+            evento.cargo,
           campo:
-            item.campo || "",
+            "Resumo do evento",
           antes:
-            valorBonito(item.antes),
+            "—",
           depois:
-            valorBonito(item.depois),
+            evento.resumo ||
+            evento.descricao ||
+            "Evento registrado.",
           autor:
-            log.autorNome ||
-            "Usuário do sistema",
+            evento.autor,
           dispositivo:
-            log.autorDispositivo || "",
-          resumo:
-            log.resumo || ""
+            evento.dispositivo,
+          ip:
+            evento.ip,
+          sessao:
+            evento.sessao,
+          documento:
+            evento.documento,
+          logId:
+            evento.logId
         });
-      });
-    });
+      }
+    }
+  );
 
-  return linhas;
+  return {
+    logs,
+    eventos,
+    alteracoes,
+    resumo:
+      resumoAuditoriaExportacao(
+        logs
+      ),
+    filtros:
+      filtrosAuditoriaExportacao()
+  };
+}
+
+function linhasAuditoriaExportacao() {
+  /*
+   * Mantido por compatibilidade com versões anteriores.
+   * Agora retorna a visão detalhada já humanizada.
+   */
+  return dadosAuditoriaExportacao()
+    .alteracoes;
 }
 
 async function exportarAuditoriaExcel() {
-  const linhas =
-    linhasAuditoriaExportacao();
+  const dados =
+    dadosAuditoriaExportacao();
 
-  if (!linhas.length) {
+  if (
+    !dados.eventos.length
+  ) {
     alert(
       "Não há registros de auditoria para exportar com os filtros atuais."
     );
@@ -2879,72 +3185,588 @@ async function exportarAuditoriaExcel() {
 
   workbook.creator =
     "Sistema de Campanhas Pós-Vendas";
+
+  workbook.company =
+    "Campanhas Pós-Vendas";
+
+  workbook.subject =
+    "Auditoria e rastreabilidade";
+
+  workbook.title =
+    "Auditoria Completa — Campanhas Pós-Vendas";
+
   workbook.created =
     new Date();
 
-  const sheet =
+  const navy =
+    "FF0B3658";
+  const green =
+    "FF087F5B";
+  const lightGreen =
+    "FFE9F6F0";
+  const lightBlue =
+    "FFF1F6F9";
+  const border =
+    "FFDCE5EA";
+  const dark =
+    "FF17324A";
+  const muted =
+    "FF667C8A";
+  const red =
+    "FFB52B2B";
+  const amber =
+    "FF9A6B00";
+
+  const aplicarBorda =
+    celula => {
+      celula.border = {
+        top: {
+          style:"thin",
+          color:{argb:border}
+        },
+        left: {
+          style:"thin",
+          color:{argb:border}
+        },
+        bottom: {
+          style:"thin",
+          color:{argb:border}
+        },
+        right: {
+          style:"thin",
+          color:{argb:border}
+        }
+      };
+    };
+
+  const sheetResumo =
     workbook.addWorksheet(
-      "Auditoria"
+      "Resumo"
     );
 
-  sheet.columns = [
-    { header: "Data/Hora", key: "data", width: 18 },
-    { header: "Módulo", key: "modulo", width: 22 },
-    { header: "Ação", key: "acao", width: 16 },
-    { header: "Competência", key: "competencia", width: 13 },
-    { header: "Semana", key: "semana", width: 10 },
-    { header: "DN", key: "dn", width: 10 },
-    { header: "Filial", key: "filial", width: 18 },
-    { header: "Colaborador/Registro", key: "colaborador", width: 34 },
-    { header: "Cargo", key: "cargo", width: 30 },
-    { header: "Campo alterado", key: "campo", width: 23 },
-    { header: "Antes", key: "antes", width: 30 },
-    { header: "Depois", key: "depois", width: 30 },
-    { header: "Autor", key: "autor", width: 22 },
-    { header: "Dispositivo", key: "dispositivo", width: 24 },
-    { header: "Resumo", key: "resumo", width: 46 }
-  ];
-
-  linhas.forEach(
-    linha => sheet.addRow(linha)
-  );
-
-  const header = sheet.getRow(1);
-  header.height = 28;
-  header.font = {
-    bold: true,
-    color: { argb: "FFFFFFFF" }
-  };
-  header.fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FF0B3658" }
-  };
-  header.alignment = {
-    vertical: "middle",
-    horizontal: "center"
-  };
-
-  sheet.views = [
+  sheetResumo.views = [
     {
-      state: "frozen",
-      ySplit: 1
+      showGridLines:false
     }
   ];
 
-  sheet.autoFilter = {
-    from: "A1",
-    to: "O1"
+  sheetResumo.mergeCells(
+    "A1:H2"
+  );
+
+  const titulo =
+    sheetResumo.getCell(
+      "A1"
+    );
+
+  titulo.value =
+    "AUDITORIA COMPLETA — CAMPANHAS PÓS-VENDAS";
+
+  titulo.font = {
+    bold:true,
+    size:20,
+    color:{
+      argb:"FFFFFFFF"
+    }
   };
 
-  sheet.eachRow(
-    (row, rowNumber) => {
-      if (rowNumber > 1) {
-        row.alignment = {
-          vertical: "top",
-          wrapText: true
-        };
+  titulo.fill = {
+    type:"pattern",
+    pattern:"solid",
+    fgColor:{
+      argb:navy
+    }
+  };
+
+  titulo.alignment = {
+    vertical:"middle",
+    horizontal:"left"
+  };
+
+  sheetResumo.getRow(1)
+    .height = 30;
+
+  sheetResumo.getRow(2)
+    .height = 18;
+
+  sheetResumo.mergeCells(
+    "A3:H3"
+  );
+
+  sheetResumo.getCell(
+    "A3"
+  ).value =
+    `Gerado em ${new Date().toLocaleString("pt-BR")} · Relatório baseado nos filtros aplicados no painel de auditoria.`;
+
+  sheetResumo.getCell(
+    "A3"
+  ).font = {
+    italic:true,
+    size:10,
+    color:{
+      argb:muted
+    }
+  };
+
+  const cards = [
+    [
+      "Total de eventos",
+      dados.resumo.total
+    ],
+    [
+      "Criações",
+      dados.resumo.criacoes
+    ],
+    [
+      "Alterações",
+      dados.resumo.alteracoes
+    ],
+    [
+      "Importações",
+      dados.resumo.importacoes
+    ],
+    [
+      "Exclusões",
+      dados.resumo.exclusoes
+    ],
+    [
+      "Desligamentos",
+      dados.resumo.desligamentos
+    ],
+    [
+      "Filiais",
+      dados.resumo.filiais
+    ],
+    [
+      "Colaboradores/Registros",
+      dados.resumo.colaboradores
+    ]
+  ];
+
+  cards.forEach(
+    ([rotulo, valor], indice) => {
+      const coluna =
+        indice % 4;
+
+      const linha =
+        5 +
+        Math.floor(
+          indice / 4
+        ) * 3;
+
+      const inicio =
+        1 +
+        coluna * 2;
+
+      const letra1 =
+        String.fromCharCode(
+          64 + inicio
+        );
+
+      const letra2 =
+        String.fromCharCode(
+          64 + inicio + 1
+        );
+
+      sheetResumo.mergeCells(
+        `${letra1}${linha}:${letra2}${linha}`
+      );
+
+      sheetResumo.mergeCells(
+        `${letra1}${linha + 1}:${letra2}${linha + 1}`
+      );
+
+      const c1 =
+        sheetResumo.getCell(
+          `${letra1}${linha}`
+        );
+
+      const c2 =
+        sheetResumo.getCell(
+          `${letra1}${linha + 1}`
+        );
+
+      c1.value =
+        rotulo;
+
+      c1.font = {
+        bold:true,
+        size:9,
+        color:{
+          argb:muted
+        }
+      };
+
+      c2.value =
+        valor;
+
+      c2.font = {
+        bold:true,
+        size:17,
+        color:{
+          argb:dark
+        }
+      };
+
+      [c1,c2].forEach(
+        celula => {
+          celula.fill = {
+            type:"pattern",
+            pattern:"solid",
+            fgColor:{
+              argb:lightBlue
+            }
+          };
+
+          celula.alignment = {
+            vertical:"middle",
+            horizontal:"left"
+          };
+
+          aplicarBorda(
+            celula
+          );
+        }
+      );
+    }
+  );
+
+  const linhaFiltros =
+    12;
+
+  sheetResumo.mergeCells(
+    `A${linhaFiltros}:H${linhaFiltros}`
+  );
+
+  sheetResumo.getCell(
+    `A${linhaFiltros}`
+  ).value =
+    "FILTROS UTILIZADOS";
+
+  sheetResumo.getCell(
+    `A${linhaFiltros}`
+  ).font = {
+    bold:true,
+    color:{
+      argb:"FFFFFFFF"
+    }
+  };
+
+  sheetResumo.getCell(
+    `A${linhaFiltros}`
+  ).fill = {
+    type:"pattern",
+    pattern:"solid",
+    fgColor:{
+      argb:green
+    }
+  };
+
+  const filtrosLista = [
+    [
+      "Módulo",
+      dados.filtros.modulo
+    ],
+    [
+      "Ação",
+      dados.filtros.acao
+    ],
+    [
+      "Filial",
+      dados.filtros.filial
+    ],
+    [
+      "Data inicial",
+      dados.filtros.dataInicio
+    ],
+    [
+      "Data final",
+      dados.filtros.dataFim
+    ],
+    [
+      "Busca",
+      dados.filtros.busca
+    ]
+  ];
+
+  filtrosLista.forEach(
+    ([rotulo, valor], indice) => {
+      const linha =
+        linhaFiltros +
+        1 +
+        indice;
+
+      sheetResumo.getCell(
+        `A${linha}`
+      ).value =
+        rotulo;
+
+      sheetResumo.getCell(
+        `A${linha}`
+      ).font = {
+        bold:true,
+        color:{
+          argb:dark
+        }
+      };
+
+      sheetResumo.mergeCells(
+        `B${linha}:H${linha}`
+      );
+
+      sheetResumo.getCell(
+        `B${linha}`
+      ).value =
+        valor;
+
+      [
+        sheetResumo.getCell(
+          `A${linha}`
+        ),
+        sheetResumo.getCell(
+          `B${linha}`
+        )
+      ].forEach(
+        aplicarBorda
+      );
+    }
+  );
+
+  sheetResumo.columns = [
+    {width:18},
+    {width:18},
+    {width:18},
+    {width:18},
+    {width:18},
+    {width:18},
+    {width:18},
+    {width:18}
+  ];
+
+  const sheetEventos =
+    workbook.addWorksheet(
+      "Eventos"
+    );
+
+  sheetEventos.columns = [
+    {header:"Data/Hora",key:"data",width:20},
+    {header:"Módulo",key:"modulo",width:23},
+    {header:"Ação",key:"acao",width:17},
+    {header:"Competência",key:"competencia",width:14},
+    {header:"Semana",key:"semana",width:10},
+    {header:"DN",key:"dn",width:10},
+    {header:"Filial",key:"filial",width:18},
+    {header:"Colaborador/Registro",key:"colaborador",width:36},
+    {header:"Cargo",key:"cargo",width:30},
+    {header:"Descrição da ação",key:"descricao",width:38},
+    {header:"Resumo registrado",key:"resumo",width:46},
+    {header:"Autor",key:"autor",width:24},
+    {header:"Dispositivo",key:"dispositivo",width:27},
+    {header:"IP",key:"ip",width:18},
+    {header:"Sessão",key:"sessao",width:28},
+    {header:"Documento",key:"documento",width:30},
+    {header:"ID do log",key:"logId",width:38},
+    {header:"Coleção de origem",key:"colecao",width:30},
+    {header:"Arquivo importado",key:"arquivo",width:28},
+    {header:"Origem da importação",key:"origemImportacao",width:28},
+    {header:"Horário existente no registro",key:"dataEventoOrigem",width:24}
+  ];
+
+  dados.eventos.forEach(
+    evento => {
+      sheetEventos.addRow(
+        evento
+      );
+    }
+  );
+
+  const formatarCabecalho =
+    sheet => {
+      const header =
+        sheet.getRow(1);
+
+      header.height =
+        30;
+
+      header.font = {
+        bold:true,
+        color:{
+          argb:"FFFFFFFF"
+        }
+      };
+
+      header.fill = {
+        type:"pattern",
+        pattern:"solid",
+        fgColor:{
+          argb:navy
+        }
+      };
+
+      header.alignment = {
+        vertical:"middle",
+        horizontal:"center",
+        wrapText:true
+      };
+
+      header.eachCell(
+        aplicarBorda
+      );
+
+      sheet.views = [
+        {
+          state:"frozen",
+          ySplit:1
+        }
+      ];
+
+      sheet.autoFilter = {
+        from:{
+          row:1,
+          column:1
+        },
+        to:{
+          row:1,
+          column:
+            sheet.columnCount
+        }
+      };
+
+      sheet.eachRow(
+        (row,rowNumber) => {
+          if (
+            rowNumber > 1
+          ) {
+            row.alignment = {
+              vertical:"top",
+              wrapText:true
+            };
+
+            row.eachCell(
+              aplicarBorda
+            );
+
+            if (
+              rowNumber % 2 === 0
+            ) {
+              row.eachCell(
+                celula => {
+                  celula.fill = {
+                    type:"pattern",
+                    pattern:"solid",
+                    fgColor:{
+                      argb:"FFF8FAFB"
+                    }
+                  };
+                }
+              );
+            }
+          }
+        }
+      );
+    };
+
+  formatarCabecalho(
+    sheetEventos
+  );
+
+  const colunaAcao =
+    sheetEventos.getColumn(
+      "acao"
+    );
+
+  colunaAcao.eachCell(
+    (celula,linha) => {
+      if (
+        linha === 1
+      ) {
+        return;
       }
+
+      const valor =
+        normalizar(
+          celula.value
+        );
+
+      celula.font = {
+        bold:true,
+        color:{
+          argb:
+            valor === "EXCLUSAO" ||
+            valor === "DESLIGAMENTO"
+              ? red
+              : valor === "IMPORTACAO"
+                ? amber
+                : valor === "CRIACAO"
+                  ? green
+                  : dark
+        }
+      };
+    }
+  );
+
+  const sheetAlteracoes =
+    workbook.addWorksheet(
+      "Alterações detalhadas"
+    );
+
+  sheetAlteracoes.columns = [
+    {header:"Data/Hora",key:"data",width:20},
+    {header:"Módulo",key:"modulo",width:22},
+    {header:"Ação",key:"acao",width:16},
+    {header:"Competência",key:"competencia",width:14},
+    {header:"Semana",key:"semana",width:10},
+    {header:"DN",key:"dn",width:10},
+    {header:"Filial",key:"filial",width:18},
+    {header:"Colaborador/Registro",key:"colaborador",width:36},
+    {header:"Cargo",key:"cargo",width:30},
+    {header:"Campo / Informação",key:"campo",width:27},
+    {header:"Antes",key:"antes",width:34},
+    {header:"Depois / Inserido",key:"depois",width:34},
+    {header:"Autor",key:"autor",width:24},
+    {header:"Dispositivo",key:"dispositivo",width:27},
+    {header:"IP",key:"ip",width:18},
+    {header:"Sessão",key:"sessao",width:28},
+    {header:"Documento",key:"documento",width:30},
+    {header:"ID do log",key:"logId",width:38}
+  ];
+
+  dados.alteracoes.forEach(
+    linha => {
+      sheetAlteracoes.addRow(
+        linha
+      );
+    }
+  );
+
+  formatarCabecalho(
+    sheetAlteracoes
+  );
+
+  sheetAlteracoes.getColumn(
+    "depois"
+  ).eachCell(
+    (celula,linha) => {
+      if (
+        linha === 1
+      ) {
+        return;
+      }
+
+      celula.fill = {
+        type:"pattern",
+        pattern:"solid",
+        fgColor:{
+          argb:lightGreen
+        }
+      };
+
+      celula.font = {
+        bold:true,
+        color:{
+          argb:"FF08704F"
+        }
+      };
     }
   );
 
@@ -2961,23 +3783,41 @@ async function exportarAuditoriaExcel() {
     );
 
   const url =
-    URL.createObjectURL(blob);
-  const link =
-    document.createElement("a");
+    URL.createObjectURL(
+      blob
+    );
 
-  link.href = url;
+  const link =
+    document.createElement(
+      "a"
+    );
+
+  link.href =
+    url;
+
   link.download =
-    nomeArquivoAuditoria("xlsx");
+    nomeArquivoAuditoria(
+      "xlsx"
+    );
+
   link.click();
 
-  URL.revokeObjectURL(url);
+  window.setTimeout(
+    () =>
+      URL.revokeObjectURL(
+        url
+      ),
+    1000
+  );
 }
 
 function exportarAuditoriaPdf() {
-  const linhas =
-    linhasAuditoriaExportacao();
+  const dados =
+    dadosAuditoriaExportacao();
 
-  if (!linhas.length) {
+  if (
+    !dados.eventos.length
+  ) {
     alert(
       "Não há registros de auditoria para exportar com os filtros atuais."
     );
@@ -2996,130 +3836,732 @@ function exportarAuditoriaPdf() {
 
   const documento =
     new jsPDF({
-      orientation: "landscape",
-      unit: "mm",
-      format: "a4"
+      orientation:"landscape",
+      unit:"mm",
+      format:"a4"
     });
 
-  documento.setFillColor(
+  const largura =
+    documento.internal.pageSize.getWidth();
+
+  const altura =
+    documento.internal.pageSize.getHeight();
+
+  const margem =
+    12;
+
+  const azul = [
     11,
     54,
     88
-  );
-  documento.rect(
-    0,
-    0,
-    297,
-    26,
-    "F"
+  ];
+
+  const verde = [
+    8,
+    128,
+    91
+  ];
+
+  const cinza = [
+    101,
+    121,
+    134
+  ];
+
+  const cinzaClaro = [
+    245,
+    248,
+    250
+  ];
+
+  const borda = [
+    220,
+    229,
+    234
+  ];
+
+  const vermelho = [
+    181,
+    43,
+    43
+  ];
+
+  const amarelo = [
+    154,
+    107,
+    0
+  ];
+
+  const corPorAcao =
+    acao => {
+      const chave =
+        normalizar(
+          acao
+        );
+
+      if (
+        chave === "CRIACAO"
+      ) {
+        return verde;
+      }
+
+      if (
+        chave === "IMPORTACAO"
+      ) {
+        return amarelo;
+      }
+
+      if (
+        chave === "EXCLUSAO" ||
+        chave === "DESLIGAMENTO"
+      ) {
+        return vermelho;
+      }
+
+      return [
+        49,
+        120,
+        198
+      ];
+    };
+
+  const escreverCabecalho =
+    () => {
+      documento.setFillColor(
+        ...azul
+      );
+
+      documento.rect(
+        0,
+        0,
+        largura,
+        30,
+        "F"
+      );
+
+      documento.setTextColor(
+        255,
+        255,
+        255
+      );
+
+      documento.setFont(
+        "helvetica",
+        "bold"
+      );
+
+      documento.setFontSize(
+        17
+      );
+
+      documento.text(
+        "AUDITORIA COMPLETA — CAMPANHAS PÓS-VENDAS",
+        margem,
+        11
+      );
+
+      documento.setFont(
+        "helvetica",
+        "normal"
+      );
+
+      documento.setFontSize(
+        8.5
+      );
+
+      documento.text(
+        `Gerado em ${new Date().toLocaleString("pt-BR")} · ${dados.resumo.total} evento(s)`,
+        margem,
+        18
+      );
+
+      documento.text(
+        `Filtros: ${dados.filtros.modulo} · ${dados.filtros.acao} · ${dados.filtros.filial}`,
+        margem,
+        24
+      );
+    };
+
+  const escreverRodape =
+    numeroPagina => {
+      documento.setDrawColor(
+        ...borda
+      );
+
+      documento.line(
+        margem,
+        altura - 9,
+        largura - margem,
+        altura - 9
+      );
+
+      documento.setFont(
+        "helvetica",
+        "normal"
+      );
+
+      documento.setFontSize(
+        7
+      );
+
+      documento.setTextColor(
+        ...cinza
+      );
+
+      documento.text(
+        "Sistema de Campanhas Pós-Vendas · Relatório de rastreabilidade",
+        margem,
+        altura - 4.5
+      );
+
+      documento.text(
+        `Página ${numeroPagina}`,
+        largura - margem,
+        altura - 4.5,
+        {
+          align:"right"
+        }
+      );
+    };
+
+  const novaPagina =
+    () => {
+      documento.addPage();
+      escreverCabecalho();
+      return 37;
+    };
+
+  escreverCabecalho();
+
+  let y =
+    36;
+
+  const cardLargura =
+    (largura -
+      margem * 2 -
+      9) /
+    4;
+
+  const cards = [
+    [
+      "EVENTOS",
+      dados.resumo.total
+    ],
+    [
+      "CRIAÇÕES",
+      dados.resumo.criacoes
+    ],
+    [
+      "ALTERAÇÕES",
+      dados.resumo.alteracoes
+    ],
+    [
+      "IMPORTAÇÕES",
+      dados.resumo.importacoes
+    ]
+  ];
+
+  cards.forEach(
+    ([rotulo,valor],indice) => {
+      const x =
+        margem +
+        indice *
+          (
+            cardLargura +
+            3
+          );
+
+      documento.setFillColor(
+        ...cinzaClaro
+      );
+
+      documento.setDrawColor(
+        ...borda
+      );
+
+      documento.roundedRect(
+        x,
+        y,
+        cardLargura,
+        17,
+        2,
+        2,
+        "FD"
+      );
+
+      documento.setTextColor(
+        ...cinza
+      );
+
+      documento.setFont(
+        "helvetica",
+        "bold"
+      );
+
+      documento.setFontSize(
+        6.5
+      );
+
+      documento.text(
+        rotulo,
+        x + 4,
+        y + 6
+      );
+
+      documento.setTextColor(
+        ...azul
+      );
+
+      documento.setFontSize(
+        14
+      );
+
+      documento.text(
+        String(
+          valor
+        ),
+        x + 4,
+        y + 13.5
+      );
+    }
   );
 
+  y += 23;
+
   documento.setTextColor(
-    255,
-    255,
-    255
+    ...azul
   );
-  documento.setFontSize(18);
+
   documento.setFont(
     "helvetica",
     "bold"
   );
-  documento.text(
-    "AUDITORIA COMPLETA — CAMPANHAS PÓS-VENDAS",
-    12,
-    11
+
+  documento.setFontSize(
+    9
   );
 
-  documento.setFontSize(9);
+  documento.text(
+    "FILTROS DA CONSULTA",
+    margem,
+    y
+  );
+
+  y += 5;
+
   documento.setFont(
     "helvetica",
     "normal"
   );
+
+  documento.setTextColor(
+    ...cinza
+  );
+
+  documento.setFontSize(
+    7.5
+  );
+
+  const textoFiltros = [
+    `Módulo: ${dados.filtros.modulo}`,
+    `Ação: ${dados.filtros.acao}`,
+    `Filial: ${dados.filtros.filial}`,
+    `Período: ${dados.filtros.dataInicio} até ${dados.filtros.dataFim}`,
+    `Busca: ${dados.filtros.busca}`
+  ];
+
   documento.text(
-    `Gerado em ${new Date().toLocaleString("pt-BR")} · ${linhas.length} linha(s)`,
-    12,
-    18
+    textoFiltros,
+    margem,
+    y
+  );
+
+  y +=
+    textoFiltros.length *
+      4 +
+    3;
+
+  documento.setFont(
+    "helvetica",
+    "bold"
+  );
+
+  documento.setFontSize(
+    10
   );
 
   documento.setTextColor(
-    20,
-    44,
-    62
+    ...azul
   );
 
-  const body =
-    linhas.map(item => [
-      item.data,
-      item.modulo,
-      item.acao,
-      item.competencia +
-        (item.semana ? ` / S${item.semana}` : ""),
-      item.filial,
-      item.colaborador,
-      item.campo,
-      item.antes,
-      item.depois,
-      item.autor
-    ]);
+  documento.text(
+    "DETALHAMENTO DOS EVENTOS",
+    margem,
+    y
+  );
 
-  documento.autoTable({
-    startY: 31,
-    head: [[
-      "Data/Hora",
-      "Módulo",
-      "Ação",
-      "Competência",
-      "Filial",
-      "Colaborador/Registro",
-      "Campo",
-      "Antes",
-      "Depois",
-      "Autor"
-    ]],
-    body,
-    theme: "grid",
-    styles: {
-      fontSize: 6.5,
-      cellPadding: 1.6,
-      overflow: "linebreak",
-      valign: "top"
-    },
-    headStyles: {
-      fillColor: [8, 128, 91],
-      textColor: [255, 255, 255],
-      fontStyle: "bold"
-    },
-    alternateRowStyles: {
-      fillColor: [247, 250, 251]
-    },
-    columnStyles: {
-      0: { cellWidth: 20 },
-      1: { cellWidth: 23 },
-      2: { cellWidth: 18 },
-      3: { cellWidth: 18 },
-      4: { cellWidth: 20 },
-      5: { cellWidth: 36 },
-      6: { cellWidth: 24 },
-      7: { cellWidth: 34 },
-      8: { cellWidth: 34 },
-      9: { cellWidth: 25 }
-    },
-    didDrawPage: data => {
-      const totalPaginas =
-        documento.internal.getNumberOfPages();
-      documento.setFontSize(7);
-      documento.setTextColor(90, 105, 115);
-      documento.text(
-        `Página ${data.pageNumber} de ${totalPaginas}`,
-        285,
-        203,
-        { align: "right" }
+  y += 5;
+
+  dados.eventos.forEach(
+    (evento,indice) => {
+      const alteracoes =
+        evento.alteracoes;
+
+      const linhasMudancas =
+        alteracoes.length
+          ? alteracoes.map(
+              item => [
+                item.rotulo ||
+                "Campo",
+                item.antes ??
+                "—",
+                item.depois ??
+                "—"
+              ]
+            )
+          : [
+              [
+                "Resumo do evento",
+                "—",
+                evento.resumo ||
+                evento.descricao ||
+                "Evento registrado."
+              ]
+            ];
+
+      const alturaEstimada =
+        29 +
+        Math.min(
+          linhasMudancas.length,
+          6
+        ) *
+          6;
+
+      if (
+        y +
+          alturaEstimada >
+        altura -
+          16
+      ) {
+        y =
+          novaPagina();
+      }
+
+      const corAcao =
+        corPorAcao(
+          evento.acao
+        );
+
+      documento.setDrawColor(
+        ...borda
       );
+
+      documento.setFillColor(
+        255,
+        255,
+        255
+      );
+
+      documento.roundedRect(
+        margem,
+        y,
+        largura -
+          margem * 2,
+        21,
+        2,
+        2,
+        "FD"
+      );
+
+      documento.setFillColor(
+        ...corAcao
+      );
+
+      documento.roundedRect(
+        margem,
+        y,
+        3.5,
+        21,
+        1.5,
+        1.5,
+        "F"
+      );
+
+      documento.setTextColor(
+        ...azul
+      );
+
+      documento.setFont(
+        "helvetica",
+        "bold"
+      );
+
+      documento.setFontSize(
+        9
+      );
+
+      const titulo =
+        `${indice + 1}. ${evento.acao || "EVENTO"} — ${evento.colaborador || "Registro sem identificação"}`;
+
+      documento.text(
+        documento.splitTextToSize(
+          titulo,
+          180
+        ),
+        margem + 7,
+        y + 6
+      );
+
+      documento.setFont(
+        "helvetica",
+        "normal"
+      );
+
+      documento.setTextColor(
+        ...cinza
+      );
+
+      documento.setFontSize(
+        7
+      );
+
+      const linhaContexto =
+        [
+          evento.modulo,
+          evento.competencia,
+          evento.semana,
+          evento.dn
+            ? `DN ${evento.dn}`
+            : "",
+          evento.filial,
+          evento.cargo
+        ]
+          .filter(
+            Boolean
+          )
+          .join(
+            " · "
+          );
+
+      documento.text(
+        documento.splitTextToSize(
+          linhaContexto ||
+          "Sem contexto adicional",
+          180
+        ),
+        margem + 7,
+        y + 11.5
+      );
+
+      documento.setFont(
+        "helvetica",
+        "bold"
+      );
+
+      documento.setTextColor(
+        ...corAcao
+      );
+
+      documento.text(
+        evento.data ||
+        "Sem horário",
+        largura - margem - 5,
+        y + 6,
+        {
+          align:"right"
+        }
+      );
+
+      documento.setFont(
+        "helvetica",
+        "normal"
+      );
+
+      documento.setTextColor(
+        ...cinza
+      );
+
+      documento.text(
+        `Autor: ${evento.autor || "Usuário do sistema"}`,
+        largura - margem - 5,
+        y + 11.5,
+        {
+          align:"right"
+        }
+      );
+
+      documento.text(
+        documento.splitTextToSize(
+          evento.descricao ||
+          evento.resumo ||
+          "",
+          largura -
+            margem * 2 -
+            14
+        ),
+        margem + 7,
+        y + 17
+      );
+
+      y += 24;
+
+      documento.autoTable({
+        startY:y,
+        margin:{
+          left:margem + 4,
+          right:margem + 4
+        },
+        head:[
+          [
+            "O que foi feito",
+            "Antes",
+            "Depois / Inserido"
+          ]
+        ],
+        body:
+          linhasMudancas,
+        theme:"grid",
+        styles:{
+          fontSize:7,
+          cellPadding:2,
+          overflow:"linebreak",
+          valign:"top",
+          lineColor:borda,
+          lineWidth:.15
+        },
+        headStyles:{
+          fillColor:corAcao,
+          textColor:[
+            255,
+            255,
+            255
+          ],
+          fontStyle:"bold"
+        },
+        columnStyles:{
+          0:{
+            cellWidth:53,
+            fontStyle:"bold"
+          },
+          1:{
+            cellWidth:94
+          },
+          2:{
+            cellWidth:94,
+            fillColor:[
+              235,
+              247,
+              241
+            ],
+            textColor:[
+              8,
+              112,
+              79
+            ]
+          }
+        },
+        didDrawPage:() => {
+          escreverCabecalho();
+        }
+      });
+
+      y =
+        (
+          documento.lastAutoTable
+            ?.finalY ||
+          y
+        ) +
+        3;
+
+      const tecnico = [
+        evento.dispositivo
+          ? `Dispositivo: ${evento.dispositivo}`
+          : "",
+        evento.ip
+          ? `IP: ${evento.ip}`
+          : "",
+        evento.sessao
+          ? `Sessão: ${evento.sessao}`
+          : "",
+        evento.documento
+          ? `Documento: ${evento.documento}`
+          : "",
+        evento.logId
+          ? `Log: ${evento.logId}`
+          : ""
+      ]
+        .filter(
+          Boolean
+        )
+        .join(
+          " · "
+        );
+
+      if (tecnico) {
+        if (
+          y >
+          altura - 18
+        ) {
+          y =
+            novaPagina();
+        }
+
+        documento.setFont(
+          "helvetica",
+          "normal"
+        );
+
+        documento.setFontSize(
+          6.2
+        );
+
+        documento.setTextColor(
+          ...cinza
+        );
+
+        const linhasTecnicas =
+          documento.splitTextToSize(
+            tecnico,
+            largura -
+              margem * 2 -
+              8
+          );
+
+        documento.text(
+          linhasTecnicas,
+          margem + 4,
+          y
+        );
+
+        y +=
+          linhasTecnicas.length *
+            3 +
+          5;
+      }
     }
-  });
+  );
+
+  const totalPaginas =
+    documento.internal.getNumberOfPages();
+
+  for (
+    let pagina = 1;
+    pagina <= totalPaginas;
+    pagina += 1
+  ) {
+    documento.setPage(
+      pagina
+    );
+
+    escreverRodape(
+      pagina
+    );
+  }
 
   documento.save(
-    nomeArquivoAuditoria("pdf")
+    nomeArquivoAuditoria(
+      "pdf"
+    )
   );
 }
 
