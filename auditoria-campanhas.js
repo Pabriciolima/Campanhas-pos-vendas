@@ -1,4 +1,17 @@
 /*
+ * AUDITORIA PREMIUM v08 — 19/08/2026
+ * Interface de leitura humana: ação clara, antes → depois, contexto e dados técnicos.
+ * Mantém senha, Firebase, histórico, filtros, Excel e PDF.
+ */
+/*
+ * AJUSTE 2026.08.19-06
+ * - Campo da senha da Auditoria sempre abre vazio.
+ * - Reduz autofill de navegadores/gerenciadores de senha.
+ * - Senha permanece 123321 internamente, sem aparecer pré-preenchida.
+ * - Nenhuma regra de auditoria, filtros, Firebase ou histórico foi alterada.
+ */
+
+/*
  * AUDITORIA AVANÇADA v05 — 19/08/2026
  *
  * Correções críticas:
@@ -63,7 +76,7 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
-const AUDITORIA_VERSAO = "2026.08.19-05";
+const AUDITORIA_VERSAO = "2026.08.19-08";
 const COLECAO_AUDITORIA = "auditoria_campanhas";
 
 const FONTES_AUDITORIA = [
@@ -787,6 +800,196 @@ function idLogUnico(
     );
 }
 
+
+function rotuloCampoAuditoria(campo) {
+  const chave = normalizar(campo);
+
+  const mapa = {
+    ID:"Identificador",
+    METASEMANAL:"Meta semanal",
+    REALIZADOSEMANAL:"Realizado semanal",
+    TICKETMEDIO:"Ticket médio",
+    MARGEMREALIZADA:"Margem realizada",
+    METANPS:"Meta de NPS",
+    NPSREALIZADO:"NPS realizado",
+    OSEMABERTO:"O.S. em aberto",
+    FATURAMENTO:"Faturamento",
+    HORASDISPONIVEIS:"Horas disponíveis",
+    HORASTRABALHADAS:"Horas trabalhadas",
+    HORASVENDIDAS:"Horas vendidas",
+    PRODUTIVIDADE:"Produtividade",
+    EFICIENCIA:"Eficiência",
+    TREINAMENTO:"Treinamento",
+    RETRABALHO:"Retrabalho",
+    FILIAL:"Filial",
+    DN:"DN",
+    CARGO:"Cargo",
+    NOME:"Nome",
+    COLABORADOR:"Colaborador",
+    COMPETENCIA:"Competência",
+    SEMANA:"Semana",
+    STATUS:"Status",
+    TOTAL:"Total",
+    BONUS:"Bônus",
+    BONUSTOTAL:"Bônus total",
+    BONUSTICKET:"Bônus ticket",
+    PENALIDADE:"Penalidade",
+    META:"Meta",
+    REALIZADO:"Realizado"
+  };
+
+  return mapa[chave] ||
+    texto(campo)
+      .replace(/([a-z])([A-Z])/g,"$1 $2")
+      .replace(/_/g," ")
+      .replace(/\b\w/g,letra=>letra.toUpperCase());
+}
+
+function campoEhMoeda(campo) {
+  const chave = normalizar(campo);
+
+  return [
+    "META","REALIZADO","METASEMANAL","REALIZADOSEMANAL",
+    "TICKETMEDIO","FATURAMENTO","BONUS","BONUSTOTAL",
+    "BONUSTICKET","PENALIDADE","TOTAL"
+  ].some(termo=>chave.includes(termo));
+}
+
+function campoEhPercentual(campo) {
+  const chave = normalizar(campo);
+
+  return [
+    "MARGEM","NPS","PRODUTIVIDADE","EFICIENCIA","OSEMABERTO"
+  ].some(termo=>chave.includes(termo));
+}
+
+function formatarValorAuditoria(campo,valor) {
+  if (valor===null || valor===undefined || valor==="") return "—";
+
+  if (typeof valor==="object") {
+    try {
+      return JSON.stringify(valor,null,2);
+    } catch (_) {
+      return String(valor);
+    }
+  }
+
+  const numeroValor =
+    typeof valor==="number"
+      ? valor
+      : Number(
+          String(valor)
+            .replace(/\./g,"")
+            .replace(",",".")
+            .replace(/[^\d.-]/g,"")
+        );
+
+  if (campoEhMoeda(campo) && Number.isFinite(numeroValor)) {
+    return new Intl.NumberFormat(
+      "pt-BR",
+      {style:"currency",currency:"BRL"}
+    ).format(numeroValor);
+  }
+
+  if (campoEhPercentual(campo) && Number.isFinite(numeroValor)) {
+    return numeroValor.toFixed(2).replace(".",",")+"%";
+  }
+
+  return String(valor);
+}
+
+function descreverAcaoAuditoria(log) {
+  const acao = normalizar(log.acao);
+  const entidade = texto(log.entidade) || "Registro";
+  const nome = texto(log.nomeRegistro) || "Sem identificação";
+
+  if (acao==="CRIACAO") {
+    return {
+      titulo:`${entidade} incluído`,
+      destaque:nome,
+      descricao:"Novo registro inserido no sistema.",
+      icone:"+",
+      classe:"criacao"
+    };
+  }
+
+  if (acao==="ALTERACAO") {
+    return {
+      titulo:`${entidade} alterado`,
+      destaque:nome,
+      descricao:"Um ou mais dados foram modificados.",
+      icone:"↻",
+      classe:"alteracao"
+    };
+  }
+
+  if (acao==="IMPORTACAO") {
+    return {
+      titulo:`${entidade} atualizado por importação`,
+      destaque:nome,
+      descricao:"Dados alterados por uma importação de arquivo.",
+      icone:"⇩",
+      classe:"importacao"
+    };
+  }
+
+  if (acao==="EXCLUSAO" || acao==="DESLIGAMENTO") {
+    return {
+      titulo:acao==="DESLIGAMENTO"
+        ? `${entidade} desligado`
+        : `${entidade} excluído`,
+      destaque:nome,
+      descricao:acao==="DESLIGAMENTO"
+        ? "Retirado da base ativa, com histórico preservado."
+        : "Registro removido do sistema.",
+      icone:"×",
+      classe:"exclusao"
+    };
+  }
+
+  if (acao==="SESSAO DE EDICAO") {
+    return {
+      titulo:"Sessão de edição iniciada",
+      destaque:texto(log.autorNome)||nome,
+      descricao:"Um usuário autorizado iniciou uma sessão de alteração.",
+      icone:"🔐",
+      classe:"sessao"
+    };
+  }
+
+  return {
+    titulo:texto(log.resumo)||`${entidade} atualizado`,
+    destaque:nome,
+    descricao:"Evento registrado pela auditoria.",
+    icone:"•",
+    classe:"neutro"
+  };
+}
+
+function resumoAlteracoesAuditoria(log) {
+  const alteracoes = Array.isArray(log.alteracoes) ? log.alteracoes : [];
+
+  if (!alteracoes.length && normalizar(log.acao)==="CRIACAO" && log.depois) {
+    return Object.entries(log.depois)
+      .filter(([campo,valor])=>
+        !["id","createdAt","updatedAt","criadoEm","atualizadoEm"].includes(campo) &&
+        valor!==null && valor!==undefined && valor!==""
+      )
+      .slice(0,10)
+      .map(([campo,valor])=>({
+        rotulo:rotuloCampoAuditoria(campo),
+        antes:"—",
+        depois:formatarValorAuditoria(campo,valor)
+      }));
+  }
+
+  return alteracoes.map(item=>({
+    rotulo:rotuloCampoAuditoria(item.campo),
+    antes:formatarValorAuditoria(item.campo,item.antes),
+    depois:formatarValorAuditoria(item.campo,item.depois)
+  }));
+}
+
 function formatarData(valor) {
   let data = null;
 
@@ -1242,6 +1445,236 @@ function garantirInterfaceAuditoria() {
         display:none;
       }
     }
+
+    .auditoria-item {
+      position:relative;
+      overflow:hidden;
+      padding:18px;
+      border:1px solid #dce6eb;
+      border-radius:16px;
+      background:linear-gradient(180deg,#fff,#fbfcfd);
+      box-shadow:0 10px 26px rgba(18,47,67,.055);
+      transition:.18s ease;
+    }
+
+    .auditoria-item:hover {
+      transform:translateY(-1px);
+      border-color:#c8d8e0;
+      box-shadow:0 16px 34px rgba(18,47,67,.09);
+    }
+
+    .auditoria-item::before {
+      content:"";
+      position:absolute;
+      inset:0 auto 0 0;
+      width:4px;
+      background:#9bb2c0;
+    }
+
+    .auditoria-item[data-tipo="criacao"]::before{background:#0b9a69}
+    .auditoria-item[data-tipo="alteracao"]::before{background:#3178c6}
+    .auditoria-item[data-tipo="importacao"]::before{background:#d39a13}
+    .auditoria-item[data-tipo="exclusao"]::before{background:#d94a4a}
+    .auditoria-item[data-tipo="sessao"]::before{background:#7055d9}
+
+    .auditoria-leitura-topo {
+      display:grid;
+      grid-template-columns:auto 1fr auto;
+      gap:12px;
+      align-items:start;
+    }
+
+    .auditoria-leitura-icone {
+      width:38px;
+      height:38px;
+      display:grid;
+      place-items:center;
+      border-radius:12px;
+      background:#eef4f7;
+      color:#27465b;
+      font-size:17px;
+      font-weight:900;
+    }
+
+    .auditoria-item[data-tipo="criacao"] .auditoria-leitura-icone {
+      background:#e6f7ef;color:#087852;
+    }
+    .auditoria-item[data-tipo="alteracao"] .auditoria-leitura-icone {
+      background:#eaf3ff;color:#2f6fb3;
+    }
+    .auditoria-item[data-tipo="importacao"] .auditoria-leitura-icone {
+      background:#fff4d7;color:#9a6b00;
+    }
+    .auditoria-item[data-tipo="exclusao"] .auditoria-leitura-icone {
+      background:#fff0f0;color:#bd3434;
+    }
+
+    .auditoria-leitura-titulo {
+      margin:0;
+      color:#102b3e;
+      font-size:14px;
+      font-weight:900;
+      line-height:1.3;
+    }
+
+    .auditoria-leitura-titulo span {
+      color:#087453;
+    }
+
+    .auditoria-leitura-descricao {
+      margin:4px 0 0;
+      color:#738591;
+      font-size:10px;
+      line-height:1.45;
+    }
+
+    .auditoria-chips {
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      margin-top:10px;
+    }
+
+    .auditoria-chip {
+      display:inline-flex;
+      align-items:center;
+      min-height:23px;
+      padding:0 8px;
+      border-radius:999px;
+      background:#eef3f6;
+      color:#526b7a;
+      font-size:8px;
+      font-weight:850;
+    }
+
+    .auditoria-chip strong {
+      margin-left:4px;
+      color:#19374b;
+    }
+
+    .auditoria-data-humana {
+      text-align:right;
+      white-space:nowrap;
+    }
+
+    .auditoria-data-humana strong {
+      display:block;
+      color:#304c60;
+      font-size:10px;
+    }
+
+    .auditoria-data-humana small {
+      display:block;
+      margin-top:2px;
+      color:#94a2ac;
+      font-size:7px;
+    }
+
+    .auditoria-contexto-humano {
+      display:flex;
+      flex-wrap:wrap;
+      gap:7px 14px;
+      margin-top:12px;
+      padding-top:10px;
+      border-top:1px dashed #dfe7eb;
+      color:#71828f;
+      font-size:9px;
+    }
+
+    .auditoria-contexto-humano strong {
+      color:#425f71;
+    }
+
+    .auditoria-mudancas {
+      margin-top:13px;
+      overflow:hidden;
+      border:1px solid #e1e9ed;
+      border-radius:12px;
+      background:#fbfcfd;
+    }
+
+    .auditoria-mudancas-cabecalho {
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      padding:9px 11px;
+      background:#f1f6f8;
+      border-bottom:1px solid #e1e9ed;
+      color:#375267;
+      font-size:9px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+    }
+
+    .auditoria-mudanca {
+      display:grid;
+      grid-template-columns:minmax(120px,.7fr) 1fr auto 1fr;
+      gap:9px;
+      align-items:center;
+      padding:9px 11px;
+      border-top:1px solid #edf1f3;
+    }
+
+    .auditoria-mudanca:first-of-type {border-top:0}
+
+    .auditoria-mudanca-campo {
+      color:#25455a;
+      font-size:10px;
+      font-weight:900;
+    }
+
+    .auditoria-mudanca-valor {
+      min-height:32px;
+      display:flex;
+      align-items:center;
+      box-sizing:border-box;
+      padding:6px 8px;
+      border-radius:8px;
+      background:#f1f4f6;
+      color:#59707f;
+      font-size:10px;
+      word-break:break-word;
+    }
+
+    .auditoria-mudanca-valor.novo {
+      background:#e9f7f1;
+      color:#08704f;
+      font-weight:850;
+    }
+
+    .auditoria-mudanca-seta {
+      color:#8ca0ad;
+      font-weight:900;
+    }
+
+    .auditoria-rodape-tecnico {
+      display:flex;
+      flex-wrap:wrap;
+      gap:7px 14px;
+      margin-top:11px;
+      color:#8a99a4;
+      font-size:8px;
+    }
+
+    @media(max-width:800px) {
+      .auditoria-leitura-topo {
+        grid-template-columns:auto 1fr;
+      }
+      .auditoria-data-humana {
+        grid-column:1/-1;
+        padding-left:50px;
+        text-align:left;
+      }
+      .auditoria-mudanca {
+        grid-template-columns:1fr;
+      }
+      .auditoria-mudanca-seta {
+        justify-self:center;
+        transform:rotate(90deg);
+      }
+    }
+
   `;
 
   document.head.appendChild(
@@ -1545,9 +1978,15 @@ function solicitarSenhaAuditoria() {
           <input
             type="password"
             inputmode="numeric"
-            autocomplete="off"
-            placeholder="Senha"
+            autocomplete="new-password"
+            autocapitalize="off"
+            autocorrect="off"
+            spellcheck="false"
+            name="auditoria_senha_${Date.now()}"
+            value=""
+            placeholder="Digite a senha"
             data-auditoria-senha
+            readonly
           >
 
           <div
@@ -1588,6 +2027,47 @@ function solicitarSenhaAuditoria() {
         backdrop.querySelector(
           "[data-auditoria-senha]"
         );
+
+      /*
+       * Proteção contra preenchimento automático.
+       * O campo sempre nasce vazio e readonly.
+       * Só é liberado depois de uma interação real do usuário.
+       */
+      if (input) {
+        input.value = "";
+
+        window.setTimeout(
+          () => {
+            input.value = "";
+          },
+          30
+        );
+
+        const liberarDigitacao =
+          () => {
+            input.removeAttribute(
+              "readonly"
+            );
+
+            input.value = "";
+          };
+
+        input.addEventListener(
+          "pointerdown",
+          liberarDigitacao,
+          {
+            once:true
+          }
+        );
+
+        input.addEventListener(
+          "focus",
+          liberarDigitacao,
+          {
+            once:true
+          }
+        );
+      }
 
       const erro =
         backdrop.querySelector(
@@ -1676,10 +2156,18 @@ function solicitarSenhaAuditoria() {
         }
       );
 
+      /*
+       * Não damos foco automático.
+       * Isso evita que o navegador tente restaurar uma senha salva
+       * antes de qualquer interação do usuário.
+       */
       window.setTimeout(
-        () =>
-          input?.focus(),
-        30
+        () => {
+          if (input) {
+            input.value = "";
+          }
+        },
+        80
       );
     }
   );
@@ -1938,7 +2426,9 @@ function renderizarAuditoria() {
       "#auditoriaCampanhasLista"
     );
 
-  if (!lista) return;
+  if (!lista) {
+    return;
+  }
 
   const logs =
     logsAuditoriaFiltrados();
@@ -1953,45 +2443,139 @@ function renderizarAuditoria() {
   }
 
   lista.innerHTML =
-    logs.map(log => {
-      const classeAcao =
-        normalizar(log.acao)
-          .toLowerCase()
-          .replace(/\s+/g, "-");
+    logs
+      .map(
+        log => {
+          const leitura =
+            descreverAcaoAuditoria(
+              log
+            );
 
-      const alteracoes =
-        Array.isArray(log.alteracoes)
-          ? log.alteracoes
-          : [];
+          const alteracoes =
+            resumoAlteracoesAuditoria(
+              log
+            );
 
-      return `
-        <article class="auditoria-item">
-          <div class="auditoria-item-topo">
-            <div>
-              <div class="auditoria-item-meta">
-                <span class="auditoria-chip">
-                  ${escapar(
-                    rotuloModulo(
-                      log.modulo
-                    )
-                  )}
-                </span>
+          const dataRegistro =
+            formatarData(
+              log.registradoEm ||
+              log.registradoEmEpoch ||
+              log.registradoEmCliente
+            );
 
-                <span
-                  class="auditoria-chip acao ${escapar(
-                    classeAcao
-                  )}"
+          return `
+            <article
+              class="auditoria-item"
+              data-tipo="${escapar(leitura.classe)}"
+            >
+              <div
+                class="auditoria-leitura-topo"
+              >
+                <div
+                  class="auditoria-leitura-icone"
+                  aria-hidden="true"
                 >
-                  ${escapar(log.acao)}
-                </span>
+                  ${leitura.icone}
+                </div>
+
+                <div>
+                  <h3
+                    class="auditoria-leitura-titulo"
+                  >
+                    ${escapar(leitura.titulo)}:
+                    <span>
+                      ${escapar(leitura.destaque)}
+                    </span>
+                  </h3>
+
+                  <p
+                    class="auditoria-leitura-descricao"
+                  >
+                    ${escapar(leitura.descricao)}
+                  </p>
+
+                  <div
+                    class="auditoria-chips"
+                  >
+                    <span
+                      class="auditoria-chip"
+                    >
+                      Ação
+                      <strong>
+                        ${escapar(log.acao || "—")}
+                      </strong>
+                    </span>
+
+                    <span
+                      class="auditoria-chip"
+                    >
+                      Autor
+                      <strong>
+                        ${escapar(log.autorNome || "Usuário do sistema")}
+                      </strong>
+                    </span>
+
+                    ${
+                      log.colecaoOrigem
+                        ? `
+                          <span
+                            class="auditoria-chip"
+                          >
+                            Origem
+                            <strong>
+                              ${escapar(log.colecaoOrigem)}
+                            </strong>
+                          </span>
+                        `
+                        : ""
+                    }
+                  </div>
+                </div>
+
+                <div
+                  class="auditoria-data-humana"
+                >
+                  <strong>
+                    ${escapar(dataRegistro)}
+                  </strong>
+
+                  <small>
+                    Firebase / servidor
+                  </small>
+                </div>
+              </div>
+
+              <div
+                class="auditoria-contexto-humano"
+              >
+                ${
+                  log.modulo
+                    ? `
+                      <span>
+                        <strong>Módulo:</strong>
+                        ${escapar(log.modulo)}
+                      </span>
+                    `
+                    : ""
+                }
 
                 ${
                   log.competencia
                     ? `
-                      <span class="auditoria-chip">
-                        ${escapar(
-                          log.competencia
-                        )}
+                      <span>
+                        <strong>Competência:</strong>
+                        ${escapar(log.competencia)}
+                      </span>
+                    `
+                    : ""
+                }
+
+                ${
+                  log.semana
+                    ? `
+                      <span>
+                        <strong>Semana:</strong>
+                        S${escapar(log.semana)}
                       </span>
                     `
                     : ""
@@ -2000,135 +2584,193 @@ function renderizarAuditoria() {
                 ${
                   log.filial
                     ? `
-                      <span class="auditoria-chip">
-                        ${escapar(
-                          log.filial
-                        )}
+                      <span>
+                        <strong>Filial:</strong>
+                        ${escapar(log.filial)}
+                      </span>
+                    `
+                    : ""
+                }
+
+                ${
+                  log.dn
+                    ? `
+                      <span>
+                        <strong>DN:</strong>
+                        ${escapar(log.dn)}
+                      </span>
+                    `
+                    : ""
+                }
+
+                ${
+                  log.cargo
+                    ? `
+                      <span>
+                        <strong>Cargo:</strong>
+                        ${escapar(log.cargo)}
                       </span>
                     `
                     : ""
                 }
               </div>
 
-              <h3>
-                ${escapar(
-                  log.resumo ||
-                  log.nomeRegistro ||
-                  "Registro"
-                )}
-              </h3>
+              ${
+                alteracoes.length
+                  ? `
+                    <div
+                      class="auditoria-mudancas"
+                    >
+                      <div
+                        class="auditoria-mudancas-cabecalho"
+                      >
+                        <span>
+                          O que mudou
+                        </span>
 
-              <p>
-                Autor:
-                <strong>
-                  ${escapar(
-                    log.autorNome ||
-                    "Usuário do sistema"
-                  )}
-                </strong>
-                · Dispositivo:
-                ${escapar(
-                  log.autorDispositivo ||
-                  "—"
-                )}
+                        <span>
+                          ${alteracoes.length}
+                          ${
+                            alteracoes.length === 1
+                              ? "campo"
+                              : "campos"
+                          }
+                        </span>
+                      </div>
+
+                      ${alteracoes
+                        .map(
+                          item => `
+                            <div
+                              class="auditoria-mudanca"
+                            >
+                              <div
+                                class="auditoria-mudanca-campo"
+                              >
+                                ${escapar(item.rotulo)}
+                              </div>
+
+                              <div
+                                class="auditoria-mudanca-valor"
+                              >
+                                ${escapar(item.antes)}
+                              </div>
+
+                              <div
+                                class="auditoria-mudanca-seta"
+                                aria-hidden="true"
+                              >
+                                →
+                              </div>
+
+                              <div
+                                class="auditoria-mudanca-valor novo"
+                              >
+                                ${escapar(item.depois)}
+                              </div>
+                            </div>
+                          `
+                        )
+                        .join("")}
+                    </div>
+                  `
+                  : `
+                    <div
+                      class="auditoria-mudancas"
+                    >
+                      <div
+                        class="auditoria-mudancas-cabecalho"
+                      >
+                        <span>
+                          Resumo do evento
+                        </span>
+                      </div>
+
+                      <div
+                        style="
+                          padding:11px;
+                          color:#71828f;
+                          font-size:10px;
+                          line-height:1.5;
+                        "
+                      >
+                        ${escapar(
+                          log.resumo ||
+                          "Evento registrado sem campos detalhados."
+                        )}
+                      </div>
+                    </div>
+                  `
+              }
+
+              <div
+                class="auditoria-rodape-tecnico"
+              >
+                <span>
+                  Dispositivo:
+                  <strong>
+                    ${escapar(log.autorDispositivo || "—")}
+                  </strong>
+                </span>
+
                 ${
                   log.autorIp
-                    ? ` · IP público: ${escapar(log.autorIp)}`
+                    ? `
+                      <span>
+                        IP:
+                        <strong>
+                          ${escapar(log.autorIp)}
+                        </strong>
+                      </span>
+                    `
                     : ""
                 }
+
                 ${
                   log.sessaoEdicaoId
-                    ? ` · Sessão: ${escapar(log.sessaoEdicaoId)}`
+                    ? `
+                      <span>
+                        Sessão:
+                        <strong>
+                          ${escapar(log.sessaoEdicaoId)}
+                        </strong>
+                      </span>
+                    `
                     : ""
                 }
-              </p>
 
-              <p
-                style="
-                  margin-top:4px;
-                  opacity:.72;
-                  font-size:9px;
-                "
-              >
-                Log:
-                ${escapar(
-                  log.auditoriaId ||
-                  log.id ||
-                  "—"
-                )}
-                · Documento:
-                ${escapar(
-                  log.documentoId ||
-                  "—"
-                )}
+                <span>
+                  Documento:
+                  <strong>
+                    ${escapar(log.documentoId || "—")}
+                  </strong>
+                </span>
+
+                <span>
+                  Log:
+                  <strong>
+                    ${escapar(log.auditoriaId || log.id || "—")}
+                  </strong>
+                </span>
+
                 ${
                   log.dataEventoOrigem
-                    ? ` · Horário informado no registro: ${escapar(formatarData(log.dataEventoOrigem))}`
+                    ? `
+                      <span>
+                        Horário original:
+                        <strong>
+                          ${escapar(formatarData(log.dataEventoOrigem))}
+                        </strong>
+                      </span>
+                    `
                     : ""
                 }
-              </p>
-            </div>
-
-            <span class="auditoria-data">
-              ${escapar(
-                formatarData(
-                  log.registradoEm ||
-                  log.registradoEmEpoch ||
-                  log.registradoEmCliente
-                )
-              )}
-
-              <small
-                style="
-                  display:block;
-                  margin-top:3px;
-                  opacity:.68;
-                  font-size:8px;
-                "
-              >
-                Firebase / servidor
-              </small>
-            </span>
-          </div>
-
-          ${
-            alteracoes.length
-              ? `
-                <div class="auditoria-diffs">
-                  ${alteracoes.map(item => `
-                    <div class="auditoria-diff">
-                      <strong>
-                        ${escapar(item.campo)}
-                      </strong>
-
-                      <span>
-                        ${escapar(
-                          valorBonito(
-                            item.antes
-                          )
-                        )}
-                      </span>
-
-                      <span class="seta">
-                        →
-                      </span>
-
-                      <span>
-                        ${escapar(
-                          valorBonito(
-                            item.depois
-                          )
-                        )}
-                      </span>
-                    </div>
-                  `).join("")}
-                </div>
-              `
-              : ""
-          }
-        </article>
-      `;
-    }).join("");
+              </div>
+            </article>
+          `;
+        }
+      )
+      .join("");
 }
 
 function nomeArquivoAuditoria(
