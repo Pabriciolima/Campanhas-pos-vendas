@@ -1,43 +1,3 @@
-
-/*
- * AJUSTE 2026.08.19-09 — RANKING JUSTO POR SUPERAÇÃO DA META
- *
- * Mantém todo o módulo anterior: Firebase somente leitura, filtros,
- * pódio geral/filial, bandeiras oficiais, motion, elegibilidade e exclusões.
- *
- * NOVA REGRA:
- * 1) Ranking principal = maior percentual de atingimento/superação da meta.
- * 2) Empate no percentual = maior Ticket Médio.
- * 3) Persistindo o empate = maior realizado e, por fim, ordem alfabética.
- * 4) O valor principal do card passa a ser a SUPERAÇÃO DA META.
- * 5) Meta e realizado ficam abaixo, em tamanho menor.
- *
- * PIX:
- * - percentual = soma do realizado mensal / soma da meta mensal.
- * - ticket de desempate = média dos tickets das semanas válidas.
- *
- * PRODUTIVOS:
- * - quando houver meta monetária individual no documento, usa meta x faturamento.
- * - quando não houver meta monetária, usa o atingimento técnico da campanha
- *   (Produtividade 70%, Eficiência 80% e HV/HD 70%), sem inventar meta em reais.
- * - ticket médio só é usado no desempate quando existir no registro.
- */
-/*
- * MOTION PREMIUM v06
- * Inspirado em padrões de motion design observados no Jitter:
- * reveal em camadas, stagger, overshoot suave, shimmer, floating,
- * microinterações e movimento ambiente.
- * Mantém intactos Firebase, ranking, regras e filtros.
- */
-
-/*
- * AJUSTE 2026.08.18-08
- * - Orçamentista removido do pódio.
- * - Mantida toda a lógica funcional do arquivo enviado pelo usuário.
- * - Upgrade visual premium aplicado somente no CSS do próprio módulo.
- * - Continua 100% somente leitura no Firebase.
- */
-
 /*
 ===============================================================================
 PÓDIO MENSAL — PRODUTIVOS + PIX DO PRESIDENTE
@@ -54,7 +14,7 @@ import {
   onSnapshot
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
-const PODIUM_VERSAO = "2026.08.19-10";
+const PODIUM_VERSAO = "2026.08.20-12";
 
 const estado = {
   funcionariosProdutivos: [],
@@ -64,7 +24,8 @@ const estado = {
   modoProdutivos: "geral",
   filialProdutivos: "",
   modoPix: "geral",
-  filialPix: ""
+  filialPix: "",
+  categoriaPix: "consultor-tecnico"
 };
 
 const moeda = new Intl.NumberFormat("pt-BR", {
@@ -583,7 +544,57 @@ function rankingProdutivos(competencia, filial = "") {
       3
     );
 }
-function rankingPix(competencia, filial = "") {
+
+function categoriaPixDoCargo(cargo) {
+  const c =
+    normalizar(
+      cargo
+    );
+
+  if (
+    c.includes(
+      "CONSULTOR TECNICO"
+    )
+  ) {
+    return "consultor-tecnico";
+  }
+
+  if (
+    c.includes(
+      "CONSULTOR PECAS BALCAO"
+    ) ||
+    c.includes(
+      "CONSULTOR DE PECAS BALCAO"
+    ) ||
+    c.includes(
+      "CONSULTOR DE PECAS"
+    )
+  ) {
+    return "consultor-balcao";
+  }
+
+  return "";
+}
+
+function rotuloCategoriaPix(categoria) {
+  if (
+    categoria ===
+    "consultor-tecnico"
+  ) {
+    return "Consultor Técnico";
+  }
+
+  if (
+    categoria ===
+    "consultor-balcao"
+  ) {
+    return "Consultor de Balcão";
+  }
+
+  return "Pix do Presidente";
+}
+
+function rankingPix(competencia, filial = "", categoria = "") {
   const filialChave =
     normalizar(
       filial
@@ -611,6 +622,34 @@ function rankingPix(competencia, filial = "") {
           cargoExcluido(
             pessoa.cargo
           )
+        ) {
+          return;
+        }
+
+        const categoriaPessoa =
+          categoriaPixDoCargo(
+            pessoa.cargo
+          );
+
+        /*
+         * No Pix, o diretor solicitou pódios independentes.
+         * Consultor Técnico não concorre com Consultor de Balcão.
+         */
+        if (
+          categoria &&
+          categoriaPessoa !==
+            categoria
+        ) {
+          return;
+        }
+
+        /*
+         * Quando uma categoria foi solicitada, somente os cargos
+         * reconhecidos daquela categoria entram no ranking.
+         */
+        if (
+          categoria &&
+          !categoriaPessoa
         ) {
           return;
         }
@@ -994,6 +1033,69 @@ function garantirEstilos() {
   const style = document.createElement("style");
   style.id = "podiumCampanhasCss";
   style.textContent = `
+
+    .podium-pix-switch{display:inline-flex;align-items:center;gap:7px;padding:5px;border:1px solid #d8e4e8;border-radius:14px;background:rgba(255,255,255,.84);box-shadow:0 8px 22px rgba(15,48,68,.07),inset 0 1px 0 rgba(255,255,255,.95);backdrop-filter:blur(12px)}
+    .podium-pix-switch button{appearance:none;border:0;min-height:36px;padding:0 15px;border-radius:10px;background:transparent;color:#587080;font:inherit;font-size:9px;font-weight:950;cursor:pointer;transition:transform .22s ease,box-shadow .22s ease,background .22s ease,color .22s ease}
+    .podium-pix-switch button:hover{transform:translateY(-1px);color:#12364a;background:#f1f6f7}
+    .podium-pix-switch button.is-active{color:#fff;background:linear-gradient(135deg,#0b7459,#07936b);box-shadow:0 7px 18px rgba(8,126,91,.20),inset 0 1px 0 rgba(255,255,255,.18)}
+    .podium-pix-switch button.is-active[data-podium-categoria-escolha="consultor-balcao"]{background:linear-gradient(135deg,#174f78,#2b78aa);box-shadow:0 7px 18px rgba(38,105,164,.20),inset 0 1px 0 rgba(255,255,255,.18)}
+    @media(max-width:720px){.podium-pix-switch{display:grid;grid-template-columns:1fr 1fr;width:100%}.podium-pix-switch button{padding:0 9px;white-space:normal;line-height:1.15}}
+
+    .podium-pix-categorias{
+      display:grid;
+      gap:28px;
+      margin-top:22px
+    }
+
+    .podium-pix-categorias > .podium-campanhas{
+      margin-top:0
+    }
+
+    .podium-categoria-selo{
+      display:inline-flex;
+      align-items:center;
+      gap:7px;
+      margin-top:9px;
+      padding:6px 10px;
+      border:1px solid #dce7eb;
+      border-radius:999px;
+      background:rgba(247,250,251,.90);
+      color:#456375;
+      font-size:8px;
+      font-weight:950;
+      letter-spacing:.08em;
+      text-transform:uppercase
+    }
+
+    .podium-categoria-selo::before{
+      content:"";
+      width:7px;
+      height:7px;
+      border-radius:50%;
+      background:#0a8b62;
+      box-shadow:0 0 0 4px rgba(10,139,98,.08)
+    }
+
+    #podiumMensalPixTecnico{
+      border-top:3px solid rgba(12,126,91,.70)
+    }
+
+    #podiumMensalPixBalcao{
+      border-top:3px solid rgba(38,105,164,.65)
+    }
+
+    #podiumMensalPixBalcao .podium-categoria-selo::before{
+      background:#356fa4;
+      box-shadow:0 0 0 4px rgba(53,111,164,.08)
+    }
+
+    @media(max-width:720px){
+      .podium-pix-categorias{
+        gap:20px;
+        margin-top:16px
+      }
+    }
+
     .podium-campanhas{
       --ink:#0f2a3d;
       --muted:#718392;
@@ -1759,49 +1861,310 @@ function garantirEstilos() {
   document.head.appendChild(style);
 }
 
-function htmlPainel(tipo) {
-  const competencia = competenciaAtual();
-  const modo = tipo === "pix" ? estado.modoPix : estado.modoProdutivos;
-  const filial = tipo === "pix" ? estado.filialPix : estado.filialProdutivos;
-  const filiais = filiaisDisponiveis(tipo, competencia);
+function htmlPainelPixCategoria(
+  categoria,
+  competencia,
+  modo,
+  filial,
+  filiais
+) {
+  const ranking =
+    rankingPix(
+      competencia,
+      modo === "filial"
+        ? filial
+        : "",
+      categoria
+    );
 
-  const ranking = tipo === "pix"
-    ? rankingPix(competencia, modo === "filial" ? filial : "")
-    : rankingProdutivos(competencia, modo === "filial" ? filial : "");
+  const tecnico =
+    categoria ===
+    "consultor-tecnico";
 
-  const id = tipo === "pix" ? "podiumMensalPix" : "podiumMensalProdutivos";
-  const titulo = tipo === "pix" ? "Pódio mensal do Pix" : "Pódio mensal dos Produtivos";
-  const modulo = tipo === "pix" ? "PIX DO PRESIDENTE" : "CAMPANHA DOS PRODUTIVOS";
+  const id =
+    tecnico
+      ? "podiumMensalPixTecnico"
+      : "podiumMensalPixBalcao";
+
+  const titulo =
+    tecnico
+      ? "Pódio · Consultor Técnico"
+      : "Pódio · Consultor de Balcão";
+
+  const descricao =
+    tecnico
+      ? "Ranking exclusivo dos Consultores Técnicos"
+      : "Ranking exclusivo dos Consultores de Balcão";
 
   return `
-    <section id="${id}" class="podium-campanhas" data-podium-tipo="${tipo}">
-      <header class="podium-head">
+    <section
+      id="${id}"
+      class="podium-campanhas"
+      data-podium-tipo="pix"
+      data-podium-categoria="${categoria}"
+    >
+      <header
+        class="podium-head"
+      >
         <div>
-          <div class="podium-eyebrow">RECONHECIMENTO · ${modulo}</div>
-          <h2>${titulo}</h2>
-          <p>Top 3 por percentual de superação da meta · desempate por Ticket Médio · ${escapar(competencia)}</p>
+          <div
+            class="podium-eyebrow"
+          >
+            RECONHECIMENTO · PIX DO PRESIDENTE
+          </div>
+
+          <h2>
+            ${titulo}
+          </h2>
+
+          <div
+            class="podium-categoria-selo"
+          >
+            ${descricao}
+          </div>
+
+          <p>
+            Top 3 por percentual de superação da meta
+            · desempate por Ticket Médio
+            · ${escapar(competencia)}
+          </p>
         </div>
-        <div class="podium-controles">
-          <select data-podium-modo="${tipo}">
-            <option value="geral" ${modo === "geral" ? "selected" : ""}>Pódio geral</option>
-            <option value="filial" ${modo === "filial" ? "selected" : ""}>Pódio por filial</option>
+
+        <div
+          class="podium-controles"
+        >
+          <div class="podium-pix-switch" role="group" aria-label="Escolher categoria do pódio">
+            <button type="button" data-podium-categoria-escolha="consultor-tecnico" class="${tecnico ? "is-active" : ""}" aria-pressed="${tecnico ? "true" : "false"}">Consultor Técnico</button>
+            <button type="button" data-podium-categoria-escolha="consultor-balcao" class="${!tecnico ? "is-active" : ""}" aria-pressed="${!tecnico ? "true" : "false"}">Consultor de Balcão</button>
+          </div>
+
+          <select
+            data-podium-modo="pix"
+          >
+            <option
+              value="geral"
+              ${modo === "geral" ? "selected" : ""}
+            >
+              Pódio geral
+            </option>
+
+            <option
+              value="filial"
+              ${modo === "filial" ? "selected" : ""}
+            >
+              Pódio por filial
+            </option>
           </select>
-          <select data-podium-filial="${tipo}" ${modo !== "filial" ? "disabled" : ""}>
-            <option value="">Selecione a filial</option>
-            ${filiais.map(unidade => `
-              <option value="${escapar(unidade)}" ${normalizar(unidade) === normalizar(filial) ? "selected" : ""}>
-                ${escapar(unidade)}
-              </option>`).join("")}
+
+          <select
+            data-podium-filial="pix"
+            ${modo !== "filial" ? "disabled" : ""}
+          >
+            <option value="">
+              Selecione a filial
+            </option>
+
+            ${filiais
+              .map(
+                unidade => `
+                  <option
+                    value="${escapar(unidade)}"
+                    ${
+                      normalizar(unidade) ===
+                      normalizar(filial)
+                        ? "selected"
+                        : ""
+                    }
+                  >
+                    ${escapar(unidade)}
+                  </option>
+                `
+              )
+              .join("")}
           </select>
         </div>
       </header>
-      <div class="podium-grid">
+
+      <div
+        class="podium-grid"
+      >
         ${card(ranking[0], 1)}
         ${card(ranking[1], 2)}
         ${card(ranking[2], 3)}
       </div>
-      <div class="podium-legenda">
-        Somente colaboradores com resultado individual participam. Gerentes, Supervisores, Coordenadores, Orçamentistas e cargos cujo cálculo depende da equipe ficam fora. O ranking é definido pelo maior percentual de atingimento da meta; em caso de empate, vence o maior Ticket Médio.
+
+      <div
+        class="podium-legenda"
+      >
+        Este pódio é exclusivo para
+        <strong>
+          ${rotuloCategoriaPix(categoria)}
+        </strong>.
+        O ranking é definido pelo maior percentual de atingimento
+        da meta individual. Em caso de empate percentual,
+        vence o maior Ticket Médio.
+      </div>
+    </section>
+  `;
+}
+
+function htmlPainel(tipo) {
+  const competencia =
+    competenciaAtual();
+
+  const modo =
+    tipo === "pix"
+      ? estado.modoPix
+      : estado.modoProdutivos;
+
+  const filial =
+    tipo === "pix"
+      ? estado.filialPix
+      : estado.filialProdutivos;
+
+  const filiais =
+    filiaisDisponiveis(
+      tipo,
+      competencia
+    );
+
+  /*
+   * PIX DO PRESIDENTE
+   * Dois pódios totalmente separados:
+   * 1) Consultor Técnico
+   * 2) Consultor de Balcão
+   *
+   * Ambos continuam respeitando:
+   * - competência;
+   * - pódio geral/filial;
+   * - percentual de atingimento;
+   * - desempate por Ticket Médio;
+   * - bandeiras;
+   * - impressão de homenagem.
+   */
+  if (
+    tipo === "pix"
+  ) {
+    const categoria = estado.categoriaPix || "consultor-tecnico";
+
+    return `
+      <div id="podiumMensalPix" class="podium-pix-categorias">
+        ${htmlPainelPixCategoria(
+          categoria,
+          competencia,
+          modo,
+          filial,
+          filiais
+        )}
+      </div>
+    `;
+  }
+
+  /*
+   * PRODUTIVOS
+   * Mantido exatamente no formato anterior.
+   */
+  const ranking =
+    rankingProdutivos(
+      competencia,
+      modo === "filial"
+        ? filial
+        : ""
+    );
+
+  return `
+    <section
+      id="podiumMensalProdutivos"
+      class="podium-campanhas"
+      data-podium-tipo="produtivos"
+    >
+      <header
+        class="podium-head"
+      >
+        <div>
+          <div
+            class="podium-eyebrow"
+          >
+            RECONHECIMENTO · CAMPANHA DOS PRODUTIVOS
+          </div>
+
+          <h2>
+            Pódio mensal dos Produtivos
+          </h2>
+
+          <p>
+            Top 3 por percentual de superação da meta
+            · desempate por Ticket Médio
+            · ${escapar(competencia)}
+          </p>
+        </div>
+
+        <div
+          class="podium-controles"
+        >
+          <select
+            data-podium-modo="produtivos"
+          >
+            <option
+              value="geral"
+              ${modo === "geral" ? "selected" : ""}
+            >
+              Pódio geral
+            </option>
+
+            <option
+              value="filial"
+              ${modo === "filial" ? "selected" : ""}
+            >
+              Pódio por filial
+            </option>
+          </select>
+
+          <select
+            data-podium-filial="produtivos"
+            ${modo !== "filial" ? "disabled" : ""}
+          >
+            <option value="">
+              Selecione a filial
+            </option>
+
+            ${filiais
+              .map(
+                unidade => `
+                  <option
+                    value="${escapar(unidade)}"
+                    ${
+                      normalizar(unidade) ===
+                      normalizar(filial)
+                        ? "selected"
+                        : ""
+                    }
+                  >
+                    ${escapar(unidade)}
+                  </option>
+                `
+              )
+              .join("")}
+          </select>
+        </div>
+      </header>
+
+      <div
+        class="podium-grid"
+      >
+        ${card(ranking[0], 1)}
+        ${card(ranking[1], 2)}
+        ${card(ranking[2], 3)}
+      </div>
+
+      <div
+        class="podium-legenda"
+      >
+        Somente colaboradores com resultado individual participam.
+        Gerentes, Supervisores, Coordenadores, Orçamentistas e cargos
+        cujo cálculo depende da equipe ficam fora.
+        O ranking é definido pelo maior percentual de atingimento da meta;
+        em caso de empate, vence o maior Ticket Médio.
       </div>
     </section>
   `;
@@ -1914,6 +2277,20 @@ function eventos() {
     const botao = evento.target.closest("button");
     if (!botao) return;
 
+    if (botao.matches("[data-podium-categoria-escolha]")) {
+      const categoria = botao.dataset.podiumCategoriaEscolha;
+
+      if (
+        categoria === "consultor-tecnico" ||
+        categoria === "consultor-balcao"
+      ) {
+        estado.categoriaPix = categoria;
+        renderizar();
+      }
+
+      return;
+    }
+
     if (["btnMesAnterior", "btnMesSeguinte"].includes(botao.id)) {
       setTimeout(renderizar, 120);
       setTimeout(renderizar, 350);
@@ -1962,6 +2339,30 @@ if (document.readyState === "loading") {
 window.podiumCampanhas = {
   atualizar: renderizar,
   rankingProdutivos: competencia => rankingProdutivos(competencia || competenciaAtual()),
-  rankingPix: competencia => rankingPix(competencia || competenciaAtual()),
+  rankingPix:
+    competencia =>
+      rankingPix(
+        competencia ||
+        competenciaAtual()
+      ),
+
+  rankingPixConsultorTecnico:
+    competencia =>
+      rankingPix(
+        competencia ||
+        competenciaAtual(),
+        "",
+        "consultor-tecnico"
+      ),
+
+  rankingPixConsultorBalcao:
+    competencia =>
+      rankingPix(
+        competencia ||
+        competenciaAtual(),
+        "",
+        "consultor-balcao"
+      ),
+
   versao: PODIUM_VERSAO
 };

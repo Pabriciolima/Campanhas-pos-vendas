@@ -1,1506 +1,1507 @@
-<!doctype html>
-<html lang="pt-BR">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sistema de Campanhas Pós-Vendas</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="./evidencias-produtivos.css?v=20260715-03" />
-  <link rel="stylesheet" href="crm-module.css" />
-  <link rel="stylesheet" href="garantia-module.css" />
-  <link rel="stylesheet" href="./evidencias-pix.css?v=20260715-03" />
-  <link rel="stylesheet" href="./alerts-premium.css?v=20260716-01" />
-  <link rel="stylesheet" href="./importacao-funcionarios.css?v=20260716-01" />
-  <link rel="stylesheet" href="./politicas-penalidades.css?v=20260717-01" />
-  <link rel="stylesheet" href="./bloqueio-lancamentos.css?v=20260717-01" />
-
-  <style id="importacao-relatorio-botoes-fixos-css">
-    .panel-header-actions {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-left: auto;
-    }
-
-    .pix-export-filial-filter {
-      min-width: 190px;
-    }
-
-    .pix-export-filial-filter select {
-      width: 100%;
-      min-width: 190px;
-    }
-
-    @media (max-width: 760px) {
-      .panel-header-actions {
-        width: 100%;
-        justify-content: stretch;
-      }
-
-      .panel-header-actions>button {
-        flex: 1 1 150px;
-      }
-
-      .pix-export-filial-filter {
-        min-width: 150px;
-        flex: 1 1 170px;
-      }
-
-      .pix-export-filial-filter select {
-        min-width: 0;
-      }
-    }
-  </style>
-
-  <style id="politicas-valores-css">
-    #politicas .policy-grid-values {
-      align-items: stretch;
-      gap: 20px;
-    }
-
-    #politicas .policy-card-values {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      min-width: 0;
-    }
-
-    #politicas .policy-card-heading {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    #politicas .policy-card-heading h2 {
-      margin: 3px 0 0;
-    }
-
-    #politicas .policy-max-value {
-      flex: 0 0 auto;
-      padding: 7px 10px;
-      border: 1px solid #b9dfd1;
-      border-radius: 999px;
-      color: #087354;
-      background: #e9f7f1;
-      font-size: 12px;
-      font-weight: 800;
-      white-space: nowrap;
-    }
-
-    #politicas .policy-formulas,
-    #politicas .policy-intro {
-      color: #506575;
-      line-height: 1.55;
-    }
-
-    #politicas .policy-formulas p {
-      margin: 0 0 7px;
-    }
-
-    #politicas .policy-values-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-    }
-
-    #politicas .policy-value-block {
-      overflow: hidden;
-      border: 1px solid #dce6ec;
-      border-radius: 14px;
-      background: #fbfcfd;
-    }
-
-    #politicas .policy-value-block-full {
-      width: 100%;
-    }
-
-    #politicas .policy-value-block h3 {
-      margin: 0;
-      padding: 11px 12px;
-      color: #12324a;
-      background: #edf3f6;
-      font-size: 13px;
-    }
-
-    #politicas .policy-tier {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 10px 12px;
-      border-top: 1px solid #e6edf1;
-      color: #536675;
-      font-size: 12px;
-    }
-
-    #politicas .policy-tier strong {
-      color: #0a2b44;
-      white-space: nowrap;
-    }
-
-    #politicas .policy-tier-highlight {
-      color: #087354;
-      background: #eff9f5;
-    }
-
-    #politicas .policy-tier-highlight strong {
-      color: #087354;
-    }
-
-    #politicas .policy-total-box {
-      display: grid;
-      gap: 4px;
-      padding: 14px;
-      border: 1px solid #b9dfd1;
-      border-radius: 14px;
-      background: #eff9f5;
-    }
-
-    #politicas .policy-total-box span {
-      color: #607380;
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: .04em;
-      text-transform: uppercase;
-    }
-
-    #politicas .policy-total-box strong {
-      color: #087354;
-      font-size: 16px;
-    }
-
-    #politicas .policy-total-box small {
-      color: #536675;
-      line-height: 1.4;
-    }
-
-    #politicas .policy-role-payment {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-    }
-
-    #politicas .policy-role-payment>div {
-      display: grid;
-      gap: 5px;
-      padding: 14px;
-      border: 1px solid #dce6ec;
-      border-radius: 14px;
-      background: #fbfcfd;
-    }
-
-    #politicas .policy-role-payment span {
-      color: #607380;
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    #politicas .policy-role-payment strong {
-      color: #0a2b44;
-    }
-
-    #politicas .policy-role-payment small {
-      color: #607380;
-      line-height: 1.4;
-    }
-
-    #politicas .policy-example {
-      padding: 12px 14px;
-      border-left: 4px solid #0a7d5b;
-      border-radius: 8px;
-      color: #536675;
-      background: #f4f9f7;
-      font-size: 12px;
-      line-height: 1.5;
-    }
-
-    #politicas .policy-alert {
-      margin-top: auto;
-      padding: 14px 16px;
-      border-radius: 14px;
-      font-size: 12px;
-      line-height: 1.5;
-    }
-
-    #politicas .policy-alert strong {
-      display: block;
-      margin-bottom: 7px;
-    }
-
-    #politicas .policy-alert ul {
-      margin: 0;
-      padding-left: 19px;
-    }
-
-    #politicas .policy-alert li+li {
-      margin-top: 5px;
-    }
-
-    #politicas .policy-alert-danger {
-      border: 1px solid #f2b9b4;
-      color: #a52820;
-      background: #fff1ef;
-    }
-
-    #politicas .policy-alert-warning {
-      border: 1px solid #f0cd82;
-      color: #795100;
-      background: #fff7e5;
-    }
-
-    @media (max-width: 1150px) {
-
-      #politicas .policy-values-grid,
-      #politicas .policy-role-payment {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (max-width: 760px) {
-      #politicas .policy-card-heading {
-        flex-direction: column;
-      }
-
-      #politicas .policy-max-value {
-        white-space: normal;
-      }
-    }
-  </style>
-
-</head>
-
-<body>
-  <aside class="sidebar">
-    <div class="brand">
-      <div class="brand-mark">CM</div>
-      <div><strong>Campanhas</strong><span>Pós-Vendas</span></div>
-    </div>
-
-    <nav class="campaign-modules-nav">
-      <!-- CAMPANHA DOS PRODUTIVOS -->
-      <div class="campaign-module-group open" data-module-group="produtivos">
-        <button type="button" class="module-toggle" data-module-toggle="produtivos" aria-expanded="true">
-          <span class="module-icon module-icon-prod"> MP </span>
-
-          <span class="module-toggle-text">
-            <strong> Campanha dos Produtivos </strong>
-
-            <small> Oficina e produtividade </small>
-          </span>
-
-          <span class="module-chevron"> ⌄ </span>
-        </button>
-
-        <div class="module-dropdown">
-          <button class="nav-btn active" data-view="dashboard">
-            Visão geral
-          </button>
-
-          <button class="nav-btn" data-view="funcionarios">
-            Base de funcionários
-          </button>
-
-          <button class="nav-btn" data-view="lancamentos">Lançamentos</button>
-
-          <button class="nav-btn" data-view="apuracao">Apuração</button>
-
-          <button class="nav-btn" data-view="politicas">Políticas</button>
-        </div>
-      </div>
-
-      <!-- PIX DO PRESIDENTE -->
-      <div class="campaign-module-group" data-module-group="pix">
-        <button type="button" class="module-toggle" data-module-toggle="pix" aria-expanded="false">
-          <span class="module-icon module-icon-pix"> PIX </span>
-
-          <span class="module-toggle-text">
-            <strong> Pix do Presidente </strong>
-
-            <small> Campanha semanal </small>
-          </span>
-
-          <span class="module-chevron"> ⌄ </span>
-        </button>
-
-        <div class="module-dropdown">
-          <button type="button" class="pix-menu-btn active" data-pix-view="dashboard">
-            Visão geral
-          </button>
-
-          <button type="button" class="pix-menu-btn" data-pix-view="funcionarios">
-            Base de participantes
-          </button>
-
-          <button type="button" class="pix-menu-btn" data-pix-view="lancamentos">
-            Lançamentos
-          </button>
-
-          <button type="button" class="pix-menu-btn" data-pix-view="apuracao">
-            Apuração
-          </button>
-
-          <button type="button" class="pix-menu-btn" data-pix-view="politicas">
-            Políticas
-          </button>
-        </div>
-      </div>
-
-      <!-- CAMPANHAS DO CRM -->
-      <div class="campaign-module-group" data-module-group="crm">
-        <button type="button" class="module-toggle" data-module-toggle="crm" aria-expanded="false">
-          <span class="module-icon module-icon-crm"> CRM </span>
-
-          <span class="module-toggle-text">
-            <strong> Campanhas do CRM </strong>
-
-            <small> Em estruturação </small>
-          </span>
-
-          <span class="module-chevron"> ⌄ </span>
-        </button>
-
-        <div class="module-dropdown">
-          <button type="button" class="crm-menu-btn" data-crm-view="dashboard">
-            Visão geral
-          </button>
-
-          <button type="button" class="crm-menu-btn" data-crm-view="funcionarios">
-            Base de participantes
-          </button>
-
-          <button type="button" class="crm-menu-btn" data-crm-view="lancamentos">
-            Lançamentos
-          </button>
-
-          <button type="button" class="crm-menu-btn" data-crm-view="apuracao">
-            Apuração
-          </button>
-
-          <button type="button" class="crm-menu-btn" data-crm-view="politicas">
-            Políticas
-          </button>
-        </div>
-      </div>
-
-      <!-- CAMPANHAS DE GARANTIA -->
-      <div class="campaign-module-group" data-module-group="garantia">
-        <button type="button" class="module-toggle" data-module-toggle="garantia" aria-expanded="false">
-          <span class="module-icon module-icon-garantia"> GAR </span>
-
-          <span class="module-toggle-text">
-            <strong> Campanhas de Garantia </strong>
-
-            <small> Em estruturação </small>
-          </span>
-
-          <span class="module-chevron"> ⌄ </span>
-        </button>
-
-        <div class="module-dropdown">
-          <button type="button" class="garantia-menu-btn" data-garantia-view="dashboard">
-            Visão geral
-          </button>
-
-          <button type="button" class="garantia-menu-btn" data-garantia-view="funcionarios">
-            Base de participantes
-          </button>
-
-          <button type="button" class="garantia-menu-btn" data-garantia-view="lancamentos">
-            Lançamentos
-          </button>
-
-          <button type="button" class="garantia-menu-btn" data-garantia-view="apuracao">
-            Apuração
-          </button>
-
-          <button type="button" class="garantia-menu-btn" data-garantia-view="politicas">
-            Políticas
-          </button>
-        </div>
-      </div>
-    </nav>
-
-    <div class="sidebar-footer">
-      <button type="button" id="btnAbrirSobreSistema" class="developer-card"
-        aria-label="Abrir informações sobre o sistema e o desenvolvedor" title="Sobre o sistema">
-        <span class="developer-card-glow" aria-hidden="true"></span>
-
-        <span class="developer-avatar" aria-hidden="true">
-          <span>PL</span>
-        </span>
-
-        <span class="developer-info">
-          <span class="developer-kicker">Desenvolvido por</span>
-
-          <strong class="developer-name">Pabricio Lima</strong>
-
-          <span class="developer-role">
-            Analista de Negócios &amp; Tecnologia
-          </span>
-
-          <span class="developer-meta">
-            <span class="developer-badge">Developer</span>
-            <span class="developer-version">Enterprise • v2.0</span>
-          </span>
-        </span>
-
-        <span class="developer-arrow" aria-hidden="true">›</span>
-      </button>
-
-      <div class="sidebar-system-status">
-        <span class="sidebar-status-dot" aria-hidden="true"></span>
-        <small>Dados sincronizados com o sistema</small>
-      </div>
-
-      <button id="btnLimparTudo" class="danger-link">
-        Limpar lançamentos locais
-      </button>
-    </div>
-  </aside>
-
-  <main class="main">
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">MVP</p>
-        <h1 id="pageTitle">Campanha dos Produtivos</h1>
-      </div>
-      <div class="topbar-actions" id="produtivosTopbarActions">
-        <label>Competência<input type="month" id="competenciaGlobal" /></label>
-        <div class="export-toolbar">
-          <label class="export-filter"><span>Exportar</span><select id="tipoExportacao">
-              <option value="habilitados">Somente habilitados</option>
-              <option value="todos">Todos os resultados</option>
-            </select></label>
-
-          <label id="pixFilialExportacaoLabel" class="export-filter pix-export-filial-filter" hidden>
-            <span>Filial</span>
-            <select id="pixFilialExportacao" aria-label="Filtrar exportação por filial">
-              <option value="">Todas as filiais</option>
-            </select>
-          </label>
-          <div class="export-buttons">
-            <button type="button" id="btnExportarExcel" class="export-btn export-excel">
-              <span><small>Exportar</small>Excel</span>
-            </button>
-            <button type="button" id="btnExportarPdf" class="export-btn export-pdf">
-              <span><small>Exportar</small>PDF</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <!-- CAMPANHA DOS PRODUTIVOS -->
-    <section id="dashboard" class="view active">
-      <div class="cards" id="dashboardCards"></div>
-
-      <article class="panel produtivos-dashboard-filter-panel" aria-label="Filtros da visão geral dos Produtivos">
-        <div class="produtivos-dashboard-filters">
-          <label>
-            <span>DN</span>
-
-            <select id="filtroDnDashboardProdutivos" aria-label="Filtrar visão geral dos Produtivos por DN">
-              <option value="">Todos</option>
-            </select>
-          </label>
-
-          <label>
-            <span>Filial</span>
-
-            <select id="filtroFilialDashboardProdutivos" aria-label="Filtrar visão geral dos Produtivos por filial">
-              <option value="">Todas</option>
-            </select>
-          </label>
-        </div>
-      </article>
-
-      <div class="grid-2">
-        <article class="panel">
-          <div class="panel-header">
-            <div>
-              <p class="eyebrow">Resumo</p>
-              <h2>Valores por cargo</h2>
-            </div>
-          </div>
-          <div id="resumoCargo"></div>
-        </article>
-        <article class="panel">
-          <div class="panel-header">
-            <div>
-              <p class="eyebrow">Filiais</p>
-              <h2>Investimento por unidade</h2>
-            </div>
-          </div>
-          <div id="resumoFilial"></div>
-        </article>
-      </div>
-      <article class="panel monthly-history-panel">
-        <div class="panel-header">
-          <div>
-            <p class="eyebrow">Histórico e avaliação</p>
-            <h2>Resultado individual do mês</h2>
-          </div>
-          <div id="historicoResumo" class="monthly-history-summary"></div>
-        </div>
-        <div class="table-wrap">
-          <table class="monthly-history-table">
-            <thead>
-              <tr>
-                <th>Colaborador</th>
-                <th>Filial</th>
-                <th>Cargo</th>
-                <th>Faturamento</th>
-                <th>Produtividade</th>
-                <th>Eficiência</th>
-                <th>Bônus</th>
-                <th>Status</th>
-                <th>Avaliação</th>
-              </tr>
-            </thead>
-            <tbody id="tabelaHistoricoMensal"></tbody>
-          </table>
-        </div>
-      </article>
-    </section>
-
-    <section id="funcionarios" class="view">
-      <article class="panel">
-        <div class="panel-header">
-          <div>
-            <p class="eyebrow">Cadastro</p>
-            <h2>Base de funcionários</h2>
-          </div>
-          <button id="btnNovoFuncionario" class="primary">
-            + Novo funcionário
-          </button>
-        </div>
-        <div class="filters">
-          <input id="buscaFuncionario" type="search" placeholder="Buscar por nome, filial ou cargo" /><select
-            id="filtroFilialFuncionario">
-            <option value="">Todas as filiais</option>
-          </select><select id="filtroCargoFuncionario">
-            <option value="">Todos os cargos</option>
-          </select>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>DN</th>
-                <th>Filial</th>
-                <th>Nome</th>
-                <th>Cargo</th>
-                <th>Status</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody id="tabelaFuncionarios"></tbody>
-          </table>
-        </div>
-      </article>
-    </section>
-
-    <section id="lancamentos" class="view">
-      <article class="panel">
-        <div class="panel-header">
-          <div>
-            <p class="eyebrow">Mensuração</p>
-            <h2>Lançamentos da campanha</h2>
-          </div>
-          <div class="panel-header-actions" id="produtivosLancamentosAcoes">
-            <button type="button" id="btnBaixarModeloRelatorioProdutivos" class="secondary"
-              onclick="window.baixarModeloProdutivosSeguro(event)">
-              Baixar modelo
-            </button>
-
-            <button type="button" id="btnImportarRelatorioProdutivos" class="secondary"
-              onclick="window.abrirImportacaoProdutivosSeguro(event)"
-              style="background:#0b3154;color:#fff;border-color:#0b3154">
-              Importar relatório
-            </button>
-
-            <button id="btnNovoLancamento" class="primary">
-              + Novo lançamento
-            </button>
-          </div>
-        </div>
-        <div class="filters">
-          <select id="filtroCompetenciaLancamento">
-            <option value="">Todas as competências</option>
-          </select><select id="filtroFilialLancamento">
-            <option value="">Todas as filiais</option>
-          </select><select id="filtroCargoLancamento">
-            <option value="">Todos os cargos</option>
-          </select>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Competência</th>
-                <th>Filial</th>
-                <th>Colaborador</th>
-                <th>Cargo</th>
-                <th>Indicadores</th>
-                <th>Bônus final</th>
-                <th>Status</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody id="tabelaLancamentos"></tbody>
-          </table>
-        </div>
-      </article>
-    </section>
-
-    <section id="apuracao" class="view">
-      <div class="cards" id="apuracaoCards"></div>
-      <article class="panel">
-        <div class="panel-header">
-          <div>
-            <p class="eyebrow">Resultado consolidado</p>
-            <h2>Apuração dos Produtivos</h2>
-          </div>
-          <button id="btnExportarCsv" class="secondary">Exportar CSV</button>
-        </div>
-        <div class="filters">
-          <select id="filtroCompetenciaApuracao">
-            <option value="">Todas as competências</option>
-          </select><select id="filtroFilialApuracao">
-            <option value="">Todas as filiais</option>
-          </select><select id="filtroStatusApuracao">
-            <option value="">Todos os status</option>
-            <option value="HABILITADO">Habilitado</option>
-            <option value="NÃO HABILITADO">Não habilitado</option>
-          </select>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Competência</th>
-                <th>DN</th>
-                <th>Filial</th>
-                <th>Colaborador</th>
-                <th>Cargo</th>
-                <th>Prod.</th>
-                <th>Eficiência</th>
-                <th>Bônus bruto</th>
-                <th>Penalidade</th>
-                <th>Total</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="tabelaApuracao"></tbody>
-          </table>
-        </div>
-      </article>
-    </section>
-
-    <section id="politicas" class="view">
-      <div class="policy-grid policy-grid-values">
-        <article class="panel policy-card policy-card-values">
-          <div class="policy-card-heading">
-            <div>
-              <p class="eyebrow">Apuração individual</p>
-              <h2>Mecânico produtivo</h2>
-            </div>
-            <span class="policy-max-value">Até R$ 2.000,00</span>
-          </div>
-
-          <div class="policy-formulas">
-            <p><strong>Produtividade</strong> = horas trabalhadas ÷ horas disponíveis.</p>
-            <p><strong>Eficiência</strong> = horas vendidas ÷ horas trabalhadas.</p>
-          </div>
-
-          <div class="policy-values-grid">
-            <div class="policy-value-block">
-              <h3>Bônus por produtividade</h3>
-              <div class="policy-tier"><span>70% a 79,99%</span><strong>R$ 600,00</strong></div>
-              <div class="policy-tier"><span>80% a 89,99%</span><strong>R$ 690,00</strong></div>
-              <div class="policy-tier"><span>90% a 99,99%</span><strong>R$ 790,00</strong></div>
-              <div class="policy-tier policy-tier-highlight"><span>100% ou mais</span><strong>R$ 1.000,00</strong></div>
-            </div>
-
-            <div class="policy-value-block">
-              <h3>Bônus por eficiência</h3>
-              <div class="policy-tier"><span>80% a 89,99%</span><strong>R$ 690,00</strong></div>
-              <div class="policy-tier"><span>90% a 99,99%</span><strong>R$ 790,00</strong></div>
-              <div class="policy-tier policy-tier-highlight"><span>100% ou mais</span><strong>R$ 1.000,00</strong></div>
-            </div>
-          </div>
-
-          <div class="policy-total-box">
-            <span>Pagamento da campanha</span>
-            <strong>Produtividade + eficiência</strong>
-            <small>O colaborador precisa atingir simultaneamente os mínimos de 70% e 80%.</small>
-          </div>
-
-          <div class="policy-alert policy-alert-danger">
-            <strong>Penalidades e bloqueios</strong>
-            <ul>
-              <li>Treinamento pendente: desconto de 50% sobre o bônus apurado.</li>
-              <li>Retrabalho, imperícia, prejuízo ou O.S. interna: inabilitação total na competência.</li>
-              <li>As horas vendidas precisam representar pelo menos 70% das horas disponíveis.</li>
-            </ul>
-          </div>
-        </article>
-
-        <article class="panel policy-card policy-card-values">
-          <div class="policy-card-heading">
-            <div>
-              <p class="eyebrow">Apuração da equipe</p>
-              <h2>Chefe e líder</h2>
-            </div>
-            <span class="policy-max-value">Valor variável</span>
-          </div>
-
-          <p class="policy-intro">
-            Apuração automática conforme o faturamento individual de todos os Mecânicos Produtivos da filial,
-            independentemente da habilitação individual.
-          </p>
-
-          <div class="policy-value-block policy-value-block-full">
-            <h3>Valor gerado por mecânico</h3>
-            <div class="policy-tier"><span>De R$ 50.000,00 a R$ 59.999,99</span><strong>R$ 300,00</strong></div>
-            <div class="policy-tier policy-tier-highlight"><span>R$ 60.000,00 ou mais</span><strong>R$ 500,00</strong>
-            </div>
-          </div>
-
-          <div class="policy-role-payment">
-            <div>
-              <span>Chefe de Oficina</span>
-              <strong>100% do valor apurado</strong>
-              <small>Soma dos valores gerados pelas faixas de faturamento de todos os mecânicos da filial.</small>
-            </div>
-            <div>
-              <span>Mecânico Líder</span>
-              <strong>50% do valor do Chefe</strong>
-              <small>Recebe metade do total calculado para o Chefe de Oficina.</small>
-            </div>
-          </div>
-
-          <div class="policy-example">
-            <strong>Exemplo:</strong>
-            dois mecânicos acima de R$ 60 mil geram R$ 1.000,00 para o Chefe e R$ 500,00 para o Líder.
-          </div>
-
-          <div class="policy-alert policy-alert-warning">
-            <strong>Penalidades e bloqueios</strong>
-            <ul>
-              <li>Treinamento individual pendente do Chefe ou Líder: inabilitação.</li>
-              <li>Equipe com menos de 95% dos treinamentos em dia: desconto de 50%.</li>
-              <li>Entram no cálculo todos os Mecânicos Produtivos da mesma filial e competência que atingirem as faixas
-                de faturamento, mesmo quando não estiverem habilitados individualmente.</li>
-            </ul>
-          </div>
-        </article>
-
-        <article class="panel policy-card policy-card-values">
-          <div class="policy-card-heading">
-            <div>
-              <p class="eyebrow">Indicadores consolidados</p>
-              <h2>Controlador</h2>
-            </div>
-            <span class="policy-max-value">Até R$ 1.000,00</span>
-          </div>
-
-          <p class="policy-intro">
-            Bonificação calculada pela produtividade e eficiência consolidadas dos Mecânicos Produtivos da filial.
-          </p>
-
-          <div class="policy-values-grid">
-            <div class="policy-value-block">
-              <h3>Bônus por produtividade</h3>
-              <div class="policy-tier"><span>70% a 79,99%</span><strong>R$ 100,00</strong></div>
-              <div class="policy-tier"><span>80% a 89,99%</span><strong>R$ 300,00</strong></div>
-              <div class="policy-tier policy-tier-highlight"><span>90% ou mais</span><strong>R$ 500,00</strong></div>
-            </div>
-
-            <div class="policy-value-block">
-              <h3>Bônus por eficiência</h3>
-              <div class="policy-tier"><span>80% a 89,99%</span><strong>R$ 100,00</strong></div>
-              <div class="policy-tier"><span>90% a 99,99%</span><strong>R$ 300,00</strong></div>
-              <div class="policy-tier policy-tier-highlight"><span>100% ou mais</span><strong>R$ 500,00</strong></div>
-            </div>
-          </div>
-
-          <div class="policy-total-box">
-            <span>Pagamento da campanha</span>
-            <strong>Soma dos KPIs atingidos</strong>
-            <small>Exemplo: produtividade de 90% paga R$ 500,00; eficiência de 100% paga R$ 500,00. Se atingir os dois,
-              recebe R$ 1.000,00.</small>
-          </div>
-
-          <div class="policy-alert policy-alert-warning">
-            <strong>Condições da apuração</strong>
-            <ul>
-              <li>Produtividade mínima: 70%.</li>
-              <li>Eficiência mínima: 80%.</li>
-              <li>Cada KPI é independente: atingir produtividade gera o bônus de produtividade; atingir eficiência gera
-                o bônus de eficiência.</li>
-              <li>São considerados apenas os lançamentos da mesma filial e competência.</li>
-            </ul>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <!-- PIX DO PRESIDENTE -->
-    <section id="pixPresidente" class="view">
-      <div class="pix-module-hero">
-        <div>
-          <p class="eyebrow">Campanha independente</p>
-          <h2>Pix do Presidente</h2>
-          <p>Apuração semanal separada da Campanha dos Produtivos.</p>
-        </div>
-      </div>
-
-      <div id="pix-dashboard" class="pix-subview active">
-        <div class="pix-page-header">
-          <div>
-            <p class="eyebrow">Resumo mensal</p>
-            <h2>Visão geral da apuração</h2>
-          </div>
-          <label class="pix-competencia-box">Competência<input type="month" id="pixDashboardCompetencia"
-              min="2026-06" /></label>
-        </div>
-        <div id="pixDashboardCards" class="pix-dashboard-cards"></div>
-        <div class="grid-2">
-          <article class="panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Resumo</p>
-                <h2>Valores por cargo</h2>
-              </div>
-            </div>
-            <div id="pixResumoCargo"></div>
-          </article>
-          <article class="panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Filiais</p>
-                <h2>Investimento por unidade</h2>
-              </div>
-            </div>
-            <div id="pixResumoFilial"></div>
-          </article>
-        </div>
-      </div>
-
-      <div id="pix-funcionarios" class="pix-subview">
-        <article class="panel">
-          <div class="panel-header">
-            <div>
-              <p class="eyebrow">Cadastro exclusivo</p>
-              <h2>Base de participantes</h2>
-              <p class="pix-section-description">
-                Somente cargos do Pix do Presidente.
-              </p>
-            </div>
-            <button type="button" id="btnNovoFuncionarioPix" class="primary">
-              + Novo participante
-            </button>
-          </div>
-          <div class="filters">
-            <input id="pixBuscaFuncionario" type="search" placeholder="Buscar participante" /><select
-              id="pixFiltroFilialFuncionario">
-              <option value="">Todas as filiais</option>
-            </select><select id="pixFiltroCargoFuncionario">
-              <option value="">Todos os cargos</option>
-            </select>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>DN</th>
-                  <th>Filial</th>
-                  <th>Nome</th>
-                  <th>Cargo</th>
-                  <th>Status</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody id="pixTabelaFuncionarios"></tbody>
-            </table>
-          </div>
-        </article>
-      </div>
-
-      <div id="pix-lancamentos" class="pix-subview">
-        <article class="panel">
-          <div class="panel-header">
-            <div>
-              <p class="eyebrow">Semanas 1 a 4</p>
-              <h2>Lançamentos semanais</h2>
-            </div>
-            <div class="panel-header-actions" id="pixLancamentosAcoes">
-              <button type="button" id="btnBaixarModeloRelatorioPix" class="secondary"
-                onclick="window.baixarModeloPixSeguro(event)">
-                Baixar modelo
-              </button>
-
-              <button type="button" id="btnImportarRelatorioPix" class="secondary"
-                onclick="window.abrirImportacaoPixSeguro(event)"
-                style="background:#0b3154;color:#fff;border-color:#0b3154">
-                Importar relatório
-              </button>
-
-              <button type="button" id="btnNovoLancamentoPix" class="primary pix-primary-button">
-                + Novo lançamento
-              </button>
-            </div>
-          </div>
-          <div class="pix-filters pix-filters-4">
-            <select id="pixFiltroCompetenciaLancamento">
-              <option value="">Todas as competências</option>
-            </select><select id="pixFiltroFilialLancamento">
-              <option value="">Todas as filiais</option>
-            </select><select id="pixFiltroCargoLancamento">
-              <option value="">Todos os cargos</option>
-            </select><select id="pixFiltroSemanaLancamento">
-              <option value="">Todas as semanas</option>
-              <option value="1">Semana 1</option>
-              <option value="2">Semana 2</option>
-              <option value="3">Semana 3</option>
-              <option value="4">Semana 4</option>
-            </select>
-          </div>
-          <div class="table-wrap">
-            <table class="pix-table">
-              <thead>
-                <tr>
-                  <th>Competência</th>
-                  <th>Semana</th>
-                  <th>Filial</th>
-                  <th>Colaborador</th>
-                  <th>Cargo</th>
-                  <th>Indicadores</th>
-                  <th>Bonif. faturamento</th>
-                  <th>Bônus ticket</th>
-                  <th>NPS</th>
-                  <th>Penalidade</th>
-                  <th>Total</th>
-                  <th>Status</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody id="pixTabelaLancamentos"></tbody>
-            </table>
-          </div>
-        </article>
-      </div>
-
-      <div id="pix-apuracao" class="pix-subview">
-        <div id="pixApuracaoCards" class="pix-dashboard-cards"></div>
-        <article class="panel">
-          <div class="panel-header">
-            <div>
-              <p class="eyebrow">Resultado consolidado</p>
-              <h2>Apuração do Pix do Presidente</h2>
-            </div>
-          </div>
-          <div class="pix-filters">
-            <select id="pixFiltroCompetenciaApuracao">
-              <option value="">Todas as competências</option>
-            </select><select id="pixFiltroFilialApuracao">
-              <option value="">Todas as filiais</option>
-            </select><select id="pixFiltroCargoApuracao">
-              <option value="">Todos os cargos</option>
-            </select><select id="pixFiltroSemanaApuracao">
-              <option value="">Todas as semanas</option>
-              <option value="1">Semana 1</option>
-              <option value="2">Semana 2</option>
-              <option value="3">Semana 3</option>
-              <option value="4">Semana 4</option>
-            </select><select id="pixFiltroStatusApuracao">
-              <option value="">Todos os status</option>
-              <option value="HABILITADO">Habilitado</option>
-              <option value="NÃO HABILITADO">Não habilitado</option>
-            </select>
-          </div>
-          <div class="table-wrap">
-            <table class="pix-table pix-table-apuracao">
-              <thead>
-                <tr>
-                  <th>Competência</th>
-                  <th>Semana</th>
-                  <th>Filial</th>
-                  <th>Colaborador</th>
-                  <th>Cargo</th>
-                  <th>Indicadores</th>
-                  <th>Bonif. faturamento</th>
-                  <th>Bônus ticket</th>
-                  <th>NPS</th>
-                  <th>Penalidade</th>
-                  <th>Total</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="pixTabelaApuracao"></tbody>
-            </table>
-          </div>
-        </article>
-      </div>
-
-      <div id="pix-politicas" class="pix-subview">
-        <article class="panel">
-          <div class="panel-header">
-            <div>
-              <p class="eyebrow">Regras exclusivas</p>
-              <h2>Políticas do Pix do Presidente</h2>
-            </div>
-          </div>
-          <div id="pixPolicyGrid" class="pix-policy-grid"></div>
-          <div class="pix-penalty-policy">
-            <strong>Regra especial da Semana 4</strong>
-            <p>
-              O NPS é pago mesmo sem atingir a meta semanal. O.S. em aberto
-              acima de 28% aplica penalidade de 50% sobre o total da Semana 4.
-            </p>
-          </div>
-        </article>
-      </div>
-    </section>
-  </main>
-
-  <!-- MODAIS PRODUTIVOS -->
-  <dialog id="modalFuncionario">
-    <form id="formFuncionario" class="modal-form">
-      <div class="modal-header">
-        <h2>Funcionário</h2>
-        <button type="button" class="icon-btn fechar-modal">×</button>
-      </div>
-      <input type="hidden" id="funcionarioId" />
-      <div class="form-grid">
-        <label>Filial<select id="funcionarioFilial" required></select></label><label>DN<input id="funcionarioDn"
-            readonly /></label><label class="full">Nome<input id="funcionarioNome"
-            required /></label><label>Cargo<select id="funcionarioCargo" required></select></label><label>Status<select
-            id="funcionarioAtivo">
-            <option value="true">Ativo</option>
-            <option value="false">Inativo</option>
-          </select></label>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="secondary fechar-modal">Cancelar</button><button type="submit"
-          class="primary">Salvar participante</button>
-      </div>
-    </form>
-  </dialog>
-
-  <dialog id="modalLancamento">
-    <form id="formLancamento" class="modal-form wide">
-      <div class="modal-header">
-        <h2>Lançamento</h2>
-        <button type="button" class="icon-btn fechar-modal">×</button>
-      </div>
-      <input type="hidden" id="lancamentoId" />
-      <div class="form-grid">
-        <label>Competência<input type="month" id="lancamentoCompetencia" required /></label><label>Filial<select
-            id="lancamentoFilial" required></select></label><label class="full">Colaborador<select
-            id="lancamentoFuncionario" required></select></label>
-      </div>
-      <div id="camposDinamicos" class="dynamic-fields"></div>
-
-      <section id="evidenciaProdutivos" class="evidence-section">
-        <div class="evidence-section-header">
-          <div>
-            <p class="eyebrow">Evidências da filial</p>
-            <h3>Anexar imagens para o relatório</h3>
-            <p>
-              As imagens valem para toda a filial da competência selecionada.
-            </p>
-          </div>
-          <span id="evidenciaContador" class="evidence-counter">0/20</span>
-        </div>
-
-        <div id="evidenciaLegendaFilial" class="evidence-branch-label">
-          Selecione a competência e a filial
-        </div>
-
-        <div id="evidenciaDropzone" class="evidence-dropzone">
-          <input type="file" id="evidenciaInput" class="evidence-input" accept="image/jpeg,image/png,image/webp"
-            multiple />
-
-          <div class="evidence-dropzone-content">
-            <div class="evidence-upload-icon">↑</div>
-            <strong>Arraste as imagens para cá</strong>
-            <small>JPG, PNG ou WEBP</small>
-
-            <button type="button" id="btnSelecionarEvidencia" class="evidence-select-button"
-              aria-controls="evidenciaInput">
-              Selecionar imagens
-            </button>
-          </div>
-        </div>
-
-        <p id="evidenciaMensagem" class="evidence-message"></p>
-
-        <div id="evidenciaGaleria" class="evidence-gallery"></div>
-      </section>
-
-      <div id="resultadoPreview" class="resultado-preview"></div>
-      <div class="modal-actions">
-        <button type="button" class="secondary fechar-modal">Cancelar</button><button type="submit"
-          class="primary">Salvar lançamento</button>
-      </div>
-    </form>
-  </dialog>
-
-  <!-- MODAIS PIX -->
-  <dialog id="modalFuncionarioPix">
-    <form id="formFuncionarioPix" class="modal-form">
-      <div class="modal-header">
-        <div>
-          <p class="eyebrow">Pix do Presidente</p>
-          <h2>Participante</h2>
-        </div>
-        <button type="button" id="fecharModalFuncionarioPix" class="icon-btn">
-          ×
-        </button>
-      </div>
-      <input type="hidden" id="pixFuncionarioId" />
-      <div class="form-grid">
-        <label>Filial<select id="pixFuncionarioFilial" required></select></label><label>DN<input id="pixFuncionarioDn"
-            readonly /></label><label class="full">Nome<input id="pixFuncionarioNome"
-            required /></label><label>Cargo<select id="pixFuncionarioCargo"
-            required></select></label><label>Status<select id="pixFuncionarioAtivo">
-            <option value="true">Ativo</option>
-            <option value="false">Inativo</option>
-          </select></label>
-      </div>
-      <div class="modal-actions">
-        <button type="button" id="cancelarModalFuncionarioPix" class="secondary">
-          Cancelar</button><button type="submit" class="primary">Salvar participante</button>
-      </div>
-    </form>
-  </dialog>
-
-  <dialog id="modalPixPresidente" class="pix-dialog">
-    <form id="formPixPresidente" class="modal-form wide">
-      <div class="modal-header">
-        <div>
-          <p class="eyebrow">Pix do Presidente</p>
-          <h2>Lançamento semanal</h2>
-        </div>
-        <button type="button" id="fecharModalPix" class="icon-btn">×</button>
-      </div>
-      <input type="hidden" id="pixLancamentoId" />
-      <div class="form-grid">
-        <label>Competência<input type="month" id="pixLancamentoCompetencia" min="2026-06"
-            required /></label><label>Semana<select id="pixLancamentoSemana" required>
-            <option value="1">Semana 1</option>
-            <option value="2">Semana 2</option>
-            <option value="3">Semana 3</option>
-            <option value="4">Semana 4</option>
-          </select></label><label>Filial<select id="pixLancamentoFilial" required></select></label><label>Consultor
-          Técnico<select id="pixLancamentoFuncionario" required></select></label>
-      </div>
-      <div id="pixCamposDinamicos" class="dynamic-fields pix-dynamic-fields"></div>
-      <div id="pixResultadoPreview" class="resultado-preview pix-preview">
-        O cálculo aparecerá aqui.
-      </div>
-      <div class="modal-actions">
-        <button type="button" id="cancelarModalPix" class="secondary">
-          Cancelar</button><button type="submit" class="primary">Salvar lançamento</button>
-      </div>
-    </form>
-  </dialog>
-
-
-  <!-- SOBRE O SISTEMA — AUTORIA -->
-  <dialog id="modalSobreSistema" class="about-system-dialog">
-    <article class="about-system-card">
-      <button type="button" id="btnFecharSobreSistema" class="about-system-close"
-        aria-label="Fechar informações sobre o sistema">
-        ×
-      </button>
-
-      <div class="about-system-hero">
-        <div class="about-system-logo" aria-hidden="true">
-          PL
-        </div>
-
-        <div>
-          <p class="about-system-eyebrow">Sistema corporativo</p>
-          <h2>Sistema de Campanhas Pós-Vendas</h2>
-          <p class="about-system-subtitle">
-            Gestão integrada de campanhas, apurações e indicadores.
-          </p>
-        </div>
-      </div>
-
-      <div class="about-system-content">
-        <section class="about-developer-section">
-          <span class="about-label">Desenvolvido por</span>
-          <h3>Pabricio Lima</h3>
-          <p>Analista de Negócios &amp; Tecnologia</p>
-
-          <div class="about-tags">
-            <span>Developer</span>
-            <span>Enterprise Edition</span>
-            <span>Versão 2.0</span>
-          </div>
-        </section>
-
-        <section class="about-technology-section">
-          <span class="about-label">Tecnologias do projeto</span>
-
-          <div class="about-technology-grid">
-            <span>HTML5</span>
-            <span>CSS3</span>
-            <span>JavaScript</span>
-            <span>Firebase</span>
-            <span>Supabase</span>
-            <span>Excel &amp; PDF</span>
-          </div>
-        </section>
-
-        <footer class="about-system-footer">
-          <div>
-            <strong>Grupo Mônaco</strong>
-            <span>Sistema desenvolvido para operação interna.</span>
-          </div>
-
-          <small>
-            © 2026 Pabricio Lima. Todos os direitos reservados.
-          </small>
-        </footer>
-      </div>
-    </article>
-  </dialog>
-
-  <div id="toast" class="toast"></div>
-
-  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
-  <script src="./alerts-premium.js?v=20260716-01"></script>
-  <script type="module" src="./script.js?v=20260806-32"></script>
-  <script type="module" src="./pix-presidente.js?v=20260724-07"></script>
-  <script type="module" src="./importacao-funcionarios.js?v=20260716-01"></script>
-  <script src="./pix-historico-individual.js?v=20260715-01"></script>
-  <script type="module" src="./evidencias-produtivos.js?v=20260804-03"></script>
-  <script type="module" src="./evidencias-pix.js?v=20260730-03"></script>
-  <script src="./module-switcher.js?v=20260715-07"></script>
-  <script src="./isolamento-competencias.js?v=20260724-02"></script>
-  <script src="./politicas-penalidades.js?v=20260804-02"></script>
-  <script type="module" src="./bloqueio-lancamentos.js?v=20260717-01"></script>
-  <script src="./dashboard-pix-gestor-funcional.js?v=20260721-04"></script>
-  <script type="module" src="./compras-module.js?v=20260723-11"></script>
-  <script type="module" src="./auditoria-campanhas.js?v=20260808-01"></script>
-  <script type="module" src="./comparativo-mensal-campanhas.js?v=20260808-01"></script>
-  <script src="./guia-campos-pendentes-pix-v01.js?v=20260819-01"></script>
-  <script src="./podium-homenagem-premium-v01.js?v=20260819-01"></script>
-  <!-- Leitura de XLSX, XLS e CSV -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
-
-  <script>
-    /*
-    LOADER SEGURO DA IMPORTAÇÃO V15
-    O clique carrega o módulo diretamente e não depende de
-    addEventListener registrado anteriormente.
-    */
-    window.__importadorPromise = null;
-
-    window.__carregarImportador = async function () {
-      if (
-        window.importacaoRelatorioSistema
-      ) {
-        return window.importacaoRelatorioSistema;
-      }
-
-      if (!window.__importadorPromise) {
-        window.__importadorPromise =
-          import(
-            "./importacao-relatorio-sistema.js?v=20260723-16"
-          );
-      }
-
-      try {
-        await window.__importadorPromise;
-
-        const api =
-          window.importacaoRelatorioSistema;
-
-        if (!api) {
-          throw new Error(
-            "O módulo foi carregado, mas a API window.importacaoRelatorioSistema não foi criada."
-          );
-        }
-
-        return api;
-      } catch (erro) {
-        window.__importadorPromise = null;
-
-        console.error(
-          "[IMPORTAÇÃO] ERRO REAL AO CARREGAR:",
-          erro
-        );
-
-        const detalhe =
-          erro?.message ||
-          String(erro);
-
-        const mensagem =
-          "Não foi possível carregar a área de importação.\n\n" +
-          "Detalhe técnico: " +
-          detalhe;
-
-        if (
-          window.CampanhaUI &&
-          typeof window.CampanhaUI.alert === "function"
-        ) {
-          await window.CampanhaUI.alert(
-            mensagem,
-            {
-              tipo: "erro",
-              titulo:
-                "Falha ao abrir importação"
-            }
-          );
-        } else {
-          window.alert(mensagem);
-        }
-
-        throw erro;
-      }
-    };
-
-    window.abrirImportacaoPixSeguro =
-      async function (evento) {
-        evento?.preventDefault();
-        evento?.stopPropagation();
-
-        const botao =
-          document.querySelector(
-            "#btnImportarRelatorioPix"
-          );
-
-        const textoOriginal =
-          botao?.textContent ||
-          "Importar relatório";
-
-        try {
-          if (botao) {
-            botao.disabled = true;
-            botao.textContent =
-              "Abrindo...";
-          }
-
-          const api =
-            await window.__carregarImportador();
-
-          return api.abrirPix();
-        } finally {
-          if (botao) {
-            botao.disabled = false;
-            botao.textContent =
-              textoOriginal;
-          }
-        }
-      };
-
-    window.baixarModeloPixSeguro =
-      async function (evento) {
-        evento?.preventDefault();
-        evento?.stopPropagation();
-
-        const api =
-          await window.__carregarImportador();
-
-        return api.baixarModeloPix();
-      };
-
-    window.abrirImportacaoProdutivosSeguro =
-      async function (evento) {
-        evento?.preventDefault();
-        evento?.stopPropagation();
-
-        const api =
-          await window.__carregarImportador();
-
-        return api.abrirProdutivos();
-      };
-
-    window.baixarModeloProdutivosSeguro =
-      async function (evento) {
-        evento?.preventDefault();
-        evento?.stopPropagation();
-
-        const api =
-          await window.__carregarImportador();
-
-        return api.baixarModeloProdutivos();
-      };
-  </script>
-
-  <script>
-    /*
-     * Card de autoria e modal "Sobre o Sistema".
-     * Código isolado: não interfere nos módulos, filtros ou cálculos.
-     */
-    (() => {
-      const botaoAbrir =
-        document.getElementById(
-          "btnAbrirSobreSistema"
-        );
-
-      const modal =
-        document.getElementById(
-          "modalSobreSistema"
-        );
-
-      const botaoFechar =
-        document.getElementById(
-          "btnFecharSobreSistema"
-        );
-
-      if (
-        !botaoAbrir ||
-        !modal ||
-        !botaoFechar
-      ) {
-        return;
-      }
-
-      botaoAbrir.addEventListener(
-        "click",
-        () => {
-          if (
-            typeof modal.showModal ===
-            "function"
-          ) {
-            modal.showModal();
-          }
-        }
-      );
-
-      botaoFechar.addEventListener(
-        "click",
-        () => modal.close()
-      );
-
-      modal.addEventListener(
-        "click",
-        evento => {
-          if (
-            evento.target === modal
-          ) {
-            modal.close();
-          }
-        }
-      );
-    })();
-  </script>
-  <script type="module" src="./podium-campanhas.js?v=20260818-01"></script>
-
-  <!-- Importação integrada aos módulos de Lançamentos -->
-</body>
-
-</html>
+ <!doctype html>
+            <html lang="pt-BR">
+
+            <head>
+              <meta charset="UTF-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+              <title>Sistema de Campanhas Pós-Vendas</title>
+              <link rel="stylesheet" href="style.css" />
+              <link rel="stylesheet" href="./evidencias-produtivos.css?v=20260715-03" />
+              <link rel="stylesheet" href="./crm-module.css?v=20260821-163" />
+              <link rel="stylesheet" href="garantia-module.css" />
+              <link rel="stylesheet" href="./evidencias-pix.css?v=20260715-03" />
+              <link rel="stylesheet" href="./alerts-premium.css?v=20260716-01" />
+              <link rel="stylesheet" href="./importacao-funcionarios.css?v=20260716-01" />
+              <link rel="stylesheet" href="./politicas-penalidades.css?v=20260717-01" />
+              <link rel="stylesheet" href="./bloqueio-lancamentos.css?v=20260717-01" />
+
+              <style id="importacao-relatorio-botoes-fixos-css">
+                .panel-header-actions {
+                  display: flex;
+                  align-items: center;
+                  justify-content: flex-end;
+                  gap: 8px;
+                  flex-wrap: wrap;
+                  margin-left: auto;
+                }
+
+                .pix-export-filial-filter {
+                  min-width: 190px;
+                }
+
+                .pix-export-filial-filter select {
+                  width: 100%;
+                  min-width: 190px;
+                }
+
+                @media (max-width: 760px) {
+                  .panel-header-actions {
+                    width: 100%;
+                    justify-content: stretch;
+                  }
+
+                  .panel-header-actions>button {
+                    flex: 1 1 150px;
+                  }
+
+                  .pix-export-filial-filter {
+                    min-width: 150px;
+                    flex: 1 1 170px;
+                  }
+
+                  .pix-export-filial-filter select {
+                    min-width: 0;
+                  }
+                }
+              </style>
+
+              <style id="politicas-valores-css">
+                #politicas .policy-grid-values {
+                  align-items: stretch;
+                  gap: 20px;
+                }
+
+                #politicas .policy-card-values {
+                  display: flex;
+                  flex-direction: column;
+                  gap: 16px;
+                  min-width: 0;
+                }
+
+                #politicas .policy-card-heading {
+                  display: flex;
+                  align-items: flex-start;
+                  justify-content: space-between;
+                  gap: 12px;
+                }
+
+                #politicas .policy-card-heading h2 {
+                  margin: 3px 0 0;
+                }
+
+                #politicas .policy-max-value {
+                  flex: 0 0 auto;
+                  padding: 7px 10px;
+                  border: 1px solid #b9dfd1;
+                  border-radius: 999px;
+                  color: #087354;
+                  background: #e9f7f1;
+                  font-size: 12px;
+                  font-weight: 800;
+                  white-space: nowrap;
+                }
+
+                #politicas .policy-formulas,
+                #politicas .policy-intro {
+                  color: #506575;
+                  line-height: 1.55;
+                }
+
+                #politicas .policy-formulas p {
+                  margin: 0 0 7px;
+                }
+
+                #politicas .policy-values-grid {
+                  display: grid;
+                  grid-template-columns: repeat(2, minmax(0, 1fr));
+                  gap: 12px;
+                }
+
+                #politicas .policy-value-block {
+                  overflow: hidden;
+                  border: 1px solid #dce6ec;
+                  border-radius: 14px;
+                  background: #fbfcfd;
+                }
+
+                #politicas .policy-value-block-full {
+                  width: 100%;
+                }
+
+                #politicas .policy-value-block h3 {
+                  margin: 0;
+                  padding: 11px 12px;
+                  color: #12324a;
+                  background: #edf3f6;
+                  font-size: 13px;
+                }
+
+                #politicas .policy-tier {
+                  display: flex;
+                  justify-content: space-between;
+                  gap: 12px;
+                  padding: 10px 12px;
+                  border-top: 1px solid #e6edf1;
+                  color: #536675;
+                  font-size: 12px;
+                }
+
+                #politicas .policy-tier strong {
+                  color: #0a2b44;
+                  white-space: nowrap;
+                }
+
+                #politicas .policy-tier-highlight {
+                  color: #087354;
+                  background: #eff9f5;
+                }
+
+                #politicas .policy-tier-highlight strong {
+                  color: #087354;
+                }
+
+                #politicas .policy-total-box {
+                  display: grid;
+                  gap: 4px;
+                  padding: 14px;
+                  border: 1px solid #b9dfd1;
+                  border-radius: 14px;
+                  background: #eff9f5;
+                }
+
+                #politicas .policy-total-box span {
+                  color: #607380;
+                  font-size: 11px;
+                  font-weight: 800;
+                  letter-spacing: .04em;
+                  text-transform: uppercase;
+                }
+
+                #politicas .policy-total-box strong {
+                  color: #087354;
+                  font-size: 16px;
+                }
+
+                #politicas .policy-total-box small {
+                  color: #536675;
+                  line-height: 1.4;
+                }
+
+                #politicas .policy-role-payment {
+                  display: grid;
+                  grid-template-columns: repeat(2, minmax(0, 1fr));
+                  gap: 12px;
+                }
+
+                #politicas .policy-role-payment>div {
+                  display: grid;
+                  gap: 5px;
+                  padding: 14px;
+                  border: 1px solid #dce6ec;
+                  border-radius: 14px;
+                  background: #fbfcfd;
+                }
+
+                #politicas .policy-role-payment span {
+                  color: #607380;
+                  font-size: 12px;
+                  font-weight: 700;
+                }
+
+                #politicas .policy-role-payment strong {
+                  color: #0a2b44;
+                }
+
+                #politicas .policy-role-payment small {
+                  color: #607380;
+                  line-height: 1.4;
+                }
+
+                #politicas .policy-example {
+                  padding: 12px 14px;
+                  border-left: 4px solid #0a7d5b;
+                  border-radius: 8px;
+                  color: #536675;
+                  background: #f4f9f7;
+                  font-size: 12px;
+                  line-height: 1.5;
+                }
+
+                #politicas .policy-alert {
+                  margin-top: auto;
+                  padding: 14px 16px;
+                  border-radius: 14px;
+                  font-size: 12px;
+                  line-height: 1.5;
+                }
+
+                #politicas .policy-alert strong {
+                  display: block;
+                  margin-bottom: 7px;
+                }
+
+                #politicas .policy-alert ul {
+                  margin: 0;
+                  padding-left: 19px;
+                }
+
+                #politicas .policy-alert li+li {
+                  margin-top: 5px;
+                }
+
+                #politicas .policy-alert-danger {
+                  border: 1px solid #f2b9b4;
+                  color: #a52820;
+                  background: #fff1ef;
+                }
+
+                #politicas .policy-alert-warning {
+                  border: 1px solid #f0cd82;
+                  color: #795100;
+                  background: #fff7e5;
+                }
+
+                @media (max-width: 1150px) {
+
+                  #politicas .policy-values-grid,
+                  #politicas .policy-role-payment {
+                    grid-template-columns: 1fr;
+                  }
+                }
+
+                @media (max-width: 760px) {
+                  #politicas .policy-card-heading {
+                    flex-direction: column;
+                  }
+
+                  #politicas .policy-max-value {
+                    white-space: normal;
+                  }
+                }
+              </style>
+
+            </head>
+
+            <body>
+              <aside class="sidebar">
+                <div class="brand">
+                  <div class="brand-mark">CM</div>
+                  <div><strong>Campanhas</strong><span>Pós-Vendas</span></div>
+                </div>
+
+                <nav class="campaign-modules-nav">
+                  <!-- CAMPANHA DOS PRODUTIVOS -->
+                  <div class="campaign-module-group open" data-module-group="produtivos">
+                    <button type="button" class="module-toggle" data-module-toggle="produtivos" aria-expanded="true">
+                      <span class="module-icon module-icon-prod"> MP </span>
+
+                      <span class="module-toggle-text">
+                        <strong> Campanha dos Produtivos </strong>
+
+                        <small> Oficina e produtividade </small>
+                      </span>
+
+                      <span class="module-chevron"> ⌄ </span>
+                    </button>
+
+                    <div class="module-dropdown">
+                      <button class="nav-btn active" data-view="dashboard">
+                        Visão geral
+                      </button>
+
+                      <button class="nav-btn" data-view="funcionarios">
+                        Base de funcionários
+                      </button>
+
+                      <button class="nav-btn" data-view="lancamentos">Lançamentos</button>
+
+                      <button class="nav-btn" data-view="apuracao">Apuração</button>
+
+                      <button class="nav-btn" data-view="politicas">Políticas</button>
+                    </div>
+                  </div>
+
+                  <!-- PIX DO PRESIDENTE -->
+                  <div class="campaign-module-group" data-module-group="pix">
+                    <button type="button" class="module-toggle" data-module-toggle="pix" aria-expanded="false">
+                      <span class="module-icon module-icon-pix"> PIX </span>
+
+                      <span class="module-toggle-text">
+                        <strong> Pix do Presidente </strong>
+
+                        <small> Campanha semanal </small>
+                      </span>
+
+                      <span class="module-chevron"> ⌄ </span>
+                    </button>
+
+                    <div class="module-dropdown">
+                      <button type="button" class="pix-menu-btn active" data-pix-view="dashboard">
+                        Visão geral
+                      </button>
+
+                      <button type="button" class="pix-menu-btn" data-pix-view="funcionarios">
+                        Base de participantes
+                      </button>
+
+                      <button type="button" class="pix-menu-btn" data-pix-view="lancamentos">
+                        Lançamentos
+                      </button>
+
+                      <button type="button" class="pix-menu-btn" data-pix-view="apuracao">
+                        Apuração
+                      </button>
+
+                      <button type="button" class="pix-menu-btn" data-pix-view="politicas">
+                        Políticas
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- CAMPANHAS DO CRM -->
+                  <div class="campaign-module-group" data-module-group="crm">
+                    <button type="button" class="module-toggle" data-module-toggle="crm" aria-expanded="false">
+                      <span class="module-icon module-icon-crm"> CRM </span>
+
+                      <span class="module-toggle-text">
+                        <strong> Campanhas do CRM </strong>
+
+                        <small> Bonificação mensal </small>
+                      </span>
+
+                      <span class="module-chevron"> ⌄ </span>
+                    </button>
+
+                    <div class="module-dropdown">
+                      <button type="button" class="crm-menu-btn" data-crm-view="dashboard">
+                        Visão geral
+                      </button>
+
+                      <button type="button" class="crm-menu-btn" data-crm-view="funcionarios">
+                        Base de participantes
+                      </button>
+
+                      <button type="button" class="crm-menu-btn" data-crm-view="lancamentos">
+                        Lançamentos
+                      </button>
+
+                      <button type="button" class="crm-menu-btn" data-crm-view="apuracao">
+                        Apuração
+                      </button>
+
+                      <button type="button" class="crm-menu-btn" data-crm-view="politicas">
+                        Políticas
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- CAMPANHAS DE GARANTIA -->
+                  <div class="campaign-module-group" data-module-group="garantia">
+                    <button type="button" class="module-toggle" data-module-toggle="garantia" aria-expanded="false">
+                      <span class="module-icon module-icon-garantia"> GAR </span>
+
+                      <span class="module-toggle-text">
+                        <strong> Campanhas de Garantia </strong>
+
+                        <small> Em estruturação </small>
+                      </span>
+
+                      <span class="module-chevron"> ⌄ </span>
+                    </button>
+
+                    <div class="module-dropdown">
+                      <button type="button" class="garantia-menu-btn" data-garantia-view="dashboard">
+                        Visão geral
+                      </button>
+
+                      <button type="button" class="garantia-menu-btn" data-garantia-view="funcionarios">
+                        Base de participantes
+                      </button>
+
+                      <button type="button" class="garantia-menu-btn" data-garantia-view="lancamentos">
+                        Lançamentos
+                      </button>
+
+                      <button type="button" class="garantia-menu-btn" data-garantia-view="apuracao">
+                        Apuração
+                      </button>
+
+                      <button type="button" class="garantia-menu-btn" data-garantia-view="politicas">
+                        Políticas
+                      </button>
+                    </div>
+                  </div>
+                </nav>
+
+                <div class="sidebar-footer">
+                  <button type="button" id="btnAbrirSobreSistema" class="developer-card"
+                    aria-label="Abrir informações sobre o sistema e o desenvolvedor" title="Sobre o sistema">
+                    <span class="developer-card-glow" aria-hidden="true"></span>
+
+                    <span class="developer-avatar" aria-hidden="true">
+                      <span>PL</span>
+                    </span>
+
+                    <span class="developer-info">
+                      <span class="developer-kicker">Desenvolvido por</span>
+
+                      <strong class="developer-name">Pabricio Lima</strong>
+
+                      <span class="developer-role">
+                        Analista de Negócios &amp; Tecnologia
+                      </span>
+
+                      <span class="developer-meta">
+                        <span class="developer-badge">Developer</span>
+                        <span class="developer-version">Enterprise • v2.0</span>
+                      </span>
+                    </span>
+
+                    <span class="developer-arrow" aria-hidden="true">›</span>
+                  </button>
+
+                  <div class="sidebar-system-status">
+                    <span class="sidebar-status-dot" aria-hidden="true"></span>
+                    <small>Dados sincronizados com o sistema</small>
+                  </div>
+
+                  <button id="btnLimparTudo" class="danger-link">
+                    Limpar lançamentos locais
+                  </button>
+                </div>
+              </aside>
+
+              <main class="main">
+                <header class="topbar">
+                  <div>
+                    <p class="eyebrow">MVP</p>
+                    <h1 id="pageTitle">Campanha dos Produtivos</h1>
+                  </div>
+                  <div class="topbar-actions" id="produtivosTopbarActions">
+                    <label>Competência<input type="month" id="competenciaGlobal" /></label>
+                    <div class="export-toolbar">
+                      <label class="export-filter"><span>Exportar</span><select id="tipoExportacao">
+                          <option value="habilitados">Somente habilitados</option>
+                          <option value="todos">Todos os resultados</option>
+                        </select></label>
+
+                      <label id="pixFilialExportacaoLabel" class="export-filter pix-export-filial-filter" hidden>
+                        <span>Filial</span>
+                        <select id="pixFilialExportacao" aria-label="Filtrar exportação por filial">
+                          <option value="">Todas as filiais</option>
+                        </select>
+                      </label>
+                      <div class="export-buttons">
+                        <button type="button" id="btnExportarExcel" class="export-btn export-excel">
+                          <span><small>Exportar</small>Excel</span>
+                        </button>
+                        <button type="button" id="btnExportarPdf" class="export-btn export-pdf">
+                          <span><small>Exportar</small>PDF</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </header>
+
+                <!-- CAMPANHA DOS PRODUTIVOS -->
+                <section id="dashboard" class="view active">
+                  <div class="cards" id="dashboardCards"></div>
+
+                  <article class="panel produtivos-dashboard-filter-panel" aria-label="Filtros da visão geral dos Produtivos">
+                    <div class="produtivos-dashboard-filters">
+                      <label>
+                        <span>DN</span>
+
+                        <select id="filtroDnDashboardProdutivos" aria-label="Filtrar visão geral dos Produtivos por DN">
+                          <option value="">Todos</option>
+                        </select>
+                      </label>
+
+                      <label>
+                        <span>Filial</span>
+
+                        <select id="filtroFilialDashboardProdutivos" aria-label="Filtrar visão geral dos Produtivos por filial">
+                          <option value="">Todas</option>
+                        </select>
+                      </label>
+                    </div>
+                  </article>
+
+                  <div class="grid-2">
+                    <article class="panel">
+                      <div class="panel-header">
+                        <div>
+                          <p class="eyebrow">Resumo</p>
+                          <h2>Valores por cargo</h2>
+                        </div>
+                      </div>
+                      <div id="resumoCargo"></div>
+                    </article>
+                    <article class="panel">
+                      <div class="panel-header">
+                        <div>
+                          <p class="eyebrow">Filiais</p>
+                          <h2>Investimento por unidade</h2>
+                        </div>
+                      </div>
+                      <div id="resumoFilial"></div>
+                    </article>
+                  </div>
+                  <article class="panel monthly-history-panel">
+                    <div class="panel-header">
+                      <div>
+                        <p class="eyebrow">Histórico e avaliação</p>
+                        <h2>Resultado individual do mês</h2>
+                      </div>
+                      <div id="historicoResumo" class="monthly-history-summary"></div>
+                    </div>
+                    <div class="table-wrap">
+                      <table class="monthly-history-table">
+                        <thead>
+                          <tr>
+                            <th>Colaborador</th>
+                            <th>Filial</th>
+                            <th>Cargo</th>
+                            <th>Faturamento</th>
+                            <th>Produtividade</th>
+                            <th>Eficiência</th>
+                            <th>Bônus</th>
+                            <th>Status</th>
+                            <th>Avaliação</th>
+                          </tr>
+                        </thead>
+                        <tbody id="tabelaHistoricoMensal"></tbody>
+                      </table>
+                    </div>
+                  </article>
+                </section>
+
+                <section id="funcionarios" class="view">
+                  <article class="panel">
+                    <div class="panel-header">
+                      <div>
+                        <p class="eyebrow">Cadastro</p>
+                        <h2>Base de funcionários</h2>
+                      </div>
+                      <button id="btnNovoFuncionario" class="primary">
+                        + Novo funcionário
+                      </button>
+                    </div>
+                    <div class="filters">
+                      <input id="buscaFuncionario" type="search" placeholder="Buscar por nome, filial ou cargo" /><select
+                        id="filtroFilialFuncionario">
+                        <option value="">Todas as filiais</option>
+                      </select><select id="filtroCargoFuncionario">
+                        <option value="">Todos os cargos</option>
+                      </select>
+                    </div>
+                    <div class="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>DN</th>
+                            <th>Filial</th>
+                            <th>Nome</th>
+                            <th>Cargo</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody id="tabelaFuncionarios"></tbody>
+                      </table>
+                    </div>
+                  </article>
+                </section>
+
+                <section id="lancamentos" class="view">
+                  <article class="panel">
+                    <div class="panel-header">
+                      <div>
+                        <p class="eyebrow">Mensuração</p>
+                        <h2>Lançamentos da campanha</h2>
+                      </div>
+                      <div class="panel-header-actions" id="produtivosLancamentosAcoes">
+                        <button type="button" id="btnBaixarModeloRelatorioProdutivos" class="secondary"
+                          onclick="window.baixarModeloProdutivosSeguro(event)">
+                          Baixar modelo
+                        </button>
+
+                        <button type="button" id="btnImportarRelatorioProdutivos" class="secondary"
+                          onclick="window.abrirImportacaoProdutivosSeguro(event)"
+                          style="background:#0b3154;color:#fff;border-color:#0b3154">
+                          Importar relatório
+                        </button>
+
+                        <button id="btnNovoLancamento" class="primary">
+                          + Novo lançamento
+                        </button>
+                      </div>
+                    </div>
+                    <div class="filters">
+                      <select id="filtroCompetenciaLancamento">
+                        <option value="">Todas as competências</option>
+                      </select><select id="filtroFilialLancamento">
+                        <option value="">Todas as filiais</option>
+                      </select><select id="filtroCargoLancamento">
+                        <option value="">Todos os cargos</option>
+                      </select>
+                    </div>
+                    <div class="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Competência</th>
+                            <th>Filial</th>
+                            <th>Colaborador</th>
+                            <th>Cargo</th>
+                            <th>Indicadores</th>
+                            <th>Bônus final</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody id="tabelaLancamentos"></tbody>
+                      </table>
+                    </div>
+                  </article>
+                </section>
+
+                <section id="apuracao" class="view">
+                  <div class="cards" id="apuracaoCards"></div>
+                  <article class="panel">
+                    <div class="panel-header">
+                      <div>
+                        <p class="eyebrow">Resultado consolidado</p>
+                        <h2>Apuração dos Produtivos</h2>
+                      </div>
+                      <button id="btnExportarCsv" class="secondary">Exportar CSV</button>
+                    </div>
+                    <div class="filters">
+                      <select id="filtroCompetenciaApuracao">
+                        <option value="">Todas as competências</option>
+                      </select><select id="filtroFilialApuracao">
+                        <option value="">Todas as filiais</option>
+                      </select><select id="filtroStatusApuracao">
+                        <option value="">Todos os status</option>
+                        <option value="HABILITADO">Habilitado</option>
+                        <option value="NÃO HABILITADO">Não habilitado</option>
+                      </select>
+                    </div>
+                    <div class="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Competência</th>
+                            <th>DN</th>
+                            <th>Filial</th>
+                            <th>Colaborador</th>
+                            <th>Cargo</th>
+                            <th>Prod.</th>
+                            <th>Eficiência</th>
+                            <th>Bônus bruto</th>
+                            <th>Penalidade</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody id="tabelaApuracao"></tbody>
+                      </table>
+                    </div>
+                  </article>
+                </section>
+
+                <section id="politicas" class="view">
+                  <div class="policy-grid policy-grid-values">
+                    <article class="panel policy-card policy-card-values">
+                      <div class="policy-card-heading">
+                        <div>
+                          <p class="eyebrow">Apuração individual</p>
+                          <h2>Mecânico produtivo</h2>
+                        </div>
+                        <span class="policy-max-value">Até R$ 2.000,00</span>
+                      </div>
+
+                      <div class="policy-formulas">
+                        <p><strong>Produtividade</strong> = horas trabalhadas ÷ horas disponíveis.</p>
+                        <p><strong>Eficiência</strong> = horas vendidas ÷ horas trabalhadas.</p>
+                      </div>
+
+                      <div class="policy-values-grid">
+                        <div class="policy-value-block">
+                          <h3>Bônus por produtividade</h3>
+                          <div class="policy-tier"><span>70% a 79,99%</span><strong>R$ 600,00</strong></div>
+                          <div class="policy-tier"><span>80% a 89,99%</span><strong>R$ 690,00</strong></div>
+                          <div class="policy-tier"><span>90% a 99,99%</span><strong>R$ 790,00</strong></div>
+                          <div class="policy-tier policy-tier-highlight"><span>100% ou mais</span><strong>R$ 1.000,00</strong></div>
+                        </div>
+
+                        <div class="policy-value-block">
+                          <h3>Bônus por eficiência</h3>
+                          <div class="policy-tier"><span>80% a 89,99%</span><strong>R$ 690,00</strong></div>
+                          <div class="policy-tier"><span>90% a 99,99%</span><strong>R$ 790,00</strong></div>
+                          <div class="policy-tier policy-tier-highlight"><span>100% ou mais</span><strong>R$ 1.000,00</strong></div>
+                        </div>
+                      </div>
+
+                      <div class="policy-total-box">
+                        <span>Pagamento da campanha</span>
+                        <strong>Produtividade + eficiência</strong>
+                        <small>O colaborador precisa atingir simultaneamente os mínimos de 70% e 80%.</small>
+                      </div>
+
+                      <div class="policy-alert policy-alert-danger">
+                        <strong>Penalidades e bloqueios</strong>
+                        <ul>
+                          <li>Treinamento pendente: desconto de 50% sobre o bônus apurado.</li>
+                          <li>Retrabalho, imperícia, prejuízo ou O.S. interna: inabilitação total na competência.</li>
+                          <li>As horas vendidas precisam representar pelo menos 70% das horas disponíveis.</li>
+                        </ul>
+                      </div>
+                    </article>
+
+                    <article class="panel policy-card policy-card-values">
+                      <div class="policy-card-heading">
+                        <div>
+                          <p class="eyebrow">Apuração da equipe</p>
+                          <h2>Chefe e líder</h2>
+                        </div>
+                        <span class="policy-max-value">Valor variável</span>
+                      </div>
+
+                      <p class="policy-intro">
+                        Apuração automática conforme o faturamento individual de todos os Mecânicos Produtivos da filial,
+                        independentemente da habilitação individual.
+                      </p>
+
+                      <div class="policy-value-block policy-value-block-full">
+                        <h3>Valor gerado por mecânico</h3>
+                        <div class="policy-tier"><span>De R$ 50.000,00 a R$ 59.999,99</span><strong>R$ 300,00</strong></div>
+                        <div class="policy-tier policy-tier-highlight"><span>R$ 60.000,00 ou mais</span><strong>R$ 500,00</strong>
+                        </div>
+                      </div>
+
+                      <div class="policy-role-payment">
+                        <div>
+                          <span>Chefe de Oficina</span>
+                          <strong>100% do valor apurado</strong>
+                          <small>Soma dos valores gerados pelas faixas de faturamento de todos os mecânicos da filial.</small>
+                        </div>
+                        <div>
+                          <span>Mecânico Líder</span>
+                          <strong>50% do valor do Chefe</strong>
+                          <small>Recebe metade do total calculado para o Chefe de Oficina.</small>
+                        </div>
+                      </div>
+
+                      <div class="policy-example">
+                        <strong>Exemplo:</strong>
+                        dois mecânicos acima de R$ 60 mil geram R$ 1.000,00 para o Chefe e R$ 500,00 para o Líder.
+                      </div>
+
+                      <div class="policy-alert policy-alert-warning">
+                        <strong>Penalidades e bloqueios</strong>
+                        <ul>
+                          <li>Treinamento individual pendente do Chefe ou Líder: inabilitação.</li>
+                          <li>Equipe com menos de 95% dos treinamentos em dia: desconto de 50%.</li>
+                          <li>Entram no cálculo todos os Mecânicos Produtivos da mesma filial e competência que atingirem as faixas
+                            de faturamento, mesmo quando não estiverem habilitados individualmente.</li>
+                        </ul>
+                      </div>
+                    </article>
+
+                    <article class="panel policy-card policy-card-values">
+                      <div class="policy-card-heading">
+                        <div>
+                          <p class="eyebrow">Indicadores consolidados</p>
+                          <h2>Controlador</h2>
+                        </div>
+                        <span class="policy-max-value">Até R$ 1.000,00</span>
+                      </div>
+
+                      <p class="policy-intro">
+                        Bonificação calculada pela produtividade e eficiência consolidadas dos Mecânicos Produtivos da filial.
+                      </p>
+
+                      <div class="policy-values-grid">
+                        <div class="policy-value-block">
+                          <h3>Bônus por produtividade</h3>
+                          <div class="policy-tier"><span>70% a 79,99%</span><strong>R$ 100,00</strong></div>
+                          <div class="policy-tier"><span>80% a 89,99%</span><strong>R$ 300,00</strong></div>
+                          <div class="policy-tier policy-tier-highlight"><span>90% ou mais</span><strong>R$ 500,00</strong></div>
+                        </div>
+
+                        <div class="policy-value-block">
+                          <h3>Bônus por eficiência</h3>
+                          <div class="policy-tier"><span>80% a 89,99%</span><strong>R$ 100,00</strong></div>
+                          <div class="policy-tier"><span>90% a 99,99%</span><strong>R$ 300,00</strong></div>
+                          <div class="policy-tier policy-tier-highlight"><span>100% ou mais</span><strong>R$ 500,00</strong></div>
+                        </div>
+                      </div>
+
+                      <div class="policy-total-box">
+                        <span>Pagamento da campanha</span>
+                        <strong>Soma dos KPIs atingidos</strong>
+                        <small>Exemplo: produtividade de 90% paga R$ 500,00; eficiência de 100% paga R$ 500,00. Se atingir os dois,
+                          recebe R$ 1.000,00.</small>
+                      </div>
+
+                      <div class="policy-alert policy-alert-warning">
+                        <strong>Condições da apuração</strong>
+                        <ul>
+                          <li>Produtividade mínima: 70%.</li>
+                          <li>Eficiência mínima: 80%.</li>
+                          <li>Cada KPI é independente: atingir produtividade gera o bônus de produtividade; atingir eficiência gera
+                            o bônus de eficiência.</li>
+                          <li>São considerados apenas os lançamentos da mesma filial e competência.</li>
+                        </ul>
+                      </div>
+                    </article>
+                  </div>
+                </section>
+
+                <!-- PIX DO PRESIDENTE -->
+                <section id="pixPresidente" class="view">
+                  <div class="pix-module-hero">
+                    <div>
+                      <p class="eyebrow">Campanha independente</p>
+                      <h2>Pix do Presidente</h2>
+                      <p>Apuração semanal separada da Campanha dos Produtivos.</p>
+                    </div>
+                  </div>
+
+                  <div id="pix-dashboard" class="pix-subview active">
+                    <div class="pix-page-header">
+                      <div>
+                        <p class="eyebrow">Resumo mensal</p>
+                        <h2>Visão geral da apuração</h2>
+                      </div>
+                      <label class="pix-competencia-box">Competência<input type="month" id="pixDashboardCompetencia"
+                          min="2026-06" /></label>
+                    </div>
+                    <div id="pixDashboardCards" class="pix-dashboard-cards"></div>
+                    <div class="grid-2">
+                      <article class="panel">
+                        <div class="panel-header">
+                          <div>
+                            <p class="eyebrow">Resumo</p>
+                            <h2>Valores por cargo</h2>
+                          </div>
+                        </div>
+                        <div id="pixResumoCargo"></div>
+                      </article>
+                      <article class="panel">
+                        <div class="panel-header">
+                          <div>
+                            <p class="eyebrow">Filiais</p>
+                            <h2>Investimento por unidade</h2>
+                          </div>
+                        </div>
+                        <div id="pixResumoFilial"></div>
+                      </article>
+                    </div>
+                  </div>
+
+                  <div id="pix-funcionarios" class="pix-subview">
+                    <article class="panel">
+                      <div class="panel-header">
+                        <div>
+                          <p class="eyebrow">Cadastro exclusivo</p>
+                          <h2>Base de participantes</h2>
+                          <p class="pix-section-description">
+                            Somente cargos do Pix do Presidente.
+                          </p>
+                        </div>
+                        <button type="button" id="btnNovoFuncionarioPix" class="primary">
+                          + Novo participante
+                        </button>
+                      </div>
+                      <div class="filters">
+                        <input id="pixBuscaFuncionario" type="search" placeholder="Buscar participante" /><select
+                          id="pixFiltroFilialFuncionario">
+                          <option value="">Todas as filiais</option>
+                        </select><select id="pixFiltroCargoFuncionario">
+                          <option value="">Todos os cargos</option>
+                        </select>
+                      </div>
+                      <div class="table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>DN</th>
+                              <th>Filial</th>
+                              <th>Nome</th>
+                              <th>Cargo</th>
+                              <th>Status</th>
+                              <th>Ações</th>
+                            </tr>
+                          </thead>
+                          <tbody id="pixTabelaFuncionarios"></tbody>
+                        </table>
+                      </div>
+                    </article>
+                  </div>
+
+                  <div id="pix-lancamentos" class="pix-subview">
+                    <article class="panel">
+                      <div class="panel-header">
+                        <div>
+                          <p class="eyebrow">Semanas 1 a 4</p>
+                          <h2>Lançamentos semanais</h2>
+                        </div>
+                        <div class="panel-header-actions" id="pixLancamentosAcoes">
+                          <button type="button" id="btnBaixarModeloRelatorioPix" class="secondary"
+                            onclick="window.baixarModeloPixSeguro(event)">
+                            Baixar modelo
+                          </button>
+
+                          <button type="button" id="btnImportarRelatorioPix" class="secondary"
+                            onclick="window.abrirImportacaoPixSeguro(event)"
+                            style="background:#0b3154;color:#fff;border-color:#0b3154">
+                            Importar relatório
+                          </button>
+
+                          <button type="button" id="btnNovoLancamentoPix" class="primary pix-primary-button">
+                            + Novo lançamento
+                          </button>
+                        </div>
+                      </div>
+                      <div class="pix-filters pix-filters-4">
+                        <select id="pixFiltroCompetenciaLancamento">
+                          <option value="">Todas as competências</option>
+                        </select><select id="pixFiltroFilialLancamento">
+                          <option value="">Todas as filiais</option>
+                        </select><select id="pixFiltroCargoLancamento">
+                          <option value="">Todos os cargos</option>
+                        </select><select id="pixFiltroSemanaLancamento">
+                          <option value="">Todas as semanas</option>
+                          <option value="1">Semana 1</option>
+                          <option value="2">Semana 2</option>
+                          <option value="3">Semana 3</option>
+                          <option value="4">Semana 4</option>
+                        </select>
+                      </div>
+                      <div class="table-wrap">
+                        <table class="pix-table">
+                          <thead>
+                            <tr>
+                              <th>Competência</th>
+                              <th>Semana</th>
+                              <th>Filial</th>
+                              <th>Colaborador</th>
+                              <th>Cargo</th>
+                              <th>Indicadores</th>
+                              <th>Bonif. faturamento</th>
+                              <th>Bônus ticket</th>
+                              <th>NPS</th>
+                              <th>Penalidade</th>
+                              <th>Total</th>
+                              <th>Status</th>
+                              <th>Ações</th>
+                            </tr>
+                          </thead>
+                          <tbody id="pixTabelaLancamentos"></tbody>
+                        </table>
+                      </div>
+                    </article>
+                  </div>
+
+                  <div id="pix-apuracao" class="pix-subview">
+                    <div id="pixApuracaoCards" class="pix-dashboard-cards"></div>
+                    <article class="panel">
+                      <div class="panel-header">
+                        <div>
+                          <p class="eyebrow">Resultado consolidado</p>
+                          <h2>Apuração do Pix do Presidente</h2>
+                        </div>
+                      </div>
+                      <div class="pix-filters">
+                        <select id="pixFiltroCompetenciaApuracao">
+                          <option value="">Todas as competências</option>
+                        </select><select id="pixFiltroFilialApuracao">
+                          <option value="">Todas as filiais</option>
+                        </select><select id="pixFiltroCargoApuracao">
+                          <option value="">Todos os cargos</option>
+                        </select><select id="pixFiltroSemanaApuracao">
+                          <option value="">Todas as semanas</option>
+                          <option value="1">Semana 1</option>
+                          <option value="2">Semana 2</option>
+                          <option value="3">Semana 3</option>
+                          <option value="4">Semana 4</option>
+                        </select><select id="pixFiltroStatusApuracao">
+                          <option value="">Todos os status</option>
+                          <option value="HABILITADO">Habilitado</option>
+                          <option value="NÃO HABILITADO">Não habilitado</option>
+                        </select>
+                      </div>
+                      <div class="table-wrap">
+                        <table class="pix-table pix-table-apuracao">
+                          <thead>
+                            <tr>
+                              <th>Competência</th>
+                              <th>Semana</th>
+                              <th>Filial</th>
+                              <th>Colaborador</th>
+                              <th>Cargo</th>
+                              <th>Indicadores</th>
+                              <th>Bonif. faturamento</th>
+                              <th>Bônus ticket</th>
+                              <th>NPS</th>
+                              <th>Penalidade</th>
+                              <th>Total</th>
+                              <th>Status</th>
+                            </tr>
+                          </thead>
+                          <tbody id="pixTabelaApuracao"></tbody>
+                        </table>
+                      </div>
+                    </article>
+                  </div>
+
+                  <div id="pix-politicas" class="pix-subview">
+                    <article class="panel">
+                      <div class="panel-header">
+                        <div>
+                          <p class="eyebrow">Regras exclusivas</p>
+                          <h2>Políticas do Pix do Presidente</h2>
+                        </div>
+                      </div>
+                      <div id="pixPolicyGrid" class="pix-policy-grid"></div>
+                      <div class="pix-penalty-policy">
+                        <strong>Regra especial da Semana 4</strong>
+                        <p>
+                          O NPS é pago mesmo sem atingir a meta semanal. O.S. em aberto
+                          acima de 28% aplica penalidade de 50% sobre o total da Semana 4.
+                        </p>
+                      </div>
+                    </article>
+                  </div>
+                </section>
+              </main>
+
+              <!-- MODAIS PRODUTIVOS -->
+              <dialog id="modalFuncionario">
+                <form id="formFuncionario" class="modal-form">
+                  <div class="modal-header">
+                    <h2>Funcionário</h2>
+                    <button type="button" class="icon-btn fechar-modal">×</button>
+                  </div>
+                  <input type="hidden" id="funcionarioId" />
+                  <div class="form-grid">
+                    <label>Filial<select id="funcionarioFilial" required></select></label><label>DN<input id="funcionarioDn"
+                        readonly /></label><label class="full">Nome<input id="funcionarioNome"
+                        required /></label><label>Cargo<select id="funcionarioCargo" required></select></label><label>Status<select
+                        id="funcionarioAtivo">
+                        <option value="true">Ativo</option>
+                        <option value="false">Inativo</option>
+                      </select></label>
+                  </div>
+                  <div class="modal-actions">
+                    <button type="button" class="secondary fechar-modal">Cancelar</button><button type="submit"
+                      class="primary">Salvar participante</button>
+                  </div>
+                </form>
+              </dialog>
+
+              <dialog id="modalLancamento">
+                <form id="formLancamento" class="modal-form wide">
+                  <div class="modal-header">
+                    <h2>Lançamento</h2>
+                    <button type="button" class="icon-btn fechar-modal">×</button>
+                  </div>
+                  <input type="hidden" id="lancamentoId" />
+                  <div class="form-grid">
+                    <label>Competência<input type="month" id="lancamentoCompetencia" required /></label><label>Filial<select
+                        id="lancamentoFilial" required></select></label><label class="full">Colaborador<select
+                        id="lancamentoFuncionario" required></select></label>
+                  </div>
+                  <div id="camposDinamicos" class="dynamic-fields"></div>
+
+                  <section id="evidenciaProdutivos" class="evidence-section">
+                    <div class="evidence-section-header">
+                      <div>
+                        <p class="eyebrow">Evidências da filial</p>
+                        <h3>Anexar imagens para o relatório</h3>
+                        <p>
+                          As imagens valem para toda a filial da competência selecionada.
+                        </p>
+                      </div>
+                      <span id="evidenciaContador" class="evidence-counter">0/20</span>
+                    </div>
+
+                    <div id="evidenciaLegendaFilial" class="evidence-branch-label">
+                      Selecione a competência e a filial
+                    </div>
+
+                    <div id="evidenciaDropzone" class="evidence-dropzone">
+                      <input type="file" id="evidenciaInput" class="evidence-input" accept="image/jpeg,image/png,image/webp"
+                        multiple />
+
+                      <div class="evidence-dropzone-content">
+                        <div class="evidence-upload-icon">↑</div>
+                        <strong>Arraste as imagens para cá</strong>
+                        <small>JPG, PNG ou WEBP</small>
+
+                        <button type="button" id="btnSelecionarEvidencia" class="evidence-select-button"
+                          aria-controls="evidenciaInput">
+                          Selecionar imagens
+                        </button>
+                      </div>
+                    </div>
+
+                    <p id="evidenciaMensagem" class="evidence-message"></p>
+
+                    <div id="evidenciaGaleria" class="evidence-gallery"></div>
+                  </section>
+
+                  <div id="resultadoPreview" class="resultado-preview"></div>
+                  <div class="modal-actions">
+                    <button type="button" class="secondary fechar-modal">Cancelar</button><button type="submit"
+                      class="primary">Salvar lançamento</button>
+                  </div>
+                </form>
+              </dialog>
+
+              <!-- MODAIS PIX -->
+              <dialog id="modalFuncionarioPix">
+                <form id="formFuncionarioPix" class="modal-form">
+                  <div class="modal-header">
+                    <div>
+                      <p class="eyebrow">Pix do Presidente</p>
+                      <h2>Participante</h2>
+                    </div>
+                    <button type="button" id="fecharModalFuncionarioPix" class="icon-btn">
+                      ×
+                    </button>
+                  </div>
+                  <input type="hidden" id="pixFuncionarioId" />
+                  <div class="form-grid">
+                    <label>Filial<select id="pixFuncionarioFilial" required></select></label><label>DN<input id="pixFuncionarioDn"
+                        readonly /></label><label class="full">Nome<input id="pixFuncionarioNome"
+                        required /></label><label>Cargo<select id="pixFuncionarioCargo"
+                        required></select></label><label>Status<select id="pixFuncionarioAtivo">
+                        <option value="true">Ativo</option>
+                        <option value="false">Inativo</option>
+                      </select></label>
+                  </div>
+                  <div class="modal-actions">
+                    <button type="button" id="cancelarModalFuncionarioPix" class="secondary">
+                      Cancelar</button><button type="submit" class="primary">Salvar participante</button>
+                  </div>
+                </form>
+              </dialog>
+
+              <dialog id="modalPixPresidente" class="pix-dialog">
+                <form id="formPixPresidente" class="modal-form wide">
+                  <div class="modal-header">
+                    <div>
+                      <p class="eyebrow">Pix do Presidente</p>
+                      <h2>Lançamento semanal</h2>
+                    </div>
+                    <button type="button" id="fecharModalPix" class="icon-btn">×</button>
+                  </div>
+                  <input type="hidden" id="pixLancamentoId" />
+                  <div class="form-grid">
+                    <label>Competência<input type="month" id="pixLancamentoCompetencia" min="2026-06"
+                        required /></label><label>Semana<select id="pixLancamentoSemana" required>
+                        <option value="1">Semana 1</option>
+                        <option value="2">Semana 2</option>
+                        <option value="3">Semana 3</option>
+                        <option value="4">Semana 4</option>
+                      </select></label><label>Filial<select id="pixLancamentoFilial" required></select></label><label>Consultor
+                      Técnico<select id="pixLancamentoFuncionario" required></select></label>
+                  </div>
+                  <div id="pixCamposDinamicos" class="dynamic-fields pix-dynamic-fields"></div>
+                  <div id="pixResultadoPreview" class="resultado-preview pix-preview">
+                    O cálculo aparecerá aqui.
+                  </div>
+                  <div class="modal-actions">
+                    <button type="button" id="cancelarModalPix" class="secondary">
+                      Cancelar</button><button type="submit" class="primary">Salvar lançamento</button>
+                  </div>
+                </form>
+              </dialog>
+
+
+              <!-- SOBRE O SISTEMA — AUTORIA -->
+              <dialog id="modalSobreSistema" class="about-system-dialog">
+                <article class="about-system-card">
+                  <button type="button" id="btnFecharSobreSistema" class="about-system-close"
+                    aria-label="Fechar informações sobre o sistema">
+                    ×
+                  </button>
+
+                  <div class="about-system-hero">
+                    <div class="about-system-logo" aria-hidden="true">
+                      PL
+                    </div>
+
+                    <div>
+                      <p class="about-system-eyebrow">Sistema corporativo</p>
+                      <h2>Sistema de Campanhas Pós-Vendas</h2>
+                      <p class="about-system-subtitle">
+                        Gestão integrada de campanhas, apurações e indicadores.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="about-system-content">
+                    <section class="about-developer-section">
+                      <span class="about-label">Desenvolvido por</span>
+                      <h3>Pabricio Lima</h3>
+                      <p>Analista de Negócios &amp; Tecnologia</p>
+
+                      <div class="about-tags">
+                        <span>Developer</span>
+                        <span>Enterprise Edition</span>
+                        <span>Versão 2.0</span>
+                      </div>
+                    </section>
+
+                    <section class="about-technology-section">
+                      <span class="about-label">Tecnologias do projeto</span>
+
+                      <div class="about-technology-grid">
+                        <span>HTML5</span>
+                        <span>CSS3</span>
+                        <span>JavaScript</span>
+                        <span>Firebase</span>
+                        <span>Supabase</span>
+                        <span>Excel &amp; PDF</span>
+                      </div>
+                    </section>
+
+                    <footer class="about-system-footer">
+                      <div>
+                        <strong>Grupo Mônaco</strong>
+                        <span>Sistema desenvolvido para operação interna.</span>
+                      </div>
+
+                      <small>
+                        © 2026 Pabricio Lima. Todos os direitos reservados.
+                      </small>
+                    </footer>
+                  </div>
+                </article>
+              </dialog>
+
+              <div id="toast" class="toast"></div>
+
+              <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+              <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+              <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
+              <script src="./alerts-premium.js?v=20260716-01"></script>
+              <script type="module" src="./script.js?v=20260806-32"></script>
+              <script type="module" src="./pix-presidente.js?v=20260724-07"></script>
+              <script type="module" src="./importacao-funcionarios.js?v=20260716-01"></script>
+              <script src="./pix-historico-individual.js?v=20260715-01"></script>
+              <script type="module" src="./evidencias-produtivos.js?v=20260804-03"></script>
+              <script type="module" src="./evidencias-pix.js?v=20260730-03"></script>
+              <script src="./module-switcher.js?v=20260715-07"></script>
+              <script src="./isolamento-competencias.js?v=20260724-02"></script>
+              <script src="./politicas-penalidades.js?v=20260804-02"></script>
+              <script type="module" src="./bloqueio-lancamentos.js?v=20260717-01"></script>
+              <script src="./dashboard-pix-gestor-funcional.js?v=20260721-04"></script>
+              <script type="module" src="./compras-module.js?v=20260723-11"></script>
+              <script type="module" src="./auditoria-campanhas.js?v=20260808-01"></script>
+              <script type="module" src="./comparativo-mensal-campanhas.js?v=20260808-01"></script>
+              <script src="./guia-campos-pendentes-pix-v01.js?v=20260819-01"></script>
+              <script src="./podium-homenagem-premium-v01.js?v=20260819-01"></script>
+              <!-- Leitura de XLSX, XLS e CSV -->
+              <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+              <script src="./crm-module.js?v=20260821-163"></script>
+
+
+              <script>
+                /*
+                LOADER SEGURO DA IMPORTAÇÃO V15
+                O clique carrega o módulo diretamente e não depende de
+                addEventListener registrado anteriormente.
+                */
+                window.__importadorPromise = null;
+
+                window.__carregarImportador = async function () {
+                  if (
+                    window.importacaoRelatorioSistema
+                  ) {
+                    return window.importacaoRelatorioSistema;
+                  }
+
+                  if (!window.__importadorPromise) {
+                    window.__importadorPromise =
+                      import(
+                        "./importacao-relatorio-sistema.js?v=20260723-16"
+                      );
+                  }
+
+                  try {
+                    await window.__importadorPromise;
+
+                    const api =
+                      window.importacaoRelatorioSistema;
+
+                    if (!api) {
+                      throw new Error(
+                        "O módulo foi carregado, mas a API window.importacaoRelatorioSistema não foi criada."
+                      );
+                    }
+
+                    return api;
+                  } catch (erro) {
+                    window.__importadorPromise = null;
+
+                    console.error(
+                      "[IMPORTAÇÃO] ERRO REAL AO CARREGAR:",
+                      erro
+                    );
+
+                    const detalhe =
+                      erro?.message ||
+                      String(erro);
+
+                    const mensagem =
+                      "Não foi possível carregar a área de importação.\n\n" +
+                      "Detalhe técnico: " +
+                      detalhe;
+
+                    if (
+                      window.CampanhaUI &&
+                      typeof window.CampanhaUI.alert === "function"
+                    ) {
+                      await window.CampanhaUI.alert(
+                        mensagem,
+                        {
+                          tipo: "erro",
+                          titulo:
+                            "Falha ao abrir importação"
+                        }
+                      );
+                    } else {
+                      window.alert(mensagem);
+                    }
+
+                    throw erro;
+                  }
+                };
+
+                window.abrirImportacaoPixSeguro =
+                  async function (evento) {
+                    evento?.preventDefault();
+                    evento?.stopPropagation();
+
+                    const botao =
+                      document.querySelector(
+                        "#btnImportarRelatorioPix"
+                      );
+
+                    const textoOriginal =
+                      botao?.textContent ||
+                      "Importar relatório";
+
+                    try {
+                      if (botao) {
+                        botao.disabled = true;
+                        botao.textContent =
+                          "Abrindo...";
+                      }
+
+                      const api =
+                        await window.__carregarImportador();
+
+                      return api.abrirPix();
+                    } finally {
+                      if (botao) {
+                        botao.disabled = false;
+                        botao.textContent =
+                          textoOriginal;
+                      }
+                    }
+                  };
+
+                window.baixarModeloPixSeguro =
+                  async function (evento) {
+                    evento?.preventDefault();
+                    evento?.stopPropagation();
+
+                    const api =
+                      await window.__carregarImportador();
+
+                    return api.baixarModeloPix();
+                  };
+
+                window.abrirImportacaoProdutivosSeguro =
+                  async function (evento) {
+                    evento?.preventDefault();
+                    evento?.stopPropagation();
+
+                    const api =
+                      await window.__carregarImportador();
+
+                    return api.abrirProdutivos();
+                  };
+
+                window.baixarModeloProdutivosSeguro =
+                  async function (evento) {
+                    evento?.preventDefault();
+                    evento?.stopPropagation();
+
+                    const api =
+                      await window.__carregarImportador();
+
+                    return api.baixarModeloProdutivos();
+                  };
+              </script>
+
+              <script>
+                /*
+                 * Card de autoria e modal "Sobre o Sistema".
+                 * Código isolado: não interfere nos módulos, filtros ou cálculos.
+                 */
+                (() => {
+                  const botaoAbrir =
+                    document.getElementById(
+                      "btnAbrirSobreSistema"
+                    );
+
+                  const modal =
+                    document.getElementById(
+                      "modalSobreSistema"
+                    );
+
+                  const botaoFechar =
+                    document.getElementById(
+                      "btnFecharSobreSistema"
+                    );
+
+                  if (
+                    !botaoAbrir ||
+                    !modal ||
+                    !botaoFechar
+                  ) {
+                    return;
+                  }
+
+                  botaoAbrir.addEventListener(
+                    "click",
+                    () => {
+                      if (
+                        typeof modal.showModal ===
+                        "function"
+                      ) {
+                        modal.showModal();
+                      }
+                    }
+                  );
+
+                  botaoFechar.addEventListener(
+                    "click",
+                    () => modal.close()
+                  );
+
+                  modal.addEventListener(
+                    "click",
+                    evento => {
+                      if (
+                        evento.target === modal
+                      ) {
+                        modal.close();
+                      }
+                    }
+                  );
+                })();
+              </script>
+              <script type="module" src="./podium-campanhas.js?v=20260818-01"></script>
+
+              <!-- Importação integrada aos módulos de Lançamentos -->
+            </body>
+
+            </html>
