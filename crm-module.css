@@ -1,2704 +1,2737 @@
-    /* ======================================================================
-               CAMPANHAS DO CRM — CSS PREMIUM v1.1
-               Arquivo: crm-module.css
-               ====================================================================== */
-
-            #crmCampanhas,
-            #crmCampanhas * {
-              box-sizing: border-box;
-            }
-
-            .crm-campaign-view {
-              min-width: 0;
-            }
-
-            .crm-module-shell {
-              display: grid;
-              gap: 16px;
-              min-width: 0;
-            }
-
-            .crm-module-toolbar {
-              display: flex;
-              align-items: flex-end;
-              justify-content: space-between;
-              gap: 18px;
-            }
-
-            .crm-module-toolbar h2 {
-              margin: 3px 0 0;
-              color: #102b3d;
-              font-size: 28px;
-            }
-
-            .crm-module-toolbar-actions {
-              display: flex;
-              align-items: flex-end;
-              justify-content: flex-end;
-              gap: 8px;
-              flex-wrap: wrap;
-            }
-
-            .crm-month-button,
-            .crm-export-button,
-            .crm-primary-button,
-            .crm-secondary-button,
-            .crm-mini-button {
-              font: inherit;
-            }
-
-            .crm-month-button {
-              width: 42px;
-              height: 42px;
-              border: 1px solid #d5e0e6;
-              border-radius: 11px;
-              color: #14364c;
-              background: #fff;
-              font-size: 22px;
-              font-weight: 900;
-              cursor: pointer;
-              box-shadow: 0 5px 14px rgba(25, 54, 74, .05);
-            }
-
-            .crm-month-box,
-            .crm-top-filter {
-              display: grid;
-              gap: 4px;
-            }
-
-            .crm-month-box span,
-            .crm-top-filter span {
-              color: #617684;
-              font-size: 9px;
-              font-weight: 850;
-            }
-
-            .crm-month-box input,
-            .crm-top-filter select {
-              height: 42px;
-              min-width: 160px;
-              padding: 0 12px;
-              border: 1px solid #d5e0e6;
-              border-radius: 11px;
-              color: #14364c;
-              background: #fff;
-              font: inherit;
-              font-size: 11px;
-              font-weight: 750;
-            }
-
-            .crm-export-button {
-              height: 42px;
-              padding: 0 14px;
-              border: 0;
-              border-radius: 11px;
-              color: #fff;
-              font-size: 10px;
-              font-weight: 900;
-              cursor: pointer;
-            }
-
-            .crm-export-button.crm-excel {
-              background: linear-gradient(135deg, #0d9764, #087a55);
-            }
-
-            .crm-export-button.crm-pdf {
-              background: linear-gradient(135deg, #df4141, #be2730);
-            }
-
-            .crm-panel {
-              overflow: hidden;
-              min-width: 0;
-              border: 1px solid #dbe5ea;
-              border-radius: 16px;
-              background: #fff;
-              box-shadow: 0 9px 28px rgba(18, 49, 69, .045);
-            }
-
-            .crm-panel-header {
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              gap: 14px;
-              padding: 15px 17px;
-              border-bottom: 1px solid #e4eaee;
-            }
-
-            .crm-panel-header h3 {
-              margin: 3px 0 2px;
-              color: #132f43;
-              font-size: 15px;
-            }
-
-            .crm-panel-header span {
-              color: #718591;
-              font-size: 9px;
-            }
-
-            .crm-kicker {
-              margin: 0;
-              color: #7558ed;
-              font-size: 8px;
-              font-weight: 950;
-              letter-spacing: .11em;
-            }
-
-            .crm-podium-panel {
-              position: relative;
-              padding: 18px;
-              background:
-                radial-gradient(circle at 50% -10%, rgba(243, 187, 24, .13), transparent 37%),
-                linear-gradient(135deg, #fff, #fbfcfd);
-            }
-
-            .crm-podium-panel::before {
-              content: "";
-              position: absolute;
-              inset: 0 66% auto 0;
-              height: 3px;
-              background: #d9a900;
-            }
-
-            .crm-podium-panel::after {
-              content: "";
-              position: absolute;
-              inset: 0 0 auto 66%;
-              height: 3px;
-              background: #bd6c39;
-            }
-
-            .crm-podium-header {
-              display: flex;
-              justify-content: space-between;
-              gap: 14px;
-              margin-bottom: 20px;
-            }
-
-            .crm-podium-header h3 {
-              margin: 4px 0;
-              font-size: 21px;
-            }
-
-            .crm-podium-header span {
-              color: #738692;
-              font-size: 9px;
-            }
-
-            .crm-podium-grid {
-              display: grid;
-              grid-template-columns: 1fr 1.14fr 1fr;
-              align-items: end;
-              gap: 14px;
-              padding-top: 26px;
-            }
-
-            .crm-podium-card {
-              position: relative;
-              min-height: 300px;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              padding: 28px 18px 18px;
-              border: 1px solid #dce5e9;
-              border-radius: 17px;
-              background: rgba(255, 255, 255, .96);
-              text-align: center;
-            }
-
-            .crm-podium-card.ouro {
-              min-height: 350px;
-              border: 2px solid #e1b638;
-              background: linear-gradient(180deg, #fff9e9, #fff);
-              box-shadow:
-                0 24px 50px rgba(179, 133, 0, .12),
-                0 8px 20px rgba(18, 49, 69, .06);
-            }
-
-            .crm-podium-card.bronze {
-              border-color: #edc3a6;
-              background: linear-gradient(180deg, #fff7f2, #fff);
-            }
-
-            .crm-podium-crown {
-              position: absolute;
-              top: -24px;
-              min-width: 52px;
-              height: 52px;
-              display: grid;
-              place-items: center;
-              padding: 0 11px;
-              border: 1px solid #dce5e9;
-              border-radius: 16px;
-              color: #8d6c00;
-              background: #fff;
-              font-size: 13px;
-              font-weight: 950;
-              box-shadow: 0 10px 20px rgba(21, 48, 67, .08);
-            }
-
-            .crm-podium-card.ouro .crm-podium-crown {
-              width: 68px;
-              height: 68px;
-              top: -34px;
-              border-color: #f0d15d;
-              color: #a57900;
-              font-size: 17px;
-            }
-
-            .crm-podium-card > small {
-              margin-top: 8px;
-              padding: 5px 9px;
-              border-radius: 999px;
-              color: #657985;
-              background: #f1f4f6;
-              font-size: 7px;
-              font-weight: 950;
-            }
-
-            .crm-podium-card h4 {
-              margin: 15px 0 4px;
-              color: #142f43;
-              font-size: 14px;
-              line-height: 1.15;
-              text-transform: uppercase;
-            }
-
-            .crm-podium-card p {
-              margin: 0;
-              color: #778b96;
-              font-size: 9px;
-            }
-
-            .crm-podium-branch {
-              margin-top: 13px;
-              padding: 5px 9px;
-              border-radius: 999px;
-              color: #67808c;
-              background: #f0f4f6;
-              font-size: 7px;
-              font-weight: 850;
-            }
-
-            .crm-podium-money {
-              width: 100%;
-              margin-top: auto;
-              padding: 15px 12px;
-              border-radius: 12px;
-              background: #edf8f3;
-            }
-
-            .crm-podium-money em {
-              display: block;
-              color: #728690;
-              font-style: normal;
-              font-size: 7px;
-              font-weight: 900;
-              letter-spacing: .08em;
-            }
-
-            .crm-podium-money strong {
-              display: block;
-              margin: 6px 0 3px;
-              color: #098355;
-              font-size: 24px;
-            }
-
-            .crm-podium-card.ouro .crm-podium-money strong {
-              color: #ad7d00;
-              font-size: 31px;
-            }
-
-            .crm-podium-money span {
-              color: #708591;
-              font-size: 8px;
-            }
-
-            .crm-await {
-              color: #8798a3 !important;
-            }
-
-            .crm-dashboard-cards {
-              display: grid;
-              grid-template-columns: repeat(5, minmax(0, 1fr));
-              gap: 11px;
-            }
-
-            .crm-dashboard-cards article {
-              min-width: 0;
-              padding: 15px;
-              border: 1px solid #dbe4e9;
-              border-radius: 14px;
-              background: #fff;
-            }
-
-            .crm-dashboard-cards span {
-              display: block;
-              color: #718591;
-              font-size: 8px;
-              font-weight: 800;
-            }
-
-            .crm-dashboard-cards strong {
-              display: block;
-              margin: 6px 0 3px;
-              color: #102d42;
-              font-size: 22px;
-            }
-
-            .crm-dashboard-cards small {
-              color: #82939d;
-              font-size: 8px;
-            }
-
-            .crm-table-wrap {
-              max-width: 100%;
-              overflow: auto;
-            }
-
-            .crm-table {
-              width: 100%;
-              border-collapse: collapse;
-              font-size: 9px;
-            }
-
-            .crm-table th {
-              padding: 10px 11px;
-              color: #617682;
-              background: #f2f6f8;
-              font-size: 7px;
-              font-weight: 900;
-              letter-spacing: .035em;
-              text-align: left;
-              text-transform: uppercase;
-              white-space: nowrap;
-            }
-
-            .crm-table td {
-              padding: 10px 11px;
-              border-top: 1px solid #e8eef1;
-              color: #17364b;
-              vertical-align: middle;
-              white-space: nowrap;
-            }
-
-            .crm-table tbody tr:hover {
-              background: #fafcfd;
-            }
-
-            .crm-cell-subtitle {
-              display: block;
-              margin-top: 3px;
-              color: #81939d;
-              font-size: 7px;
-            }
-
-            .crm-level-chip,
-            .crm-status-chip {
-              display: inline-flex;
-              align-items: center;
-              padding: 4px 8px;
-              border-radius: 999px;
-              font-size: 7px;
-              font-weight: 900;
-            }
-
-            .crm-level-chip {
-              color: #704ce8;
-              background: #eee8ff;
-            }
-
-            .crm-status-chip.ativo {
-              color: #087d52;
-              background: #dff5e9;
-            }
-
-            .crm-status-chip.inativo {
-              color: #bf3030;
-              background: #ffe7e7;
-            }
-
-            .crm-mini-button {
-              min-height: 29px;
-              padding: 0 8px;
-              border: 1px solid #d9e2e7;
-              border-radius: 7px;
-              color: #23445a;
-              background: #fff;
-              font-size: 8px;
-              cursor: pointer;
-            }
-
-            .crm-mini-button.danger {
-              color: #c62e2e;
-            }
-
-            .crm-primary-button,
-            .crm-secondary-button {
-              min-height: 38px;
-              padding: 0 13px;
-              border-radius: 10px;
-              font-size: 9px;
-              font-weight: 900;
-              cursor: pointer;
-            }
-
-            .crm-primary-button {
-              border: 0;
-              color: #fff;
-              background: linear-gradient(135deg, #7857f4, #6847df);
-            }
-
-            .crm-secondary-button {
-              border: 1px solid #d9e3e8;
-              color: #4f6978;
-              background: #fff;
-            }
-
-            .crm-import-main {
-              background:
-                radial-gradient(circle at 100% 0, rgba(116, 80, 232, .07), transparent 32%),
-                #fff;
-            }
-
-            .crm-import-grid {
-              display: grid;
-              grid-template-columns: repeat(2, minmax(0, 1fr));
-              gap: 11px;
-              padding: 15px;
-            }
-
-            .crm-import-card {
-              position: relative;
-              min-width: 0;
-              display: grid;
-              grid-template-columns: auto 1fr auto;
-              align-items: center;
-              gap: 12px;
-              padding: 14px;
-              border: 1px solid #dee6eb;
-              border-radius: 14px;
-              background: #fff;
-              box-shadow: 0 7px 18px rgba(18, 49, 69, .035);
-            }
-
-            .crm-import-icon {
-              width: 45px;
-              height: 45px;
-              display: grid;
-              place-items: center;
-              border-radius: 12px;
-              color: #7253e8;
-              background: #efeaff;
-              font-size: 9px;
-              font-weight: 950;
-            }
-
-            .crm-import-copy {
-              min-width: 0;
-            }
-
-            .crm-import-copy h4 {
-              margin: 0 0 4px;
-              color: #16364a;
-              font-size: 11px;
-            }
-
-            .crm-import-copy p {
-              margin: 0;
-              color: #788b96;
-              font-size: 8px;
-              line-height: 1.45;
-            }
-
-            .crm-import-copy small {
-              display: block;
-              margin-top: 7px;
-              color: #607984;
-              font-size: 7px;
-              font-weight: 800;
-            }
-
-            .crm-import-button {
-              min-height: 36px;
-              display: inline-flex;
-              align-items: center;
-              justify-content: center;
-              padding: 0 12px;
-              border: 1px solid #d9d1ff;
-              border-radius: 10px;
-              color: #6f4de3;
-              background: #faf8ff;
-              font-size: 8px;
-              font-weight: 900;
-              cursor: pointer;
-            }
-
-            .crm-import-guide,
-            .crm-policy-note {
-              margin: 0 15px 15px;
-              padding: 11px 13px;
-              border-radius: 10px;
-              color: #6a7f8b;
-              background: #f2f6f8;
-              font-size: 8px;
-              line-height: 1.55;
-            }
-
-            .crm-import-guide strong {
-              display: block;
-              margin-bottom: 3px;
-              color: #354f60;
-            }
-
-            .crm-empty-state {
-              padding: 28px 18px;
-              color: #81939d;
-              text-align: center;
-              font-size: 10px;
-            }
-
-            .crm-modal-overlay {
-              position: fixed;
-              inset: 0;
-              z-index: 999999;
-              display: grid;
-              place-items: center;
-              padding: 18px;
-            }
-
-            .crm-modal-backdrop {
-              position: absolute;
-              inset: 0;
-              background: rgba(8, 27, 40, .68);
-              backdrop-filter: blur(6px);
-            }
-
-            .crm-modal-card {
-              position: relative;
-              width: min(720px, 96vw);
-              overflow: hidden;
-              border: 1px solid rgba(255, 255, 255, .45);
-              border-radius: 19px;
-              background: #fff;
-              box-shadow: 0 30px 90px rgba(0, 0, 0, .24);
-            }
-
-            .crm-modal-header {
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              gap: 14px;
-              padding: 18px 20px;
-              border-bottom: 1px solid #e3eaee;
-            }
-
-            .crm-modal-header h3 {
-              margin: 3px 0 0;
-            }
-
-            .crm-modal-close {
-              width: 36px;
-              height: 36px;
-              border: 0;
-              border-radius: 10px;
-              color: #5f7380;
-              background: #edf3f6;
-              font-size: 21px;
-              cursor: pointer;
-            }
-
-            .crm-form-grid {
-              display: grid;
-              grid-template-columns: repeat(2, minmax(0, 1fr));
-              gap: 12px;
-              padding: 18px 20px;
-            }
-
-            .crm-form-grid label {
-              display: grid;
-              gap: 5px;
-            }
-
-            .crm-form-grid label.full {
-              grid-column: 1 / -1;
-            }
-
-            .crm-form-grid label span {
-              color: #667b88;
-              font-size: 8px;
-              font-weight: 900;
-            }
-
-            .crm-form-grid input,
-            .crm-form-grid select {
-              width: 100%;
-              height: 40px;
-              padding: 0 10px;
-              border: 1px solid #dae4e9;
-              border-radius: 9px;
-              color: #17364b;
-              background: #fff;
-              font: inherit;
-              font-size: 10px;
-            }
-
-            .crm-modal-actions {
-              display: flex;
-              justify-content: flex-end;
-              gap: 8px;
-              padding: 14px 20px;
-              border-top: 1px solid #e4eaee;
-              background: #fafcfd;
-            }
-
-            .crm-toast {
-              position: fixed;
-              right: 22px;
-              bottom: 22px;
-              z-index: 1000000;
-              max-width: min(370px, calc(100vw - 32px));
-              padding: 12px 16px;
-              border-radius: 11px;
-              color: #fff;
-              background: #17364b;
-              font-size: 10px;
-              font-weight: 800;
-              box-shadow: 0 15px 40px rgba(0, 0, 0, .18);
-              opacity: 0;
-              transform: translateY(10px);
-              pointer-events: none;
-              transition: opacity .2s ease, transform .2s ease;
-            }
-
-            .crm-toast.show {
-              opacity: 1;
-              transform: translateY(0);
-            }
-
-            .crm-toast.ok {
-              background: #087d59;
-            }
-
-            .crm-toast.info {
-              background: #2f607f;
-            }
-
-            .crm-toast.erro {
-              background: #b52e2e;
-            }
-
-            .crm-menu-btn.active {
-              color: #fff !important;
-              background: #7955ef !important;
-            }
-
-            @media (max-width: 1180px) {
-              .crm-module-toolbar {
-                align-items: flex-start;
-                flex-direction: column;
-              }
-
-              .crm-module-toolbar-actions {
-                width: 100%;
-                justify-content: flex-start;
-              }
-
-              .crm-dashboard-cards {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-              }
-            }
-
-            @media (max-width: 860px) {
-              .crm-podium-grid {
-                grid-template-columns: 1fr;
-              }
-
-              .crm-podium-card.ouro {
-                order: -1;
-                min-height: 320px;
-              }
-
-              .crm-import-grid {
-                grid-template-columns: 1fr;
-              }
-            }
-
-            @media (max-width: 650px) {
-              .crm-module-toolbar h2 {
-                font-size: 23px;
-              }
-
-              .crm-module-toolbar-actions {
-                display: grid;
-                grid-template-columns: auto 1fr auto;
-              }
-
-              .crm-month-box,
-              .crm-top-filter {
-                min-width: 0;
-              }
-
-              .crm-month-box input,
-              .crm-top-filter select {
-                width: 100%;
-                min-width: 0;
-              }
-
-              .crm-top-filter {
-                grid-column: 1 / -1;
-              }
-
-              .crm-export-button {
-                grid-column: span 1;
-              }
-
-              .crm-dashboard-cards {
-                grid-template-columns: 1fr;
-              }
-
-              .crm-import-card {
-                grid-template-columns: auto 1fr;
-              }
-
-              .crm-import-button {
-                grid-column: 1 / -1;
-                width: 100%;
-              }
-
-              .crm-form-grid {
-                grid-template-columns: 1fr;
-              }
-
-              .crm-form-grid label.full {
-                grid-column: auto;
-              }
-            }
-
-            @media print {
-              body * {
-                visibility: hidden !important;
-              }
-
-              #crmCampanhas,
-              #crmCampanhas * {
-                visibility: visible !important;
-              }
-
-              #crmCampanhas {
-                position: absolute;
-                inset: 0;
-                background: #fff;
-              }
-
-              .crm-module-toolbar-actions,
-              .crm-mini-button,
-              .crm-primary-button,
-              .crm-import-button {
-                display: none !important;
-              }
-            }
-
-            /* ======================================================================
-               CRM v1.2 — INTEGRAÇÃO VISUAL COM O SISTEMA PRINCIPAL
-               ====================================================================== */
-
-            .crm-module-toolbar,.crm-module-toolbar-actions{display:none!important}
-
-            [data-module-group="crm"] .submenu{
-              margin-top:4px;padding:0 10px 8px 16px;border-left:1px solid rgba(255,255,255,.13)
-            }
-            [data-module-group="crm"] .crm-menu-btn{
-              width:100%;min-height:38px;display:flex;align-items:center;justify-content:flex-start;
-              margin:0;padding:0 12px;border:0!important;border-radius:9px;color:#dfeaf2!important;
-              background:transparent!important;box-shadow:none!important;font-size:10px;font-weight:800;
-              text-align:left;transition:background .2s ease,color .2s ease,transform .2s ease
-            }
-            [data-module-group="crm"] .crm-menu-btn:hover{color:#fff!important;background:rgba(255,255,255,.06)!important;transform:translateX(2px)}
-            [data-module-group="crm"] .crm-menu-btn.active{
-              color:#fff!important;background:linear-gradient(90deg,rgba(125,85,239,.24),rgba(125,85,239,.08))!important;
-              box-shadow:inset 3px 0 0 #8b6cff!important
-            }
-
-            #crmCampanhas{animation:crmViewEnter .42s cubic-bezier(.22,.8,.24,1) both}
-            @keyframes crmViewEnter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-            #crmConteudo{display:grid;gap:16px}
-            .crm-panel{
-              border-color:#d9e4ea;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.99),rgba(250,252,253,.99));
-              box-shadow:0 18px 45px rgba(17,48,68,.055),0 1px 0 rgba(255,255,255,.9) inset;
-              animation:crmCardEnter .5s cubic-bezier(.22,.8,.24,1) both
-            }
-            @keyframes crmCardEnter{from{opacity:0;transform:translateY(10px) scale(.995)}to{opacity:1;transform:none}}
-            .crm-panel:nth-child(2){animation-delay:.04s}.crm-panel:nth-child(3){animation-delay:.08s}.crm-panel:nth-child(4){animation-delay:.12s}
-
-            .crm-podium-panel{
-              overflow:visible;padding:22px 20px 20px;
-              background:radial-gradient(circle at 50% 0,rgba(255,197,45,.12),transparent 32%),radial-gradient(circle at 4% 8%,rgba(117,88,237,.06),transparent 22%),linear-gradient(135deg,#fff,#fcfdfd)
-            }
-            .crm-podium-grid{gap:16px}
-            .crm-podium-card{overflow:hidden;transition:transform .24s ease,box-shadow .24s ease,border-color .24s ease}
-            .crm-podium-card:hover{transform:translateY(-4px);box-shadow:0 18px 38px rgba(17,48,68,.08)}
-            .crm-podium-card.ouro:hover{transform:translateY(-10px)}
-            .crm-podium-card::after{
-              content:"";position:absolute;inset:0;pointer-events:none;
-              background:linear-gradient(115deg,transparent 15%,rgba(255,255,255,.52) 42%,transparent 64%);
-              transform:translateX(-125%);animation:crmSheen 5.8s ease-in-out infinite
-            }
-            @keyframes crmSheen{0%,74%{transform:translateX(-125%)}88%,100%{transform:translateX(125%)}}
-
-            .crm-dashboard-cards article{
-              position:relative;overflow:hidden;min-height:102px;padding:17px;border-radius:15px;
-              background:linear-gradient(180deg,#fff,#fbfcfd);box-shadow:0 10px 26px rgba(19,49,68,.045)
-            }
-            .crm-dashboard-cards article::before{
-              content:"";position:absolute;inset:0 auto 0 0;width:3px;background:linear-gradient(180deg,#7b5af0,#0f8c6d)
-            }
-            .crm-dashboard-cards strong{font-size:24px}
-
-            .crm-import-main{
-              position:relative;overflow:hidden;background:radial-gradient(circle at 100% 0,rgba(117,82,235,.09),transparent 34%),linear-gradient(180deg,#fff,#fbfcfe)
-            }
-            .crm-import-main::after{
-              content:"CRM";position:absolute;right:28px;top:6px;color:rgba(105,76,223,.035);font-size:92px;font-weight:950;letter-spacing:-.06em;pointer-events:none
-            }
-            .crm-import-grid{gap:13px;padding:17px}
-            .crm-import-card{
-              min-height:112px;border-radius:15px;box-shadow:0 11px 26px rgba(18,49,69,.045);
-              transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease
-            }
-            .crm-import-card:hover{transform:translateY(-2px);border-color:#d6cfff;box-shadow:0 16px 34px rgba(47,38,95,.08)}
-            .crm-import-icon{width:50px;height:50px;border-radius:14px;background:linear-gradient(135deg,#efeaff,#e7f8f3);box-shadow:inset 0 1px 0 rgba(255,255,255,.85)}
-            .crm-import-button{
-              min-height:39px;border-color:#d6ccff;background:linear-gradient(180deg,#fff,#f8f5ff);box-shadow:0 7px 16px rgba(88,61,186,.06);
-              transition:transform .18s ease,box-shadow .18s ease,background .18s ease
-            }
-            .crm-import-button:hover{transform:translateY(-1px);background:#f3efff;box-shadow:0 10px 22px rgba(88,61,186,.10)}
-
-            .crm-table th{background:linear-gradient(180deg,#f4f7f9,#eef3f6)}
-            .crm-table tbody tr{transition:background .16s ease}.crm-table tbody tr:hover{background:#f8fbfd}
-            .crm-policy-note,.crm-import-guide{border:1px solid #e2eaee;background:linear-gradient(180deg,#f6f9fb,#f2f6f8)}
-
-            @media (prefers-reduced-motion:reduce){#crmCampanhas,.crm-panel,.crm-podium-card::after{animation:none!important}.crm-podium-card,[data-module-group="crm"] .crm-menu-btn{transition:none!important}}
-
-
-            /* ======================================================================
-               CRM v1.3 — LEGIBILIDADE, ORGANIZAÇÃO E DENSIDADE VISUAL
-               ====================================================================== */
-
-            #crmCampanhas {
-              --crm-text: #123249;
-              --crm-muted: #6b8190;
-              --crm-border: #d6e2e8;
-              --crm-purple: #7655ef;
-              --crm-green: #0b9164;
-            }
-
-            #crmCampanhas,
-            #crmCampanhas button,
-            #crmCampanhas input,
-            #crmCampanhas select {
-              font-size: 13px;
-            }
-
-            .crm-kicker {
-              font-size: 10px;
-              letter-spacing: .12em;
-            }
-
-            .crm-panel-header {
-              min-height: 74px;
-              padding: 18px 20px;
-            }
-
-            .crm-panel-header h3 {
-              margin-top: 5px;
-              font-size: 19px;
-              line-height: 1.18;
-            }
-
-            .crm-panel-header span {
-              display: block;
-              margin-top: 4px;
-              font-size: 11px;
-              line-height: 1.4;
-            }
-
-            .crm-table {
-              font-size: 12px;
-            }
-
-            .crm-table th {
-              padding: 12px 14px;
-              font-size: 9.5px;
-              letter-spacing: .055em;
-            }
-
-            .crm-table td {
-              padding: 13px 14px;
-              font-size: 11.5px;
-              line-height: 1.3;
-            }
-
-            .crm-cell-subtitle {
-              margin-top: 4px;
-              font-size: 9px;
-            }
-
-            .crm-level-chip,
-            .crm-status-chip {
-              padding: 5px 9px;
-              font-size: 9px;
-            }
-
-            .crm-mini-button {
-              min-height: 34px;
-              padding: 0 10px;
-              font-size: 10px;
-            }
-
-            /* Pódio: mais compacto quando ainda está vazio */
-            .crm-podium-panel {
-              padding: 20px;
-            }
-
-            .crm-podium-header {
-              margin-bottom: 13px;
-            }
-
-            .crm-podium-header h3 {
-              font-size: 22px;
-            }
-
-            .crm-podium-header span {
-              max-width: 880px;
-              font-size: 10.5px;
-              line-height: 1.45;
-            }
-
-            .crm-podium-grid {
-              align-items: stretch;
-              gap: 13px;
-              padding-top: 24px;
-            }
-
-            .crm-podium-card {
-              min-height: 240px;
-              padding: 26px 17px 16px;
-            }
-
-            .crm-podium-card.ouro {
-              min-height: 270px;
-            }
-
-            .crm-podium-card h4 {
-              font-size: 15px;
-            }
-
-            .crm-podium-card p {
-              font-size: 10px;
-            }
-
-            .crm-podium-branch {
-              font-size: 9px;
-            }
-
-            .crm-podium-money {
-              padding: 12px;
-            }
-
-            .crm-podium-money em {
-              font-size: 8px;
-            }
-
-            .crm-podium-money strong {
-              font-size: 23px;
-            }
-
-            .crm-podium-card.ouro .crm-podium-money strong {
-              font-size: 28px;
-            }
-
-            .crm-podium-money span {
-              font-size: 9px;
-            }
-
-            .crm-podium-card:has(.crm-await) {
-              min-height: 185px;
-              justify-content: center;
-            }
-
-            .crm-podium-card:has(.crm-await) .crm-podium-crown {
-              top: -22px;
-            }
-
-            /* Cards de resumo */
-            .crm-dashboard-cards {
-              gap: 12px;
-            }
-
-            .crm-dashboard-cards article {
-              min-height: 112px;
-              padding: 17px 18px;
-            }
-
-            .crm-dashboard-cards span {
-              font-size: 10px;
-            }
-
-            .crm-dashboard-cards strong {
-              margin: 8px 0 4px;
-              font-size: 27px;
-            }
-
-            .crm-dashboard-cards small {
-              font-size: 9.5px;
-            }
-
-            /* Painel vazio: sem área gigante desperdiçada */
-            .crm-empty-state {
-              min-height: 74px;
-              display: grid;
-              place-items: center;
-              padding: 20px 18px;
-              font-size: 11px;
-            }
-
-            .crm-primary-button,
-            .crm-secondary-button {
-              min-height: 40px;
-              padding: 0 15px;
-              font-size: 10.5px;
-            }
-
-            /* Importação */
-            .crm-import-main::after {
-              right: 28px;
-              top: 4px;
-              font-size: 86px;
-            }
-
-            .crm-import-grid {
-              gap: 14px;
-              padding: 18px;
-            }
-
-            .crm-import-card {
-              min-height: 126px;
-              grid-template-columns: 58px minmax(0, 1fr) auto;
-              gap: 14px;
-              padding: 17px;
-            }
-
-            .crm-import-icon {
-              width: 54px;
-              height: 54px;
-              font-size: 10px;
-            }
-
-            .crm-import-copy h4 {
-              margin-bottom: 6px;
-              font-size: 14px;
-            }
-
-            .crm-import-copy p {
-              max-width: 620px;
-              font-size: 10.5px;
-              line-height: 1.45;
-            }
-
-            .crm-import-copy small {
-              margin-top: 8px;
-              font-size: 9px;
-            }
-
-            .crm-import-button {
-              min-height: 42px;
-              padding: 0 14px;
-              font-size: 10px;
-            }
-
-            .crm-import-guide,
-            .crm-policy-note {
-              margin: 0 18px 18px;
-              padding: 13px 15px;
-              font-size: 10px;
-            }
-
-            .crm-import-guide strong {
-              margin-bottom: 5px;
-              font-size: 10.5px;
-            }
-
-            .crm-import-main + .crm-panel .crm-empty-state {
-              min-height: 78px;
-            }
-
-            /* Políticas: texto legível e quebra controlada */
-            #crmCampanhas .crm-table td {
-              white-space: normal;
-            }
-
-            #crmCampanhas .crm-table th {
-              white-space: nowrap;
-            }
-
-            #crmCampanhas .crm-apuracao-table td {
-              white-space: nowrap;
-            }
-
-            #crmCampanhas .crm-table-wrap {
-              scrollbar-width: thin;
-              scrollbar-color: #b7c7d0 #eef3f6;
-            }
-
-            #crmCampanhas .crm-table-wrap::-webkit-scrollbar {
-              height: 10px;
-              width: 10px;
-            }
-
-            #crmCampanhas .crm-table-wrap::-webkit-scrollbar-track {
-              background: #eef3f6;
-              border-radius: 999px;
-            }
-
-            #crmCampanhas .crm-table-wrap::-webkit-scrollbar-thumb {
-              background: #b7c7d0;
-              border-radius: 999px;
-              border: 2px solid #eef3f6;
-            }
-
-            /* Sidebar CRM */
-            [data-module-group="crm"] .crm-menu-btn {
-              min-height: 42px;
-              padding: 0 14px;
-              font-size: 11px;
-            }
-
-            @media (min-width: 1500px) {
-              #crmCampanhas .crm-module-shell {
-                max-width: 1760px;
-                margin-inline: auto;
-              }
-            }
-
-            @media (max-width: 900px) {
-              .crm-podium-card,
-              .crm-podium-card.ouro {
-                min-height: 220px;
-              }
-
-              .crm-import-card {
-                grid-template-columns: 54px minmax(0, 1fr);
-              }
-
-              .crm-import-button {
-                grid-column: 1 / -1;
-              }
-            }
-
-
-            /* ======================================================================
-               CRM v1.4 — PÓDIO, MARCAS, TABELAS E IMPRESSÃO
-               ====================================================================== */
-
-            /* Pódio — distribuição mais elegante e consistente */
-            .crm-podium-stage {
-              position: relative;
-              padding: 26px 8px 2px;
-            }
-
-            .crm-podium-grid {
-              grid-template-columns: minmax(0, .98fr) minmax(0, 1.08fr) minmax(0, .98fr);
-              align-items: end;
-              gap: 18px;
-            }
-
-            .crm-podium-card {
-              min-height: 285px;
-              padding: 38px 22px 18px;
-              border-radius: 20px;
-            }
-
-            .crm-podium-card.ouro {
-              min-height: 320px;
-              transform: translateY(-10px);
-            }
-
-            .crm-podium-card.ouro:hover {
-              transform: translateY(-14px);
-            }
-
-            .crm-podium-crown {
-              top: -31px;
-              width: 62px;
-              min-width: 62px;
-              height: 62px;
-              padding: 0;
-              border-radius: 18px;
-            }
-
-            .crm-podium-card.ouro .crm-podium-crown {
-              top: -39px;
-              width: 76px;
-              height: 76px;
-              border-radius: 21px;
-            }
-
-            .crm-crown-symbol {
-              display: grid;
-              place-items: center;
-              color: #99a9b3;
-              font-family: Georgia, serif;
-              font-size: 30px;
-              line-height: 1;
-            }
-
-            .crm-podium-card.ouro .crm-crown-symbol {
-              color: #d1a000;
-              font-size: 40px;
-            }
-
-            .crm-podium-card.bronze .crm-crown-symbol {
-              color: #b96a3e;
-            }
-
-            .crm-place-chip {
-              display: inline-flex;
-              align-items: center;
-              justify-content: center;
-              min-height: 25px;
-              padding: 0 11px;
-              margin: 0 auto 11px;
-              border-radius: 999px;
-              color: #647985;
-              background: #f0f4f6;
-              font-size: 8.5px;
-              font-weight: 950;
-              letter-spacing: .04em;
-            }
-
-            .crm-podium-card.ouro .crm-place-chip {
-              color: #876500;
-              background: #fff1b6;
-            }
-
-            .crm-podium-card.bronze .crm-place-chip {
-              color: #9a542f;
-              background: #fce8dc;
-            }
-
-            .crm-podium-brand {
-              min-height: 48px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              margin: 0 0 6px;
-            }
-
-            .crm-podium-card h4 {
-              min-height: 38px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              margin: 6px 0 3px;
-              font-size: 15.5px;
-              line-height: 1.2;
-            }
-
-            .crm-podium-card p {
-              min-height: 18px;
-              font-size: 10px;
-            }
-
-            .crm-podium-branch {
-              min-height: 26px;
-              display: inline-flex;
-              align-items: center;
-              justify-content: center;
-              margin-top: 9px;
-            }
-
-            .crm-podium-money {
-              margin-top: 16px;
-            }
-
-            .crm-podium-card.ouro .crm-podium-money {
-              padding-block: 16px;
-            }
-
-            /* Marcas */
-            .crm-brand-logo {
-              position: relative;
-              width: 64px;
-              height: 42px;
-              display: inline-flex;
-              align-items: center;
-              justify-content: center;
-              flex: 0 0 auto;
-            }
-
-            .crm-brand-logo.compact {
-              width: 34px;
-              height: 27px;
-            }
-
-            .crm-brand-logo.vw img {
-              width: 39px;
-              height: 39px;
-              object-fit: contain;
-              mix-blend-mode: multiply;
-            }
-
-            .crm-brand-logo.compact.vw img {
-              width: 24px;
-              height: 24px;
-            }
-
-            .crm-brand-logo.fiat {
-              width: 88px;
-              gap: 5px;
-            }
-
-            .crm-brand-logo.compact.fiat {
-              width: 53px;
-              gap: 3px;
-            }
-
-            .crm-fiat-bars {
-              height: 28px;
-              display: flex;
-              align-items: center;
-              gap: 3px;
-              transform: skew(-12deg);
-            }
-
-            .crm-brand-logo.compact .crm-fiat-bars {
-              height: 19px;
-              gap: 2px;
-            }
-
-            .crm-fiat-bars i {
-              width: 7px;
-              height: 100%;
-              display: block;
-              background: #e9e3ce;
-            }
-
-            .crm-fiat-bars i:first-child {
-              background: #159151;
-            }
-
-            .crm-fiat-bars i:last-child {
-              background: #f22637;
-            }
-
-            .crm-brand-logo.compact .crm-fiat-bars i {
-              width: 4px;
-            }
-
-            .crm-brand-logo.fiat b {
-              color: #ada68e;
-              font-family: Arial Black, Arial, sans-serif;
-              font-size: 21px;
-              letter-spacing: -.08em;
-            }
-
-            .crm-brand-logo.compact.fiat b {
-              font-size: 12px;
-            }
-
-            .crm-brand-dual {
-              display: inline-flex;
-              align-items: center;
-              justify-content: center;
-              gap: 6px;
-            }
-
-            /* Tabelas — colunas bem alinhadas e leitura mais clara */
-            .crm-source-table {
-              table-layout: auto;
-            }
-
-            .crm-source-table th,
-            .crm-source-table td {
-              vertical-align: middle;
-            }
-
-            .crm-source-table th {
-              height: 43px;
-              color: #516b7a;
-              background: #f3f7f9;
-              border-bottom: 1px solid #d7e3e8;
-            }
-
-            .crm-source-table td {
-              height: 50px;
-              border-bottom: 1px solid #e7eef1;
-            }
-
-            .crm-source-table tbody tr:last-child td {
-              border-bottom: 0;
-            }
-
-            .crm-source-table .crm-col-nome {
-              min-width: 290px;
-            }
-
-            .crm-source-table .crm-col-funcao {
-              min-width: 180px;
-            }
-
-            .crm-source-table .crm-col-marca {
-              min-width: 145px;
-            }
-
-            .crm-source-table .crm-col-filial {
-              min-width: 190px;
-            }
-
-            .crm-source-table .crm-col-dn {
-              min-width: 72px;
-              text-align: center;
-            }
-
-            .crm-person-cell,
-            .crm-brand-cell {
-              display: flex;
-              align-items: center;
-              gap: 10px;
-            }
-
-            .crm-person-cell strong {
-              color: #123249;
-              font-size: 11.5px;
-            }
-
-            .crm-brand-cell > span:last-child {
-              color: #526d7c;
-              font-weight: 800;
-            }
-
-            .crm-percent-pill {
-              min-width: 62px;
-              display: inline-flex;
-              align-items: center;
-              justify-content: center;
-              padding: 5px 8px;
-              border-radius: 999px;
-              color: #087d55;
-              background: #def5e9;
-              font-weight: 900;
-            }
-
-            /* O PDF do CRM é gerado por jsPDF; não deixar regras globais de print
-               capturarem outros módulos caso o fallback seja usado. */
-            @media print {
-              body.crm-print-only #crmCampanhas,
-              body.crm-print-only #crmCampanhas * {
-                visibility: visible !important;
-              }
-            }
-
-            @media (max-width: 1050px) {
-              .crm-podium-grid {
-                grid-template-columns: 1fr;
-                align-items: stretch;
-              }
-
-              .crm-podium-card,
-              .crm-podium-card.ouro {
-                min-height: 260px;
-                transform: none;
-              }
-
-              .crm-podium-card.ouro:hover {
-                transform: translateY(-4px);
-              }
-            }
-
-
-            /* ======================================================================
-               CRM v1.4.1 — CORREÇÃO DA COROA DO PÓDIO
-               A coroa agora fica totalmente para fora do card sem ser recortada.
-               ====================================================================== */
-
-            .crm-podium-stage {
-              padding-top: 44px !important;
-              overflow: visible !important;
-            }
-
-            .crm-podium-grid {
-              overflow: visible !important;
-            }
-
-            .crm-podium-card {
-              overflow: visible !important;
-              isolation: isolate;
-            }
-
-            .crm-podium-card::after {
-              z-index: 0;
-              border-radius: inherit;
-              clip-path: inset(0 round 20px);
-            }
-
-            .crm-podium-card > * {
-              position: relative;
-              z-index: 2;
-            }
-
-            .crm-podium-crown {
-              z-index: 10 !important;
-              overflow: visible !important;
-              box-shadow:
-                0 12px 26px rgba(18, 49, 69, .12),
-                0 2px 0 rgba(255,255,255,.95) inset !important;
-            }
-
-            .crm-podium-card.prata .crm-podium-crown,
-            .crm-podium-card.bronze .crm-podium-crown {
-              top: -32px !important;
-            }
-
-            .crm-podium-card.ouro .crm-podium-crown {
-              top: -42px !important;
-            }
-
-            .crm-crown-symbol {
-              transform: translateY(-1px);
-            }
-
-            /* dá espaço real entre a coroa externa e o selo de colocação */
-            .crm-place-chip {
-              margin-top: 5px !important;
-            }
-
-            .crm-podium-card.ouro .crm-place-chip {
-              margin-top: 9px !important;
-            }
-
-            @media (max-width: 1050px) {
-              .crm-podium-stage {
-                padding-top: 38px !important;
-              }
-
-              .crm-podium-card.ouro .crm-podium-crown {
-                top: -34px !important;
-              }
-
-              .crm-podium-card.prata .crm-podium-crown,
-              .crm-podium-card.bronze .crm-podium-crown {
-                top: -29px !important;
-              }
-            }
-
-
-            /* ======================================================================
-               CRM v1.5 — PÓDIO PREMIUM / MOTION UI
-               Inspirado na linguagem visual do pódio do Pix e em princípios de
-               motion design: hierarquia, stagger, glow, microinteração e profundidade.
-               ====================================================================== */
-
-            .crm-podium-panel{
-              position:relative;
-              overflow:hidden;
-              border:1px solid rgba(189,205,214,.72)!important;
-              border-radius:26px!important;
-              background:
-                radial-gradient(circle at 52% 28%,rgba(255,213,82,.12),transparent 31%),
-                radial-gradient(circle at 8% 18%,rgba(22,174,141,.08),transparent 26%),
-                radial-gradient(circle at 94% 20%,rgba(209,112,57,.07),transparent 25%),
-                linear-gradient(135deg,#fff 0%,#fbfdfd 47%,#f7fbfa 100%)!important;
-              box-shadow:0 18px 48px rgba(18,49,69,.075)!important;
-            }
-
-            .crm-podium-panel::before{
-              content:"";
-              position:absolute;
-              inset:0 0 auto;
-              height:4px;
-              background:linear-gradient(90deg,#d6ad13 0 32%,#91b5c8 32% 66%,#c97849 66%);
-              opacity:.95;
-            }
-
-            .crm-podium-header{
-              position:relative;
-              z-index:2;
-              padding:24px 28px 2px!important;
-            }
-
-            .crm-podium-header h3{
-              font-size:24px!important;
-              letter-spacing:-.025em;
-            }
-
-            .crm-podium-header span{
-              font-size:12px!important;
-              line-height:1.5;
-            }
-
-            .crm-podium-stage{
-              position:relative;
-              z-index:1;
-              padding:72px 28px 26px!important;
-              overflow:visible!important;
-            }
-
-            .crm-podium-stage::before{
-              content:"";
-              position:absolute;
-              left:15%;
-              right:15%;
-              bottom:20px;
-              height:70px;
-              border-radius:50%;
-              background:radial-gradient(ellipse,rgba(25,55,72,.10),transparent 68%);
-              filter:blur(12px);
-              pointer-events:none;
-            }
-
-            .crm-podium-grid{
-              position:relative;
-              display:grid!important;
-              grid-template-columns:minmax(0,1fr) minmax(0,1.08fr) minmax(0,1fr)!important;
-              gap:22px!important;
-              align-items:end!important;
-              overflow:visible!important;
-            }
-
-            .crm-podium-card{
-              --podium-accent:#a9b7c0;
-              --podium-soft:#f2f6f8;
-              --podium-rgb:142,159,170;
-              position:relative;
-              min-height:350px!important;
-              padding:72px 24px 22px!important;
-              overflow:visible!important;
-              border:1px solid rgba(192,205,213,.78)!important;
-              border-radius:24px!important;
-              background:
-                linear-gradient(145deg,rgba(255,255,255,.98),rgba(249,252,253,.96))!important;
-              box-shadow:
-                0 18px 42px rgba(17,48,68,.075),
-                inset 0 1px 0 rgba(255,255,255,.96)!important;
-              transform:translateY(0);
-              transition:
-                transform .52s cubic-bezier(.2,.8,.2,1),
-                box-shadow .52s cubic-bezier(.2,.8,.2,1),
-                border-color .4s ease!important;
-              animation:crmPodiumReveal .78s cubic-bezier(.16,1,.3,1) both!important;
-            }
-
-            .crm-podium-card.prata{animation-delay:.08s!important}
-            .crm-podium-card.ouro{
-              --podium-accent:#d4a500;
-              --podium-soft:#fff7d8;
-              --podium-rgb:212,165,0;
-              min-height:390px!important;
-              transform:translateY(-24px)!important;
-              border-color:rgba(218,169,0,.76)!important;
-              background:
-                radial-gradient(circle at 50% 8%,rgba(255,217,90,.22),transparent 31%),
-                linear-gradient(145deg,#fffdf7,#fffaf0 58%,#fff 100%)!important;
-              box-shadow:
-                0 28px 64px rgba(160,119,0,.14),
-                0 0 0 1px rgba(255,214,73,.13),
-                inset 0 1px 0 #fff!important;
-              animation-delay:0s!important;
-            }
-            .crm-podium-card.bronze{
-              --podium-accent:#bd6b3c;
-              --podium-soft:#fff0e8;
-              --podium-rgb:189,107,60;
-              border-color:rgba(208,139,100,.54)!important;
-              animation-delay:.16s!important;
-            }
-
-            .crm-podium-card::before{
-              content:"";
-              position:absolute;
-              inset:0;
-              border-radius:inherit;
-              background:linear-gradient(115deg,transparent 25%,rgba(255,255,255,.72) 45%,transparent 65%);
-              transform:translateX(-130%);
-              pointer-events:none;
-              opacity:.65;
-            }
-
-            .crm-podium-card:hover{
-              transform:translateY(-8px)!important;
-              border-color:rgba(var(--podium-rgb),.72)!important;
-              box-shadow:
-                0 28px 62px rgba(17,48,68,.13),
-                0 0 0 1px rgba(var(--podium-rgb),.08)!important;
-            }
-
-            .crm-podium-card.ouro:hover{
-              transform:translateY(-32px)!important;
-            }
-
-            .crm-podium-card:hover::before{
-              animation:crmPodiumSheen 1.05s cubic-bezier(.2,.8,.2,1);
-            }
-
-            .crm-podium-crown{
-              position:absolute!important;
-              top:-38px!important;
-              left:50%!important;
-              transform:translateX(-50%)!important;
-              display:grid!important;
-              place-items:center!important;
-              width:76px!important;
-              height:76px!important;
-              border-radius:22px!important;
-              overflow:visible!important;
-              z-index:20!important;
-              color:var(--podium-accent)!important;
-              border:1px solid rgba(var(--podium-rgb),.26)!important;
-              background:rgba(255,255,255,.96)!important;
-              box-shadow:
-                0 16px 34px rgba(17,48,68,.14),
-                0 0 0 7px rgba(255,255,255,.55)!important;
-              backdrop-filter:blur(12px);
-              animation:crmCrownFloat 4.2s ease-in-out infinite;
-            }
-
-            .crm-podium-card.ouro .crm-podium-crown{
-              top:-50px!important;
-              width:92px!important;
-              height:92px!important;
-              border-radius:26px!important;
-              background:linear-gradient(145deg,#fff,#fff8dc)!important;
-              box-shadow:
-                0 18px 38px rgba(175,129,0,.19),
-                0 0 0 8px rgba(255,248,218,.72)!important;
-            }
-
-            .crm-crown-symbol{
-              display:grid!important;
-              place-items:center!important;
-              font-family:Georgia,"Times New Roman",serif!important;
-              font-size:40px!important;
-              line-height:1!important;
-              color:var(--podium-accent)!important;
-              text-shadow:0 4px 12px rgba(var(--podium-rgb),.16);
-              transform:none!important;
-            }
-
-            .crm-podium-card.ouro .crm-crown-symbol{
-              font-size:51px!important;
-            }
-
-            .crm-place-chip{
-              position:absolute!important;
-              top:31px!important;
-              left:50%!important;
-              transform:translateX(-50%)!important;
-              min-height:27px!important;
-              margin:0!important;
-              padding:0 12px!important;
-              color:#607681!important;
-              background:#eef4f6!important;
-              box-shadow:0 5px 12px rgba(17,48,68,.05);
-              white-space:nowrap;
-            }
-
-            .crm-podium-card.ouro .crm-place-chip{
-              top:34px!important;
-              color:#826100!important;
-              background:#fff0ae!important;
-            }
-            .crm-podium-card.bronze .crm-place-chip{
-              color:#96512f!important;
-              background:#fde8dc!important;
-            }
-
-            .crm-podium-brand{
-              min-height:56px!important;
-              margin:2px 0 10px!important;
-              gap:8px;
-            }
-
-            .crm-podium-card h4{
-              min-height:44px!important;
-              margin:5px auto 2px!important;
-              max-width:94%;
-              font-size:17px!important;
-              line-height:1.18!important;
-              letter-spacing:-.018em;
-            }
-
-            .crm-podium-card.ouro h4{
-              font-size:18px!important;
-            }
-
-            .crm-podium-card p{
-              min-height:19px!important;
-              margin:2px 0 8px!important;
-              font-size:11px!important;
-            }
-
-            .crm-podium-branch{
-              min-height:28px!important;
-              margin-top:8px!important;
-              padding:0 12px!important;
-              border-radius:999px;
-              background:#eef4f6;
-              font-size:9px!important;
-              font-weight:850!important;
-            }
-
-            .crm-podium-money{
-              position:relative;
-              margin-top:18px!important;
-              padding:18px 16px 16px!important;
-              border-radius:17px!important;
-              background:
-                linear-gradient(135deg,rgba(226,247,240,.82),rgba(241,249,246,.95))!important;
-              border:1px solid rgba(37,157,123,.07);
-            }
-
-            .crm-podium-money em{
-              font-size:9px!important;
-              letter-spacing:.14em!important;
-            }
-
-            .crm-podium-money strong{
-              margin-top:7px!important;
-              font-size:27px!important;
-              letter-spacing:-.035em;
-            }
-
-            .crm-podium-card.ouro .crm-podium-money strong{
-              font-size:32px!important;
-            }
-
-            .crm-podium-money span{
-              margin-top:5px!important;
-              font-size:9.5px!important;
-            }
-
-            @keyframes crmPodiumReveal{
-              0%{opacity:0;filter:blur(8px);transform:translateY(34px) scale(.97)}
-              100%{opacity:1;filter:blur(0);transform:translateY(0) scale(1)}
-            }
-            .crm-podium-card.ouro{animation-name:crmPodiumRevealGold!important}
-            @keyframes crmPodiumRevealGold{
-              0%{opacity:0;filter:blur(8px);transform:translateY(14px) scale(.965)}
-              100%{opacity:1;filter:blur(0);transform:translateY(-24px) scale(1)}
-            }
-            @keyframes crmCrownFloat{
-              0%,100%{translate:0 0}
-              50%{translate:0 -5px}
-            }
-            @keyframes crmPodiumSheen{
-              from{transform:translateX(-130%)}
-              to{transform:translateX(135%)}
-            }
-
-            @media(max-width:1100px){
-              .crm-podium-stage{padding:64px 16px 20px!important}
-              .crm-podium-grid{gap:14px!important}
-              .crm-podium-card{padding-inline:16px!important}
-            }
-
-            @media(max-width:820px){
-              .crm-podium-stage{padding:54px 12px 12px!important}
-              .crm-podium-grid{
-                grid-template-columns:1fr!important;
-                gap:58px!important;
-              }
-              .crm-podium-card,
-              .crm-podium-card.ouro{
-                min-height:auto!important;
-                transform:none!important;
-              }
-              .crm-podium-card.ouro:hover,
-              .crm-podium-card:hover{transform:translateY(-5px)!important}
-              .crm-podium-card.ouro{order:-1}
-              .crm-podium-crown,
-              .crm-podium-card.ouro .crm-podium-crown{
-                top:-38px!important;
-                width:76px!important;
-                height:76px!important;
-              }
-              .crm-podium-card.ouro .crm-crown-symbol{font-size:42px!important}
-            }
-
-            @media(prefers-reduced-motion:reduce){
-              .crm-podium-card,
-              .crm-podium-crown,
-              .crm-podium-card::before{
-                animation:none!important;
-                transition:none!important;
-              }
-            }
-
-
-    /* ======================================================================
-       CRM v1.6 — NAVEGAÇÃO DE MÊS + LANÇAMENTO MANUAL + AJUSTE DO PÓDIO
-       ====================================================================== */
-
-    /* Enquanto o CRM estiver ativo, escondemos apenas o seletor de competência
-       do módulo principal. O CRM passa a ter um navegador próprio e isolado. */
-    body.crm-mode-active #produtivosTopbarActions > label:has(#competenciaGlobal) {
-      display: none !important;
-    }
-
-    .crm-month-nav {
-      min-width: 295px;
-      display: grid;
-      gap: 5px;
-    }
-
-    .crm-month-nav[hidden] {
-      display: none !important;
-    }
-
-    .crm-month-nav-label {
-      color: #58707f;
-      font-size: 10px;
-      font-weight: 850;
-    }
-
-    .crm-month-nav-controls {
-      display: grid;
-      grid-template-columns: 45px minmax(160px, 1fr) 45px;
-      gap: 8px;
-    }
-
-    .crm-month-arrow,
-    .crm-month-display {
-      min-height: 45px;
-      border: 1px solid #cad9e1;
-      border-radius: 12px;
-      background: #fff;
-      box-shadow: 0 8px 18px rgba(17,48,68,.055);
-    }
-
-    .crm-month-arrow {
-      display: grid;
-      place-items: center;
-      padding: 0;
-      color: #073f68;
-      font-size: 30px !important;
-      font-weight: 850;
-      line-height: 1;
-      cursor: pointer;
-      transition:
-        transform .18s ease,
-        border-color .18s ease,
-        box-shadow .18s ease;
-    }
-
-    .crm-month-arrow:hover {
-      transform: translateY(-1px);
-      border-color: #91b1c2;
-      box-shadow: 0 10px 24px rgba(17,48,68,.09);
-    }
-
-    .crm-month-arrow:active {
-      transform: scale(.96);
-    }
-
-    .crm-month-display {
-      display: grid;
-      place-items: center;
-      padding: 0 14px;
-      color: #102f45;
-      font-size: 13px;
-      font-weight: 950;
-      white-space: nowrap;
-    }
-
-    /* Espaço real entre coroa e selo 1º/2º/3º lugar */
-    .crm-podium-card {
-      padding-top: 92px !important;
-    }
-
-    .crm-podium-card.ouro {
-      padding-top: 105px !important;
-    }
-
-    .crm-podium-crown {
-      top: -39px !important;
-    }
-
-    .crm-podium-card.ouro .crm-podium-crown {
-      top: -50px !important;
-    }
-
-    .crm-place-chip {
-      top: 51px !important;
-    }
-
-    .crm-podium-card.ouro .crm-place-chip {
-      top: 58px !important;
-    }
-
-    /* Tela de lançamentos */
-    .crm-launch-header {
-      align-items: center;
-      gap: 18px;
-    }
-
-    .crm-new-manual {
-      min-width: 190px;
-      box-shadow:
-        0 12px 24px rgba(88,61,186,.13);
-    }
-
-    .crm-row-actions {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      white-space: nowrap;
-    }
-
-    .crm-manual-table th,
-    .crm-manual-table td {
-      vertical-align: middle;
-    }
-
-    /* Modal de lançamento manual */
-    .crm-manual-modal {
-      width: min(1080px, calc(100vw - 40px));
-      max-height: 90vh;
-    }
-
-    .crm-manual-modal .crm-modal-header {
-      position: sticky;
-      top: 0;
-      z-index: 4;
-      background: rgba(255,255,255,.97);
-      backdrop-filter: blur(16px);
-    }
-
-    .crm-manual-modal .crm-modal-body {
-      max-height: calc(90vh - 160px);
-      overflow-y: auto;
-      padding: 18px 22px 24px;
-      background:
-        linear-gradient(180deg,#fbfcfe,#f6f9fb);
-    }
-
-    .crm-manual-section {
-      padding: 17px;
-      margin-bottom: 13px;
-      border: 1px solid #dce6eb;
-      border-radius: 16px;
-      background: #fff;
-      box-shadow:
-        0 8px 22px rgba(17,48,68,.04);
-    }
-
-    .crm-manual-section:last-child {
-      margin-bottom: 0;
-    }
-
-    .crm-manual-section h4 {
-      margin: 0 0 13px;
-      color: #18384e;
-      font-size: 13px;
-    }
-
-    .crm-form-grid {
-      display: grid;
-      grid-template-columns:
-        repeat(4, minmax(0, 1fr));
-      gap: 12px;
-    }
-
-    .crm-form-field {
-      display: grid;
-      gap: 6px;
-    }
-
-    .crm-form-field.full {
-      grid-column: 1 / -1;
-    }
-
-    .crm-form-field > span {
-      color: #607785;
-      font-size: 9.5px;
-      font-weight: 850;
-    }
-
-    .crm-form-field input,
-    .crm-form-field select {
-      width: 100%;
-      min-height: 42px;
-      padding: 0 11px;
-      border: 1px solid #ccdbe2;
-      border-radius: 10px;
-      color: #143349;
-      background: #fff;
-      outline: none;
-    }
-
-    .crm-form-field input:focus,
-    .crm-form-field select:focus {
-      border-color: #7e66e8;
-      box-shadow:
-        0 0 0 3px rgba(126,102,232,.11);
-    }
-
-    .crm-manual-modal .crm-modal-footer {
-      position: sticky;
-      bottom: 0;
-      z-index: 4;
-      background: rgba(255,255,255,.98);
-      backdrop-filter: blur(16px);
-    }
-
-    @media (max-width: 1050px) {
-      .crm-month-nav {
-        min-width: 255px;
-      }
-
-      .crm-form-grid {
-        grid-template-columns:
-          repeat(2, minmax(0, 1fr));
-      }
-    }
-
-    @media (max-width: 700px) {
-      .crm-month-nav {
-        width: 100%;
-        min-width: 0;
-      }
-
-      .crm-month-nav-controls {
-        grid-template-columns: 44px 1fr 44px;
-      }
-
-      .crm-form-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .crm-launch-header {
-        align-items: stretch;
-      }
-
-      .crm-new-manual {
-        width: 100%;
-      }
-    }
-
-
-    /* ======================================================================
-       CRM v1.6.1 — CABEÇALHO ÚNICO + EXPORTAÇÃO CRM ISOLADA
-       ====================================================================== */
-
-    /* Remove totalmente a navegação adicional criada na v1.6. */
-    #crmCompetenciaNav,
-    .crm-month-nav {
-      display: none !important;
-    }
-
-    /* Mantém a navegação oficial do sistema visível no CRM. */
-    body.crm-mode-active #controleHistoricoMensal {
-      display: block !important;
-    }
-
-    /* O input real continua escondido dentro do controle visual oficial. */
-    body.crm-mode-active
-    #controleHistoricoMensal
-    #competenciaGlobal {
-      display: none !important;
-    }
-
-
-    /* ======================================================================
-       CRM v1.6.3 — AUDITORIA EXCLUSIVA DO CRM
-       ====================================================================== */
-
-    body.crm-auditoria-aberta {
-      overflow: hidden !important;
-    }
-
-    .crm-audit-lock-overlay,
-    .crm-audit-modal {
-      position: fixed;
-      inset: 0;
-      z-index: 99999;
-    }
-
-    .crm-audit-lock-overlay {
-      display: grid;
-      place-items: center;
-      padding: 20px;
-      background:
-        rgba(9, 31, 46, .72);
-      backdrop-filter:
-        blur(14px);
-    }
-
-    .crm-audit-lock-card {
-      width:
-        min(420px, calc(100vw - 34px));
-      padding: 25px;
-      border:
-        1px solid rgba(255,255,255,.44);
-      border-radius: 23px;
-      background:
-        rgba(255,255,255,.98);
-      box-shadow:
-        0 30px 80px rgba(4,27,42,.28);
-    }
-
-    .crm-audit-lock-icon {
-      width: 52px;
-      height: 52px;
-      display: grid;
-      place-items: center;
-      margin-bottom: 17px;
-      border-radius: 16px;
-      background:
-        #e9f7f1;
-      font-size: 23px;
-    }
-
-    .crm-audit-lock-card h3 {
-      margin: 5px 0 8px;
-      color: #16364b;
-      font-size: 22px;
-    }
-
-    .crm-audit-lock-card > p:not(.crm-kicker) {
-      margin: 0 0 16px;
-      color: #607784;
-      font-size: 11px;
-      line-height: 1.5;
-    }
-
-    .crm-audit-lock-card input {
-      width: 100%;
-      min-height: 46px;
-      padding: 0 13px;
-      border: 1px solid #cad9df;
-      border-radius: 11px;
-      outline: none;
-      color: #15364c;
-      background: #fff;
-      font-size: 13px;
-    }
-
-    .crm-audit-lock-card input:focus {
-      border-color: #1b9a70;
-      box-shadow:
-        0 0 0 3px rgba(27,154,112,.12);
-    }
-
-    .crm-audit-lock-error {
-      min-height: 19px;
-      padding-top: 6px;
-      color: #d73c3c;
-      font-size: 10px;
-      font-weight: 800;
-    }
-
-    .crm-audit-lock-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      margin-top: 5px;
-    }
-
-    .crm-audit-modal {
-      padding: 16px;
-    }
-
-    .crm-audit-backdrop {
-      position: absolute;
-      inset: 0;
-      background:
-        rgba(8, 29, 43, .76);
-      backdrop-filter:
-        blur(13px);
-    }
-
-    .crm-audit-card {
-      position: relative;
-      z-index: 2;
-      width:
-        min(1440px, calc(100vw - 32px));
-      height:
-        min(900px, calc(100vh - 32px));
-      display: grid;
-      grid-template-rows:
-        auto auto auto minmax(0,1fr);
-      margin: auto;
-      overflow: hidden;
-      border:
-        1px solid rgba(255,255,255,.52);
-      border-radius: 25px;
-      background:
-        #f6f9fb;
-      box-shadow:
-        0 35px 100px rgba(5,27,41,.30);
-    }
-
-    .crm-audit-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 20px;
-      padding: 21px 24px 18px;
-      border-bottom:
-        1px solid #dbe5ea;
-      background:
-        rgba(255,255,255,.97);
-    }
-
-    .crm-audit-header h2 {
-      margin: 4px 0 4px;
-      color: #14354b;
-      font-size: 23px;
-    }
-
-    .crm-audit-header > div:first-child > span {
-      color: #69808d;
-      font-size: 10.5px;
-    }
-
-    .crm-audit-header-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .crm-audit-export {
-      min-height: 37px;
-      padding: 0 13px;
-      border-radius: 10px;
-      border: 1px solid;
-      font-size: 10px;
-      font-weight: 850;
-      cursor: pointer;
-    }
-
-    .crm-audit-export.excel {
-      color: #087a54;
-      border-color: #b8dfcf;
-      background: #effaf5;
-    }
-
-    .crm-audit-export.pdf {
-      color: #c83232;
-      border-color: #f0c7c7;
-      background: #fff4f4;
-    }
-
-    .crm-audit-close {
-      width: 38px;
-      height: 38px;
-      display: grid;
-      place-items: center;
-      padding: 0;
-      border: 0;
-      border-radius: 50%;
-      color: #607885;
-      background: #edf3f5;
-      font-size: 25px;
-      cursor: pointer;
-    }
-
-    .crm-audit-filters {
-      display: grid;
-      grid-template-columns:
-        180px 220px 155px 155px minmax(260px,1fr);
-      gap: 9px;
-      padding: 12px 24px;
-      border-bottom:
-        1px solid #dfe8ec;
-      background: #fff;
-    }
-
-    .crm-audit-filters select,
-    .crm-audit-filters input {
-      width: 100%;
-      min-height: 40px;
-      padding: 0 11px;
-      border:
-        1px solid #cad9e0;
-      border-radius: 10px;
-      outline: none;
-      color: #244457;
-      background: #fff;
-      font-size: 10.5px;
-    }
-
-    .crm-audit-filters select:focus,
-    .crm-audit-filters input:focus {
-      border-color: #20a17a;
-      box-shadow:
-        0 0 0 3px rgba(32,161,122,.10);
-    }
-
-    .crm-audit-toolbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 15px;
-      min-height: 43px;
-      padding: 0 24px;
-      border-bottom:
-        1px solid #dfe8ec;
-      color: #647d8a;
-      background: #f6f9fa;
-      font-size: 10px;
-    }
-
-    .crm-audit-toolbar strong {
-      color: #17394f;
-    }
-
-    .crm-audit-toolbar b {
-      color: #0a9066;
-    }
-
-    .crm-audit-list {
-      min-height: 0;
-      overflow-y: auto;
-      padding: 14px 18px 22px;
-    }
-
-    .crm-audit-item {
-      position: relative;
-      padding: 17px;
-      margin-bottom: 11px;
-      overflow: hidden;
-      border:
-        1px solid #dae5ea;
-      border-radius: 17px;
-      background:
-        linear-gradient(
-          145deg,
-          #fff,
-          #fbfdfe
-        );
-      box-shadow:
-        0 7px 20px rgba(18,49,69,.035);
-    }
-
-    .crm-audit-item::before {
-      content: "";
-      position: absolute;
-      inset: 0 auto 0 0;
-      width: 4px;
-      background: #7e66e8;
-    }
-
-    .crm-audit-item[data-action*="IMPORT"]::before {
-      background: #e3a91a;
-    }
-
-    .crm-audit-item[data-action*="CRIA"]::before {
-      background: #0aa06f;
-    }
-
-    .crm-audit-item[data-action*="ALTER"]::before {
-      background: #367cc6;
-    }
-
-    .crm-audit-item[data-action*="EXCLUS"]::before,
-    .crm-audit-item[data-action*="INATIVA"]::before {
-      background: #dd4c4c;
-    }
-
-    .crm-audit-item-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 12px;
-    }
-
-    .crm-audit-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    .crm-audit-chip {
-      display: inline-flex;
-      align-items: center;
-      min-height: 22px;
-      padding: 0 8px;
-      border-radius: 999px;
-      color: #516c7a;
-      background: #edf3f5;
-      font-size: 8.5px;
-      font-weight: 900;
-      letter-spacing: .035em;
-    }
-
-    .crm-audit-chip.module {
-      color: #6545d8;
-      background: #efeaff;
-    }
-
-    .crm-audit-chip.action {
-      color: #087957;
-      background: #e8f8f1;
-    }
-
-    .crm-audit-item time {
-      color: #728895;
-      font-size: 9px;
-      white-space: nowrap;
-    }
-
-    .crm-audit-item h3 {
-      margin: 11px 0 4px;
-      color: #12344b;
-      font-size: 14px;
-    }
-
-    .crm-audit-description {
-      margin: 0 0 10px;
-      color: #607987;
-      font-size: 10px;
-      line-height: 1.45;
-    }
-
-    .crm-audit-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 14px;
-      color: #6b808c;
-      font-size: 9px;
-    }
-
-    .crm-audit-meta b {
-      color: #294b60;
-    }
-
-    .crm-audit-diffs {
-      display: grid;
-      gap: 6px;
-      margin-top: 13px;
-    }
-
-    .crm-audit-diff {
-      display: grid;
-      grid-template-columns:
-        180px minmax(0,1fr) 20px minmax(0,1fr);
-      align-items: center;
-      gap: 8px;
-      padding: 8px 10px;
-      border-radius: 10px;
-      background: #f3f7f9;
-      font-size: 9.3px;
-    }
-
-    .crm-audit-diff strong {
-      color: #25485c;
-    }
-
-    .crm-audit-diff .before {
-      color: #7b8e99;
-    }
-
-    .crm-audit-diff .arrow {
-      color: #6b8290;
-      text-align: center;
-    }
-
-    .crm-audit-diff .after {
-      color: #0a865f;
-      font-weight: 800;
-    }
-
-    .crm-audit-details {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 7px 15px;
-      margin-top: 12px;
-      padding: 10px 11px;
-      border:
-        1px dashed #d5e2e7;
-      border-radius: 11px;
-      color: #617986;
-      background: #fbfdfd;
-      font-size: 9px;
-    }
-
-    .crm-audit-details b {
-      color: #294a5d;
-    }
-
-    .crm-audit-empty {
-      min-height: 180px;
-      display: grid;
-      place-items: center;
-      padding: 20px;
-      color: #748b97;
-      text-align: center;
-      font-size: 12px;
-    }
-
-    @media (max-width: 1000px) {
-      .crm-audit-filters {
-        grid-template-columns:
-          repeat(2, minmax(0,1fr));
-      }
-
-      .crm-audit-filters input[type="search"] {
-        grid-column: 1 / -1;
-      }
-    }
-
-    @media (max-width: 650px) {
-      .crm-audit-modal {
-        padding: 7px;
-      }
-
-      .crm-audit-card {
-        width:
-          calc(100vw - 14px);
-        height:
-          calc(100vh - 14px);
-        border-radius: 18px;
-      }
-
-      .crm-audit-header {
-        flex-direction: column;
-        padding: 16px;
-      }
-
-      .crm-audit-header-actions {
-        width: 100%;
-        flex-wrap: wrap;
-      }
-
-      .crm-audit-filters {
-        grid-template-columns: 1fr;
-        padding: 10px 14px;
-      }
-
-      .crm-audit-filters input[type="search"] {
-        grid-column: auto;
-      }
-
-      .crm-audit-toolbar {
-        align-items: flex-start;
-        flex-direction: column;
-        padding: 9px 14px;
-      }
-
-      .crm-audit-list {
-        padding: 10px;
-      }
-
-      .crm-audit-item-top {
-        flex-direction: column;
-      }
-
-      .crm-audit-diff {
-        grid-template-columns: 1fr;
-      }
-
-      .crm-audit-diff .arrow {
-        display: none;
-      }
-    }
+ /* ======================================================================
+           CAMPANHAS DO CRM — CSS PREMIUM v1.1
+           Arquivo: crm-module.css
+           ====================================================================== */
+
+        #crmCampanhas,
+        #crmCampanhas * {
+          box-sizing: border-box;
+        }
+
+        .crm-campaign-view {
+          min-width: 0;
+        }
+
+        .crm-module-shell {
+          display: grid;
+          gap: 16px;
+          min-width: 0;
+        }
+
+        .crm-module-toolbar {
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 18px;
+        }
+
+        .crm-module-toolbar h2 {
+          margin: 3px 0 0;
+          color: #102b3d;
+          font-size: 28px;
+        }
+
+        .crm-module-toolbar-actions {
+          display: flex;
+          align-items: flex-end;
+          justify-content: flex-end;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .crm-month-button,
+        .crm-export-button,
+        .crm-primary-button,
+        .crm-secondary-button,
+        .crm-mini-button {
+          font: inherit;
+        }
+
+        .crm-month-button {
+          width: 42px;
+          height: 42px;
+          border: 1px solid #d5e0e6;
+          border-radius: 11px;
+          color: #14364c;
+          background: #fff;
+          font-size: 22px;
+          font-weight: 900;
+          cursor: pointer;
+          box-shadow: 0 5px 14px rgba(25, 54, 74, .05);
+        }
+
+        .crm-month-box,
+        .crm-top-filter {
+          display: grid;
+          gap: 4px;
+        }
+
+        .crm-month-box span,
+        .crm-top-filter span {
+          color: #617684;
+          font-size: 9px;
+          font-weight: 850;
+        }
+
+        .crm-month-box input,
+        .crm-top-filter select {
+          height: 42px;
+          min-width: 160px;
+          padding: 0 12px;
+          border: 1px solid #d5e0e6;
+          border-radius: 11px;
+          color: #14364c;
+          background: #fff;
+          font: inherit;
+          font-size: 11px;
+          font-weight: 750;
+        }
+
+        .crm-export-button {
+          height: 42px;
+          padding: 0 14px;
+          border: 0;
+          border-radius: 11px;
+          color: #fff;
+          font-size: 10px;
+          font-weight: 900;
+          cursor: pointer;
+        }
+
+        .crm-export-button.crm-excel {
+          background: linear-gradient(135deg, #0d9764, #087a55);
+        }
+
+        .crm-export-button.crm-pdf {
+          background: linear-gradient(135deg, #df4141, #be2730);
+        }
+
+        .crm-panel {
+          overflow: hidden;
+          min-width: 0;
+          border: 1px solid #dbe5ea;
+          border-radius: 16px;
+          background: #fff;
+          box-shadow: 0 9px 28px rgba(18, 49, 69, .045);
+        }
+
+        .crm-panel-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+          padding: 15px 17px;
+          border-bottom: 1px solid #e4eaee;
+        }
+
+        .crm-panel-header h3 {
+          margin: 3px 0 2px;
+          color: #132f43;
+          font-size: 15px;
+        }
+
+        .crm-panel-header span {
+          color: #718591;
+          font-size: 9px;
+        }
+
+        .crm-kicker {
+          margin: 0;
+          color: #7558ed;
+          font-size: 8px;
+          font-weight: 950;
+          letter-spacing: .11em;
+        }
+
+        .crm-podium-panel {
+          position: relative;
+          padding: 18px;
+          background:
+            radial-gradient(circle at 50% -10%, rgba(243, 187, 24, .13), transparent 37%),
+            linear-gradient(135deg, #fff, #fbfcfd);
+        }
+
+        .crm-podium-panel::before {
+          content: "";
+          position: absolute;
+          inset: 0 66% auto 0;
+          height: 3px;
+          background: #d9a900;
+        }
+
+        .crm-podium-panel::after {
+          content: "";
+          position: absolute;
+          inset: 0 0 auto 66%;
+          height: 3px;
+          background: #bd6c39;
+        }
+
+        .crm-podium-header {
+          display: flex;
+          justify-content: space-between;
+          gap: 14px;
+          margin-bottom: 20px;
+        }
+
+        .crm-podium-header h3 {
+          margin: 4px 0;
+          font-size: 21px;
+        }
+
+        .crm-podium-header span {
+          color: #738692;
+          font-size: 9px;
+        }
+
+        .crm-podium-grid {
+          display: grid;
+          grid-template-columns: 1fr 1.14fr 1fr;
+          align-items: end;
+          gap: 14px;
+          padding-top: 26px;
+        }
+
+        .crm-podium-card {
+          position: relative;
+          min-height: 300px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 28px 18px 18px;
+          border: 1px solid #dce5e9;
+          border-radius: 17px;
+          background: rgba(255, 255, 255, .96);
+          text-align: center;
+        }
+
+        .crm-podium-card.ouro {
+          min-height: 350px;
+          border: 2px solid #e1b638;
+          background: linear-gradient(180deg, #fff9e9, #fff);
+          box-shadow:
+            0 24px 50px rgba(179, 133, 0, .12),
+            0 8px 20px rgba(18, 49, 69, .06);
+        }
+
+        .crm-podium-card.bronze {
+          border-color: #edc3a6;
+          background: linear-gradient(180deg, #fff7f2, #fff);
+        }
+
+        .crm-podium-crown {
+          position: absolute;
+          top: -24px;
+          min-width: 52px;
+          height: 52px;
+          display: grid;
+          place-items: center;
+          padding: 0 11px;
+          border: 1px solid #dce5e9;
+          border-radius: 16px;
+          color: #8d6c00;
+          background: #fff;
+          font-size: 13px;
+          font-weight: 950;
+          box-shadow: 0 10px 20px rgba(21, 48, 67, .08);
+        }
+
+        .crm-podium-card.ouro .crm-podium-crown {
+          width: 68px;
+          height: 68px;
+          top: -34px;
+          border-color: #f0d15d;
+          color: #a57900;
+          font-size: 17px;
+        }
+
+        .crm-podium-card > small {
+          margin-top: 8px;
+          padding: 5px 9px;
+          border-radius: 999px;
+          color: #657985;
+          background: #f1f4f6;
+          font-size: 7px;
+          font-weight: 950;
+        }
+
+        .crm-podium-card h4 {
+          margin: 15px 0 4px;
+          color: #142f43;
+          font-size: 14px;
+          line-height: 1.15;
+          text-transform: uppercase;
+        }
+
+        .crm-podium-card p {
+          margin: 0;
+          color: #778b96;
+          font-size: 9px;
+        }
+
+        .crm-podium-branch {
+          margin-top: 13px;
+          padding: 5px 9px;
+          border-radius: 999px;
+          color: #67808c;
+          background: #f0f4f6;
+          font-size: 7px;
+          font-weight: 850;
+        }
+
+        .crm-podium-money {
+          width: 100%;
+          margin-top: auto;
+          padding: 15px 12px;
+          border-radius: 12px;
+          background: #edf8f3;
+        }
+
+        .crm-podium-money em {
+          display: block;
+          color: #728690;
+          font-style: normal;
+          font-size: 7px;
+          font-weight: 900;
+          letter-spacing: .08em;
+        }
+
+        .crm-podium-money strong {
+          display: block;
+          margin: 6px 0 3px;
+          color: #098355;
+          font-size: 24px;
+        }
+
+        .crm-podium-card.ouro .crm-podium-money strong {
+          color: #ad7d00;
+          font-size: 31px;
+        }
+
+        .crm-podium-money span {
+          color: #708591;
+          font-size: 8px;
+        }
+
+        .crm-await {
+          color: #8798a3 !important;
+        }
+
+        .crm-dashboard-cards {
+          display: grid;
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+          gap: 11px;
+        }
+
+        .crm-dashboard-cards article {
+          min-width: 0;
+          padding: 15px;
+          border: 1px solid #dbe4e9;
+          border-radius: 14px;
+          background: #fff;
+        }
+
+        .crm-dashboard-cards span {
+          display: block;
+          color: #718591;
+          font-size: 8px;
+          font-weight: 800;
+        }
+
+        .crm-dashboard-cards strong {
+          display: block;
+          margin: 6px 0 3px;
+          color: #102d42;
+          font-size: 22px;
+        }
+
+        .crm-dashboard-cards small {
+          color: #82939d;
+          font-size: 8px;
+        }
+
+        .crm-table-wrap {
+          max-width: 100%;
+          overflow: auto;
+        }
+
+        .crm-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 9px;
+        }
+
+        .crm-table th {
+          padding: 10px 11px;
+          color: #617682;
+          background: #f2f6f8;
+          font-size: 7px;
+          font-weight: 900;
+          letter-spacing: .035em;
+          text-align: left;
+          text-transform: uppercase;
+          white-space: nowrap;
+        }
+
+        .crm-table td {
+          padding: 10px 11px;
+          border-top: 1px solid #e8eef1;
+          color: #17364b;
+          vertical-align: middle;
+          white-space: nowrap;
+        }
+
+        .crm-table tbody tr:hover {
+          background: #fafcfd;
+        }
+
+        .crm-cell-subtitle {
+          display: block;
+          margin-top: 3px;
+          color: #81939d;
+          font-size: 7px;
+        }
+
+        .crm-level-chip,
+        .crm-status-chip {
+          display: inline-flex;
+          align-items: center;
+          padding: 4px 8px;
+          border-radius: 999px;
+          font-size: 7px;
+          font-weight: 900;
+        }
+
+        .crm-level-chip {
+          color: #704ce8;
+          background: #eee8ff;
+        }
+
+        .crm-status-chip.ativo {
+          color: #087d52;
+          background: #dff5e9;
+        }
+
+        .crm-status-chip.inativo {
+          color: #bf3030;
+          background: #ffe7e7;
+        }
+
+        .crm-mini-button {
+          min-height: 29px;
+          padding: 0 8px;
+          border: 1px solid #d9e2e7;
+          border-radius: 7px;
+          color: #23445a;
+          background: #fff;
+          font-size: 8px;
+          cursor: pointer;
+        }
+
+        .crm-mini-button.danger {
+          color: #c62e2e;
+        }
+
+        .crm-primary-button,
+        .crm-secondary-button {
+          min-height: 38px;
+          padding: 0 13px;
+          border-radius: 10px;
+          font-size: 9px;
+          font-weight: 900;
+          cursor: pointer;
+        }
+
+        .crm-primary-button {
+          border: 0;
+          color: #fff;
+          background: linear-gradient(135deg, #7857f4, #6847df);
+        }
+
+        .crm-secondary-button {
+          border: 1px solid #d9e3e8;
+          color: #4f6978;
+          background: #fff;
+        }
+
+        .crm-import-main {
+          background:
+            radial-gradient(circle at 100% 0, rgba(116, 80, 232, .07), transparent 32%),
+            #fff;
+        }
+
+        .crm-import-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 11px;
+          padding: 15px;
+        }
+
+        .crm-import-card {
+          position: relative;
+          min-width: 0;
+          display: grid;
+          grid-template-columns: auto 1fr auto;
+          align-items: center;
+          gap: 12px;
+          padding: 14px;
+          border: 1px solid #dee6eb;
+          border-radius: 14px;
+          background: #fff;
+          box-shadow: 0 7px 18px rgba(18, 49, 69, .035);
+        }
+
+        .crm-import-icon {
+          width: 45px;
+          height: 45px;
+          display: grid;
+          place-items: center;
+          border-radius: 12px;
+          color: #7253e8;
+          background: #efeaff;
+          font-size: 9px;
+          font-weight: 950;
+        }
+
+        .crm-import-copy {
+          min-width: 0;
+        }
+
+        .crm-import-copy h4 {
+          margin: 0 0 4px;
+          color: #16364a;
+          font-size: 11px;
+        }
+
+        .crm-import-copy p {
+          margin: 0;
+          color: #788b96;
+          font-size: 8px;
+          line-height: 1.45;
+        }
+
+        .crm-import-copy small {
+          display: block;
+          margin-top: 7px;
+          color: #607984;
+          font-size: 7px;
+          font-weight: 800;
+        }
+
+        .crm-import-button {
+          min-height: 36px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 12px;
+          border: 1px solid #d9d1ff;
+          border-radius: 10px;
+          color: #6f4de3;
+          background: #faf8ff;
+          font-size: 8px;
+          font-weight: 900;
+          cursor: pointer;
+        }
+
+        .crm-import-guide,
+        .crm-policy-note {
+          margin: 0 15px 15px;
+          padding: 11px 13px;
+          border-radius: 10px;
+          color: #6a7f8b;
+          background: #f2f6f8;
+          font-size: 8px;
+          line-height: 1.55;
+        }
+
+        .crm-import-guide strong {
+          display: block;
+          margin-bottom: 3px;
+          color: #354f60;
+        }
+
+        .crm-empty-state {
+          padding: 28px 18px;
+          color: #81939d;
+          text-align: center;
+          font-size: 10px;
+        }
+
+        .crm-modal-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 999999;
+          display: grid;
+          place-items: center;
+          padding: 18px;
+        }
+
+        .crm-modal-backdrop {
+          position: absolute;
+          inset: 0;
+          background: rgba(8, 27, 40, .68);
+          backdrop-filter: blur(6px);
+        }
+
+        .crm-modal-card {
+          position: relative;
+          width: min(720px, 96vw);
+          overflow: hidden;
+          border: 1px solid rgba(255, 255, 255, .45);
+          border-radius: 19px;
+          background: #fff;
+          box-shadow: 0 30px 90px rgba(0, 0, 0, .24);
+        }
+
+        .crm-modal-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+          padding: 18px 20px;
+          border-bottom: 1px solid #e3eaee;
+        }
+
+        .crm-modal-header h3 {
+          margin: 3px 0 0;
+        }
+
+        .crm-modal-close {
+          width: 36px;
+          height: 36px;
+          border: 0;
+          border-radius: 10px;
+          color: #5f7380;
+          background: #edf3f6;
+          font-size: 21px;
+          cursor: pointer;
+        }
+
+        .crm-form-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 12px;
+          padding: 18px 20px;
+        }
+
+        .crm-form-grid label {
+          display: grid;
+          gap: 5px;
+        }
+
+        .crm-form-grid label.full {
+          grid-column: 1 / -1;
+        }
+
+        .crm-form-grid label span {
+          color: #667b88;
+          font-size: 8px;
+          font-weight: 900;
+        }
+
+        .crm-form-grid input,
+        .crm-form-grid select {
+          width: 100%;
+          height: 40px;
+          padding: 0 10px;
+          border: 1px solid #dae4e9;
+          border-radius: 9px;
+          color: #17364b;
+          background: #fff;
+          font: inherit;
+          font-size: 10px;
+        }
+
+        .crm-modal-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 8px;
+          padding: 14px 20px;
+          border-top: 1px solid #e4eaee;
+          background: #fafcfd;
+        }
+
+        .crm-toast {
+          position: fixed;
+          right: 22px;
+          bottom: 22px;
+          z-index: 1000000;
+          max-width: min(370px, calc(100vw - 32px));
+          padding: 12px 16px;
+          border-radius: 11px;
+          color: #fff;
+          background: #17364b;
+          font-size: 10px;
+          font-weight: 800;
+          box-shadow: 0 15px 40px rgba(0, 0, 0, .18);
+          opacity: 0;
+          transform: translateY(10px);
+          pointer-events: none;
+          transition: opacity .2s ease, transform .2s ease;
+        }
+
+        .crm-toast.show {
+          opacity: 1;
+          transform: translateY(0);
+        }
+
+        .crm-toast.ok {
+          background: #087d59;
+        }
+
+        .crm-toast.info {
+          background: #2f607f;
+        }
+
+        .crm-toast.erro {
+          background: #b52e2e;
+        }
+
+        .crm-menu-btn.active {
+          color: #fff !important;
+          background: #7955ef !important;
+        }
+
+        @media (max-width: 1180px) {
+          .crm-module-toolbar {
+            align-items: flex-start;
+            flex-direction: column;
+          }
+
+          .crm-module-toolbar-actions {
+            width: 100%;
+            justify-content: flex-start;
+          }
+
+          .crm-dashboard-cards {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+
+        @media (max-width: 860px) {
+          .crm-podium-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .crm-podium-card.ouro {
+            order: -1;
+            min-height: 320px;
+          }
+
+          .crm-import-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 650px) {
+          .crm-module-toolbar h2 {
+            font-size: 23px;
+          }
+
+          .crm-module-toolbar-actions {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+          }
+
+          .crm-month-box,
+          .crm-top-filter {
+            min-width: 0;
+          }
+
+          .crm-month-box input,
+          .crm-top-filter select {
+            width: 100%;
+            min-width: 0;
+          }
+
+          .crm-top-filter {
+            grid-column: 1 / -1;
+          }
+
+          .crm-export-button {
+            grid-column: span 1;
+          }
+
+          .crm-dashboard-cards {
+            grid-template-columns: 1fr;
+          }
+
+          .crm-import-card {
+            grid-template-columns: auto 1fr;
+          }
+
+          .crm-import-button {
+            grid-column: 1 / -1;
+            width: 100%;
+          }
+
+          .crm-form-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .crm-form-grid label.full {
+            grid-column: auto;
+          }
+        }
+
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
+
+          #crmCampanhas,
+          #crmCampanhas * {
+            visibility: visible !important;
+          }
+
+          #crmCampanhas {
+            position: absolute;
+            inset: 0;
+            background: #fff;
+          }
+
+          .crm-module-toolbar-actions,
+          .crm-mini-button,
+          .crm-primary-button,
+          .crm-import-button {
+            display: none !important;
+          }
+        }
+
+        /* ======================================================================
+           CRM v1.2 — INTEGRAÇÃO VISUAL COM O SISTEMA PRINCIPAL
+           ====================================================================== */
+
+        .crm-module-toolbar,.crm-module-toolbar-actions{display:none!important}
+
+        [data-module-group="crm"] .submenu{
+          margin-top:4px;padding:0 10px 8px 16px;border-left:1px solid rgba(255,255,255,.13)
+        }
+        [data-module-group="crm"] .crm-menu-btn{
+          width:100%;min-height:38px;display:flex;align-items:center;justify-content:flex-start;
+          margin:0;padding:0 12px;border:0!important;border-radius:9px;color:#dfeaf2!important;
+          background:transparent!important;box-shadow:none!important;font-size:10px;font-weight:800;
+          text-align:left;transition:background .2s ease,color .2s ease,transform .2s ease
+        }
+        [data-module-group="crm"] .crm-menu-btn:hover{color:#fff!important;background:rgba(255,255,255,.06)!important;transform:translateX(2px)}
+        [data-module-group="crm"] .crm-menu-btn.active{
+          color:#fff!important;background:linear-gradient(90deg,rgba(125,85,239,.24),rgba(125,85,239,.08))!important;
+          box-shadow:inset 3px 0 0 #8b6cff!important
+        }
+
+        #crmCampanhas{animation:crmViewEnter .42s cubic-bezier(.22,.8,.24,1) both}
+        @keyframes crmViewEnter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+        #crmConteudo{display:grid;gap:16px}
+        .crm-panel{
+          border-color:#d9e4ea;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.99),rgba(250,252,253,.99));
+          box-shadow:0 18px 45px rgba(17,48,68,.055),0 1px 0 rgba(255,255,255,.9) inset;
+          animation:crmCardEnter .5s cubic-bezier(.22,.8,.24,1) both
+        }
+        @keyframes crmCardEnter{from{opacity:0;transform:translateY(10px) scale(.995)}to{opacity:1;transform:none}}
+        .crm-panel:nth-child(2){animation-delay:.04s}.crm-panel:nth-child(3){animation-delay:.08s}.crm-panel:nth-child(4){animation-delay:.12s}
+
+        .crm-podium-panel{
+          overflow:visible;padding:22px 20px 20px;
+          background:radial-gradient(circle at 50% 0,rgba(255,197,45,.12),transparent 32%),radial-gradient(circle at 4% 8%,rgba(117,88,237,.06),transparent 22%),linear-gradient(135deg,#fff,#fcfdfd)
+        }
+        .crm-podium-grid{gap:16px}
+        .crm-podium-card{overflow:hidden;transition:transform .24s ease,box-shadow .24s ease,border-color .24s ease}
+        .crm-podium-card:hover{transform:translateY(-4px);box-shadow:0 18px 38px rgba(17,48,68,.08)}
+        .crm-podium-card.ouro:hover{transform:translateY(-10px)}
+        .crm-podium-card::after{
+          content:"";position:absolute;inset:0;pointer-events:none;
+          background:linear-gradient(115deg,transparent 15%,rgba(255,255,255,.52) 42%,transparent 64%);
+          transform:translateX(-125%);animation:crmSheen 5.8s ease-in-out infinite
+        }
+        @keyframes crmSheen{0%,74%{transform:translateX(-125%)}88%,100%{transform:translateX(125%)}}
+
+        .crm-dashboard-cards article{
+          position:relative;overflow:hidden;min-height:102px;padding:17px;border-radius:15px;
+          background:linear-gradient(180deg,#fff,#fbfcfd);box-shadow:0 10px 26px rgba(19,49,68,.045)
+        }
+        .crm-dashboard-cards article::before{
+          content:"";position:absolute;inset:0 auto 0 0;width:3px;background:linear-gradient(180deg,#7b5af0,#0f8c6d)
+        }
+        .crm-dashboard-cards strong{font-size:24px}
+
+        .crm-import-main{
+          position:relative;overflow:hidden;background:radial-gradient(circle at 100% 0,rgba(117,82,235,.09),transparent 34%),linear-gradient(180deg,#fff,#fbfcfe)
+        }
+        .crm-import-main::after{
+          content:"CRM";position:absolute;right:28px;top:6px;color:rgba(105,76,223,.035);font-size:92px;font-weight:950;letter-spacing:-.06em;pointer-events:none
+        }
+        .crm-import-grid{gap:13px;padding:17px}
+        .crm-import-card{
+          min-height:112px;border-radius:15px;box-shadow:0 11px 26px rgba(18,49,69,.045);
+          transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease
+        }
+        .crm-import-card:hover{transform:translateY(-2px);border-color:#d6cfff;box-shadow:0 16px 34px rgba(47,38,95,.08)}
+        .crm-import-icon{width:50px;height:50px;border-radius:14px;background:linear-gradient(135deg,#efeaff,#e7f8f3);box-shadow:inset 0 1px 0 rgba(255,255,255,.85)}
+        .crm-import-button{
+          min-height:39px;border-color:#d6ccff;background:linear-gradient(180deg,#fff,#f8f5ff);box-shadow:0 7px 16px rgba(88,61,186,.06);
+          transition:transform .18s ease,box-shadow .18s ease,background .18s ease
+        }
+        .crm-import-button:hover{transform:translateY(-1px);background:#f3efff;box-shadow:0 10px 22px rgba(88,61,186,.10)}
+
+        .crm-table th{background:linear-gradient(180deg,#f4f7f9,#eef3f6)}
+        .crm-table tbody tr{transition:background .16s ease}.crm-table tbody tr:hover{background:#f8fbfd}
+        .crm-policy-note,.crm-import-guide{border:1px solid #e2eaee;background:linear-gradient(180deg,#f6f9fb,#f2f6f8)}
+
+        @media (prefers-reduced-motion:reduce){#crmCampanhas,.crm-panel,.crm-podium-card::after{animation:none!important}.crm-podium-card,[data-module-group="crm"] .crm-menu-btn{transition:none!important}}
+
+
+        /* ======================================================================
+           CRM v1.3 — LEGIBILIDADE, ORGANIZAÇÃO E DENSIDADE VISUAL
+           ====================================================================== */
+
+        #crmCampanhas {
+          --crm-text: #123249;
+          --crm-muted: #6b8190;
+          --crm-border: #d6e2e8;
+          --crm-purple: #7655ef;
+          --crm-green: #0b9164;
+        }
+
+        #crmCampanhas,
+        #crmCampanhas button,
+        #crmCampanhas input,
+        #crmCampanhas select {
+          font-size: 13px;
+        }
+
+        .crm-kicker {
+          font-size: 10px;
+          letter-spacing: .12em;
+        }
+
+        .crm-panel-header {
+          min-height: 74px;
+          padding: 18px 20px;
+        }
+
+        .crm-panel-header h3 {
+          margin-top: 5px;
+          font-size: 19px;
+          line-height: 1.18;
+        }
+
+        .crm-panel-header span {
+          display: block;
+          margin-top: 4px;
+          font-size: 11px;
+          line-height: 1.4;
+        }
+
+        .crm-table {
+          font-size: 12px;
+        }
+
+        .crm-table th {
+          padding: 12px 14px;
+          font-size: 9.5px;
+          letter-spacing: .055em;
+        }
+
+        .crm-table td {
+          padding: 13px 14px;
+          font-size: 11.5px;
+          line-height: 1.3;
+        }
+
+        .crm-cell-subtitle {
+          margin-top: 4px;
+          font-size: 9px;
+        }
+
+        .crm-level-chip,
+        .crm-status-chip {
+          padding: 5px 9px;
+          font-size: 9px;
+        }
+
+        .crm-mini-button {
+          min-height: 34px;
+          padding: 0 10px;
+          font-size: 10px;
+        }
+
+        /* Pódio: mais compacto quando ainda está vazio */
+        .crm-podium-panel {
+          padding: 20px;
+        }
+
+        .crm-podium-header {
+          margin-bottom: 13px;
+        }
+
+        .crm-podium-header h3 {
+          font-size: 22px;
+        }
+
+        .crm-podium-header span {
+          max-width: 880px;
+          font-size: 10.5px;
+          line-height: 1.45;
+        }
+
+        .crm-podium-grid {
+          align-items: stretch;
+          gap: 13px;
+          padding-top: 24px;
+        }
+
+        .crm-podium-card {
+          min-height: 240px;
+          padding: 26px 17px 16px;
+        }
+
+        .crm-podium-card.ouro {
+          min-height: 270px;
+        }
+
+        .crm-podium-card h4 {
+          font-size: 15px;
+        }
+
+        .crm-podium-card p {
+          font-size: 10px;
+        }
+
+        .crm-podium-branch {
+          font-size: 9px;
+        }
+
+        .crm-podium-money {
+          padding: 12px;
+        }
+
+        .crm-podium-money em {
+          font-size: 8px;
+        }
+
+        .crm-podium-money strong {
+          font-size: 23px;
+        }
+
+        .crm-podium-card.ouro .crm-podium-money strong {
+          font-size: 28px;
+        }
+
+        .crm-podium-money span {
+          font-size: 9px;
+        }
+
+        .crm-podium-card:has(.crm-await) {
+          min-height: 185px;
+          justify-content: center;
+        }
+
+        .crm-podium-card:has(.crm-await) .crm-podium-crown {
+          top: -22px;
+        }
+
+        /* Cards de resumo */
+        .crm-dashboard-cards {
+          gap: 12px;
+        }
+
+        .crm-dashboard-cards article {
+          min-height: 112px;
+          padding: 17px 18px;
+        }
+
+        .crm-dashboard-cards span {
+          font-size: 10px;
+        }
+
+        .crm-dashboard-cards strong {
+          margin: 8px 0 4px;
+          font-size: 27px;
+        }
+
+        .crm-dashboard-cards small {
+          font-size: 9.5px;
+        }
+
+        /* Painel vazio: sem área gigante desperdiçada */
+        .crm-empty-state {
+          min-height: 74px;
+          display: grid;
+          place-items: center;
+          padding: 20px 18px;
+          font-size: 11px;
+        }
+
+        .crm-primary-button,
+        .crm-secondary-button {
+          min-height: 40px;
+          padding: 0 15px;
+          font-size: 10.5px;
+        }
+
+        /* Importação */
+        .crm-import-main::after {
+          right: 28px;
+          top: 4px;
+          font-size: 86px;
+        }
+
+        .crm-import-grid {
+          gap: 14px;
+          padding: 18px;
+        }
+
+        .crm-import-card {
+          min-height: 126px;
+          grid-template-columns: 58px minmax(0, 1fr) auto;
+          gap: 14px;
+          padding: 17px;
+        }
+
+        .crm-import-icon {
+          width: 54px;
+          height: 54px;
+          font-size: 10px;
+        }
+
+        .crm-import-copy h4 {
+          margin-bottom: 6px;
+          font-size: 14px;
+        }
+
+        .crm-import-copy p {
+          max-width: 620px;
+          font-size: 10.5px;
+          line-height: 1.45;
+        }
+
+        .crm-import-copy small {
+          margin-top: 8px;
+          font-size: 9px;
+        }
+
+        .crm-import-button {
+          min-height: 42px;
+          padding: 0 14px;
+          font-size: 10px;
+        }
+
+        .crm-import-guide,
+        .crm-policy-note {
+          margin: 0 18px 18px;
+          padding: 13px 15px;
+          font-size: 10px;
+        }
+
+        .crm-import-guide strong {
+          margin-bottom: 5px;
+          font-size: 10.5px;
+        }
+
+        .crm-import-main + .crm-panel .crm-empty-state {
+          min-height: 78px;
+        }
+
+        /* Políticas: texto legível e quebra controlada */
+        #crmCampanhas .crm-table td {
+          white-space: normal;
+        }
+
+        #crmCampanhas .crm-table th {
+          white-space: nowrap;
+        }
+
+        #crmCampanhas .crm-apuracao-table td {
+          white-space: nowrap;
+        }
+
+        #crmCampanhas .crm-table-wrap {
+          scrollbar-width: thin;
+          scrollbar-color: #b7c7d0 #eef3f6;
+        }
+
+        #crmCampanhas .crm-table-wrap::-webkit-scrollbar {
+          height: 10px;
+          width: 10px;
+        }
+
+        #crmCampanhas .crm-table-wrap::-webkit-scrollbar-track {
+          background: #eef3f6;
+          border-radius: 999px;
+        }
+
+        #crmCampanhas .crm-table-wrap::-webkit-scrollbar-thumb {
+          background: #b7c7d0;
+          border-radius: 999px;
+          border: 2px solid #eef3f6;
+        }
+
+        /* Sidebar CRM */
+        [data-module-group="crm"] .crm-menu-btn {
+          min-height: 42px;
+          padding: 0 14px;
+          font-size: 11px;
+        }
+
+        @media (min-width: 1500px) {
+          #crmCampanhas .crm-module-shell {
+            max-width: 1760px;
+            margin-inline: auto;
+          }
+        }
+
+        @media (max-width: 900px) {
+          .crm-podium-card,
+          .crm-podium-card.ouro {
+            min-height: 220px;
+          }
+
+          .crm-import-card {
+            grid-template-columns: 54px minmax(0, 1fr);
+          }
+
+          .crm-import-button {
+            grid-column: 1 / -1;
+          }
+        }
+
+
+        /* ======================================================================
+           CRM v1.4 — PÓDIO, MARCAS, TABELAS E IMPRESSÃO
+           ====================================================================== */
+
+        /* Pódio — distribuição mais elegante e consistente */
+        .crm-podium-stage {
+          position: relative;
+          padding: 26px 8px 2px;
+        }
+
+        .crm-podium-grid {
+          grid-template-columns: minmax(0, .98fr) minmax(0, 1.08fr) minmax(0, .98fr);
+          align-items: end;
+          gap: 18px;
+        }
+
+        .crm-podium-card {
+          min-height: 285px;
+          padding: 38px 22px 18px;
+          border-radius: 20px;
+        }
+
+        .crm-podium-card.ouro {
+          min-height: 320px;
+          transform: translateY(-10px);
+        }
+
+        .crm-podium-card.ouro:hover {
+          transform: translateY(-14px);
+        }
+
+        .crm-podium-crown {
+          top: -31px;
+          width: 62px;
+          min-width: 62px;
+          height: 62px;
+          padding: 0;
+          border-radius: 18px;
+        }
+
+        .crm-podium-card.ouro .crm-podium-crown {
+          top: -39px;
+          width: 76px;
+          height: 76px;
+          border-radius: 21px;
+        }
+
+        .crm-crown-symbol {
+          display: grid;
+          place-items: center;
+          color: #99a9b3;
+          font-family: Georgia, serif;
+          font-size: 30px;
+          line-height: 1;
+        }
+
+        .crm-podium-card.ouro .crm-crown-symbol {
+          color: #d1a000;
+          font-size: 40px;
+        }
+
+        .crm-podium-card.bronze .crm-crown-symbol {
+          color: #b96a3e;
+        }
+
+        .crm-place-chip {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 25px;
+          padding: 0 11px;
+          margin: 0 auto 11px;
+          border-radius: 999px;
+          color: #647985;
+          background: #f0f4f6;
+          font-size: 8.5px;
+          font-weight: 950;
+          letter-spacing: .04em;
+        }
+
+        .crm-podium-card.ouro .crm-place-chip {
+          color: #876500;
+          background: #fff1b6;
+        }
+
+        .crm-podium-card.bronze .crm-place-chip {
+          color: #9a542f;
+          background: #fce8dc;
+        }
+
+        .crm-podium-brand {
+          min-height: 48px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 0 6px;
+        }
+
+        .crm-podium-card h4 {
+          min-height: 38px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 6px 0 3px;
+          font-size: 15.5px;
+          line-height: 1.2;
+        }
+
+        .crm-podium-card p {
+          min-height: 18px;
+          font-size: 10px;
+        }
+
+        .crm-podium-branch {
+          min-height: 26px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          margin-top: 9px;
+        }
+
+        .crm-podium-money {
+          margin-top: 16px;
+        }
+
+        .crm-podium-card.ouro .crm-podium-money {
+          padding-block: 16px;
+        }
+
+        /* Marcas */
+        .crm-brand-logo {
+          position: relative;
+          width: 64px;
+          height: 42px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex: 0 0 auto;
+        }
+
+        .crm-brand-logo.compact {
+          width: 34px;
+          height: 27px;
+        }
+
+        .crm-brand-logo.vw img {
+          width: 39px;
+          height: 39px;
+          object-fit: contain;
+          mix-blend-mode: multiply;
+        }
+
+        .crm-brand-logo.compact.vw img {
+          width: 24px;
+          height: 24px;
+        }
+
+        .crm-brand-logo.fiat {
+          width: 88px;
+          gap: 5px;
+        }
+
+        .crm-brand-logo.compact.fiat {
+          width: 53px;
+          gap: 3px;
+        }
+
+        .crm-fiat-bars {
+          height: 28px;
+          display: flex;
+          align-items: center;
+          gap: 3px;
+          transform: skew(-12deg);
+        }
+
+        .crm-brand-logo.compact .crm-fiat-bars {
+          height: 19px;
+          gap: 2px;
+        }
+
+        .crm-fiat-bars i {
+          width: 7px;
+          height: 100%;
+          display: block;
+          background: #e9e3ce;
+        }
+
+        .crm-fiat-bars i:first-child {
+          background: #159151;
+        }
+
+        .crm-fiat-bars i:last-child {
+          background: #f22637;
+        }
+
+        .crm-brand-logo.compact .crm-fiat-bars i {
+          width: 4px;
+        }
+
+        .crm-brand-logo.fiat b {
+          color: #ada68e;
+          font-family: Arial Black, Arial, sans-serif;
+          font-size: 21px;
+          letter-spacing: -.08em;
+        }
+
+        .crm-brand-logo.compact.fiat b {
+          font-size: 12px;
+        }
+
+        .crm-brand-dual {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+        }
+
+        /* Tabelas — colunas bem alinhadas e leitura mais clara */
+        .crm-source-table {
+          table-layout: auto;
+        }
+
+        .crm-source-table th,
+        .crm-source-table td {
+          vertical-align: middle;
+        }
+
+        .crm-source-table th {
+          height: 43px;
+          color: #516b7a;
+          background: #f3f7f9;
+          border-bottom: 1px solid #d7e3e8;
+        }
+
+        .crm-source-table td {
+          height: 50px;
+          border-bottom: 1px solid #e7eef1;
+        }
+
+        .crm-source-table tbody tr:last-child td {
+          border-bottom: 0;
+        }
+
+        .crm-source-table .crm-col-nome {
+          min-width: 290px;
+        }
+
+        .crm-source-table .crm-col-funcao {
+          min-width: 180px;
+        }
+
+        .crm-source-table .crm-col-marca {
+          min-width: 145px;
+        }
+
+        .crm-source-table .crm-col-filial {
+          min-width: 190px;
+        }
+
+        .crm-source-table .crm-col-dn {
+          min-width: 72px;
+          text-align: center;
+        }
+
+        .crm-person-cell,
+        .crm-brand-cell {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .crm-person-cell strong {
+          color: #123249;
+          font-size: 11.5px;
+        }
+
+        .crm-brand-cell > span:last-child {
+          color: #526d7c;
+          font-weight: 800;
+        }
+
+        .crm-percent-pill {
+          min-width: 62px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 5px 8px;
+          border-radius: 999px;
+          color: #087d55;
+          background: #def5e9;
+          font-weight: 900;
+        }
+
+        /* O PDF do CRM é gerado por jsPDF; não deixar regras globais de print
+           capturarem outros módulos caso o fallback seja usado. */
+        @media print {
+          body.crm-print-only #crmCampanhas,
+          body.crm-print-only #crmCampanhas * {
+            visibility: visible !important;
+          }
+        }
+
+        @media (max-width: 1050px) {
+          .crm-podium-grid {
+            grid-template-columns: 1fr;
+            align-items: stretch;
+          }
+
+          .crm-podium-card,
+          .crm-podium-card.ouro {
+            min-height: 260px;
+            transform: none;
+          }
+
+          .crm-podium-card.ouro:hover {
+            transform: translateY(-4px);
+          }
+        }
+
+
+        /* ======================================================================
+           CRM v1.4.1 — CORREÇÃO DA COROA DO PÓDIO
+           A coroa agora fica totalmente para fora do card sem ser recortada.
+           ====================================================================== */
+
+        .crm-podium-stage {
+          padding-top: 44px !important;
+          overflow: visible !important;
+        }
+
+        .crm-podium-grid {
+          overflow: visible !important;
+        }
+
+        .crm-podium-card {
+          overflow: visible !important;
+          isolation: isolate;
+        }
+
+        .crm-podium-card::after {
+          z-index: 0;
+          border-radius: inherit;
+          clip-path: inset(0 round 20px);
+        }
+
+        .crm-podium-card > * {
+          position: relative;
+          z-index: 2;
+        }
+
+        .crm-podium-crown {
+          z-index: 10 !important;
+          overflow: visible !important;
+          box-shadow:
+            0 12px 26px rgba(18, 49, 69, .12),
+            0 2px 0 rgba(255,255,255,.95) inset !important;
+        }
+
+        .crm-podium-card.prata .crm-podium-crown,
+        .crm-podium-card.bronze .crm-podium-crown {
+          top: -32px !important;
+        }
+
+        .crm-podium-card.ouro .crm-podium-crown {
+          top: -42px !important;
+        }
+
+        .crm-crown-symbol {
+          transform: translateY(-1px);
+        }
+
+        /* dá espaço real entre a coroa externa e o selo de colocação */
+        .crm-place-chip {
+          margin-top: 5px !important;
+        }
+
+        .crm-podium-card.ouro .crm-place-chip {
+          margin-top: 9px !important;
+        }
+
+        @media (max-width: 1050px) {
+          .crm-podium-stage {
+            padding-top: 38px !important;
+          }
+
+          .crm-podium-card.ouro .crm-podium-crown {
+            top: -34px !important;
+          }
+
+          .crm-podium-card.prata .crm-podium-crown,
+          .crm-podium-card.bronze .crm-podium-crown {
+            top: -29px !important;
+          }
+        }
+
+
+        /* ======================================================================
+           CRM v1.5 — PÓDIO PREMIUM / MOTION UI
+           Inspirado na linguagem visual do pódio do Pix e em princípios de
+           motion design: hierarquia, stagger, glow, microinteração e profundidade.
+           ====================================================================== */
+
+        .crm-podium-panel{
+          position:relative;
+          overflow:hidden;
+          border:1px solid rgba(189,205,214,.72)!important;
+          border-radius:26px!important;
+          background:
+            radial-gradient(circle at 52% 28%,rgba(255,213,82,.12),transparent 31%),
+            radial-gradient(circle at 8% 18%,rgba(22,174,141,.08),transparent 26%),
+            radial-gradient(circle at 94% 20%,rgba(209,112,57,.07),transparent 25%),
+            linear-gradient(135deg,#fff 0%,#fbfdfd 47%,#f7fbfa 100%)!important;
+          box-shadow:0 18px 48px rgba(18,49,69,.075)!important;
+        }
+
+        .crm-podium-panel::before{
+          content:"";
+          position:absolute;
+          inset:0 0 auto;
+          height:4px;
+          background:linear-gradient(90deg,#d6ad13 0 32%,#91b5c8 32% 66%,#c97849 66%);
+          opacity:.95;
+        }
+
+        .crm-podium-header{
+          position:relative;
+          z-index:2;
+          padding:24px 28px 2px!important;
+        }
+
+        .crm-podium-header h3{
+          font-size:24px!important;
+          letter-spacing:-.025em;
+        }
+
+        .crm-podium-header span{
+          font-size:12px!important;
+          line-height:1.5;
+        }
+
+        .crm-podium-stage{
+          position:relative;
+          z-index:1;
+          padding:72px 28px 26px!important;
+          overflow:visible!important;
+        }
+
+        .crm-podium-stage::before{
+          content:"";
+          position:absolute;
+          left:15%;
+          right:15%;
+          bottom:20px;
+          height:70px;
+          border-radius:50%;
+          background:radial-gradient(ellipse,rgba(25,55,72,.10),transparent 68%);
+          filter:blur(12px);
+          pointer-events:none;
+        }
+
+        .crm-podium-grid{
+          position:relative;
+          display:grid!important;
+          grid-template-columns:minmax(0,1fr) minmax(0,1.08fr) minmax(0,1fr)!important;
+          gap:22px!important;
+          align-items:end!important;
+          overflow:visible!important;
+        }
+
+        .crm-podium-card{
+          --podium-accent:#a9b7c0;
+          --podium-soft:#f2f6f8;
+          --podium-rgb:142,159,170;
+          position:relative;
+          min-height:350px!important;
+          padding:72px 24px 22px!important;
+          overflow:visible!important;
+          border:1px solid rgba(192,205,213,.78)!important;
+          border-radius:24px!important;
+          background:
+            linear-gradient(145deg,rgba(255,255,255,.98),rgba(249,252,253,.96))!important;
+          box-shadow:
+            0 18px 42px rgba(17,48,68,.075),
+            inset 0 1px 0 rgba(255,255,255,.96)!important;
+          transform:translateY(0);
+          transition:
+            transform .52s cubic-bezier(.2,.8,.2,1),
+            box-shadow .52s cubic-bezier(.2,.8,.2,1),
+            border-color .4s ease!important;
+          animation:crmPodiumReveal .78s cubic-bezier(.16,1,.3,1) both!important;
+        }
+
+        .crm-podium-card.prata{animation-delay:.08s!important}
+        .crm-podium-card.ouro{
+          --podium-accent:#d4a500;
+          --podium-soft:#fff7d8;
+          --podium-rgb:212,165,0;
+          min-height:390px!important;
+          transform:translateY(-24px)!important;
+          border-color:rgba(218,169,0,.76)!important;
+          background:
+            radial-gradient(circle at 50% 8%,rgba(255,217,90,.22),transparent 31%),
+            linear-gradient(145deg,#fffdf7,#fffaf0 58%,#fff 100%)!important;
+          box-shadow:
+            0 28px 64px rgba(160,119,0,.14),
+            0 0 0 1px rgba(255,214,73,.13),
+            inset 0 1px 0 #fff!important;
+          animation-delay:0s!important;
+        }
+        .crm-podium-card.bronze{
+          --podium-accent:#bd6b3c;
+          --podium-soft:#fff0e8;
+          --podium-rgb:189,107,60;
+          border-color:rgba(208,139,100,.54)!important;
+          animation-delay:.16s!important;
+        }
+
+        .crm-podium-card::before{
+          content:"";
+          position:absolute;
+          inset:0;
+          border-radius:inherit;
+          background:linear-gradient(115deg,transparent 25%,rgba(255,255,255,.72) 45%,transparent 65%);
+          transform:translateX(-130%);
+          pointer-events:none;
+          opacity:.65;
+        }
+
+        .crm-podium-card:hover{
+          transform:translateY(-8px)!important;
+          border-color:rgba(var(--podium-rgb),.72)!important;
+          box-shadow:
+            0 28px 62px rgba(17,48,68,.13),
+            0 0 0 1px rgba(var(--podium-rgb),.08)!important;
+        }
+
+        .crm-podium-card.ouro:hover{
+          transform:translateY(-32px)!important;
+        }
+
+        .crm-podium-card:hover::before{
+          animation:crmPodiumSheen 1.05s cubic-bezier(.2,.8,.2,1);
+        }
+
+        .crm-podium-crown{
+          position:absolute!important;
+          top:-38px!important;
+          left:50%!important;
+          transform:translateX(-50%)!important;
+          display:grid!important;
+          place-items:center!important;
+          width:76px!important;
+          height:76px!important;
+          border-radius:22px!important;
+          overflow:visible!important;
+          z-index:20!important;
+          color:var(--podium-accent)!important;
+          border:1px solid rgba(var(--podium-rgb),.26)!important;
+          background:rgba(255,255,255,.96)!important;
+          box-shadow:
+            0 16px 34px rgba(17,48,68,.14),
+            0 0 0 7px rgba(255,255,255,.55)!important;
+          backdrop-filter:blur(12px);
+          animation:crmCrownFloat 4.2s ease-in-out infinite;
+        }
+
+        .crm-podium-card.ouro .crm-podium-crown{
+          top:-50px!important;
+          width:92px!important;
+          height:92px!important;
+          border-radius:26px!important;
+          background:linear-gradient(145deg,#fff,#fff8dc)!important;
+          box-shadow:
+            0 18px 38px rgba(175,129,0,.19),
+            0 0 0 8px rgba(255,248,218,.72)!important;
+        }
+
+        .crm-crown-symbol{
+          display:grid!important;
+          place-items:center!important;
+          font-family:Georgia,"Times New Roman",serif!important;
+          font-size:40px!important;
+          line-height:1!important;
+          color:var(--podium-accent)!important;
+          text-shadow:0 4px 12px rgba(var(--podium-rgb),.16);
+          transform:none!important;
+        }
+
+        .crm-podium-card.ouro .crm-crown-symbol{
+          font-size:51px!important;
+        }
+
+        .crm-place-chip{
+          position:absolute!important;
+          top:31px!important;
+          left:50%!important;
+          transform:translateX(-50%)!important;
+          min-height:27px!important;
+          margin:0!important;
+          padding:0 12px!important;
+          color:#607681!important;
+          background:#eef4f6!important;
+          box-shadow:0 5px 12px rgba(17,48,68,.05);
+          white-space:nowrap;
+        }
+
+        .crm-podium-card.ouro .crm-place-chip{
+          top:34px!important;
+          color:#826100!important;
+          background:#fff0ae!important;
+        }
+        .crm-podium-card.bronze .crm-place-chip{
+          color:#96512f!important;
+          background:#fde8dc!important;
+        }
+
+        .crm-podium-brand{
+          min-height:56px!important;
+          margin:2px 0 10px!important;
+          gap:8px;
+        }
+
+        .crm-podium-card h4{
+          min-height:44px!important;
+          margin:5px auto 2px!important;
+          max-width:94%;
+          font-size:17px!important;
+          line-height:1.18!important;
+          letter-spacing:-.018em;
+        }
+
+        .crm-podium-card.ouro h4{
+          font-size:18px!important;
+        }
+
+        .crm-podium-card p{
+          min-height:19px!important;
+          margin:2px 0 8px!important;
+          font-size:11px!important;
+        }
+
+        .crm-podium-branch{
+          min-height:28px!important;
+          margin-top:8px!important;
+          padding:0 12px!important;
+          border-radius:999px;
+          background:#eef4f6;
+          font-size:9px!important;
+          font-weight:850!important;
+        }
+
+        .crm-podium-money{
+          position:relative;
+          margin-top:18px!important;
+          padding:18px 16px 16px!important;
+          border-radius:17px!important;
+          background:
+            linear-gradient(135deg,rgba(226,247,240,.82),rgba(241,249,246,.95))!important;
+          border:1px solid rgba(37,157,123,.07);
+        }
+
+        .crm-podium-money em{
+          font-size:9px!important;
+          letter-spacing:.14em!important;
+        }
+
+        .crm-podium-money strong{
+          margin-top:7px!important;
+          font-size:27px!important;
+          letter-spacing:-.035em;
+        }
+
+        .crm-podium-card.ouro .crm-podium-money strong{
+          font-size:32px!important;
+        }
+
+        .crm-podium-money span{
+          margin-top:5px!important;
+          font-size:9.5px!important;
+        }
+
+        @keyframes crmPodiumReveal{
+          0%{opacity:0;filter:blur(8px);transform:translateY(34px) scale(.97)}
+          100%{opacity:1;filter:blur(0);transform:translateY(0) scale(1)}
+        }
+        .crm-podium-card.ouro{animation-name:crmPodiumRevealGold!important}
+        @keyframes crmPodiumRevealGold{
+          0%{opacity:0;filter:blur(8px);transform:translateY(14px) scale(.965)}
+          100%{opacity:1;filter:blur(0);transform:translateY(-24px) scale(1)}
+        }
+        @keyframes crmCrownFloat{
+          0%,100%{translate:0 0}
+          50%{translate:0 -5px}
+        }
+        @keyframes crmPodiumSheen{
+          from{transform:translateX(-130%)}
+          to{transform:translateX(135%)}
+        }
+
+        @media(max-width:1100px){
+          .crm-podium-stage{padding:64px 16px 20px!important}
+          .crm-podium-grid{gap:14px!important}
+          .crm-podium-card{padding-inline:16px!important}
+        }
+
+        @media(max-width:820px){
+          .crm-podium-stage{padding:54px 12px 12px!important}
+          .crm-podium-grid{
+            grid-template-columns:1fr!important;
+            gap:58px!important;
+          }
+          .crm-podium-card,
+          .crm-podium-card.ouro{
+            min-height:auto!important;
+            transform:none!important;
+          }
+          .crm-podium-card.ouro:hover,
+          .crm-podium-card:hover{transform:translateY(-5px)!important}
+          .crm-podium-card.ouro{order:-1}
+          .crm-podium-crown,
+          .crm-podium-card.ouro .crm-podium-crown{
+            top:-38px!important;
+            width:76px!important;
+            height:76px!important;
+          }
+          .crm-podium-card.ouro .crm-crown-symbol{font-size:42px!important}
+        }
+
+        @media(prefers-reduced-motion:reduce){
+          .crm-podium-card,
+          .crm-podium-crown,
+          .crm-podium-card::before{
+            animation:none!important;
+            transition:none!important;
+          }
+        }
+
+
+/* ======================================================================
+   CRM v1.6 — NAVEGAÇÃO DE MÊS + LANÇAMENTO MANUAL + AJUSTE DO PÓDIO
+   ====================================================================== */
+
+/* Enquanto o CRM estiver ativo, escondemos apenas o seletor de competência
+   do módulo principal. O CRM passa a ter um navegador próprio e isolado. */
+body.crm-mode-active #produtivosTopbarActions > label:has(#competenciaGlobal) {
+  display: none !important;
+}
+
+.crm-month-nav {
+  min-width: 295px;
+  display: grid;
+  gap: 5px;
+}
+
+.crm-month-nav[hidden] {
+  display: none !important;
+}
+
+.crm-month-nav-label {
+  color: #58707f;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.crm-month-nav-controls {
+  display: grid;
+  grid-template-columns: 45px minmax(160px, 1fr) 45px;
+  gap: 8px;
+}
+
+.crm-month-arrow,
+.crm-month-display {
+  min-height: 45px;
+  border: 1px solid #cad9e1;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(17,48,68,.055);
+}
+
+.crm-month-arrow {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: #073f68;
+  font-size: 30px !important;
+  font-weight: 850;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    transform .18s ease,
+    border-color .18s ease,
+    box-shadow .18s ease;
+}
+
+.crm-month-arrow:hover {
+  transform: translateY(-1px);
+  border-color: #91b1c2;
+  box-shadow: 0 10px 24px rgba(17,48,68,.09);
+}
+
+.crm-month-arrow:active {
+  transform: scale(.96);
+}
+
+.crm-month-display {
+  display: grid;
+  place-items: center;
+  padding: 0 14px;
+  color: #102f45;
+  font-size: 13px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+/* Espaço real entre coroa e selo 1º/2º/3º lugar */
+.crm-podium-card {
+  padding-top: 92px !important;
+}
+
+.crm-podium-card.ouro {
+  padding-top: 105px !important;
+}
+
+.crm-podium-crown {
+  top: -39px !important;
+}
+
+.crm-podium-card.ouro .crm-podium-crown {
+  top: -50px !important;
+}
+
+.crm-place-chip {
+  top: 51px !important;
+}
+
+.crm-podium-card.ouro .crm-place-chip {
+  top: 58px !important;
+}
+
+/* Tela de lançamentos */
+.crm-launch-header {
+  align-items: center;
+  gap: 18px;
+}
+
+.crm-new-manual {
+  min-width: 190px;
+  box-shadow:
+    0 12px 24px rgba(88,61,186,.13);
+}
+
+.crm-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.crm-manual-table th,
+.crm-manual-table td {
+  vertical-align: middle;
+}
+
+/* Modal de lançamento manual */
+.crm-manual-modal {
+  width: min(1080px, calc(100vw - 40px));
+  max-height: 90vh;
+}
+
+.crm-manual-modal .crm-modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: rgba(255,255,255,.97);
+  backdrop-filter: blur(16px);
+}
+
+.crm-manual-modal .crm-modal-body {
+  max-height: calc(90vh - 160px);
+  overflow-y: auto;
+  padding: 18px 22px 24px;
+  background:
+    linear-gradient(180deg,#fbfcfe,#f6f9fb);
+}
+
+.crm-manual-section {
+  padding: 17px;
+  margin-bottom: 13px;
+  border: 1px solid #dce6eb;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow:
+    0 8px 22px rgba(17,48,68,.04);
+}
+
+.crm-manual-section:last-child {
+  margin-bottom: 0;
+}
+
+.crm-manual-section h4 {
+  margin: 0 0 13px;
+  color: #18384e;
+  font-size: 13px;
+}
+
+.crm-form-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.crm-form-field {
+  display: grid;
+  gap: 6px;
+}
+
+.crm-form-field.full {
+  grid-column: 1 / -1;
+}
+
+.crm-form-field > span {
+  color: #607785;
+  font-size: 9.5px;
+  font-weight: 850;
+}
+
+.crm-form-field input,
+.crm-form-field select {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 11px;
+  border: 1px solid #ccdbe2;
+  border-radius: 10px;
+  color: #143349;
+  background: #fff;
+  outline: none;
+}
+
+.crm-form-field input:focus,
+.crm-form-field select:focus {
+  border-color: #7e66e8;
+  box-shadow:
+    0 0 0 3px rgba(126,102,232,.11);
+}
+
+.crm-manual-modal .crm-modal-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  background: rgba(255,255,255,.98);
+  backdrop-filter: blur(16px);
+}
+
+@media (max-width: 1050px) {
+  .crm-month-nav {
+    min-width: 255px;
+  }
+
+  .crm-form-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .crm-month-nav {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .crm-month-nav-controls {
+    grid-template-columns: 44px 1fr 44px;
+  }
+
+  .crm-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .crm-launch-header {
+    align-items: stretch;
+  }
+
+  .crm-new-manual {
+    width: 100%;
+  }
+}
+
+
+/* ======================================================================
+   CRM v1.6.1 — CABEÇALHO ÚNICO + EXPORTAÇÃO CRM ISOLADA
+   ====================================================================== */
+
+/* Remove totalmente a navegação adicional criada na v1.6. */
+#crmCompetenciaNav,
+.crm-month-nav {
+  display: none !important;
+}
+
+/* Mantém a navegação oficial do sistema visível no CRM. */
+body.crm-mode-active #controleHistoricoMensal {
+  display: block !important;
+}
+
+/* O input real continua escondido dentro do controle visual oficial. */
+body.crm-mode-active
+#controleHistoricoMensal
+#competenciaGlobal {
+  display: none !important;
+}
+
+
+/* ======================================================================
+   CRM v1.6.3 — AUDITORIA EXCLUSIVA DO CRM
+   ====================================================================== */
+
+body.crm-auditoria-aberta {
+  overflow: hidden !important;
+}
+
+.crm-audit-lock-overlay,
+.crm-audit-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+}
+
+.crm-audit-lock-overlay {
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background:
+    rgba(9, 31, 46, .72);
+  backdrop-filter:
+    blur(14px);
+}
+
+.crm-audit-lock-card {
+  width:
+    min(420px, calc(100vw - 34px));
+  padding: 25px;
+  border:
+    1px solid rgba(255,255,255,.44);
+  border-radius: 23px;
+  background:
+    rgba(255,255,255,.98);
+  box-shadow:
+    0 30px 80px rgba(4,27,42,.28);
+}
+
+.crm-audit-lock-icon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 17px;
+  border-radius: 16px;
+  background:
+    #e9f7f1;
+  font-size: 23px;
+}
+
+.crm-audit-lock-card h3 {
+  margin: 5px 0 8px;
+  color: #16364b;
+  font-size: 22px;
+}
+
+.crm-audit-lock-card > p:not(.crm-kicker) {
+  margin: 0 0 16px;
+  color: #607784;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.crm-audit-lock-card input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 13px;
+  border: 1px solid #cad9df;
+  border-radius: 11px;
+  outline: none;
+  color: #15364c;
+  background: #fff;
+  font-size: 13px;
+}
+
+.crm-audit-lock-card input:focus {
+  border-color: #1b9a70;
+  box-shadow:
+    0 0 0 3px rgba(27,154,112,.12);
+}
+
+.crm-audit-lock-error {
+  min-height: 19px;
+  padding-top: 6px;
+  color: #d73c3c;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.crm-audit-lock-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 5px;
+}
+
+.crm-audit-modal {
+  padding: 16px;
+}
+
+.crm-audit-backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    rgba(8, 29, 43, .76);
+  backdrop-filter:
+    blur(13px);
+}
+
+.crm-audit-card {
+  position: relative;
+  z-index: 2;
+  width:
+    min(1440px, calc(100vw - 32px));
+  height:
+    min(900px, calc(100vh - 32px));
+  display: grid;
+  grid-template-rows:
+    auto auto auto minmax(0,1fr);
+  margin: auto;
+  overflow: hidden;
+  border:
+    1px solid rgba(255,255,255,.52);
+  border-radius: 25px;
+  background:
+    #f6f9fb;
+  box-shadow:
+    0 35px 100px rgba(5,27,41,.30);
+}
+
+.crm-audit-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 21px 24px 18px;
+  border-bottom:
+    1px solid #dbe5ea;
+  background:
+    rgba(255,255,255,.97);
+}
+
+.crm-audit-header h2 {
+  margin: 4px 0 4px;
+  color: #14354b;
+  font-size: 23px;
+}
+
+.crm-audit-header > div:first-child > span {
+  color: #69808d;
+  font-size: 10.5px;
+}
+
+.crm-audit-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.crm-audit-export {
+  min-height: 37px;
+  padding: 0 13px;
+  border-radius: 10px;
+  border: 1px solid;
+  font-size: 10px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.crm-audit-export.excel {
+  color: #087a54;
+  border-color: #b8dfcf;
+  background: #effaf5;
+}
+
+.crm-audit-export.pdf {
+  color: #c83232;
+  border-color: #f0c7c7;
+  background: #fff4f4;
+}
+
+.crm-audit-close {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: #607885;
+  background: #edf3f5;
+  font-size: 25px;
+  cursor: pointer;
+}
+
+.crm-audit-filters {
+  display: grid;
+  grid-template-columns:
+    180px 220px 155px 155px minmax(260px,1fr);
+  gap: 9px;
+  padding: 12px 24px;
+  border-bottom:
+    1px solid #dfe8ec;
+  background: #fff;
+}
+
+.crm-audit-filters select,
+.crm-audit-filters input {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 11px;
+  border:
+    1px solid #cad9e0;
+  border-radius: 10px;
+  outline: none;
+  color: #244457;
+  background: #fff;
+  font-size: 10.5px;
+}
+
+.crm-audit-filters select:focus,
+.crm-audit-filters input:focus {
+  border-color: #20a17a;
+  box-shadow:
+    0 0 0 3px rgba(32,161,122,.10);
+}
+
+.crm-audit-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  min-height: 43px;
+  padding: 0 24px;
+  border-bottom:
+    1px solid #dfe8ec;
+  color: #647d8a;
+  background: #f6f9fa;
+  font-size: 10px;
+}
+
+.crm-audit-toolbar strong {
+  color: #17394f;
+}
+
+.crm-audit-toolbar b {
+  color: #0a9066;
+}
+
+.crm-audit-list {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 18px 22px;
+}
+
+.crm-audit-item {
+  position: relative;
+  padding: 17px;
+  margin-bottom: 11px;
+  overflow: hidden;
+  border:
+    1px solid #dae5ea;
+  border-radius: 17px;
+  background:
+    linear-gradient(
+      145deg,
+      #fff,
+      #fbfdfe
+    );
+  box-shadow:
+    0 7px 20px rgba(18,49,69,.035);
+}
+
+.crm-audit-item::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: #7e66e8;
+}
+
+.crm-audit-item[data-action*="IMPORT"]::before {
+  background: #e3a91a;
+}
+
+.crm-audit-item[data-action*="CRIA"]::before {
+  background: #0aa06f;
+}
+
+.crm-audit-item[data-action*="ALTER"]::before {
+  background: #367cc6;
+}
+
+.crm-audit-item[data-action*="EXCLUS"]::before,
+.crm-audit-item[data-action*="INATIVA"]::before {
+  background: #dd4c4c;
+}
+
+.crm-audit-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.crm-audit-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.crm-audit-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  color: #516c7a;
+  background: #edf3f5;
+  font-size: 8.5px;
+  font-weight: 900;
+  letter-spacing: .035em;
+}
+
+.crm-audit-chip.module {
+  color: #6545d8;
+  background: #efeaff;
+}
+
+.crm-audit-chip.action {
+  color: #087957;
+  background: #e8f8f1;
+}
+
+.crm-audit-item time {
+  color: #728895;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.crm-audit-item h3 {
+  margin: 11px 0 4px;
+  color: #12344b;
+  font-size: 14px;
+}
+
+.crm-audit-description {
+  margin: 0 0 10px;
+  color: #607987;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.crm-audit-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  color: #6b808c;
+  font-size: 9px;
+}
+
+.crm-audit-meta b {
+  color: #294b60;
+}
+
+.crm-audit-diffs {
+  display: grid;
+  gap: 6px;
+  margin-top: 13px;
+}
+
+.crm-audit-diff {
+  display: grid;
+  grid-template-columns:
+    180px minmax(0,1fr) 20px minmax(0,1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #f3f7f9;
+  font-size: 9.3px;
+}
+
+.crm-audit-diff strong {
+  color: #25485c;
+}
+
+.crm-audit-diff .before {
+  color: #7b8e99;
+}
+
+.crm-audit-diff .arrow {
+  color: #6b8290;
+  text-align: center;
+}
+
+.crm-audit-diff .after {
+  color: #0a865f;
+  font-weight: 800;
+}
+
+.crm-audit-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 15px;
+  margin-top: 12px;
+  padding: 10px 11px;
+  border:
+    1px dashed #d5e2e7;
+  border-radius: 11px;
+  color: #617986;
+  background: #fbfdfd;
+  font-size: 9px;
+}
+
+.crm-audit-details b {
+  color: #294a5d;
+}
+
+.crm-audit-empty {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  color: #748b97;
+  text-align: center;
+  font-size: 12px;
+}
+
+@media (max-width: 1000px) {
+  .crm-audit-filters {
+    grid-template-columns:
+      repeat(2, minmax(0,1fr));
+  }
+
+  .crm-audit-filters input[type="search"] {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 650px) {
+  .crm-audit-modal {
+    padding: 7px;
+  }
+
+  .crm-audit-card {
+    width:
+      calc(100vw - 14px);
+    height:
+      calc(100vh - 14px);
+    border-radius: 18px;
+  }
+
+  .crm-audit-header {
+    flex-direction: column;
+    padding: 16px;
+  }
+
+  .crm-audit-header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .crm-audit-filters {
+    grid-template-columns: 1fr;
+    padding: 10px 14px;
+  }
+
+  .crm-audit-filters input[type="search"] {
+    grid-column: auto;
+  }
+
+  .crm-audit-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 9px 14px;
+  }
+
+  .crm-audit-list {
+    padding: 10px;
+  }
+
+  .crm-audit-item-top {
+    flex-direction: column;
+  }
+
+  .crm-audit-diff {
+    grid-template-columns: 1fr;
+  }
+
+  .crm-audit-diff .arrow {
+    display: none;
+  }
+}
+
+
+/* ======================================================================
+   CRM v1.6.4 — STATUS DE SINCRONIZAÇÃO FIREBASE
+   ====================================================================== */
+.crm-firebase-status {
+  margin: 8px 12px 3px;
+  padding: 7px 9px;
+  border: 1px solid rgba(126, 154, 170, .22);
+  border-radius: 9px;
+  color: #b9cad4;
+  background: rgba(255,255,255,.045);
+  font-size: 8.5px;
+  font-weight: 750;
+  line-height: 1.3;
+}
+
+.crm-firebase-status::before {
+  content: "●";
+  margin-right: 6px;
+}
+
+.crm-firebase-status[data-status="ok"]::before {
+  color: #29d39a;
+}
+
+.crm-firebase-status[data-status="sync"]::before {
+  color: #f0c94b;
+}
+
+.crm-firebase-status[data-status="erro"]::before {
+  color: #ff6c6c;
+}
