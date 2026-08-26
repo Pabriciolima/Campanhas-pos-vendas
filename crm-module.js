@@ -1,15 +1,4 @@
-import { firestore } from "./firebase-config.js";
-
-    import {
-      collection,
-      doc,
-      setDoc,
-      deleteDoc,
-      getDocs,
-      onSnapshot,
-      writeBatch,
-      serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+ import { supabase } from "./supabase-config.js";
 
     /* ======================================================================
                CAMPANHAS DO CRM — MÓDULO COMPLETO v1.1
@@ -28,26 +17,28 @@ import { firestore } from "./firebase-config.js";
             (() => {
               "use strict";
 
-              const VERSION = "2026.08.25-16.6";
+              const VERSION = "2026.08.26-16.7-SUPABASE";
               const STORAGE_KEY = "campanhas_crm_estado_v01";
               const IMPORT_KEY = "campanhas_crm_importacoes_v01";
               const CRM_AUDIT_KEY = "campanhas_crm_auditoria_v01";
               const CRM_AUDIT_ACCESS_KEY = "campanhas_crm_auditoria_acesso_v01";
               const CRM_AUDIT_PASSWORD = "123321";
-              const CRM_FIREBASE = {
+              const CRM_SUPABASE = {
                 participantes: "crm_participantes",
                 competencias: "crm_competencias",
                 importacoes: "crm_importacoes",
                 auditoria: "crm_auditoria",
-                meta: "crm_meta"
+                config: "crm_config"
               };
 
-              let crmFirebasePronto = false;
-              let crmFirebaseAplicandoSnapshot = false;
-              let crmFirebaseTimer = null;
-              let crmImportFirebaseTimer = null;
-              const crmHashesRemotos = new Map();
-              const crmImportHashesRemotos = new Map();
+              const CRM_MIGRATION_KEY =
+                "campanhas_crm_supabase_migrado_v01";
+
+              let crmSupabasePronto = false;
+              let crmAplicandoRemoto = false;
+              let crmSyncTimer = null;
+              let crmImportSyncTimer = null;
+              let crmRealtimeChannels = [];
 
 
               const $ = (selector, root = document) => root.querySelector(selector);
@@ -457,19 +448,13 @@ import { firestore } from "./firebase-config.js";
               };
 
 
-              function hashCRM(valor) {
-                try {
-                  return JSON.stringify(valor ?? null);
-                } catch {
-                  return String(valor ?? "");
-                }
-              }
-
-              function sanitizarFirestoreCRM(valor) {
+              function sanitizarSupabaseCRM(valor) {
                 if (valor === undefined) return null;
 
                 if (Array.isArray(valor)) {
-                  return valor.map(sanitizarFirestoreCRM);
+                  return valor.map(
+                    sanitizarSupabaseCRM
+                  );
                 }
 
                 if (
@@ -483,7 +468,7 @@ import { firestore } from "./firebase-config.js";
                     ([chave, item]) => {
                       if (item !== undefined) {
                         saida[chave] =
-                          sanitizarFirestoreCRM(item);
+                          sanitizarSupabaseCRM(item);
                       }
                     }
                   );
@@ -501,25 +486,15 @@ import { firestore } from "./firebase-config.js";
                 return valor;
               }
 
-              function limparMetadadosFirebaseCRM(valor) {
-                if (!valor || typeof valor !== "object") {
-                  return valor;
-                }
-
-                const clone = { ...valor };
-                delete clone._updatedAt;
-                delete clone.atualizadoEmFirebase;
-                return clone;
-              }
-
-              function mostrarStatusFirebaseCRM(
+              function mostrarStatusSupabaseCRM(
                 mensagem,
                 tipo = "ok"
               ) {
+                const id =
+                  "crmSupabaseStatus";
+
                 const existente =
-                  document.getElementById(
-                    "crmFirebaseStatus"
-                  );
+                  document.getElementById(id);
 
                 if (existente) {
                   existente.textContent = mensagem;
@@ -540,105 +515,115 @@ import { firestore } from "./firebase-config.js";
                 const status =
                   document.createElement("div");
 
-                status.id = "crmFirebaseStatus";
+                status.id = id;
                 status.className =
-                  "crm-firebase-status";
+                  "crm-firebase-status crm-supabase-status";
                 status.dataset.status = tipo;
                 status.textContent = mensagem;
 
                 menuCRM.appendChild(status);
               }
 
-
-              async function salvarParticipanteFirebaseCRM(participante) {
-                const id = String(participante?.id || idUnico());
-
-                const payload =
-                  sanitizarFirestoreCRM({
-                    ...participante,
-                    id
-                  });
-
-                try {
-                  await setDoc(
-                    doc(
-                      firestore,
-                      CRM_FIREBASE.participantes,
-                      id
+              function participanteParaSupabaseCRM(
+                participante
+              ) {
+                return {
+                  id:
+                    String(
+                      participante?.id ||
+                      idUnico()
                     ),
-                    {
-                      ...payload,
-                      _updatedAt: serverTimestamp()
-                    },
-                    { merge: true }
-                  );
 
-                  crmHashesRemotos.set(
-                    `p:${id}`,
-                    hashCRM(payload)
-                  );
+                  nome:
+                    texto(participante?.nome),
 
-                  mostrarStatusFirebaseCRM(
-                    "CRM em tempo real · Firebase",
-                    "ok"
-                  );
+                  funcao:
+                    texto(participante?.funcao),
 
-                  return true;
-                } catch (erro) {
-                  console.error(
-                    "[CRM/Firebase] Falha ao salvar participante:",
-                    erro
-                  );
+                  nivel:
+                    texto(participante?.nivel),
 
-                  mostrarStatusFirebaseCRM(
-                    "Falha ao salvar no Firebase",
-                    "erro"
-                  );
+                  marca:
+                    texto(participante?.marca),
 
-                  mostrarToast(
-                    "Não foi possível salvar o participante no Firebase.",
-                    "erro"
-                  );
+                  dn:
+                    texto(participante?.dn),
 
-                  return false;
-                }
+                  filial:
+                    texto(participante?.filial),
+
+                  teto_bonificacao:
+                    numero(
+                      participante?.teto_bonificacao ??
+                      participante?.teto ??
+                      0
+                    ),
+
+                  ativo:
+                    participante?.ativo !== false,
+
+                  updated_at:
+                    new Date().toISOString()
+                };
               }
 
-              async function excluirParticipanteFirebaseCRM(participante) {
-                if (!participante?.id) return false;
+              function participanteDoSupabaseCRM(
+                linha
+              ) {
+                return {
+                  id: String(linha.id),
+                  nome: texto(linha.nome),
+                  funcao: texto(linha.funcao),
+                  nivel: texto(linha.nivel),
+                  marca: texto(linha.marca),
+                  dn: texto(linha.dn),
+                  filial: texto(linha.filial),
+                  teto_bonificacao:
+                    numero(linha.teto_bonificacao),
+                  ativo: linha.ativo !== false
+                };
+              }
+
+              async function salvarParticipanteSupabaseCRM(
+                participante
+              ) {
+                const payload =
+                  participanteParaSupabaseCRM(
+                    participante
+                  );
 
                 try {
-                  await deleteDoc(
-                    doc(
-                      firestore,
-                      CRM_FIREBASE.participantes,
-                      String(participante.id)
-                    )
-                  );
+                  const { error } =
+                    await supabase
+                      .from(
+                        CRM_SUPABASE.participantes
+                      )
+                      .upsert(
+                        payload,
+                        { onConflict: "id" }
+                      );
 
-                  crmHashesRemotos.delete(
-                    `p:${participante.id}`
-                  );
+                  if (error) throw error;
 
-                  mostrarStatusFirebaseCRM(
-                    "CRM em tempo real · Firebase",
+                  mostrarStatusSupabaseCRM(
+                    "CRM em tempo real · Supabase",
                     "ok"
                   );
 
                   return true;
                 } catch (erro) {
                   console.error(
-                    "[CRM/Firebase] Falha ao excluir participante:",
+                    "[CRM/Supabase] Falha ao salvar participante:",
                     erro
                   );
 
-                  mostrarStatusFirebaseCRM(
-                    "Falha ao excluir no Firebase",
+                  mostrarStatusSupabaseCRM(
+                    "Falha ao salvar no Supabase",
                     "erro"
                   );
 
                   mostrarToast(
-                    "Não foi possível excluir o participante do Firebase.",
+                    "Não foi possível salvar o participante no Supabase.",
                     "erro"
                   );
 
@@ -646,877 +631,1097 @@ import { firestore } from "./firebase-config.js";
                 }
               }
 
-              async function sincronizarEstadoFirebaseCRM() {
+              async function excluirParticipanteSupabaseCRM(
+                participante
+              ) {
+                if (!participante?.id) {
+                  return false;
+                }
+
+                try {
+                  const { error } =
+                    await supabase
+                      .from(
+                        CRM_SUPABASE.participantes
+                      )
+                      .delete()
+                      .eq(
+                        "id",
+                        String(participante.id)
+                      );
+
+                  if (error) throw error;
+
+                  mostrarStatusSupabaseCRM(
+                    "CRM em tempo real · Supabase",
+                    "ok"
+                  );
+
+                  return true;
+                } catch (erro) {
+                  console.error(
+                    "[CRM/Supabase] Falha ao excluir participante:",
+                    erro
+                  );
+
+                  mostrarStatusSupabaseCRM(
+                    "Falha ao excluir no Supabase",
+                    "erro"
+                  );
+
+                  mostrarToast(
+                    "Não foi possível excluir o participante do Supabase.",
+                    "erro"
+                  );
+
+                  return false;
+                }
+              }
+
+              function linhasCompetenciaSupabaseCRM(
+                competencia
+              ) {
+                const dados =
+                  estado.resultados?.[competencia];
+
+                if (!dados) return [];
+
+                return [
+                  "clientes",
+                  "atendimento",
+                  "satisfacao",
+                  "indicadores",
+                  "manuais"
+                ].map(tipo => ({
+                  id:
+                    `${competencia}__${tipo}`,
+
+                  competencia,
+                  tipo,
+
+                  dados:
+                    sanitizarSupabaseCRM(
+                      Array.isArray(dados[tipo])
+                        ? dados[tipo]
+                        : []
+                    ),
+
+                  updated_at:
+                    new Date().toISOString()
+                }));
+              }
+
+              async function salvarCompetenciaSupabaseCRM(
+                competencia
+              ) {
                 if (
-                  !crmFirebasePronto ||
-                  crmFirebaseAplicandoSnapshot
+                  !crmSupabasePronto ||
+                  crmAplicandoRemoto
+                ) {
+                  return;
+                }
+
+                const linhas =
+                  linhasCompetenciaSupabaseCRM(
+                    competencia
+                  );
+
+                if (!linhas.length) return;
+
+                const { error } =
+                  await supabase
+                    .from(
+                      CRM_SUPABASE.competencias
+                    )
+                    .upsert(
+                      linhas,
+                      { onConflict: "id" }
+                    );
+
+                if (error) {
+                  throw error;
+                }
+              }
+
+              async function salvarConfigSupabaseCRM() {
+                if (
+                  !crmSupabasePronto ||
+                  crmAplicandoRemoto
+                ) {
+                  return;
+                }
+
+                const { error } =
+                  await supabase
+                    .from(
+                      CRM_SUPABASE.config
+                    )
+                    .upsert(
+                      {
+                        id: "estado",
+                        valor: {
+                          competencia:
+                            estado.competencia,
+                          view:
+                            estado.view
+                        },
+                        updated_at:
+                          new Date().toISOString()
+                      },
+                      { onConflict: "id" }
+                    );
+
+                if (error) throw error;
+              }
+
+              async function sincronizarEstadoSupabaseCRM() {
+                if (
+                  !crmSupabasePronto ||
+                  crmAplicandoRemoto
                 ) {
                   return;
                 }
 
                 try {
-                  const batch =
-                    writeBatch(firestore);
+                  await Promise.all([
+                    salvarCompetenciaSupabaseCRM(
+                      estado.competencia
+                    ),
+                    salvarConfigSupabaseCRM()
+                  ]);
 
-                  let houveAlteracao = false;
-
-                  /*
-                   * Participantes usam CRUD direto por documento.
-                   * Não sincronizamos mais a lista inteira aqui,
-                   * evitando que um navegador desatualizado sobrescreva outro.
-                   */
-
-                  const competenciasAtuais =
-                    new Set();
-
-                  Object.entries(
-                    estado.resultados || {}
-                  ).forEach(
-                    ([competencia, dados]) => {
-                      competenciasAtuais.add(
-                        competencia
-                      );
-
-                      const payload =
-                        sanitizarFirestoreCRM({
-                          competencia,
-                          clientes:
-                            dados.clientes || [],
-                          atendimento:
-                            dados.atendimento || [],
-                          satisfacao:
-                            dados.satisfacao || [],
-                          indicadores:
-                            dados.indicadores || [],
-                          manuais:
-                            dados.manuais || []
-                        });
-
-                      const hash =
-                        hashCRM(payload);
-
-                      const chave =
-                        `c:${competencia}`;
-
-                      if (
-                        crmHashesRemotos.get(chave) !==
-                        hash
-                      ) {
-                        houveAlteracao = true;
-
-                        batch.set(
-                          doc(
-                            firestore,
-                            CRM_FIREBASE.competencias,
-                            competencia
-                          ),
-                          {
-                            ...payload,
-                            _updatedAt:
-                              serverTimestamp()
-                          },
-                          { merge: true }
-                        );
-
-                        crmHashesRemotos.set(
-                          chave,
-                          hash
-                        );
-                      }
-                    }
-                  );
-
-                  [...crmHashesRemotos.keys()]
-                    .filter(
-                      chave =>
-                        chave.startsWith("c:") &&
-                        !competenciasAtuais.has(
-                          chave.slice(2)
-                        )
-                    )
-                    .forEach(chave => {
-                      const competencia =
-                        chave.slice(2);
-
-                      houveAlteracao = true;
-
-                      batch.delete(
-                        doc(
-                          firestore,
-                          CRM_FIREBASE.competencias,
-                          competencia
-                        )
-                      );
-
-                      crmHashesRemotos.delete(chave);
-                    });
-
-                  const metaPayload =
-                    sanitizarFirestoreCRM({
-                      competencia:
-                        estado.competencia,
-                      view:
-                        estado.view
-                    });
-
-                  const metaHash =
-                    hashCRM(metaPayload);
-
-                  if (
-                    crmHashesRemotos.get("meta") !==
-                    metaHash
-                  ) {
-                    houveAlteracao = true;
-
-                    batch.set(
-                      doc(
-                        firestore,
-                        CRM_FIREBASE.meta,
-                        "estado"
-                      ),
-                      {
-                        ...metaPayload,
-                        _updatedAt:
-                          serverTimestamp()
-                      },
-                      { merge: true }
-                    );
-
-                    crmHashesRemotos.set(
-                      "meta",
-                      metaHash
-                    );
-                  }
-
-                  if (houveAlteracao) {
-                    await batch.commit();
-                  }
-
-                  mostrarStatusFirebaseCRM(
-                    "CRM sincronizado com Firebase",
+                  mostrarStatusSupabaseCRM(
+                    "CRM sincronizado · Supabase",
                     "ok"
                   );
                 } catch (erro) {
                   console.error(
-                    "[CRM/Firebase] Falha ao sincronizar estado:",
+                    "[CRM/Supabase] Falha ao sincronizar estado:",
                     erro
                   );
 
-                  mostrarStatusFirebaseCRM(
+                  mostrarStatusSupabaseCRM(
                     "CRM sem sincronização",
                     "erro"
                   );
                 }
               }
 
-              function agendarSincronizacaoFirebaseCRM() {
-                if (!crmFirebasePronto) return;
+              function agendarSincronizacaoSupabaseCRM() {
+                if (!crmSupabasePronto) return;
 
                 window.clearTimeout(
-                  crmFirebaseTimer
+                  crmSyncTimer
                 );
 
-                crmFirebaseTimer =
+                crmSyncTimer =
                   window.setTimeout(
-                    sincronizarEstadoFirebaseCRM,
-                    350
+                    sincronizarEstadoSupabaseCRM,
+                    450
                   );
               }
 
-              async function sincronizarImportacoesFirebaseCRM(
+              function importacaoParaSupabaseCRM(
+                item
+              ) {
+                const id =
+                  String(
+                    item.id ||
+                    `${item.competencia || "sem"}_${item.tipo || "arquivo"}_${item.dataHora || idUnico()}`
+                  )
+                    .replace(
+                      /[^a-zA-Z0-9_-]/g,
+                      "_"
+                    );
+
+                return {
+                  id,
+                  competencia:
+                    texto(item.competencia),
+                  tipo:
+                    texto(item.tipo),
+                  arquivo:
+                    texto(item.arquivo),
+                  aba:
+                    texto(item.aba),
+                  linhas:
+                    Number(item.linhas) || 0,
+
+                  detalhes:
+                    sanitizarSupabaseCRM({
+                      campos:
+                        item.campos || [],
+                      origem:
+                        item.origem || "",
+                      dataHora:
+                        item.dataHora || "",
+                      ...item.detalhes
+                    }),
+
+                  created_at:
+                    item.dataHora ||
+                    new Date().toISOString()
+                };
+              }
+
+              async function sincronizarImportacoesSupabaseCRM(
                 lista
               ) {
                 if (
-                  !crmFirebasePronto ||
-                  crmFirebaseAplicandoSnapshot
+                  !crmSupabasePronto ||
+                  crmAplicandoRemoto
                 ) {
                   return;
                 }
 
-                try {
-                  const batch =
-                    writeBatch(firestore);
-
-                  let houveAlteracao = false;
-
-                  const idsAtuais =
-                    new Set();
-
+                const payload =
                   (Array.isArray(lista) ? lista : [])
-                    .forEach(item => {
-                      const id =
-                        String(
-                          item.id ||
-                          `${item.competencia || "sem"}-${item.tipo || "arquivo"}-${item.dataHora || idUnico()}`
-                        )
-                          .replace(
-                            /[^a-zA-Z0-9_-]/g,
-                            "_"
-                          );
+                    .map(
+                      importacaoParaSupabaseCRM
+                    );
 
-                      item.id = id;
-                      idsAtuais.add(id);
+                if (!payload.length) return;
 
-                      const payload =
-                        sanitizarFirestoreCRM({
-                          ...item
-                        });
-
-                      const hash =
-                        hashCRM(payload);
-
-                      if (
-                        crmImportHashesRemotos.get(id) !==
-                        hash
-                      ) {
-                        houveAlteracao = true;
-
-                        batch.set(
-                          doc(
-                            firestore,
-                            CRM_FIREBASE.importacoes,
-                            id
-                          ),
-                          {
-                            ...payload,
-                            _updatedAt:
-                              serverTimestamp()
-                          },
-                          { merge: true }
-                        );
-
-                        crmImportHashesRemotos.set(
-                          id,
-                          hash
-                        );
-                      }
-                    });
-
-                  [...crmImportHashesRemotos.keys()]
-                    .filter(
-                      id => !idsAtuais.has(id)
+                const { error } =
+                  await supabase
+                    .from(
+                      CRM_SUPABASE.importacoes
                     )
-                    .forEach(id => {
-                      houveAlteracao = true;
+                    .upsert(
+                      payload,
+                      { onConflict: "id" }
+                    );
 
-                      batch.delete(
-                        doc(
-                          firestore,
-                          CRM_FIREBASE.importacoes,
-                          id
-                        )
-                      );
-
-                      crmImportHashesRemotos.delete(
-                        id
-                      );
-                    });
-
-                  if (houveAlteracao) {
-                    await batch.commit();
-                  }
-                } catch (erro) {
+                if (error) {
                   console.error(
-                    "[CRM/Firebase] Falha ao sincronizar importações:",
-                    erro
+                    "[CRM/Supabase] Falha ao sincronizar importações:",
+                    error
                   );
                 }
               }
 
-              function agendarImportacoesFirebaseCRM(
+              function agendarImportacoesSupabaseCRM(
                 lista
               ) {
-                if (!crmFirebasePronto) return;
+                if (!crmSupabasePronto) return;
 
                 window.clearTimeout(
-                  crmImportFirebaseTimer
+                  crmImportSyncTimer
                 );
 
-                crmImportFirebaseTimer =
+                crmImportSyncTimer =
                   window.setTimeout(
                     () =>
-                      sincronizarImportacoesFirebaseCRM(
+                      sincronizarImportacoesSupabaseCRM(
                         lista
                       ),
-                    300
+                    400
                   );
               }
 
-              async function carregarFirebaseInicialCRM() {
-                try {
-                  mostrarStatusFirebaseCRM(
-                    "Conectando CRM ao Firebase...",
-                    "sync"
+              function auditoriaParaSupabaseCRM(
+                log
+              ) {
+                return {
+                  id:
+                    String(
+                      log.id ||
+                      idUnico()
+                    ),
+
+                  acao:
+                    texto(log.acao),
+
+                  entidade:
+                    texto(log.entidade),
+
+                  colaborador:
+                    texto(log.colaborador),
+
+                  competencia:
+                    texto(log.competencia),
+
+                  marca:
+                    texto(log.marca),
+
+                  filial:
+                    texto(log.filial),
+
+                  origem:
+                    texto(log.origem),
+
+                  descricao:
+                    texto(log.descricao),
+
+                  antes:
+                    sanitizarSupabaseCRM(
+                      log.antes
+                    ),
+
+                  depois:
+                    sanitizarSupabaseCRM(
+                      log.depois
+                    ),
+
+                  detalhes:
+                    sanitizarSupabaseCRM(
+                      log.detalhes
+                    ),
+
+                  created_at:
+                    log.dataHora ||
+                    new Date().toISOString()
+                };
+              }
+
+              async function inserirAuditoriaSupabaseCRM(
+                log
+              ) {
+                if (!crmSupabasePronto) return;
+
+                const { error } =
+                  await supabase
+                    .from(
+                      CRM_SUPABASE.auditoria
+                    )
+                    .insert(
+                      auditoriaParaSupabaseCRM(
+                        log
+                      )
+                    );
+
+                if (
+                  error &&
+                  !String(error.message || "")
+                    .toLowerCase()
+                    .includes("duplicate")
+                ) {
+                  console.error(
+                    "[CRM/Supabase] auditoria:",
+                    error
+                  );
+                }
+              }
+
+              async function carregarParticipantesSupabaseCRM() {
+                const { data, error } =
+                  await supabase
+                    .from(
+                      CRM_SUPABASE.participantes
+                    )
+                    .select("*")
+                    .order("nome");
+
+                if (error) throw error;
+
+                estado.participantes =
+                  (data || [])
+                    .map(
+                      participanteDoSupabaseCRM
+                    );
+              }
+
+              async function carregarCompetenciasSupabaseCRM() {
+                const { data, error } =
+                  await supabase
+                    .from(
+                      CRM_SUPABASE.competencias
+                    )
+                    .select(
+                      "id, competencia, tipo, dados"
+                    );
+
+                if (error) throw error;
+
+                const resultados = {};
+
+                (data || []).forEach(linha => {
+                  const competencia =
+                    texto(linha.competencia);
+
+                  if (!competencia) return;
+
+                  if (!resultados[competencia]) {
+                    resultados[competencia] = {
+                      clientes: [],
+                      atendimento: [],
+                      satisfacao: [],
+                      indicadores: [],
+                      manuais: [],
+                      calculados: []
+                    };
+                  }
+
+                  const tipo =
+                    texto(linha.tipo);
+
+                  if (
+                    [
+                      "clientes",
+                      "atendimento",
+                      "satisfacao",
+                      "indicadores",
+                      "manuais"
+                    ].includes(tipo)
+                  ) {
+                    resultados[competencia][tipo] =
+                      Array.isArray(linha.dados)
+                        ? linha.dados
+                        : [];
+                  }
+                });
+
+                estado.resultados =
+                  resultados;
+              }
+
+              async function carregarImportacoesSupabaseCRM() {
+                const { data, error } =
+                  await supabase
+                    .from(
+                      CRM_SUPABASE.importacoes
+                    )
+                    .select("*")
+                    .order(
+                      "created_at",
+                      { ascending: false }
+                    );
+
+                if (error) throw error;
+
+                const lista =
+                  (data || []).map(linha => ({
+                    id: String(linha.id),
+                    competencia:
+                      linha.competencia || "",
+                    tipo:
+                      linha.tipo || "",
+                    arquivo:
+                      linha.arquivo || "",
+                    aba:
+                      linha.aba || "",
+                    linhas:
+                      Number(linha.linhas) || 0,
+                    campos:
+                      linha.detalhes?.campos || [],
+                    origem:
+                      linha.detalhes?.origem || "",
+                    detalhes:
+                      linha.detalhes || {},
+                    dataHora:
+                      linha.detalhes?.dataHora ||
+                      linha.created_at
+                  }));
+
+                localStorage.setItem(
+                  IMPORT_KEY,
+                  JSON.stringify(lista)
+                );
+              }
+
+              async function carregarAuditoriaSupabaseCRM() {
+                const { data, error } =
+                  await supabase
+                    .from(
+                      CRM_SUPABASE.auditoria
+                    )
+                    .select("*")
+                    .order(
+                      "created_at",
+                      { ascending: false }
+                    )
+                    .limit(2500);
+
+                if (error) throw error;
+
+                const lista =
+                  (data || []).map(linha => ({
+                    id: String(linha.id),
+                    modulo: "CRM",
+                    acao: linha.acao || "",
+                    entidade:
+                      linha.entidade || "",
+                    colaborador:
+                      linha.colaborador || "",
+                    competencia:
+                      linha.competencia || "",
+                    marca:
+                      linha.marca || "",
+                    filial:
+                      linha.filial || "",
+                    origem:
+                      linha.origem || "CRM",
+                    descricao:
+                      linha.descricao || "",
+                    antes:
+                      linha.antes ?? null,
+                    depois:
+                      linha.depois ?? null,
+                    detalhes:
+                      linha.detalhes ?? null,
+                    dataHora:
+                      linha.created_at
+                  }));
+
+                localStorage.setItem(
+                  CRM_AUDIT_KEY,
+                  JSON.stringify(lista)
+                );
+              }
+
+              async function carregarConfigSupabaseCRM() {
+                const { data, error } =
+                  await supabase
+                    .from(
+                      CRM_SUPABASE.config
+                    )
+                    .select("valor")
+                    .eq("id", "estado")
+                    .maybeSingle();
+
+                if (error) throw error;
+
+                const valor =
+                  data?.valor;
+
+                if (
+                  valor &&
+                  typeof valor === "object"
+                ) {
+                  if (valor.competencia) {
+                    estado.competencia =
+                      texto(valor.competencia);
+                  }
+
+                  if (valor.view) {
+                    estado.view =
+                      texto(valor.view);
+                  }
+                }
+              }
+
+              async function tabelaVaziaSupabaseCRM(
+                tabela
+              ) {
+                const { count, error } =
+                  await supabase
+                    .from(tabela)
+                    .select(
+                      "*",
+                      {
+                        count: "exact",
+                        head: true
+                      }
+                    );
+
+                if (error) throw error;
+
+                return (count || 0) === 0;
+              }
+
+              async function migrarLocalParaSupabaseCRM() {
+                const localParticipantes =
+                  Array.isArray(estado.participantes)
+                    ? clone(estado.participantes)
+                    : [];
+
+                const localResultados =
+                  estado.resultados &&
+                  typeof estado.resultados === "object"
+                    ? clone(estado.resultados)
+                    : {};
+
+                const localImportacoes =
+                  carregarHistoricoImportacoes();
+
+                const localAuditoria =
+                  carregarAuditoriaCRM();
+
+                const [
+                  participantesVazio,
+                  competenciasVazio,
+                  importacoesVazio,
+                  auditoriaVazio
+                ] = await Promise.all([
+                  tabelaVaziaSupabaseCRM(
+                    CRM_SUPABASE.participantes
+                  ),
+                  tabelaVaziaSupabaseCRM(
+                    CRM_SUPABASE.competencias
+                  ),
+                  tabelaVaziaSupabaseCRM(
+                    CRM_SUPABASE.importacoes
+                  ),
+                  tabelaVaziaSupabaseCRM(
+                    CRM_SUPABASE.auditoria
+                  )
+                ]);
+
+                let migrados = false;
+
+                if (
+                  participantesVazio &&
+                  localParticipantes.length
+                ) {
+                  const payload =
+                    localParticipantes.map(
+                      participanteParaSupabaseCRM
+                    );
+
+                  const { error } =
+                    await supabase
+                      .from(
+                        CRM_SUPABASE.participantes
+                      )
+                      .upsert(
+                        payload,
+                        { onConflict: "id" }
+                      );
+
+                  if (error) throw error;
+                  migrados = true;
+                }
+
+                if (
+                  competenciasVazio &&
+                  Object.keys(localResultados).length
+                ) {
+                  const payload = [];
+
+                  Object.keys(
+                    localResultados
+                  ).forEach(competencia => {
+                    const dados =
+                      localResultados[competencia];
+
+                    [
+                      "clientes",
+                      "atendimento",
+                      "satisfacao",
+                      "indicadores",
+                      "manuais"
+                    ].forEach(tipo => {
+                      payload.push({
+                        id:
+                          `${competencia}__${tipo}`,
+                        competencia,
+                        tipo,
+                        dados:
+                          sanitizarSupabaseCRM(
+                            Array.isArray(dados?.[tipo])
+                              ? dados[tipo]
+                              : []
+                          ),
+                        updated_at:
+                          new Date().toISOString()
+                      });
+                    });
+                  });
+
+                  const { error } =
+                    await supabase
+                      .from(
+                        CRM_SUPABASE.competencias
+                      )
+                      .upsert(
+                        payload,
+                        { onConflict: "id" }
+                      );
+
+                  if (error) throw error;
+                  migrados = true;
+                }
+
+                if (
+                  importacoesVazio &&
+                  localImportacoes.length
+                ) {
+                  const payload =
+                    localImportacoes.map(
+                      importacaoParaSupabaseCRM
+                    );
+
+                  const { error } =
+                    await supabase
+                      .from(
+                        CRM_SUPABASE.importacoes
+                      )
+                      .upsert(
+                        payload,
+                        { onConflict: "id" }
+                      );
+
+                  if (error) throw error;
+                  migrados = true;
+                }
+
+                if (
+                  auditoriaVazio &&
+                  localAuditoria.length
+                ) {
+                  const payload =
+                    localAuditoria.map(
+                      auditoriaParaSupabaseCRM
+                    );
+
+                  const { error } =
+                    await supabase
+                      .from(
+                        CRM_SUPABASE.auditoria
+                      )
+                      .insert(payload);
+
+                  if (error) throw error;
+                  migrados = true;
+                }
+
+                await supabase
+                  .from(
+                    CRM_SUPABASE.config
+                  )
+                  .upsert(
+                    {
+                      id: "estado",
+                      valor: {
+                        competencia:
+                          estado.competencia,
+                        view:
+                          estado.view
+                      },
+                      updated_at:
+                        new Date().toISOString()
+                    },
+                    { onConflict: "id" }
                   );
 
-                  const [
-                    participantesSnap,
-                    competenciasSnap,
-                    importacoesSnap,
-                    metaSnap,
-                    auditoriaSnap
-                  ] = await Promise.all([
-                    getDocs(
-                      collection(
-                        firestore,
-                        CRM_FIREBASE.participantes
-                      )
-                    ),
-                    getDocs(
-                      collection(
-                        firestore,
-                        CRM_FIREBASE.competencias
-                      )
-                    ),
-                    getDocs(
-                      collection(
-                        firestore,
-                        CRM_FIREBASE.importacoes
-                      )
-                    ),
-                    getDocs(
-                      collection(
-                        firestore,
-                        CRM_FIREBASE.meta
-                      )
-                    ),
-                    getDocs(
-                      collection(
-                        firestore,
-                        CRM_FIREBASE.auditoria
-                      )
+                localStorage.setItem(
+                  CRM_MIGRATION_KEY,
+                  JSON.stringify({
+                    concluido: true,
+                    data:
+                      new Date().toISOString(),
+                    participantes:
+                      localParticipantes.length,
+                    competencias:
+                      Object.keys(
+                        localResultados
+                      ).length,
+                    importacoes:
+                      localImportacoes.length,
+                    auditoria:
+                      localAuditoria.length
+                  })
+                );
+
+                return migrados;
+              }
+
+              async function conferirMigracaoSupabaseCRM() {
+                const [
+                  participantes,
+                  competencias,
+                  importacoes
+                ] = await Promise.all([
+                  supabase
+                    .from(
+                      CRM_SUPABASE.participantes
                     )
+                    .select(
+                      "*",
+                      {
+                        count: "exact",
+                        head: true
+                      }
+                    ),
+
+                  supabase
+                    .from(
+                      CRM_SUPABASE.competencias
+                    )
+                    .select(
+                      "*",
+                      {
+                        count: "exact",
+                        head: true
+                      }
+                    ),
+
+                  supabase
+                    .from(
+                      CRM_SUPABASE.importacoes
+                    )
+                    .select(
+                      "*",
+                      {
+                        count: "exact",
+                        head: true
+                      }
+                    )
+                ]);
+
+                const resumo = {
+                  participantes:
+                    participantes.count || 0,
+                  linhasCompetencia:
+                    competencias.count || 0,
+                  importacoes:
+                    importacoes.count || 0
+                };
+
+                console.info(
+                  "[CRM/Supabase] Conferência da migração:",
+                  resumo
+                );
+
+                return resumo;
+              }
+
+              async function recarregarTudoSupabaseCRM() {
+                crmAplicandoRemoto = true;
+
+                try {
+                  await Promise.all([
+                    carregarParticipantesSupabaseCRM(),
+                    carregarCompetenciasSupabaseCRM(),
+                    carregarImportacoesSupabaseCRM(),
+                    carregarAuditoriaSupabaseCRM(),
+                    carregarConfigSupabaseCRM()
                   ]);
 
-                  const temRemoto =
-                    !participantesSnap.empty ||
-                    !competenciasSnap.empty ||
-                    !importacoesSnap.empty;
-
-                  crmFirebaseAplicandoSnapshot = true;
-
-                  if (temRemoto) {
-                    estado.participantes =
-                      participantesSnap.docs.map(
-                        snap => ({
-                          id: snap.id,
-                          ...limparMetadadosFirebaseCRM(
-                            snap.data()
-                          )
-                        })
-                      );
-
-                    participantesSnap.docs.forEach(
-                      snap => {
-                        const limpo =
-                          limparMetadadosFirebaseCRM(
-                            snap.data()
-                          );
-
-                        crmHashesRemotos.set(
-                          `p:${snap.id}`,
-                          hashCRM(
-                            sanitizarFirestoreCRM({
-                              id: snap.id,
-                              ...limpo
-                            })
-                          )
-                        );
-                      }
-                    );
-
-                    const resultados = {};
-
-                    competenciasSnap.docs.forEach(
-                      snap => {
-                        const data =
-                          limparMetadadosFirebaseCRM(
-                            snap.data()
-                          );
-
-                        resultados[snap.id] = {
-                          clientes:
-                            Array.isArray(data.clientes)
-                              ? data.clientes
-                              : [],
-                          atendimento:
-                            Array.isArray(data.atendimento)
-                              ? data.atendimento
-                              : [],
-                          satisfacao:
-                            Array.isArray(data.satisfacao)
-                              ? data.satisfacao
-                              : [],
-                          indicadores:
-                            Array.isArray(data.indicadores)
-                              ? data.indicadores
-                              : [],
-                          manuais:
-                            Array.isArray(data.manuais)
-                              ? data.manuais
-                              : [],
-                          calculados: []
-                        };
-
-                        crmHashesRemotos.set(
-                          `c:${snap.id}`,
-                          hashCRM(
-                            sanitizarFirestoreCRM({
-                              competencia:
-                                snap.id,
-                              clientes:
-                                resultados[snap.id]
-                                  .clientes,
-                              atendimento:
-                                resultados[snap.id]
-                                  .atendimento,
-                              satisfacao:
-                                resultados[snap.id]
-                                  .satisfacao,
-                              indicadores:
-                                resultados[snap.id]
-                                  .indicadores,
-                              manuais:
-                                resultados[snap.id]
-                                  .manuais
-                            })
-                          )
-                        );
-                      });
-
-                    estado.resultados =
-                      resultados;
-
-                    const metaDoc =
-                      metaSnap.docs.find(
-                        snap =>
-                          snap.id === "estado"
-                      );
-
-                    if (metaDoc) {
-                      const meta =
-                        limparMetadadosFirebaseCRM(
-                          metaDoc.data()
-                        );
-
-                      if (meta.competencia) {
-                        estado.competencia =
-                          meta.competencia;
-                      }
-
-                      if (meta.view) {
-                        estado.view =
-                          meta.view;
-                      }
-
-                      crmHashesRemotos.set(
-                        "meta",
-                        hashCRM(
-                          sanitizarFirestoreCRM({
-                            competencia:
-                              estado.competencia,
-                            view:
-                              estado.view
-                          })
-                        )
-                      );
-                    }
-
-                    const imports =
-                      importacoesSnap.docs
-                        .map(
-                          snap => ({
-                            id: snap.id,
-                            ...limparMetadadosFirebaseCRM(
-                              snap.data()
-                            )
-                          })
-                        )
-                        .sort(
-                          (a, b) =>
-                            new Date(
-                              b.dataHora || 0
-                            ) -
-                            new Date(
-                              a.dataHora || 0
-                            )
-                        );
-
-                    localStorage.setItem(
-                      IMPORT_KEY,
-                      JSON.stringify(imports)
-                    );
-
-                    importacoesSnap.docs.forEach(
-                      snap => {
-                        const limpo =
-                          limparMetadadosFirebaseCRM(
-                            snap.data()
-                          );
-
-                        crmImportHashesRemotos.set(
-                          snap.id,
-                          hashCRM(
-                            sanitizarFirestoreCRM({
-                              ...limpo,
-                              id: snap.id
-                            })
-                          )
-                        );
-                      }
-                    );
-
-                    const audits =
-                      auditoriaSnap.docs
-                        .map(
-                          snap => ({
-                            id: snap.id,
-                            ...limparMetadadosFirebaseCRM(
-                              snap.data()
-                            )
-                          })
-                        )
-                        .sort(
-                          (a, b) =>
-                            new Date(
-                              b.dataHora || 0
-                            ) -
-                            new Date(
-                              a.dataHora || 0
-                            )
-                        );
-
-                    if (audits.length) {
-                      localStorage.setItem(
-                        CRM_AUDIT_KEY,
-                        JSON.stringify(audits)
-                      );
-                    }
-
-                    localStorage.setItem(
-                      STORAGE_KEY,
-                      JSON.stringify(estado)
-                    );
-                  }
-
-                  crmFirebaseAplicandoSnapshot = false;
-                  crmFirebasePronto = true;
-
-                  /*
-                   * Se o Firebase ainda estiver vazio e este navegador
-                   * tiver os dados antigos locais, fazemos migração
-                   * automática uma única vez. É isso que publica a base
-                   * que já foi importada para os demais usuários.
-                   */
-                  if (!temRemoto) {
-                    for (const participante of estado.participantes) {
-                      await salvarParticipanteFirebaseCRM(participante);
-                    }
-
-                    await sincronizarEstadoFirebaseCRM();
-                    await sincronizarImportacoesFirebaseCRM(
-                      carregarHistoricoImportacoes()
-                    );
-
-                    const logs =
-                      carregarAuditoriaCRM();
-
-                    for (const log of logs) {
-                      if (!log?.id) continue;
-
-                      await setDoc(
-                        doc(
-                          firestore,
-                          CRM_FIREBASE.auditoria,
-                          String(log.id)
-                        ),
-                        {
-                          ...sanitizarFirestoreCRM(
-                            log
-                          ),
-                          _updatedAt:
-                            serverTimestamp()
-                        },
-                        { merge: true }
-                      );
-                    }
-                  }
+                  localStorage.setItem(
+                    STORAGE_KEY,
+                    JSON.stringify(estado)
+                  );
 
                   recalcular();
                   renderizar();
-
-                  mostrarStatusFirebaseCRM(
-                    "CRM sincronizado com Firebase",
-                    "ok"
-                  );
-
-                  iniciarListenersFirebaseCRM();
-                } catch (erro) {
-                  crmFirebaseAplicandoSnapshot = false;
-                  crmFirebasePronto = false;
-
-                  console.error(
-                    "[CRM/Firebase] Não foi possível iniciar sincronização:",
-                    erro
-                  );
-
-                  mostrarStatusFirebaseCRM(
-                    "Firebase indisponível no CRM",
-                    "erro"
-                  );
+                } finally {
+                  crmAplicandoRemoto = false;
                 }
               }
 
-              function iniciarListenersFirebaseCRM() {
-                onSnapshot(
-                  collection(
-                    firestore,
-                    CRM_FIREBASE.participantes
-                  ),
-                  snapshot => {
-                    if (!crmFirebasePronto) return;
-
-                    // Ignora o eco local da própria gravação.
-                    if (snapshot.metadata?.hasPendingWrites) return;
-
-                    crmFirebaseAplicandoSnapshot = true;
-
-                    estado.participantes =
-                      snapshot.docs.map(
-                        snap => ({
-                          id: snap.id,
-                          ...limparMetadadosFirebaseCRM(
-                            snap.data()
-                          )
-                        })
-                      );
-
-                    snapshot.docs.forEach(
-                      snap => {
-                        const limpo =
-                          limparMetadadosFirebaseCRM(
-                            snap.data()
-                          );
-
-                        crmHashesRemotos.set(
-                          `p:${snap.id}`,
-                          hashCRM(
-                            sanitizarFirestoreCRM({
-                              id: snap.id,
-                              ...limpo
-                            })
-                          )
-                        );
-                      }
-                    );
-
-                    localStorage.setItem(
-                      STORAGE_KEY,
-                      JSON.stringify(estado)
-                    );
-
-                    crmFirebaseAplicandoSnapshot = false;
-
-                    renderizar();
-
-                    mostrarStatusFirebaseCRM(
-                      "CRM em tempo real · Firebase",
-                      "ok"
-                    );
-                  },
-                  erro => {
-                    console.error(
-                      "[CRM/Firebase] participantes:",
-                      erro
-                    );
-
-                    mostrarStatusFirebaseCRM(
-                      "Falha no tempo real do CRM",
-                      "erro"
-                    );
+              function iniciarRealtimeSupabaseCRM() {
+                crmRealtimeChannels.forEach(
+                  canal => {
+                    try {
+                      supabase.removeChannel(canal);
+                    } catch {}
                   }
                 );
 
-                onSnapshot(
-                  collection(
-                    firestore,
-                    CRM_FIREBASE.competencias
-                  ),
-                  snapshot => {
-                    if (!crmFirebasePronto) return;
+                crmRealtimeChannels = [];
 
-                    if (snapshot.metadata?.hasPendingWrites) return;
+                const atualizarParticipantes =
+                  async () => {
+                    if (!crmSupabasePronto) return;
 
-                    crmFirebaseAplicandoSnapshot = true;
+                    crmAplicandoRemoto = true;
 
-                    const resultados = {};
+                    try {
+                      await carregarParticipantesSupabaseCRM();
 
-                    snapshot.docs.forEach(
-                      snap => {
-                        const data =
-                          limparMetadadosFirebaseCRM(
-                            snap.data()
-                          );
-
-                        resultados[snap.id] = {
-                          clientes:
-                            data.clientes || [],
-                          atendimento:
-                            data.atendimento || [],
-                          satisfacao:
-                            data.satisfacao || [],
-                          indicadores:
-                            data.indicadores || [],
-                          manuais:
-                            data.manuais || [],
-                          calculados: []
-                        };
-
-                        crmHashesRemotos.set(
-                          `c:${snap.id}`,
-                          hashCRM(
-                            sanitizarFirestoreCRM({
-                              competencia: snap.id,
-                              clientes:
-                                resultados[snap.id].clientes,
-                              atendimento:
-                                resultados[snap.id].atendimento,
-                              satisfacao:
-                                resultados[snap.id].satisfacao,
-                              indicadores:
-                                resultados[snap.id].indicadores,
-                              manuais:
-                                resultados[snap.id].manuais
-                            })
-                          )
-                        );
-                      }
-                    );
-
-                    estado.resultados =
-                      resultados;
-
-                    localStorage.setItem(
-                      STORAGE_KEY,
-                      JSON.stringify(estado)
-                    );
-
-                    crmFirebaseAplicandoSnapshot = false;
-
-                    renderizar();
-                  },
-                  erro =>
-                    console.error(
-                      "[CRM/Firebase] competencias:",
-                      erro
-                    )
-                );
-
-                onSnapshot(
-                  collection(
-                    firestore,
-                    CRM_FIREBASE.importacoes
-                  ),
-                  snapshot => {
-                    if (!crmFirebasePronto) return;
-                    if (snapshot.metadata?.hasPendingWrites) return;
-
-                    const lista =
-                      snapshot.docs
-                        .map(
-                          snap => ({
-                            id: snap.id,
-                            ...limparMetadadosFirebaseCRM(
-                              snap.data()
-                            )
-                          })
-                        )
-                        .sort(
-                          (a, b) =>
-                            new Date(
-                              b.dataHora || 0
-                            ) -
-                            new Date(
-                              a.dataHora || 0
-                            )
-                        );
-
-                    crmImportHashesRemotos.clear();
-
-                    lista.forEach(item => {
-                      crmImportHashesRemotos.set(
-                        item.id,
-                        hashCRM(
-                          sanitizarFirestoreCRM(item)
-                        )
+                      localStorage.setItem(
+                        STORAGE_KEY,
+                        JSON.stringify(estado)
                       );
-                    });
 
-                    localStorage.setItem(
-                      IMPORT_KEY,
-                      JSON.stringify(lista)
-                    );
-
-                    // Só a tela de Lançamentos depende do histórico de cargas.
-                    if (estado.view === "lancamentos") {
                       renderizar();
+
+                      mostrarStatusSupabaseCRM(
+                        "CRM em tempo real · Supabase",
+                        "ok"
+                      );
+                    } catch (erro) {
+                      console.error(
+                        "[CRM/Supabase] realtime participantes:",
+                        erro
+                      );
+                    } finally {
+                      crmAplicandoRemoto = false;
                     }
-                  },
-                  erro =>
-                    console.error(
-                      "[CRM/Firebase] importacoes:",
-                      erro
-                    )
-                );
+                  };
 
-                onSnapshot(
-                  collection(
-                    firestore,
-                    CRM_FIREBASE.auditoria
-                  ),
-                  snapshot => {
-                    if (!crmFirebasePronto) return;
-                    if (snapshot.metadata?.hasPendingWrites) return;
+                const atualizarCompetencias =
+                  async () => {
+                    if (!crmSupabasePronto) return;
 
-                    const lista =
-                      snapshot.docs
-                        .map(
-                          snap => ({
-                            id: snap.id,
-                            ...limparMetadadosFirebaseCRM(
-                              snap.data()
-                            )
-                          })
+                    crmAplicandoRemoto = true;
+
+                    try {
+                      await carregarCompetenciasSupabaseCRM();
+
+                      localStorage.setItem(
+                        STORAGE_KEY,
+                        JSON.stringify(estado)
+                      );
+
+                      recalcular();
+                      renderizar();
+                    } catch (erro) {
+                      console.error(
+                        "[CRM/Supabase] realtime competências:",
+                        erro
+                      );
+                    } finally {
+                      crmAplicandoRemoto = false;
+                    }
+                  };
+
+                const atualizarImportacoes =
+                  async () => {
+                    if (!crmSupabasePronto) return;
+
+                    try {
+                      await carregarImportacoesSupabaseCRM();
+                      renderizar();
+                    } catch (erro) {
+                      console.error(
+                        "[CRM/Supabase] realtime importações:",
+                        erro
+                      );
+                    }
+                  };
+
+                const atualizarAuditoria =
+                  async () => {
+                    if (!crmSupabasePronto) return;
+
+                    try {
+                      await carregarAuditoriaSupabaseCRM();
+
+                      if (
+                        document.getElementById(
+                          "crmAuditoriaModal"
                         )
-                        .sort(
-                          (a, b) =>
-                            new Date(
-                              b.dataHora || 0
-                            ) -
-                            new Date(
-                              a.dataHora || 0
-                            )
-                        );
-
-                    localStorage.setItem(
-                      CRM_AUDIT_KEY,
-                      JSON.stringify(lista)
-                    );
-
-                    if (
-                      document.getElementById(
-                        "crmAuditoriaModal"
-                      )
-                    ) {
-                      renderizarAuditoriaCRM();
+                      ) {
+                        renderizarAuditoriaCRM();
+                      }
+                    } catch (erro) {
+                      console.error(
+                        "[CRM/Supabase] realtime auditoria:",
+                        erro
+                      );
                     }
-                  },
-                  erro =>
-                    console.error(
-                      "[CRM/Firebase] auditoria:",
-                      erro
+                  };
+
+                crmRealtimeChannels.push(
+                  supabase
+                    .channel(
+                      "crm_participantes_realtime"
                     )
+                    .on(
+                      "postgres_changes",
+                      {
+                        event: "*",
+                        schema: "public",
+                        table:
+                          CRM_SUPABASE.participantes
+                      },
+                      atualizarParticipantes
+                    )
+                    .subscribe()
                 );
+
+                crmRealtimeChannels.push(
+                  supabase
+                    .channel(
+                      "crm_competencias_realtime"
+                    )
+                    .on(
+                      "postgres_changes",
+                      {
+                        event: "*",
+                        schema: "public",
+                        table:
+                          CRM_SUPABASE.competencias
+                      },
+                      atualizarCompetencias
+                    )
+                    .subscribe()
+                );
+
+                crmRealtimeChannels.push(
+                  supabase
+                    .channel(
+                      "crm_importacoes_realtime"
+                    )
+                    .on(
+                      "postgres_changes",
+                      {
+                        event: "*",
+                        schema: "public",
+                        table:
+                          CRM_SUPABASE.importacoes
+                      },
+                      atualizarImportacoes
+                    )
+                    .subscribe()
+                );
+
+                crmRealtimeChannels.push(
+                  supabase
+                    .channel(
+                      "crm_auditoria_realtime"
+                    )
+                    .on(
+                      "postgres_changes",
+                      {
+                        event: "INSERT",
+                        schema: "public",
+                        table:
+                          CRM_SUPABASE.auditoria
+                      },
+                      atualizarAuditoria
+                    )
+                    .subscribe()
+                );
+              }
+
+              async function carregarSupabaseInicialCRM() {
+                try {
+                  mostrarStatusSupabaseCRM(
+                    "Conectando CRM ao Supabase...",
+                    "sync"
+                  );
+
+                  /*
+                   * Primeiro preservamos o estado local atual.
+                   * Se as tabelas do CRM estiverem vazias,
+                   * ele é migrado antes de qualquer leitura remota.
+                   */
+                  await migrarLocalParaSupabaseCRM();
+
+                  crmSupabasePronto = true;
+
+                  await recarregarTudoSupabaseCRM();
+
+                  const conferencia =
+                    await conferirMigracaoSupabaseCRM();
+
+                  mostrarStatusSupabaseCRM(
+                    `Supabase online · ${conferencia.participantes} participante(s)`,
+                    "ok"
+                  );
+
+                  iniciarRealtimeSupabaseCRM();
+                } catch (erro) {
+                  crmSupabasePronto = false;
+
+                  console.error(
+                    "[CRM/Supabase] Não foi possível iniciar:",
+                    erro
+                  );
+
+                  mostrarStatusSupabaseCRM(
+                    "Supabase indisponível no CRM",
+                    "erro"
+                  );
+
+                  mostrarToast(
+                    "O CRM continuará mostrando o backup local, mas a sincronização com Supabase falhou.",
+                    "erro"
+                  );
+                }
               }
 
               let estado = carregarEstado();
@@ -1547,7 +1752,7 @@ import { firestore } from "./firebase-config.js";
                   JSON.stringify(estado)
                 );
 
-                agendarSincronizacaoFirebaseCRM();
+                agendarSincronizacaoSupabaseCRM();
               }
 
               function carregarHistoricoImportacoes() {
@@ -1570,7 +1775,7 @@ import { firestore } from "./firebase-config.js";
                   JSON.stringify(seguro)
                 );
 
-                agendarImportacoesFirebaseCRM(
+                agendarImportacoesSupabaseCRM(
                   seguro
                 );
               }
@@ -2527,29 +2732,10 @@ import { firestore } from "./firebase-config.js";
 
                 salvarAuditoriaCRM(logs);
 
-                if (crmFirebasePronto) {
-                  const logNovo = logs[0];
-
-                  setDoc(
-                    doc(
-                      firestore,
-                      CRM_FIREBASE.auditoria,
-                      String(logNovo.id)
-                    ),
-                    {
-                      ...sanitizarFirestoreCRM(
-                        logNovo
-                      ),
-                      _updatedAt:
-                        serverTimestamp()
-                    },
-                    { merge: true }
-                  ).catch(erro => {
-                    console.error(
-                      "[CRM/Firebase] auditoria:",
-                      erro
-                    );
-                  });
+                if (crmSupabasePronto) {
+                  inserirAuditoriaSupabaseCRM(
+                    logs[0]
+                  );
                 }
               }
 
@@ -6157,7 +6343,7 @@ import { firestore } from "./firebase-config.js";
                           : null;
 
                       const ok =
-                        await salvarParticipanteFirebaseCRM(
+                        await salvarParticipanteSupabaseCRM(
                           novo
                         );
 
@@ -6180,7 +6366,7 @@ import { firestore } from "./firebase-config.js";
                         competencia: estado.competencia,
                         marca: novo.marca,
                         filial: novo.filial,
-                        origem: "Base CRM / Firebase",
+                        origem: "Base CRM / Supabase",
                         descricao:
                           participante
                             ? "Cadastro de participante do CRM alterado."
@@ -6272,7 +6458,7 @@ import { firestore } from "./firebase-config.js";
                         botao.disabled = true;
 
                         const ok =
-                          await salvarParticipanteFirebaseCRM(
+                          await salvarParticipanteSupabaseCRM(
                             atualizado
                           );
 
@@ -6301,7 +6487,7 @@ import { firestore } from "./firebase-config.js";
                           competencia: estado.competencia,
                           marca: atualizado.marca,
                           filial: atualizado.filial,
-                          origem: "Base CRM / Firebase",
+                          origem: "Base CRM / Supabase",
                           descricao:
                             atualizado.ativo
                               ? "Participante reativado no CRM."
@@ -6346,7 +6532,7 @@ import { firestore } from "./firebase-config.js";
                         botao.textContent = "Excluindo...";
 
                         const ok =
-                          await excluirParticipanteFirebaseCRM(
+                          await excluirParticipanteSupabaseCRM(
                             participante
                           );
 
@@ -6363,7 +6549,7 @@ import { firestore } from "./firebase-config.js";
                           competencia: estado.competencia,
                           marca: participante.marca,
                           filial: participante.filial,
-                          origem: "Base CRM / Firebase",
+                          origem: "Base CRM / Supabase",
                           descricao:
                             "Participante excluído definitivamente da base compartilhada do CRM.",
                           antes: participante,
@@ -7627,11 +7813,9 @@ import { firestore } from "./firebase-config.js";
                 );
 
                 /*
-                 * A partir desta versão o CRM não depende mais apenas
-                 * do localStorage. A base/importações/edições passam a
-                 * ser compartilhadas pelo Firestore em tempo real.
+                 * A partir desta versão o CRM usa o Supabase como banco oficial compartilhado.\n             * O localStorage permanece somente como backup/cache de segurança.
                  */
-                carregarFirebaseInicialCRM();
+                carregarSupabaseInicialCRM();
               }
 
               window.CRMModule = {

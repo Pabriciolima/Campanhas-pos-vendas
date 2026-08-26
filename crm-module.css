@@ -1,4 +1,4 @@
- /* ======================================================================
+           /* ======================================================================
                CAMPANHAS DO CRM — CSS PREMIUM v1.1
                Arquivo: crm-module.css
                ====================================================================== */
@@ -2763,4 +2763,21 @@
 
     .crm-firebase-status[data-status="ok"] {
       color: #c7f6e7;
+    }
+
+
+    /* ======================================================================
+       CRM v1.6.7 — SUPABASE / REALTIME
+       ====================================================================== */
+
+    .crm-supabase-status[data-status="ok"]::before {
+      color: #3ecf8e !important;
+    }
+
+    .crm-supabase-status[data-status="sync"]::before {
+      color: #f0c94b !important;
+    }
+
+    .crm-supabase-status[data-status="erro"]::before {
+      color: #ff6c6c !important;
     }
