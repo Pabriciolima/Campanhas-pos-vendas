@@ -1,4 +1,11 @@
 /*
+ * VERSÃO: 2026.08.26-SUPABASE-ETAPA-06
+ * Evidências do Pix oficiais no Supabase Storage.
+ * Compatível com supabase-config.js que exporta somente `supabase`.
+ * Preserva competência + semana + filial e todas as exportações existentes.
+ */
+
+/*
  * VERSÃO: 2026.08.06-03
  * Exportação do Pix respeita Semana + Filial selecionadas no topo.
  * Evidências também seguem exatamente a filial selecionada.
@@ -9,9 +16,11 @@
  */
 /* VERSÃO: 2026.07.21-SEMANA-02 — Evidências por competência + semana + filial */
 import {
-  supabase,
-  SUPABASE_BUCKET
+  supabase
 } from "./supabase-config.js";
+
+const SUPABASE_BUCKET =
+  "evidencias-produtivos";
 
 const CONFIG_PIX_EVIDENCIAS = {
   pastaRaiz: "pix-do-presidente",
@@ -38,6 +47,88 @@ function pixEv(seletor) {
 
 function pixEvTodos(seletor) {
   return [...document.querySelectorAll(seletor)];
+}
+
+function garantirLoadingPremiumPixEvidencias() {
+  if (document.querySelector("#pixEvidencePremiumLoadingCss")) {
+    return;
+  }
+
+  const estilo = document.createElement("style");
+  estilo.id = "pixEvidencePremiumLoadingCss";
+  estilo.textContent = `
+    .pix-evidence-card {
+      position: relative;
+      transform: translateY(0);
+      transition: transform .28s ease, opacity .28s ease;
+    }
+
+    .pix-evidence-card-loading {
+      min-height: 145px;
+      overflow: hidden;
+      background: #edf4f7;
+    }
+
+    .pix-evidence-card-loading::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      background: linear-gradient(105deg, transparent 20%, rgba(255,255,255,.92) 45%, transparent 70%);
+      transform: translateX(-110%);
+      animation: pixEvidenceJitterShimmer 1.05s cubic-bezier(.4,0,.2,1) infinite;
+      pointer-events: none;
+    }
+
+    .pix-evidence-card img {
+      opacity: 1;
+      transform: scale(1);
+      transition: opacity .34s ease, transform .46s cubic-bezier(.2,.8,.2,1);
+    }
+
+    .pix-evidence-card-loading img {
+      opacity: 0;
+      transform: scale(1.045);
+    }
+
+    #pixEvidenciaDropzone.uploading {
+      position: relative;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    #pixEvidenciaDropzone.uploading::after {
+      content: "Preparando e enviando imagens…";
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      display: grid;
+      place-items: center;
+      color: #075f48;
+      background: linear-gradient(120deg, rgba(235,250,245,.96), rgba(255,255,255,.96), rgba(225,246,239,.96));
+      background-size: 220% 100%;
+      font-weight: 800;
+      animation: pixEvidenceJitterGradient 1.2s ease infinite;
+    }
+
+    @keyframes pixEvidenceJitterShimmer {
+      to { transform: translateX(110%); }
+    }
+
+    @keyframes pixEvidenceJitterGradient {
+      0% { background-position: 100% 50%; }
+      100% { background-position: 0 50%; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .pix-evidence-card-loading::after,
+      #pixEvidenciaDropzone.uploading::after {
+        animation: none;
+      }
+    }
+  `;
+
+  document.head.appendChild(estilo);
 }
 
 
@@ -611,7 +702,7 @@ function renderizarPixEvidencias() {
     estadoPixEvidencias.arquivos
       .map(
         arquivo => `
-          <article class="pix-evidence-card">
+          <article class="pix-evidence-card pix-evidence-card-loading">
             <button
               type="button"
               class="pix-evidence-image"
@@ -621,6 +712,9 @@ function renderizarPixEvidencias() {
                 src="${escaparPixEv(arquivo.url)}"
                 alt="Evidência do Pix ${escaparPixEv(contexto?.semana)}"
                 loading="lazy"
+                decoding="async"
+                onload="this.closest('.pix-evidence-card')?.classList.remove('pix-evidence-card-loading')"
+                onerror="this.closest('.pix-evidence-card')?.classList.remove('pix-evidence-card-loading')"
               />
             </button>
 
@@ -663,7 +757,8 @@ function renderizarPixEvidencias() {
           "click",
           () =>
             excluirPixEvidencia(
-              botao.dataset.pixEvidencePath
+              botao.dataset.pixEvidencePath,
+              botao
             )
         )
     );
@@ -906,16 +1001,12 @@ async function enviarPixEvidencias(
         "uploading"
       );
 
-    let numero = 0;
+    mensagemPixEvidencia(
+      `Preparando e enviando ${arquivos.length} imagem(ns)...`,
+      "loading"
+    );
 
-    for (const arquivo of arquivos) {
-      numero += 1;
-
-      mensagemPixEvidencia(
-        `Preparando imagem ${numero} de ${arquivos.length}...`,
-        "loading"
-      );
-
+    await Promise.all(arquivos.map(async arquivo => {
       const imagem =
         await comprimirImagemPix(
           arquivo
@@ -960,7 +1051,7 @@ async function enviarPixEvidencias(
       if (error) {
         throw error;
       }
-    }
+    }));
 
     await carregarPixEvidencias();
 
@@ -1004,7 +1095,10 @@ async function enviarPixEvidencias(
   }
 }
 
-async function excluirPixEvidencia(caminho) {
+async function excluirPixEvidencia(
+  caminho,
+  botao = null
+) {
   if (
     !confirm(
       "Excluir esta evidência da semana selecionada?"
@@ -1013,7 +1107,21 @@ async function excluirPixEvidencia(caminho) {
     return;
   }
 
+  const arquivosAnteriores =
+    [...estadoPixEvidencias.arquivos];
+
   try {
+    if (botao) {
+      botao.disabled = true;
+      botao.textContent = "Excluindo...";
+    }
+
+    estadoPixEvidencias.arquivos =
+      estadoPixEvidencias.arquivos.filter(
+        arquivo => arquivo.caminho !== caminho
+      );
+    renderizarPixEvidencias();
+
     const { error } = await supabase.storage
       .from(SUPABASE_BUCKET)
       .remove([caminho]);
@@ -1026,6 +1134,10 @@ async function excluirPixEvidencia(caminho) {
 
     atualizarBotoesPixEvidencia();
   } catch (erro) {
+    estadoPixEvidencias.arquivos =
+      arquivosAnteriores;
+    renderizarPixEvidencias();
+
     console.error(
       "[PIX EVIDÊNCIAS] Erro ao excluir:",
       erro
@@ -3548,6 +3660,7 @@ function configurarContextoPixEvidencias() {
 }
 
 function iniciarPixEvidencias() {
+  garantirLoadingPremiumPixEvidencias();
   garantirHtmlEvidenciasPix();
   garantirModalPixEvidencias();
   configurarContextoPixEvidencias();

@@ -5,6 +5,8 @@
  */
 import { firestore } from "./firebase-config.js";
 
+import { supabase } from "./supabase-config.js";
+
 import {
   collection,
   addDoc,
@@ -479,6 +481,316 @@ const lancamentosRef = collection(
   firestore,
   "produtivos_lancamentos"
 );
+
+/* =========================================================
+   ETAPA 01 — CÓPIA SEGURA FIREBASE → SUPABASE
+
+   Nesta etapa o Firebase continua sendo a fonte oficial do
+   módulo. A rotina abaixo somente COPIA os dados existentes
+   para o Supabase, preservando o ID de cada documento.
+
+   - não exclui documentos do Firebase;
+   - não altera documentos do Firebase;
+   - usa upsert pelo campo id, portanto não cria duplicidade;
+   - compara as contagens antes de marcar a etapa como concluída.
+========================================================= */
+
+const MIGRACAO_PRODUTIVOS_SUPABASE_KEY =
+  "produtivos_supabase_etapa_01_v1";
+
+function serializarValorFirestore(
+  valor
+) {
+  if (
+    valor === null ||
+    valor === undefined
+  ) {
+    return valor;
+  }
+
+  if (
+    typeof valor?.toDate ===
+    "function"
+  ) {
+    return valor
+      .toDate()
+      .toISOString();
+  }
+
+  if (
+    Array.isArray(valor)
+  ) {
+    return valor.map(
+      serializarValorFirestore
+    );
+  }
+
+  if (
+    typeof valor === "object"
+  ) {
+    return Object.fromEntries(
+      Object.entries(valor).map(
+        ([chave, item]) => [
+          chave,
+          serializarValorFirestore(
+            item
+          )
+        ]
+      )
+    );
+  }
+
+  return valor;
+}
+
+function textoMigracaoProdutivos(
+  ...valores
+) {
+  const encontrado =
+    valores.find(
+      valor =>
+        valor !== null &&
+        valor !== undefined &&
+        String(valor).trim() !== ""
+    );
+
+  return encontrado === undefined
+    ? ""
+    : String(encontrado);
+}
+
+async function enviarLotesProdutivosSupabase(
+  tabela,
+  linhas
+) {
+  const TAMANHO_LOTE = 200;
+
+  for (
+    let inicio = 0;
+    inicio < linhas.length;
+    inicio += TAMANHO_LOTE
+  ) {
+    const lote = linhas.slice(
+      inicio,
+      inicio + TAMANHO_LOTE
+    );
+
+    if (!lote.length) {
+      continue;
+    }
+
+    const {
+      error
+    } = await supabase
+      .from(tabela)
+      .upsert(
+        lote,
+        {
+          onConflict: "id"
+        }
+      );
+
+    if (error) {
+      throw new Error(
+        `${tabela}: ${error.message}`
+      );
+    }
+  }
+}
+
+async function contarTabelaProdutivosSupabase(
+  tabela
+) {
+  const {
+    count,
+    error
+  } = await supabase
+    .from(tabela)
+    .select(
+      "id",
+      {
+        count: "exact",
+        head: true
+      }
+    );
+
+  if (error) {
+    throw new Error(
+      `${tabela}: ${error.message}`
+    );
+  }
+
+  return Number(count || 0);
+}
+
+async function migrarProdutivosFirebaseParaSupabase() {
+  if (
+    window.__MIGRACAO_PRODUTIVOS_SUPABASE_EM_ANDAMENTO__
+  ) {
+    return null;
+  }
+
+  window.__MIGRACAO_PRODUTIVOS_SUPABASE_EM_ANDAMENTO__ =
+    true;
+
+  try {
+    console.info(
+      "[PRODUTIVOS/SUPABASE] Iniciando cópia segura dos dados."
+    );
+
+    const [
+      snapshotFuncionarios,
+      snapshotLancamentos
+    ] = await Promise.all([
+      getDocs(funcionariosRef),
+      getDocs(lancamentosRef)
+    ]);
+
+    const funcionarios =
+      snapshotFuncionarios.docs.map(
+        documento => {
+          const dados =
+            serializarValorFirestore(
+              documento.data()
+            );
+
+          return {
+            id: documento.id,
+            dados,
+            ativo:
+              dados.ativo !== false,
+            updated_at:
+              new Date().toISOString()
+          };
+        }
+      );
+
+    const lancamentos =
+      snapshotLancamentos.docs.map(
+        documento => {
+          const dados =
+            serializarValorFirestore(
+              documento.data()
+            );
+
+          return {
+            id: documento.id,
+            competencia:
+              textoMigracaoProdutivos(
+                dados.competencia,
+                dados.mes,
+                dados.periodo
+              ),
+            filial:
+              textoMigracaoProdutivos(
+                dados.filial,
+                dados.unidade
+              ),
+            colaborador:
+              textoMigracaoProdutivos(
+                dados.colaborador,
+                dados.nome,
+                dados.funcionarioNome,
+                dados.funcionarioId
+              ),
+            dados,
+            updated_at:
+              new Date().toISOString()
+          };
+        }
+      );
+
+    await enviarLotesProdutivosSupabase(
+      "produtivos_funcionarios",
+      funcionarios
+    );
+
+    await enviarLotesProdutivosSupabase(
+      "produtivos_lancamentos",
+      lancamentos
+    );
+
+    const [
+      totalFuncionariosSupabase,
+      totalLancamentosSupabase
+    ] = await Promise.all([
+      contarTabelaProdutivosSupabase(
+        "produtivos_funcionarios"
+      ),
+      contarTabelaProdutivosSupabase(
+        "produtivos_lancamentos"
+      )
+    ]);
+
+    const resultado = {
+      firebase: {
+        funcionarios:
+          funcionarios.length,
+        lancamentos:
+          lancamentos.length
+      },
+      supabase: {
+        funcionarios:
+          totalFuncionariosSupabase,
+        lancamentos:
+          totalLancamentosSupabase
+      },
+      concluida:
+        totalFuncionariosSupabase >=
+          funcionarios.length &&
+        totalLancamentosSupabase >=
+          lancamentos.length,
+      executadaEm:
+        new Date().toISOString()
+    };
+
+    window.__MIGRACAO_PRODUTIVOS_SUPABASE_RESULTADO__ =
+      resultado;
+
+    if (!resultado.concluida) {
+      throw new Error(
+        "A conferência final encontrou menos registros no Supabase que no Firebase. O Firebase permanece intacto."
+      );
+    }
+
+    localStorage.setItem(
+      MIGRACAO_PRODUTIVOS_SUPABASE_KEY,
+      JSON.stringify(resultado)
+    );
+
+    console.info(
+      "[PRODUTIVOS/SUPABASE] Cópia e conferência concluídas:",
+      resultado
+    );
+
+    window.dispatchEvent(
+      new CustomEvent(
+        "produtivos:supabase-migracao-concluida",
+        {
+          detail: resultado
+        }
+      )
+    );
+
+    return resultado;
+  } catch (erro) {
+    console.error(
+      "[PRODUTIVOS/SUPABASE] A cópia foi interrompida com segurança:",
+      erro
+    );
+
+    window.__MIGRACAO_PRODUTIVOS_SUPABASE_ERRO__ =
+      erro;
+
+    return null;
+  } finally {
+    window.__MIGRACAO_PRODUTIVOS_SUPABASE_EM_ANDAMENTO__ =
+      false;
+  }
+}
+
+window.migrarProdutivosFirebaseParaSupabase =
+  migrarProdutivosFirebaseParaSupabase;
 
 const MIGRACAO_LANCAMENTOS_KEY =
   "produtivos_lancamentos_migrados_fire_v1";
@@ -1003,43 +1315,61 @@ function toast(mensagem) {
   }, 2200);
 }
 
-function iniciarFuncionariosTempoReal() {
-  onSnapshot(
-    funcionariosRef,
+async function carregarFuncionariosProdutivosSupabase() {
+  const { data, error } = await supabase
+    .from("produtivos_funcionarios")
+    .select("id,dados,ativo");
 
-    snapshot => {
-      db.funcionarios = snapshot.docs
-        .map(documento => ({
-          id: documento.id,
-          ...documento.data()
-        }))
-        .sort((a, b) =>
-          String(a.nome || "").localeCompare(
-            String(b.nome || ""),
-            "pt-BR"
-          )
-        );
+  if (error) throw error;
 
-      funcionariosCarregados = true;
+  db.funcionarios = (data || [])
+    .map(linha => ({
+      ...(linha.dados || {}),
+      id: linha.id,
+      ativo: linha.ativo !== false
+    }))
+    .sort((a, b) =>
+      String(a.nome || "").localeCompare(
+        String(b.nome || ""),
+        "pt-BR"
+      )
+    );
 
-      renderTudo();
-
-      console.log(
-        `${db.funcionarios.length} funcionário(s) carregado(s) do Firebase.`
-      );
-    },
-
-    erro => {
-      console.error(
-        "Erro ao buscar funcionários no Firebase:",
-        erro
-      );
-
-      window.CampanhaUI.alert(
-        "Não foi possível carregar os funcionários do Firebase. Verifique a conexão e as regras do Firestore."
-      );
-    }
+  funcionariosCarregados = true;
+  renderTudo();
+  console.info(
+    `[PRODUTIVOS/SUPABASE] ${db.funcionarios.length} funcionário(s) carregado(s).`
   );
+}
+
+function iniciarFuncionariosTempoReal() {
+  carregarFuncionariosProdutivosSupabase()
+    .catch(erro => {
+      console.error("Erro ao carregar funcionários do Supabase:", erro);
+      window.CampanhaUI.alert(
+        "Não foi possível carregar os funcionários do Supabase."
+      );
+    });
+
+  let temporizador = null;
+  supabase
+    .channel("produtivos-funcionarios-realtime")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "produtivos_funcionarios"
+      },
+      () => {
+        window.clearTimeout(temporizador);
+        temporizador = window.setTimeout(
+          carregarFuncionariosProdutivosSupabase,
+          350
+        );
+      }
+    )
+    .subscribe();
 }
 
 
@@ -1274,14 +1604,25 @@ async function atualizarLancamentosFirebaseAgora(
     true;
 
   try {
-    const snapshot =
-      await getDocs(
-        lancamentosRef
-      );
+    const { data, error } = await supabase
+      .from("produtivos_lancamentos")
+      .select("id,dados");
 
-    aplicarSnapshotLancamentos(
-      snapshot,
-      origem
+    if (error) throw error;
+
+    db.lancamentos = ordenarLancamentosFirebase(
+      (data || []).map(linha => ({
+        ...(linha.dados || {}),
+        id: linha.id
+      }))
+    );
+
+    lancamentosFirebaseCarregados = true;
+    salvarBackupLocal();
+    renderTudo();
+
+    console.info(
+      `[PRODUTIVOS/SUPABASE] ${db.lancamentos.length} lançamento(s) carregado(s) — ${origem}.`
     );
   } catch (erro) {
     console.warn(
@@ -1295,74 +1636,30 @@ async function atualizarLancamentosFirebaseAgora(
 }
 
 function iniciarLancamentosTempoReal() {
-  let listenerComFalha =
-    false;
+  let temporizador = null;
 
-  onSnapshot(
-    lancamentosRef,
-
-    snapshot => {
-      listenerComFalha =
-        false;
-
-      aplicarSnapshotLancamentos(
-        snapshot,
-        "tempo real"
-      );
-    },
-
-    erro => {
-      listenerComFalha =
-        true;
-
-      console.error(
-        "Erro no listener em tempo real dos lançamentos:",
-        erro
-      );
-
-      /*
-       * Só usa getDocs como contingência quando o listener realmente
-       * falha. Não consulta a coleção inteira a cada 15 segundos.
-       */
-      window.setTimeout(
-        () =>
-          atualizarLancamentosFirebaseAgora(
-            "recuperação após falha do listener"
-          ),
-        30000
-      );
-    }
-  );
-
-  window.clearInterval(
-    intervaloAtualizacaoLancamentos
-  );
-
-  intervaloAtualizacaoLancamentos =
-    window.setInterval(
-      () => {
-        if (
-          listenerComFalha &&
-          document.visibilityState ===
-            "visible"
-        ) {
-          atualizarLancamentosFirebaseAgora(
-            "contingência periódica"
-          );
-        }
+  supabase
+    .channel("produtivos-lancamentos-realtime")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "produtivos_lancamentos"
       },
-      INTERVALO_ATUALIZACAO_FIREBASE
-    );
+      () => {
+        window.clearTimeout(temporizador);
+        temporizador = window.setTimeout(
+          () => atualizarLancamentosFirebaseAgora("tempo real"),
+          350
+        );
+      }
+    )
+    .subscribe();
 
   window.addEventListener(
     "online",
-    () => {
-      if (listenerComFalha) {
-        atualizarLancamentosFirebaseAgora(
-          "conexão restabelecida"
-        );
-      }
-    }
+    () => atualizarLancamentosFirebaseAgora("conexão restabelecida")
   );
 
   window.addEventListener(
@@ -1383,40 +1680,39 @@ async function salvarLancamentoFirebase(
       uid()
     );
 
-  const referencia =
-    doc(
-      firestore,
-      "produtivos_lancamentos",
-      id
-    );
-
-  const existente =
-    db.lancamentos.find(
-      lancamento =>
-        lancamento.id === id
-    );
-
   const payload = {
     ...item,
     idLocal:
       item.idLocal ||
       id,
     atualizadoEm:
-      serverTimestamp()
+      new Date().toISOString()
   };
 
-  if (!existente) {
+  if (!db.lancamentos.some(itemAtual => itemAtual.id === id)) {
     payload.criadoEm =
-      serverTimestamp();
+      new Date().toISOString();
   }
 
-  await setDoc(
-    referencia,
-    payload,
-    {
-      merge: true
-    }
-  );
+  const { error } = await supabase
+    .from("produtivos_lancamentos")
+    .upsert({
+      id,
+      competencia: textoMigracaoProdutivos(payload.competencia),
+      filial: textoMigracaoProdutivos(payload.filial),
+      colaborador: textoMigracaoProdutivos(
+        payload.colaborador,
+        payload.nome,
+        payload.funcionarioNome,
+        payload.funcionarioId
+      ),
+      dados: serializarValorFirestore(payload),
+      updated_at: new Date().toISOString()
+    }, { onConflict: "id" });
+
+  if (error) throw error;
+
+  await atualizarLancamentosFirebaseAgora("após gravação");
 
   return id;
 }
@@ -4807,13 +5103,14 @@ window.excluirFuncionario =
     }
 
     try {
-      await deleteDoc(
-        doc(
-          firestore,
-          "funcionarios",
-          id
-        )
-      );
+      const { error } = await supabase
+        .from("produtivos_funcionarios")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      await carregarFuncionariosProdutivosSupabase();
 
       toast(
         "Funcionário excluído"
@@ -5413,13 +5710,14 @@ window.excluirLancamento =
           });
       }
 
-      await deleteDoc(
-        doc(
-          firestore,
-          "produtivos_lancamentos",
-          id
-        )
-      );
+      const { error } = await supabase
+        .from("produtivos_lancamentos")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      await atualizarLancamentosFirebaseAgora("após exclusão");
 
       toast(
         "Lançamento excluído"
@@ -7205,35 +7503,59 @@ function configurarEventos() {
           }
 
           if (funcionarioId) {
-            await updateDoc(
-              doc(
-                firestore,
-                "funcionarios",
-                funcionarioId
-              ),
+            const existente =
+              db.funcionarios.find(
+                item => item.id === funcionarioId
+              ) || {};
 
-              funcionario
-            );
+            const dados = {
+              ...existente,
+              ...funcionario,
+              id: undefined,
+              atualizadoEm: new Date().toISOString()
+            };
+
+            delete dados.id;
+
+            const { error } = await supabase
+              .from("produtivos_funcionarios")
+              .upsert({
+                id: funcionarioId,
+                dados,
+                ativo: funcionario.ativo,
+                updated_at: new Date().toISOString()
+              }, { onConflict: "id" });
+
+            if (error) throw error;
 
             toast(
               "Funcionário atualizado"
             );
           } else {
-            await addDoc(
-              funcionariosRef,
+            const novoId = uid();
+            const dados = {
+              ...funcionario,
+              criadoEm: new Date().toISOString(),
+              atualizadoEm: new Date().toISOString()
+            };
 
-              {
-                ...funcionario,
+            const { error } = await supabase
+              .from("produtivos_funcionarios")
+              .insert({
+                id: novoId,
+                dados,
+                ativo: funcionario.ativo,
+                updated_at: new Date().toISOString()
+              });
 
-                criadoEm:
-                  serverTimestamp()
-              }
-            );
+            if (error) throw error;
 
             toast(
               "Funcionário cadastrado"
             );
           }
+
+          await carregarFuncionariosProdutivosSupabase();
 
           evento.target
             .closest("dialog")
@@ -7430,19 +7752,14 @@ function configurarEventos() {
         }
 
         try {
-          const snapshot =
-            await getDocs(
-              lancamentosRef
-            );
+          const { error } = await supabase
+            .from("produtivos_lancamentos")
+            .delete()
+            .not("id", "is", null);
 
-          for (
-            const documento
-            of snapshot.docs
-          ) {
-            await deleteDoc(
-              documento.ref
-            );
-          }
+          if (error) throw error;
+
+          await atualizarLancamentosFirebaseAgora("após limpeza");
 
           localStorage.removeItem(
             DB_KEY
@@ -7488,9 +7805,14 @@ document.addEventListener(
     );
 
     /*
-     * Migra uma única vez os lançamentos antigos que estavam
-     * somente neste navegador. A cópia local não é apagada.
+     * ETAPA 03: Supabase agora é a fonte oficial dos Produtivos.
+     * A migração automática do Firebase foi desligada para não
+     * sobrescrever alterações novas feitas no Supabase.
+     * As funções antigas permanecem no arquivo apenas como
+     * contingência técnica e não são executadas automaticamente.
      */
-    await migrarLancamentosLocaisParaFirebase();
+    console.info(
+      "[PRODUTIVOS/SUPABASE] Etapa 03 ativa — leitura e gravação oficiais no Supabase."
+    );
   }
 );
