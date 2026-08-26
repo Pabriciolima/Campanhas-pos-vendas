@@ -1,15 +1,18 @@
-  <!doctype html>
+ <!doctype html>
             <html lang="pt-BR">
 
             <head>
               <meta charset="UTF-8" />
               <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+              <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+              <meta http-equiv="Pragma" content="no-cache" />
+              <meta http-equiv="Expires" content="0" />
               <title>Sistema de Campanhas Pós-Vendas</title>
-              <link rel="stylesheet" href="style.css" />
-              <link rel="stylesheet" href="./evidencias-produtivos.css?v=20260715-03" />
+              <link rel="stylesheet" href="style.css?v=20260826-05" />
+              <link rel="stylesheet" href="./evidencias-produtivos.css?v=20260826-05" />
               <link rel="stylesheet" href="./crm-module.css?v=20260826-167-supabase" />
               <link rel="stylesheet" href="garantia-module.css" />
-              <link rel="stylesheet" href="./evidencias-pix.css?v=20260715-03" />
+              <link rel="stylesheet" href="./evidencias-pix.css?v=20260826-05" />
               <link rel="stylesheet" href="./alerts-premium.css?v=20260716-01" />
               <link rel="stylesheet" href="./importacao-funcionarios.css?v=20260716-01" />
               <link rel="stylesheet" href="./politicas-penalidades.css?v=20260717-01" />
@@ -1276,17 +1279,44 @@
 
               <div id="toast" class="toast"></div>
 
+              <script>
+                (() => {
+                  const versaoAtual = "20260826-05";
+                  const chave = "campanhas_app_versao";
+
+                  if (localStorage.getItem(chave) === versaoAtual) {
+                    return;
+                  }
+
+                  localStorage.setItem(chave, versaoAtual);
+
+                  if ("caches" in window) {
+                    caches.keys()
+                      .then(nomes => Promise.all(
+                        nomes.map(nome => caches.delete(nome))
+                      ))
+                      .catch(() => {});
+                  }
+
+                  const url = new URL(window.location.href);
+                  if (url.searchParams.get("appv") !== versaoAtual) {
+                    url.searchParams.set("appv", versaoAtual);
+                    window.location.replace(url.toString());
+                  }
+                })();
+              </script>
+
               <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
               <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
               <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
               <script src="./alerts-premium.js?v=20260716-01"></script>
-              <script type="module" src="./script.js?v=20260806-32"></script>
-              <script type="module" src="./pix-presidente.js?v=20260724-07"></script>
+              <script type="module" src="./script.js?v=20260826-05"></script>
+              <script type="module" src="./pix-presidente.js?v=20260826-05"></script>
               <script type="module" src="./importacao-funcionarios.js?v=20260716-01"></script>
               <script src="./pix-historico-individual.js?v=20260715-01"></script>
-              <script type="module" src="./evidencias-produtivos.js?v=20260804-03"></script>
-              <script type="module" src="./evidencias-pix.js?v=20260730-03"></script>
-              <script src="./module-switcher.js?v=20260715-07"></script>
+              <script type="module" src="./evidencias-produtivos.js?v=20260826-05"></script>
+              <script type="module" src="./evidencias-pix.js?v=20260826-05"></script>
+              <script src="./module-switcher.js?v=20260826-05"></script>
               <script src="./isolamento-competencias.js?v=20260724-02"></script>
               <script src="./politicas-penalidades.js?v=20260804-02"></script>
               <script type="module" src="./bloqueio-lancamentos.js?v=20260717-01"></script>
