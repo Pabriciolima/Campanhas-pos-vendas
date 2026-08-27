@@ -7,12 +7,11 @@ Usa Supabase Realtime Presence. Não grava presença em tabelas.
 ===============================================================================
 */
 
-import { supabase } from "./supabase-config.js";
-
 const PC_STORAGE = "campanhas_perfil_presenca_v1";
 const PC_SESSION = "campanhas_sessao_presenca_v1";
 const PC_CHANNEL = "hub-campanhas-presenca-v1";
-const PC_VERSION = "2026.08.27-01";
+const PC_VERSION = "2026.08.27-02";
+const PC_SENHA_ONLINE = "123321";
 
 const PC_FILIAIS = [
   "ÁGUA BOA-MT",
@@ -39,9 +38,11 @@ const PC_MODULOS = {
 };
 
 let pcPerfil = lerPerfil();
+let pcSupabase = null;
 let pcCanal = null;
 let pcConectado = false;
 let pcPainelAberto = false;
+let pcAcessoOnline = false;
 let pcUltimoEstado = "";
 let pcTimer = 0;
 
@@ -211,6 +212,16 @@ function renderizarPresencas() {
 }
 
 function abrirPainel() {
+  if (!pcConectado) {
+    abrirCadastro();
+    return;
+  }
+
+  if (!pcAcessoOnline) {
+    abrirAcessoOnline();
+    return;
+  }
+
   pcPainelAberto = true;
   document.querySelector("#pcPainel")?.classList.add("aberto");
   document.querySelector("#pcBotao")?.setAttribute("aria-expanded", "true");
@@ -235,13 +246,30 @@ function abrirCadastro() {
 }
 
 function fecharCadastro() {
-  if (!pcPerfil) return;
+  if (!pcConectado) return;
   document.querySelector("#pcCadastro")?.classList.remove("aberto");
 }
 
 async function conectar() {
   if (!pcPerfil || pcCanal) return;
-  pcCanal = supabase.channel(PC_CHANNEL, {
+
+  const statusCadastro = document.querySelector("#pcStatusCadastro");
+
+  try {
+    if (!pcSupabase) {
+      const modulo = await import("./supabase-config.js?v=20260827-24");
+      pcSupabase = modulo.supabase;
+    }
+  } catch (erro) {
+    if (statusCadastro) {
+      statusCadastro.textContent = "Não foi possível conectar ao servidor. Atualize a página e tente novamente.";
+      statusCadastro.classList.add("erro");
+    }
+    console.error("[PRESENÇA] Falha ao carregar a conexão do Supabase.", erro);
+    return false;
+  }
+
+  pcCanal = pcSupabase.channel(PC_CHANNEL, {
     config: { presence: { key: pcIdSessao() } }
   });
   pcCanal
@@ -251,10 +279,30 @@ async function conectar() {
     .subscribe(async status => {
       if (status === "SUBSCRIBED") {
         pcConectado = true;
+        if (statusCadastro) {
+          statusCadastro.textContent = "Entrada confirmada. Você já está online.";
+          statusCadastro.classList.remove("erro");
+        }
         await publicarPresenca(true);
         renderizarPresencas();
       }
     });
+
+  return true;
+}
+
+function abrirAcessoOnline() {
+  const modal = document.querySelector("#pcAcesso");
+  const senha = document.querySelector("#pcSenhaOnline");
+  const erro = document.querySelector("#pcErroSenha");
+  if (senha) senha.value = "";
+  if (erro) erro.textContent = "";
+  modal?.classList.add("aberto");
+  setTimeout(() => senha?.focus(), 80);
+}
+
+function fecharAcessoOnline() {
+  document.querySelector("#pcAcesso")?.classList.remove("aberto");
 }
 
 function instalarEstilos() {
@@ -271,7 +319,7 @@ function instalarEstilos() {
     #pcPainel.aberto{opacity:1;visibility:visible;transform:none}
     .pc-head{padding:20px 20px 16px;background:linear-gradient(145deg,#123e52,#0b725d);color:#fff;display:flex;align-items:center;justify-content:space-between}.pc-head strong{display:block;font:850 16px/1.2 system-ui}.pc-head span{display:block;margin-top:5px;color:#c8e9df;font:600 11px/1.2 system-ui}.pc-fechar{width:34px;height:34px;border:0;border-radius:11px;background:rgba(255,255,255,.12);color:#fff;font-size:21px;cursor:pointer}
     #pcLista{padding:12px;overflow:auto;max-height:410px}.pc-pessoa{position:relative;display:grid;grid-template-columns:44px 1fr 10px;gap:11px;align-items:center;padding:12px;border:1px solid transparent;border-radius:17px}.pc-pessoa+.pc-pessoa{margin-top:4px}.pc-pessoa:hover,.pc-pessoa.pc-eu{background:#f0f8f6;border-color:#dcece8}.pc-avatar{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#d9f4eb,#cce4ed);color:#11634f;display:grid;place-items:center;font:900 12px system-ui}.pc-pessoa strong,.pc-pessoa span,.pc-pessoa small{display:block;font-family:system-ui}.pc-pessoa strong{color:#183b4c;font-size:12px}.pc-pessoa span{margin-top:3px;color:#65808b;font-size:10px;font-weight:750}.pc-pessoa small{margin-top:5px;color:#78919a;font-size:9px;line-height:1.35}.pc-ponto{width:8px;height:8px;border-radius:50%;background:#1bc887;box-shadow:0 0 0 4px rgba(27,200,135,.11)}.pc-vazio{padding:30px 18px;text-align:center;color:#718991;font:650 11px/1.5 system-ui}.pc-footer{padding:12px 16px 16px;border-top:1px solid #e4eeec}.pc-trocar{width:100%;height:39px;border:1px solid #d9e7e4;border-radius:12px;background:#fff;color:#315665;font:800 10px system-ui;cursor:pointer}.pc-trocar:hover{border-color:#90c8ba;background:#f4faf8}
-    #pcCadastro{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(8,29,40,.58);backdrop-filter:blur(9px);opacity:0;visibility:hidden;transition:.2s ease}#pcCadastro.aberto{opacity:1;visibility:visible}.pc-card{width:min(450px,100%);border:1px solid rgba(255,255,255,.86);border-radius:27px;background:#fff;box-shadow:0 34px 90px rgba(5,30,43,.34);overflow:hidden;transform:translateY(13px) scale(.98);transition:.3s cubic-bezier(.16,1,.3,1)}#pcCadastro.aberto .pc-card{transform:none}.pc-card-top{padding:28px;background:linear-gradient(145deg,#123e52,#08785d);color:#fff}.pc-card-top em{display:inline-flex;padding:6px 9px;border-radius:8px;background:rgba(255,255,255,.12);font:800 9px system-ui;font-style:normal;letter-spacing:.08em}.pc-card-top h2{margin:13px 0 7px;font:850 23px/1.15 system-ui}.pc-card-top p{margin:0;color:#cbe7df;font:500 11px/1.5 system-ui}.pc-form{padding:24px}.pc-form label{display:block;margin-bottom:14px;color:#315565;font:800 10px system-ui}.pc-form input,.pc-form select{box-sizing:border-box;width:100%;height:48px;margin-top:7px;padding:0 14px;border:1px solid #d9e7e4;border-radius:13px;background:#f9fbfb;color:#173d4d;font:700 12px system-ui;outline:none}.pc-form input:focus,.pc-form select:focus{border-color:#39a989;box-shadow:0 0 0 4px rgba(57,169,137,.11);background:#fff}.pc-acoes{display:grid;grid-template-columns:auto 1fr;gap:9px;margin-top:20px}.pc-cancelar,.pc-entrar{height:46px;border-radius:13px;font:850 11px system-ui;cursor:pointer}.pc-cancelar{padding:0 17px;border:1px solid #dce7e5;background:#fff;color:#607984}.pc-entrar{border:0;background:linear-gradient(135deg,#123e52,#078661);color:#fff;box-shadow:0 12px 24px rgba(7,134,97,.2)}
+    #pcCadastro,#pcAcesso{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(8,29,40,.58);backdrop-filter:blur(9px);opacity:0;visibility:hidden;transition:.2s ease}#pcCadastro.aberto,#pcAcesso.aberto{opacity:1;visibility:visible}.pc-card{width:min(450px,100%);border:1px solid rgba(255,255,255,.86);border-radius:27px;background:#fff;box-shadow:0 34px 90px rgba(5,30,43,.34);overflow:hidden;transform:translateY(13px) scale(.98);transition:.3s cubic-bezier(.16,1,.3,1)}#pcCadastro.aberto .pc-card,#pcAcesso.aberto .pc-card{transform:none}.pc-card-top{padding:28px;background:linear-gradient(145deg,#123e52,#08785d);color:#fff}.pc-card-top em{display:inline-flex;padding:6px 9px;border-radius:8px;background:rgba(255,255,255,.12);font:800 9px system-ui;font-style:normal;letter-spacing:.08em}.pc-card-top h2{margin:13px 0 7px;font:850 23px/1.15 system-ui}.pc-card-top p{margin:0;color:#cbe7df;font:500 11px/1.5 system-ui}.pc-form{padding:24px}.pc-form label{display:block;margin-bottom:14px;color:#315565;font:800 10px system-ui}.pc-form input,.pc-form select{box-sizing:border-box;width:100%;height:48px;margin-top:7px;padding:0 14px;border:1px solid #d9e7e4;border-radius:13px;background:#f9fbfb;color:#173d4d;font:700 12px system-ui;outline:none}.pc-form input:focus,.pc-form select:focus{border-color:#39a989;box-shadow:0 0 0 4px rgba(57,169,137,.11);background:#fff}.pc-acoes{display:grid;grid-template-columns:auto 1fr;gap:9px;margin-top:20px}.pc-cancelar,.pc-entrar{height:46px;border-radius:13px;font:850 11px system-ui;cursor:pointer}.pc-cancelar{display:none;padding:0 17px;border:1px solid #dce7e5;background:#fff;color:#607984}.pc-entrar{border:0;background:linear-gradient(135deg,#123e52,#078661);color:#fff;box-shadow:0 12px 24px rgba(7,134,97,.2)}.pc-status{min-height:18px;margin:4px 0 0;color:#4d7468;font:750 10px/1.4 system-ui}.pc-status.erro,.pc-erro-senha{color:#c43d4d}.pc-acesso-card{width:min(390px,100%)}.pc-acesso-card .pc-card-top{background:linear-gradient(145deg,#172f43,#174e61)}.pc-acesso-acoes{display:grid;grid-template-columns:1fr 1.4fr;gap:9px;margin-top:18px}.pc-voltar{height:46px;border:1px solid #dce7e5;border-radius:13px;background:#fff;color:#607984;font:850 11px system-ui;cursor:pointer}.pc-erro-senha{min-height:18px;margin-top:8px;font:750 10px/1.4 system-ui}
     @keyframes pcPulse{50%{box-shadow:0 0 0 8px rgba(98,242,180,0)}}
     @media(max-width:600px){#pcBotao{right:14px;bottom:14px}#pcPainel{right:14px;bottom:72px}.pc-card-top{padding:23px}.pc-form{padding:20px}}
   `;
@@ -295,7 +343,18 @@ function instalarInterface() {
         <div class="pc-form">
           <label>SEU NOME<input id="pcNome" maxlength="60" autocomplete="name" placeholder="Digite seu nome" required></label>
           <label>SUA FILIAL<select id="pcFilial" required><option value="">Selecione a filial</option>${PC_FILIAIS.map(f => `<option value="${f}">${f}</option>`).join("")}</select></label>
+          <div id="pcStatusCadastro" class="pc-status" aria-live="polite"></div>
           <div class="pc-acoes"><button class="pc-cancelar" type="button">Cancelar</button><button class="pc-entrar" type="submit">Entrar no sistema</button></div>
+        </div>
+      </form>
+    </div>
+    <div id="pcAcesso" role="dialog" aria-modal="true" aria-labelledby="pcAcessoTitulo">
+      <form class="pc-card pc-acesso-card" id="pcFormularioAcesso">
+        <div class="pc-card-top"><em>ÁREA RESTRITA</em><h2 id="pcAcessoTitulo">Quem está online?</h2><p>Informe a senha administrativa para visualizar a localização da equipe.</p></div>
+        <div class="pc-form">
+          <label>SENHA DE ACESSO<input id="pcSenhaOnline" type="password" inputmode="numeric" autocomplete="off" placeholder="Digite a senha" required></label>
+          <div id="pcErroSenha" class="pc-erro-senha" aria-live="polite"></div>
+          <div class="pc-acesso-acoes"><button class="pc-voltar" type="button">Voltar</button><button class="pc-entrar" type="submit">Acessar painel</button></div>
         </div>
       </form>
     </div>`;
@@ -314,10 +373,51 @@ function instalarInterface() {
     const filial = document.querySelector("#pcFilial")?.value;
     if (!nome || !filial) return;
     salvarPerfil({ nome, filial });
-    document.querySelector("#pcCadastro")?.classList.remove("aberto");
+    const botaoEntrar = evento.submitter || document.querySelector("#pcFormulario .pc-entrar");
+    if (botaoEntrar) {
+      botaoEntrar.disabled = true;
+      botaoEntrar.textContent = "Conectando...";
+    }
     pcUltimoEstado = "";
-    await conectar();
-    await publicarPresenca(true);
+    const iniciou = await conectar();
+
+    if (iniciou !== false) {
+      const limite = Date.now() + 8000;
+      while (!pcConectado && Date.now() < limite) {
+        await new Promise(resolve => setTimeout(resolve, 120));
+      }
+    }
+
+    if (pcConectado) {
+      document.querySelector("#pcCadastro")?.classList.remove("aberto");
+      await publicarPresenca(true);
+    } else {
+      const status = document.querySelector("#pcStatusCadastro");
+      if (status && !status.textContent) {
+        status.textContent = "A conexão demorou mais que o esperado. Verifique a internet e tente novamente.";
+        status.classList.add("erro");
+      }
+      pcCanal = null;
+    }
+
+    if (botaoEntrar) {
+      botaoEntrar.disabled = false;
+      botaoEntrar.textContent = "Entrar no sistema";
+    }
+  });
+  document.querySelector(".pc-voltar")?.addEventListener("click", fecharAcessoOnline);
+  document.querySelector("#pcFormularioAcesso")?.addEventListener("submit", evento => {
+    evento.preventDefault();
+    const senha = document.querySelector("#pcSenhaOnline")?.value || "";
+    const erro = document.querySelector("#pcErroSenha");
+    if (senha !== PC_SENHA_ONLINE) {
+      if (erro) erro.textContent = "Senha incorreta. Tente novamente.";
+      document.querySelector("#pcSenhaOnline")?.select();
+      return;
+    }
+    pcAcessoOnline = true;
+    fecharAcessoOnline();
+    abrirPainel();
   });
 }
 
@@ -347,8 +447,7 @@ function instalarObservadores() {
 async function iniciarPresenca() {
   instalarInterface();
   instalarObservadores();
-  if (!pcPerfil) abrirCadastro();
-  else await conectar();
+  abrirCadastro();
   console.info(`[PRESENÇA] Módulo ativo — ${PC_VERSION}.`);
 }
 
@@ -357,4 +456,3 @@ if (document.readyState === "loading") {
 } else {
   iniciarPresenca();
 }
-

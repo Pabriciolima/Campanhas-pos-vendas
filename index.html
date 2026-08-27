@@ -8,6 +8,34 @@
               <meta http-equiv="Pragma" content="no-cache" />
               <meta http-equiv="Expires" content="0" />
               <title>Sistema de Campanhas Pós-Vendas</title>
+              <script>
+                (() => {
+                  const versaoBoot = "20260827-24";
+                  const chaveBoot = `campanhas_boot_${versaoBoot}`;
+
+                  if (sessionStorage.getItem(chaveBoot)) return;
+                  sessionStorage.setItem(chaveBoot, "1");
+
+                  Promise.all([
+                    "serviceWorker" in navigator
+                      ? navigator.serviceWorker.getRegistrations()
+                          .then(registros => Promise.all(registros.map(registro => registro.unregister())))
+                          .catch(() => [])
+                      : Promise.resolve([]),
+                    "caches" in window
+                      ? caches.keys()
+                          .then(nomes => Promise.all(nomes.map(nome => caches.delete(nome))))
+                          .catch(() => [])
+                      : Promise.resolve([])
+                  ]).finally(() => {
+                    const url = new URL(window.location.href);
+                    if (url.searchParams.get("appv") !== versaoBoot) {
+                      url.searchParams.set("appv", versaoBoot);
+                      window.location.replace(url.toString());
+                    }
+                  });
+                })();
+              </script>
               <link rel="stylesheet" href="style.css?v=20260826-05" />
               <link rel="stylesheet" href="./evidencias-produtivos.css?v=20260826-05" />
               <link rel="stylesheet" href="./crm-module.css?v=20260826-167-supabase" />
@@ -1303,7 +1331,7 @@
 
               <script>
                 (() => {
-                  const versaoAtual = "20260827-22";
+                  const versaoAtual = "20260827-24";
                   const chave = "campanhas_app_versao";
 
                   if (localStorage.getItem(chave) === versaoAtual) {
@@ -1339,7 +1367,7 @@
               <script type="module" src="./evidencias-produtivos.js?v=20260827-16"></script>
               <script type="module" src="./evidencias-pix.js?v=20260827-17"></script>
               <script src="./module-switcher.js?v=20260826-05"></script>
-              <script type="module" src="./presenca-colaborativa.js?v=20260827-22"></script>
+              <script type="module" src="./presenca-colaborativa.js?v=20260827-24"></script>
               <script src="./isolamento-competencias.js?v=20260724-02"></script>
               <script src="./politicas-penalidades.js?v=20260804-02"></script>
               <script type="module" src="./bloqueio-lancamentos.js?v=20260717-01"></script>
