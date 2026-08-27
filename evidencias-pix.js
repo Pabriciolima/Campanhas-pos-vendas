@@ -38,7 +38,10 @@ const CONFIG_PIX_EVIDENCIAS = {
 const estadoPixEvidencias = {
   contexto: null,
   arquivos: [],
-  enviando: false
+  enviando: false,
+  ultimoContextoValido: null,
+  assinaturaVisual: null,
+  requisicaoCarregamento: 0
 };
 
 function pixEv(seletor) {
@@ -352,7 +355,7 @@ function contextoPixAtual() {
   const numeroSemana =
     numeroSemanaPixEvidencia(semana);
 
-  return {
+  const contextoResolvido = {
     competencia,
     semana,
     numeroSemana,
@@ -361,6 +364,9 @@ function contextoPixAtual() {
     pasta:
       `${CONFIG_PIX_EVIDENCIAS.pastaRaiz}/${competencia}/semana-${numeroSemana}/${pastaFilial}`
   };
+
+  estadoPixEvidencias.ultimoContextoValido = contextoResolvido;
+  return contextoResolvido;
 }
 
 function construirContextoPix(
@@ -434,39 +440,121 @@ async function listarEvidenciasContextoPix(contexto) {
     return [];
   }
 
-  const { data, error } = await supabase.storage
-    .from(SUPABASE_BUCKET)
-    .list(
-      contexto.pasta,
-      {
+  const listarArquivos = async pasta => {
+    const { data, error } = await supabase.storage
+      .from(SUPABASE_BUCKET)
+      .list(pasta, {
         limit: CONFIG_PIX_EVIDENCIAS.limiteArquivos,
         sortBy: {
           column: "created_at",
           order: "asc"
         }
-      }
-    );
+      });
 
-  if (error) {
-    throw error;
+    if (error) throw error;
+
+    return (data || [])
+      .filter(item => item.id && item.name)
+      .map(item => {
+        const caminho = `${pasta}/${item.name}`;
+        return {
+          nome: item.name,
+          nomeOriginal: item.metadata?.nome_original || item.name,
+          caminho,
+          url: urlPublicaPix(caminho)
+        };
+      });
+  };
+
+  let arquivosSemana = await listarArquivos(contexto.pasta);
+
+  /*
+   * Recuperação das pastas antigas: o DN ou a grafia da filial pode ter sido
+   * diferente quando a imagem foi enviada. Procuramos apenas dentro da mesma
+   * competência e semana, sem misturar evidências de outras apurações.
+   */
+  const raizesSemana = [
+    `${CONFIG_PIX_EVIDENCIAS.pastaRaiz}/${contexto.competencia}/semana-${contexto.numeroSemana}`,
+    `${CONFIG_PIX_EVIDENCIAS.pastaRaiz}/${contexto.competencia}/${contexto.semana}`,
+    `${CONFIG_PIX_EVIDENCIAS.pastaRaiz}/${contexto.competencia}/${String(contexto.semana).toLowerCase()}`,
+    `${CONFIG_PIX_EVIDENCIAS.pastaRaiz}/${contexto.competencia}/${contexto.numeroSemana}`
+  ];
+
+  const slugFilial = slugPixEv(contexto.filial);
+  const raizesUnicas = [...new Set(raizesSemana)];
+
+  for (const raiz of raizesUnicas) {
+    if (arquivosSemana.length) break;
+
+    const { data: pastas, error } = await supabase.storage
+      .from(SUPABASE_BUCKET)
+      .list(raiz, { limit: 200 });
+
+    if (error) continue;
+
+    const candidatas = (pastas || [])
+      .filter(item => !item.id && item.name)
+      .filter(item => {
+        const nome = slugPixEv(item.name);
+        return nome === slugFilial || nome.endsWith(`-${slugFilial}`);
+      });
+
+    for (const pasta of candidatas) {
+      const caminhoAntigo = `${raiz}/${pasta.name}`;
+      const arquivosAntigos = await listarArquivos(caminhoAntigo);
+      if (arquivosAntigos.length) {
+        console.info(
+          `[PIX EVIDÊNCIAS] Pasta antiga recuperada: ${caminhoAntigo}`
+        );
+        arquivosSemana = arquivosAntigos;
+        break;
+      }
+    }
   }
 
-  return (data || [])
-    .filter(item => item.id && item.name)
-    .map(item => {
-      const caminho =
-        `${contexto.pasta}/${item.name}`;
+  /*
+   * Primeira versão do Pix: as imagens eram mensais e ficavam diretamente
+   * em 2026-07/sem-dn-filial, antes da criação das pastas semana-1 a 4.
+   * Elas são somadas à galeria como legado, sem mover ou duplicar arquivos.
+   */
+  const raizCompetencia =
+    `${CONFIG_PIX_EVIDENCIAS.pastaRaiz}/${contexto.competencia}`;
 
-      return {
-        nome: item.name,
-        nomeOriginal:
-          item.metadata?.nome_original ||
-          item.name,
-        caminho,
-        url:
-          urlPublicaPix(caminho)
-      };
-    });
+  let arquivosLegados = [];
+  const { data: pastasCompetencia, error: erroCompetencia } =
+    await supabase.storage
+      .from(SUPABASE_BUCKET)
+      .list(raizCompetencia, { limit: 200 });
+
+  if (!erroCompetencia) {
+    const pastasLegadas = (pastasCompetencia || [])
+      .filter(item => !item.id && item.name)
+      .filter(item => {
+        const nome = slugPixEv(item.name);
+        return (
+          nome === slugFilial ||
+          nome === `sem-dn-${slugFilial}` ||
+          nome.endsWith(`-${slugFilial}`)
+        ) && !nome.startsWith("semana-");
+      });
+
+    for (const pasta of pastasLegadas) {
+      const encontrados = await listarArquivos(
+        `${raizCompetencia}/${pasta.name}`
+      );
+      arquivosLegados.push(...encontrados.map(arquivo => ({
+        ...arquivo,
+        legadoSemSemana: true
+      })));
+    }
+  }
+
+  const unicos = new Map();
+  [...arquivosSemana, ...arquivosLegados].forEach(arquivo => {
+    unicos.set(arquivo.caminho, arquivo);
+  });
+
+  return [...unicos.values()];
 }
 
 function garantirHtmlEvidenciasPix() {
@@ -682,6 +770,22 @@ function renderizarPixEvidencias() {
     return;
   }
 
+  const assinaturaVisual = JSON.stringify(
+    estadoPixEvidencias.arquivos.map(arquivo => [
+      arquivo.caminho || "",
+      arquivo.url || ""
+    ])
+  );
+
+  if (
+    estadoPixEvidencias.assinaturaVisual === assinaturaVisual &&
+    galeria.childElementCount
+  ) {
+    return;
+  }
+
+  estadoPixEvidencias.assinaturaVisual = assinaturaVisual;
+
   if (!estadoPixEvidencias.arquivos.length) {
     galeria.innerHTML = `
       <div class="pix-evidence-empty">
@@ -713,6 +817,8 @@ function renderizarPixEvidencias() {
                 alt="Evidência do Pix ${escaparPixEv(contexto?.semana)}"
                 loading="lazy"
                 decoding="async"
+                crossorigin="anonymous"
+                referrerpolicy="no-referrer"
                 onload="this.closest('.pix-evidence-card')?.classList.remove('pix-evidence-card-loading')"
                 onerror="this.closest('.pix-evidence-card')?.classList.remove('pix-evidence-card-loading')"
               />
@@ -767,8 +873,17 @@ function renderizarPixEvidencias() {
 async function carregarPixEvidencias() {
   garantirHtmlEvidenciasPix();
 
-  const contexto =
-    contextoPixAtual();
+  const contextoAtual = contextoPixAtual();
+  const modalPixAberto = Boolean(
+    pixEv("#modalPixPresidente")?.open ||
+    pixEv("#formPixPresidente")?.closest("dialog")?.open
+  );
+  const contexto = contextoAtual ||
+    (modalPixAberto
+      ? estadoPixEvidencias.ultimoContextoValido
+      : null);
+  const numeroRequisicao =
+    ++estadoPixEvidencias.requisicaoCarregamento;
 
   estadoPixEvidencias.contexto =
     contexto;
@@ -790,10 +905,14 @@ async function carregarPixEvidencias() {
       "loading"
     );
 
-    estadoPixEvidencias.arquivos =
-      await listarEvidenciasContextoPix(
-        contexto
-      );
+    const arquivos =
+      await listarEvidenciasContextoPix(contexto);
+
+    if (numeroRequisicao !== estadoPixEvidencias.requisicaoCarregamento) {
+      return;
+    }
+
+    estadoPixEvidencias.arquivos = arquivos;
 
     mensagemPixEvidencia(
       estadoPixEvidencias.arquivos.length
@@ -806,6 +925,10 @@ async function carregarPixEvidencias() {
 
     renderizarPixEvidencias();
   } catch (erro) {
+    if (numeroRequisicao !== estadoPixEvidencias.requisicaoCarregamento) {
+      return;
+    }
+
     console.error(
       "[PIX EVIDÊNCIAS] Erro ao carregar:",
       erro
@@ -1006,7 +1129,7 @@ async function enviarPixEvidencias(
       "loading"
     );
 
-    await Promise.all(arquivos.map(async arquivo => {
+    for (const arquivo of arquivos) {
       const imagem =
         await comprimirImagemPix(
           arquivo
@@ -1051,7 +1174,7 @@ async function enviarPixEvidencias(
       if (error) {
         throw error;
       }
-    }));
+    }
 
     await carregarPixEvidencias();
 
@@ -1120,6 +1243,7 @@ async function excluirPixEvidencia(
       estadoPixEvidencias.arquivos.filter(
         arquivo => arquivo.caminho !== caminho
       );
+    estadoPixEvidencias.assinaturaVisual = null;
     renderizarPixEvidencias();
 
     const { error } = await supabase.storage
@@ -1136,6 +1260,7 @@ async function excluirPixEvidencia(
   } catch (erro) {
     estadoPixEvidencias.arquivos =
       arquivosAnteriores;
+    estadoPixEvidencias.assinaturaVisual = null;
     renderizarPixEvidencias();
 
     console.error(

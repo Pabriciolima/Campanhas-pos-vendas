@@ -1,2558 +1,1579 @@
-/*
- * VERSÃO: 2026.08.26-SUPABASE-ETAPA-06
- * Evidências do Pix oficiais no Supabase Storage.
- * Compatível com supabase-config.js que exporta somente `supabase`.
- * Preserva competência + semana + filial e todas as exportações existentes.
- */
+import {
+  firestore
+} from "./firebase-config.js";
 
-/*
- * VERSÃO: 2026.08.06-03
- * Exportação do Pix respeita Semana + Filial selecionadas no topo.
- * Evidências também seguem exatamente a filial selecionada.
- */
-
-/*
- * VERSÃO: 2026.08.06-ORDENACAO-FINANCEIRO-01
- */
-/* VERSÃO: 2026.07.21-SEMANA-02 — Evidências por competência + semana + filial */
 import {
   supabase
 } from "./supabase-config.js";
 
+import {
+  doc as firebaseDoc,
+  collection as firebaseCollection,
+  getDocs as firebaseGetDocs,
+  getDoc as firebaseGetDoc
+} from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+/* =========================================================
+   EVIDÊNCIAS — CAMPANHA DOS PRODUTIVOS
+
+   A evidência pertence à combinação:
+   COMPETÊNCIA + FILIAL + CAMPANHA
+
+   Portanto, uma imagem enviada no lançamento de qualquer
+   colaborador vale para todos os colaboradores da mesma
+   filial e competência.
+========================================================= */
+
+const EVIDENCIAS_COLLECTION =
+  "evidencias_produtivos";
+
+const EVIDENCIAS_SUPABASE_TABLE =
+  "produtivos_evidencias";
+
+/*
+  O supabase-config.js atual exporta apenas `supabase`.
+  O bucket já existente das evidências é mantido aqui para impedir
+  que uma importação inexistente interrompa todo o módulo e desative
+  os botões "Evidências".
+*/
 const SUPABASE_BUCKET =
   "evidencias-produtivos";
 
-const CONFIG_PIX_EVIDENCIAS = {
-  pastaRaiz: "pix-do-presidente",
-  limiteArquivos: 20,
-  limiteMbOriginal: 12,
-  larguraMaxima: 1800,
-  qualidadeJpeg: 0.82,
-  tiposPermitidos: [
-    "image/jpeg",
-    "image/png",
-    "image/webp"
-  ]
+/* =========================================================
+   ETAPA 05 — CAMADA COMPATÍVEL SUPABASE
+
+   Mantém intactas todas as funções visuais e regras existentes
+   deste arquivo. As operações que antes tinham formato Firestore
+   passam a usar a tabela produtivos_evidencias no Supabase.
+
+   Na primeira leitura, documentos antigos que ainda existirem
+   somente no Firebase são copiados automaticamente. Depois disso,
+   toda criação, edição, exclusão e tempo real usam o Supabase.
+========================================================= */
+
+const MARCADOR_TIMESTAMP =
+  "__supabase_server_timestamp__";
+const MARCADOR_ARRAY_UNION =
+  "__supabase_array_union__";
+const MARCADOR_ARRAY_REMOVE =
+  "__supabase_array_remove__";
+
+function serverTimestamp() {
+  return {
+    [MARCADOR_TIMESTAMP]: true
+  };
+}
+
+function arrayUnion(...itens) {
+  return {
+    [MARCADOR_ARRAY_UNION]: itens
+  };
+}
+
+function arrayRemove(...itens) {
+  return {
+    [MARCADOR_ARRAY_REMOVE]: itens
+  };
+}
+
+function collection(_banco, nome) {
+  return {
+    tipo: "collection",
+    nome
+  };
+}
+
+function doc(_banco, nome, id) {
+  return {
+    tipo: "doc",
+    nome,
+    id: String(id || "")
+  };
+}
+
+function serializarEvidenciaSupabase(valor) {
+  if (valor === null || valor === undefined) return valor;
+  if (typeof valor?.toDate === "function") {
+    return valor.toDate().toISOString();
+  }
+  if (Array.isArray(valor)) {
+    return valor.map(serializarEvidenciaSupabase);
+  }
+  if (typeof valor === "object") {
+    return Object.fromEntries(
+      Object.entries(valor).map(([chave, item]) => [
+        chave,
+        serializarEvidenciaSupabase(item)
+      ])
+    );
+  }
+  return valor;
+}
+
+function iguaisEvidencia(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function aplicarPatchEvidencia(atual, patch) {
+  const resultado = {
+    ...(atual || {})
+  };
+
+  Object.entries(patch || {}).forEach(([chave, valor]) => {
+    if (valor?.[MARCADOR_TIMESTAMP]) {
+      resultado[chave] = new Date().toISOString();
+      return;
+    }
+
+    if (Array.isArray(valor?.[MARCADOR_ARRAY_UNION])) {
+      const lista = Array.isArray(resultado[chave])
+        ? [...resultado[chave]]
+        : [];
+
+      valor[MARCADOR_ARRAY_UNION].forEach(item => {
+        const itemSeguro = serializarEvidenciaSupabase(item);
+        if (!lista.some(existente => iguaisEvidencia(existente, itemSeguro))) {
+          lista.push(itemSeguro);
+        }
+      });
+
+      resultado[chave] = lista;
+      return;
+    }
+
+    if (Array.isArray(valor?.[MARCADOR_ARRAY_REMOVE])) {
+      const remover = valor[MARCADOR_ARRAY_REMOVE]
+        .map(serializarEvidenciaSupabase);
+      resultado[chave] = (Array.isArray(resultado[chave])
+        ? resultado[chave]
+        : []
+      ).filter(item =>
+        !remover.some(alvo => iguaisEvidencia(item, alvo))
+      );
+      return;
+    }
+
+    resultado[chave] = serializarEvidenciaSupabase(valor);
+  });
+
+  return resultado;
+}
+
+function linhaEvidenciaSupabase(id, dados) {
+  return {
+    id,
+    competencia: String(dados?.competencia || ""),
+    filial: String(dados?.filial || ""),
+    colaborador: String(
+      dados?.matrizNome ||
+      dados?.enviadoPorNome ||
+      ""
+    ),
+    dados: serializarEvidenciaSupabase(dados),
+    updated_at: new Date().toISOString()
+  };
+}
+
+function snapshotDocumentoEvidencia(id, dados, existe = true) {
+  return {
+    id,
+    ref: doc(firestore, EVIDENCIAS_COLLECTION, id),
+    exists: () => existe,
+    data: () => dados || {}
+  };
+}
+
+async function buscarEvidenciaSupabase(id) {
+  const { data, error } = await supabase
+    .from(EVIDENCIAS_SUPABASE_TABLE)
+    .select("id,dados")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data || null;
+}
+
+async function setDoc(referencia, patch, opcoes = {}) {
+  const atual = opcoes.merge
+    ? (await buscarEvidenciaSupabase(referencia.id))?.dados || {}
+    : {};
+  const dados = aplicarPatchEvidencia(atual, patch);
+  const { error } = await supabase
+    .from(EVIDENCIAS_SUPABASE_TABLE)
+    .upsert(
+      linhaEvidenciaSupabase(referencia.id, dados),
+      { onConflict: "id" }
+    );
+  if (error) throw error;
+}
+
+async function getDoc(referencia) {
+  const linha = await buscarEvidenciaSupabase(referencia.id);
+  if (linha) {
+    return snapshotDocumentoEvidencia(
+      linha.id,
+      linha.dados,
+      true
+    );
+  }
+
+  try {
+    const antigo = await firebaseGetDoc(
+      firebaseDoc(
+        firestore,
+        EVIDENCIAS_COLLECTION,
+        referencia.id
+      )
+    );
+    if (antigo.exists()) {
+      const dados = serializarEvidenciaSupabase(antigo.data());
+      await supabase
+        .from(EVIDENCIAS_SUPABASE_TABLE)
+        .upsert(
+          linhaEvidenciaSupabase(referencia.id, dados),
+          { onConflict: "id" }
+        );
+      return snapshotDocumentoEvidencia(referencia.id, dados, true);
+    }
+  } catch (erro) {
+    console.warn("Evidência antiga não disponível no Firebase:", erro);
+  }
+
+  return snapshotDocumentoEvidencia(referencia.id, {}, false);
+}
+
+async function getDocs() {
+  const { data, error } = await supabase
+    .from(EVIDENCIAS_SUPABASE_TABLE)
+    .select("id,dados");
+  if (error) throw error;
+
+  const mapa = new Map(
+    (data || []).map(linha => [linha.id, linha.dados || {}])
+  );
+
+  try {
+    const antigos = await firebaseGetDocs(
+      firebaseCollection(firestore, EVIDENCIAS_COLLECTION)
+    );
+    const faltantes = antigos.docs
+      .filter(item => !mapa.has(item.id))
+      .map(item => ({
+        id: item.id,
+        dados: serializarEvidenciaSupabase(item.data())
+      }));
+
+    if (faltantes.length) {
+      const { error: erroMigracao } = await supabase
+        .from(EVIDENCIAS_SUPABASE_TABLE)
+        .upsert(
+          faltantes.map(item =>
+            linhaEvidenciaSupabase(item.id, item.dados)
+          ),
+          { onConflict: "id" }
+        );
+      if (erroMigracao) throw erroMigracao;
+      faltantes.forEach(item => mapa.set(item.id, item.dados));
+      console.info(
+        `[EVIDÊNCIAS/SUPABASE] ${faltantes.length} documento(s) antigo(s) migrado(s).`
+      );
+    }
+  } catch (erro) {
+    console.warn(
+      "Migração complementar das evidências não disponível; usando Supabase:",
+      erro
+    );
+  }
+
+  return {
+    docs: [...mapa.entries()].map(([id, dados]) =>
+      snapshotDocumentoEvidencia(id, dados, true)
+    )
+  };
+}
+
+async function deleteDoc(referencia) {
+  const { error } = await supabase
+    .from(EVIDENCIAS_SUPABASE_TABLE)
+    .delete()
+    .eq("id", referencia.id);
+  if (error) throw error;
+}
+
+function onSnapshot(referencia, sucesso, falha) {
+  let ativo = true;
+
+  const atualizar = async () => {
+    if (!ativo) return;
+    try {
+      sucesso(await getDoc(referencia));
+    } catch (erro) {
+      falha?.(erro);
+    }
+  };
+
+  atualizar();
+
+  return () => {
+    ativo = false;
+  };
+}
+
+const MAX_ARQUIVOS = 10;
+const MAX_TAMANHO_MB = 8;
+
+const TIPOS_PERMITIDOS = [
+  "image/jpeg",
+  "image/png",
+  "image/webp"
+];
+
+const estadoEvidencias = {
+  chaveAtual: "",
+  ultimoContextoValido: null,
+  unsubscribe: null,
+  imagens: [],
+  enviando: false,
+  assinaturaVisual: null
 };
 
-const estadoPixEvidencias = {
-  contexto: null,
-  arquivos: [],
-  enviando: false
-};
+console.info(
+  "[EVIDÊNCIAS/SUPABASE] Etapa 05 ativa — arquivos e metadados oficiais no Supabase."
+);
 
-function pixEv(seletor) {
+function evidEl(seletor) {
   return document.querySelector(seletor);
 }
 
-function pixEvTodos(seletor) {
-  return [...document.querySelectorAll(seletor)];
-}
-
-
-function pixPrimeiroElemento(seletores) {
-  for (const seletor of seletores) {
-    const elemento = pixEv(seletor);
-
-    if (elemento) {
-      return elemento;
-    }
-  }
-
-  return null;
-}
-
-function pixCampoCompetencia() {
-  return pixPrimeiroElemento([
-    "#pixLancamentoCompetencia",
-    "#pixCompetenciaLancamento",
-    "#pixCompetencia",
-    "#competenciaPixLancamento",
-    "#formPixPresidente input[type='month']",
-    "#modalPixPresidente input[type='month']"
-  ]);
-}
-
-function pixCampoSemana() {
-  return pixPrimeiroElemento([
-    "#pixLancamentoSemana",
-    "#pixSemanaLancamento",
-    "#pixSemana",
-    "#semanaPixLancamento",
-    "#formPixPresidente select[id*='Semana']",
-    "#formPixPresidente select[id*='semana']",
-    "#modalPixPresidente select[id*='Semana']",
-    "#modalPixPresidente select[id*='semana']"
-  ]);
-}
-
-function normalizarSemanaPixEvidencia(valor) {
-  const texto =
-    normalizarPixEv(valor)
-      .replace(/\s+/g, "");
-
-  const correspondencia =
-    texto.match(/(?:SEMANA|S)?([1-4])/);
-
-  return correspondencia
-    ? `S${correspondencia[1]}`
-    : "";
-}
-
-function numeroSemanaPixEvidencia(valor) {
-  const semana =
-    normalizarSemanaPixEvidencia(valor);
-
-  return semana
-    ? Number(semana.replace("S", ""))
-    : 0;
-}
-
-function pixCampoFilial() {
-  return pixPrimeiroElemento([
-    "#pixLancamentoFilial",
-    "#pixFilialLancamento",
-    "#pixFilial",
-    "#filialPixLancamento",
-    "#formPixPresidente select[id*='Filial']",
-    "#formPixPresidente select[id*='filial']",
-    "#modalPixPresidente select[id*='Filial']",
-    "#modalPixPresidente select[id*='filial']"
-  ]);
-}
-
-function pixCampoParticipante() {
-  return pixPrimeiroElemento([
-    "#pixLancamentoFuncionario",
-    "#pixLancamentoParticipante",
-    "#pixFuncionario",
-    "#pixParticipante",
-    "#formPixPresidente select[id*='Funcionario']",
-    "#formPixPresidente select[id*='Participante']",
-    "#formPixPresidente select[id*='funcionario']",
-    "#formPixPresidente select[id*='participante']"
-  ]);
-}
-
-function normalizarPixEv(valor) {
-  return String(valor ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toUpperCase();
-}
-
-function slugPixEv(valor) {
-  return normalizarPixEv(valor)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-function escaparPixEv(valor) {
-  return String(valor ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function numeroPixEv(valor) {
-  if (typeof valor === "number") {
-    return Number.isFinite(valor) ? valor : 0;
-  }
-
-  let texto = String(valor ?? "")
-    .trim()
-    .replace(/\s/g, "")
-    .replace(/R\$/gi, "")
-    .replace(/%/g, "");
-
-  if (texto.includes(",")) {
-    texto = texto
-      .replace(/\./g, "")
-      .replace(",", ".");
-  }
-
-  texto = texto.replace(/[^\d.-]/g, "");
-
-  const numero = Number(texto);
-
-  return Number.isFinite(numero)
-    ? numero
-    : 0;
-}
-
-function moedaPixEv(valor) {
-  return numeroPixEv(valor).toLocaleString(
-    "pt-BR",
-    {
-      style: "currency",
-      currency: "BRL"
-    }
-  );
-}
-
-function moduloPixAtivo() {
-  return (
-    document.body.classList.contains("modulo-pix-ativo") ||
-    pixEv("#pixPresidente")?.classList.contains("active")
-  );
-}
-
-function competenciaPixAtiva() {
-  return (
-    pixCampoCompetencia()?.value ||
-    pixEv("#competenciaGlobal")?.value ||
-    pixEv("#pixDashboardCompetencia")?.value ||
-    ""
-  );
-}
-
-function contextoPixAtual() {
-  const competencia =
-    pixCampoCompetencia()?.value || "";
-
-  const semana =
-    normalizarSemanaPixEvidencia(
-      pixCampoSemana()?.value
-    );
-
-  const selectFilial =
-    pixCampoFilial();
-
-  const textoOpcao =
-    selectFilial?.selectedOptions?.[0]
-      ?.textContent
-      ?.trim() ||
-    selectFilial?.value ||
-    "";
-
-  if (
-    !competencia ||
-    !semana ||
-    !textoOpcao
-  ) {
-    return null;
-  }
-
-  const correspondencia =
-    textoOpcao.match(
-      /^\s*(\d+)\s*-\s*(.+?)\s*$/
-    );
-
-  let dn =
-    correspondencia
-      ? correspondencia[1]
-      : "";
-
-  const filial =
-    correspondencia
-      ? correspondencia[2].trim()
-      : textoOpcao.trim();
-
-  dn =
-    dn ||
-    selectFilial?.selectedOptions?.[0]?.dataset?.dn ||
-    pixCampoParticipante()?.selectedOptions?.[0]?.dataset?.dn ||
-    "";
-
-  dn =
-    resolverDnPixPorFilial(
-      filial,
-      dn
-    );
-
-  const pastaFilial =
-    `${dn || "sem-dn"}-${slugPixEv(filial)}`;
-
-  const numeroSemana =
-    numeroSemanaPixEvidencia(semana);
-
-  return {
-    competencia,
-    semana,
-    numeroSemana,
-    dn,
-    filial,
-    pasta:
-      `${CONFIG_PIX_EVIDENCIAS.pastaRaiz}/${competencia}/semana-${numeroSemana}/${pastaFilial}`
-  };
-}
-
-function construirContextoPix(
-  competencia,
-  semana,
-  filial,
-  dn = ""
+function caminhoSupabaseEvidencia(
+  caminho
 ) {
-  const semanaNormalizada =
-    normalizarSemanaPixEvidencia(
-      semana
+  return String(
+    caminho || ""
+  )
+    .replace(/^\/+/, "")
+    .replace(
+      /^evidencias_produtivos\//,
+      "produtivos/"
     );
-
-  if (
-    !competencia ||
-    !semanaNormalizada ||
-    !filial
-  ) {
-    return null;
-  }
-
-  const texto =
-    String(filial).trim();
-
-  const correspondencia =
-    texto.match(
-      /^\s*(\d+)\s*-\s*(.+?)\s*$/
-    );
-
-  const filialFinal =
-    correspondencia
-      ? correspondencia[2].trim()
-      : texto;
-
-  const dnFinal =
-    resolverDnPixPorFilial(
-      filialFinal,
-      dn ||
-      (correspondencia ? correspondencia[1] : "")
-    );
-
-  const numeroSemana =
-    numeroSemanaPixEvidencia(
-      semanaNormalizada
-    );
-
-  return {
-    competencia,
-    semana:
-      semanaNormalizada,
-    numeroSemana,
-    dn:
-      dnFinal,
-    filial:
-      filialFinal,
-    pasta:
-      `${CONFIG_PIX_EVIDENCIAS.pastaRaiz}/${competencia}/semana-${numeroSemana}/${dnFinal || "sem-dn"}-${slugPixEv(filialFinal)}`
-  };
 }
 
-function urlPublicaPix(caminho) {
-  const { data } = supabase.storage
-    .from(SUPABASE_BUCKET)
-    .getPublicUrl(caminho);
+async function removerArquivoSupabase(
+  caminho
+) {
+  const caminhoNormalizado =
+    caminhoSupabaseEvidencia(
+      caminho
+    );
 
-  return data.publicUrl;
-}
-
-async function listarEvidenciasContextoPix(contexto) {
-  if (!contexto) {
-    return [];
+  if (!caminhoNormalizado) {
+    return;
   }
 
-  const { data, error } = await supabase.storage
-    .from(SUPABASE_BUCKET)
-    .list(
-      contexto.pasta,
-      {
-        limit: CONFIG_PIX_EVIDENCIAS.limiteArquivos,
-        sortBy: {
-          column: "created_at",
-          order: "asc"
+  const {
+    error
+  } =
+    await supabase.storage
+      .from(
+        SUPABASE_BUCKET
+      )
+      .remove([
+        caminhoNormalizado
+      ]);
+
+  if (error) {
+    throw error;
+  }
+}
+
+async function enviarArquivoSupabase(
+  caminho,
+  arquivo
+) {
+  const caminhoNormalizado =
+    caminhoSupabaseEvidencia(
+      caminho
+    );
+
+  const {
+    error
+  } =
+    await supabase.storage
+      .from(
+        SUPABASE_BUCKET
+      )
+      .upload(
+        caminhoNormalizado,
+        arquivo,
+        {
+          contentType:
+            arquivo.type,
+          cacheControl:
+            "3600",
+          upsert:
+            false
         }
-      }
-    );
+      );
 
   if (error) {
     throw error;
   }
 
-  return (data || [])
-    .filter(item => item.id && item.name)
-    .map(item => {
-      const caminho =
-        `${contexto.pasta}/${item.name}`;
+  const {
+    data
+  } =
+    supabase.storage
+      .from(
+        SUPABASE_BUCKET
+      )
+      .getPublicUrl(
+        caminhoNormalizado
+      );
 
-      return {
-        nome: item.name,
-        nomeOriginal:
-          item.metadata?.nome_original ||
-          item.name,
-        caminho,
-        url:
-          urlPublicaPix(caminho)
-      };
-    });
+  const url =
+    data?.publicUrl ||
+    "";
+
+  if (!url) {
+    throw new Error(
+      "O Supabase não retornou a URL pública da evidência."
+    );
+  }
+
+  return {
+    caminho:
+      caminhoNormalizado,
+    url
+  };
 }
 
-function garantirHtmlEvidenciasPix() {
-  if (pixEv("#pixEvidenciasSection")) {
-    return pixEv("#pixEvidenciasSection");
+
+const SENHA_GERENCIAR_EVIDENCIAS =
+  "123321";
+
+function escaparHtmlEvidencia(valor) {
+  return String(
+    valor ?? ""
+  )
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function formatarDataEvidencia(valor) {
+  if (!valor) {
+    return "Não informado";
   }
 
-  const form =
-    pixPrimeiroElemento([
-      "#formPixPresidente",
-      "#formLancamentoPix",
-      "#modalPixPresidente form",
-      "form[data-pix-form]"
-    ]);
+  try {
+    const data =
+      valor?.toDate
+        ? valor.toDate()
+        : new Date(valor);
 
-  if (!form) {
-    console.warn(
-      "[PIX EVIDÊNCIAS] Formulário do Pix não encontrado."
+    if (
+      Number.isNaN(
+        data.getTime()
+      )
+    ) {
+      return "Não informado";
+    }
+
+    return data.toLocaleString(
+      "pt-BR"
     );
+  } catch {
+    return "Não informado";
+  }
+}
 
-    return null;
+function garantirCssVisualizadorEvidencias() {
+  if (
+    document.querySelector(
+      "#cssVisualizadorEvidenciasProdutivos"
+    )
+  ) {
+    return;
   }
 
-  const resultadoPreview =
-    pixPrimeiroElemento([
-      "#pixResultadoPreview",
-      "#resultadoPreviewPix",
-      "#formPixPresidente .pix-preview",
-      "#formPixPresidente .resultado-preview"
-    ]);
+  const style =
+    document.createElement("style");
 
-  const campos =
-    pixEv("#pixCamposDinamicos");
+  style.id =
+    "cssVisualizadorEvidenciasProdutivos";
 
-  const modalActions =
-    form.querySelector(".modal-actions");
+  style.textContent = `
+    .evidence-view-btn {
+      white-space: nowrap;
+    }
 
-  const html = `
-    <section
-      id="pixEvidenciasSection"
-      class="pix-evidence-section"
-    >
-      <div class="pix-evidence-header">
-        <div>
-          <p class="eyebrow">
-            Evidências da semana
-          </p>
+    .ev-viewer-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1000005;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      background: rgba(4, 22, 38, .76);
+      backdrop-filter: blur(8px);
+    }
 
-          <h3>
-            Imagens para o relatório do Pix
-          </h3>
+    .ev-viewer-card {
+      width: min(1060px, 100%);
+      max-height: 90vh;
+      overflow: auto;
+      border-radius: 22px;
+      background: #fff;
+      box-shadow: 0 30px 90px rgba(0, 0, 0, .34);
+    }
 
-          <p>
-            As imagens são exclusivas da competência,
-            semana e filial selecionadas. Evidências de uma
-            semana não aparecem nas demais semanas.
-          </p>
+    .ev-viewer-header {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 22px 24px;
+      color: #fff;
+      background:
+        linear-gradient(
+          135deg,
+          #0a3557,
+          #087b5a
+        );
+    }
+
+    .ev-viewer-header h2 {
+      margin: 5px 0 0;
+      font-size: 24px;
+    }
+
+    .ev-viewer-header p {
+      margin: 7px 0 0;
+      color: rgba(255,255,255,.86);
+    }
+
+    .ev-viewer-close {
+      width: 40px;
+      height: 40px;
+      flex: 0 0 auto;
+      border: 1px solid rgba(255,255,255,.35);
+      border-radius: 12px;
+      color: #fff;
+      background: rgba(255,255,255,.12);
+      font-size: 23px;
+      cursor: pointer;
+    }
+
+    .ev-viewer-body {
+      padding: 22px 24px 26px;
+    }
+
+    .ev-audit-grid {
+      display: grid;
+      grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .ev-audit-card {
+      padding: 13px 14px;
+      border: 1px solid #dce6ec;
+      border-radius: 14px;
+      background: #f8fbfc;
+    }
+
+    .ev-audit-card small {
+      display: block;
+      margin-bottom: 5px;
+      color: #667887;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .ev-audit-card strong {
+      color: #0a2943;
+    }
+
+    .ev-viewer-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin: 0 0 16px;
+      padding: 12px 14px;
+      border-radius: 13px;
+      background: #edf7f3;
+    }
+
+    .ev-viewer-toolbar p {
+      margin: 0;
+      color: #476172;
+      font-size: 13px;
+    }
+
+    .ev-manage-btn,
+    .ev-add-btn {
+      min-height: 38px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 10px;
+      color: #fff;
+      background: #087b5a;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .ev-gallery {
+      display: grid;
+      grid-template-columns:
+        repeat(auto-fill, minmax(220px, 1fr));
+      gap: 15px;
+    }
+
+    .ev-image-card {
+      overflow: hidden;
+      border: 1px solid #dce6ec;
+      border-radius: 15px;
+      background: #fff;
+    }
+
+    .ev-image-card img {
+      width: 100%;
+      height: 170px;
+      display: block;
+      object-fit: cover;
+      background: #eef3f6;
+    }
+
+    .ev-image-info {
+      display: grid;
+      gap: 5px;
+      padding: 12px;
+      color: #526575;
+      font-size: 12px;
+    }
+
+    .ev-image-info strong {
+      overflow: hidden;
+      color: #102d45;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .ev-delete-btn {
+      margin-top: 6px;
+      min-height: 34px;
+      border: 1px solid #f0b7b7;
+      border-radius: 9px;
+      color: #b51f28;
+      background: #fff7f7;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .ev-empty {
+      padding: 34px;
+      border: 1px dashed #b8cad5;
+      border-radius: 15px;
+      color: #667887;
+      text-align: center;
+      background: #f8fbfc;
+    }
+
+    .ev-password-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1000010;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(4, 22, 38, .72);
+    }
+
+    .ev-password-card {
+      width: min(390px, 100%);
+      padding: 24px;
+      border-radius: 19px;
+      background: #fff;
+      box-shadow: 0 25px 70px rgba(0,0,0,.32);
+      border-top: 4px solid #087b5a;
+    }
+
+    .ev-password-card h3 {
+      margin: 0 0 8px;
+      color: #102d45;
+    }
+
+    .ev-password-card p {
+      margin: 0 0 16px;
+      color: #667887;
+      line-height: 1.45;
+    }
+
+    .ev-password-card input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px 13px;
+      border: 1px solid #cbd8e1;
+      border-radius: 11px;
+      font-size: 16px;
+    }
+
+    .ev-password-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 9px;
+      margin-top: 17px;
+    }
+
+    .ev-password-actions button {
+      min-height: 39px;
+      padding: 0 14px;
+      border-radius: 10px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .ev-password-cancel {
+      border: 1px solid #cad7e0;
+      background: #fff;
+    }
+
+    .ev-password-confirm {
+      border: 0;
+      color: #fff;
+      background: #087b5a;
+    }
+
+    .ev-password-error {
+      margin-top: 8px;
+      color: #bd2028;
+      font-weight: 700;
+    }
+
+    .evidence-card {
+      position: relative;
+      transform: translateY(0);
+      transition: transform .28s ease, opacity .28s ease;
+    }
+
+    .evidence-card-loading {
+      min-height: 145px;
+      overflow: hidden;
+      background: #edf4f7;
+    }
+
+    .evidence-card-loading::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      background: linear-gradient(105deg, transparent 20%, rgba(255,255,255,.92) 45%, transparent 70%);
+      transform: translateX(-110%);
+      animation: evidenceJitterShimmer 1.05s cubic-bezier(.4,0,.2,1) infinite;
+      pointer-events: none;
+    }
+
+    .evidence-card img {
+      opacity: 1;
+      transform: scale(1);
+      transition: opacity .34s ease, transform .46s cubic-bezier(.2,.8,.2,1);
+    }
+
+    .evidence-card-loading img {
+      opacity: 0;
+      transform: scale(1.045);
+    }
+
+    #evidenciaDropzone.uploading {
+      position: relative;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    #evidenciaDropzone.uploading::after {
+      content: "Preparando e enviando imagens…";
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      display: grid;
+      place-items: center;
+      color: #075f48;
+      background: linear-gradient(120deg, rgba(235,250,245,.96), rgba(255,255,255,.96), rgba(225,246,239,.96));
+      background-size: 220% 100%;
+      font-weight: 800;
+      animation: evidenceJitterGradient 1.2s ease infinite;
+    }
+
+    @keyframes evidenceJitterShimmer {
+      to { transform: translateX(110%); }
+    }
+
+    @keyframes evidenceJitterGradient {
+      0% { background-position: 100% 50%; }
+      100% { background-position: 0 50%; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .evidence-card-loading::after,
+      #evidenciaDropzone.uploading::after {
+        animation: none;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .ev-audit-grid {
+        grid-template-columns:
+          repeat(2, minmax(0, 1fr));
+      }
+
+      .ev-viewer-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+    }
+  `;
+
+  document.head.appendChild(
+    style
+  );
+}
+
+function solicitarSenhaEvidencias() {
+  return new Promise(resolve => {
+    const overlay =
+      document.createElement("div");
+
+    overlay.className =
+      "ev-password-overlay";
+
+    overlay.innerHTML = `
+      <div class="ev-password-card">
+        <h3>Autorizar alteração</h3>
+
+        <p>
+          A visualização é liberada para todos.
+          Para adicionar ou excluir evidências,
+          informe a senha administrativa.
+        </p>
+
+        <input
+          type="password"
+          inputmode="numeric"
+          autocomplete="off"
+          placeholder="Digite a senha"
+        >
+
+        <div
+          class="ev-password-error"
+          hidden
+        >
+          Senha incorreta.
         </div>
 
-        <span
-          id="pixEvidenciaContador"
-          class="pix-evidence-counter"
-        >
-          S- • 0/20
-        </span>
-      </div>
-
-      <div
-        id="pixEvidenciaLegenda"
-        class="pix-evidence-branch"
-      >
-        Selecione competência, semana e filial
-      </div>
-
-      <div
-        id="pixEvidenciaDropzone"
-        class="pix-evidence-dropzone"
-      >
-        <input
-          type="file"
-          id="pixEvidenciaInput"
-          class="pix-evidence-input"
-          accept="image/jpeg,image/png,image/webp"
-          multiple
-        />
-
-        <div class="pix-evidence-dropzone-content">
-          <div class="pix-evidence-upload-icon">
-            ↑
-          </div>
-
-          <strong>
-            Arraste as imagens para cá
-          </strong>
-
-          <small>
-            JPG, PNG ou WEBP — somente para a semana selecionada
-          </small>
+        <div class="ev-password-actions">
+          <button
+            type="button"
+            class="ev-password-cancel"
+          >
+            Cancelar
+          </button>
 
           <button
             type="button"
-            id="btnSelecionarPixEvidencia"
-            class="pix-evidence-select"
+            class="ev-password-confirm"
           >
-            Selecionar imagens
+            Autorizar
           </button>
         </div>
       </div>
+    `;
 
-      <p
-        id="pixEvidenciaMensagem"
-        class="pix-evidence-message"
-      ></p>
-
-      <div
-        id="pixEvidenciaGaleria"
-        class="pix-evidence-gallery"
-      ></div>
-    </section>
-  `;
-
-  if (resultadoPreview) {
-    resultadoPreview.insertAdjacentHTML(
-      "afterend",
-      html
+    document.body.appendChild(
+      overlay
     );
-  } else if (modalActions) {
-    modalActions.insertAdjacentHTML(
-      "beforebegin",
-      html
-    );
-  } else if (campos) {
-    campos.insertAdjacentHTML(
-      "afterend",
-      html
-    );
-  } else {
-    form.insertAdjacentHTML(
-      "beforeend",
-      html
-    );
-  }
 
-  configurarUploadPix();
+    const input =
+      overlay.querySelector("input");
 
-  [
-    pixCampoCompetencia(),
-    pixCampoSemana(),
-    pixCampoFilial(),
-    pixCampoParticipante()
-  ]
-    .filter(Boolean)
-    .forEach(campo => {
-      if (campo.dataset.pixEvidenceBound === "true") {
+    const erro =
+      overlay.querySelector(
+        ".ev-password-error"
+      );
+
+    const fechar =
+      resultado => {
+        overlay.remove();
+        resolve(resultado);
+      };
+
+    const validar = () => {
+      if (
+        input.value ===
+        SENHA_GERENCIAR_EVIDENCIAS
+      ) {
+        fechar(true);
         return;
       }
 
-      campo.dataset.pixEvidenceBound = "true";
-
-      campo.addEventListener(
-        "change",
-        carregarPixEvidencias
-      );
-    });
-
-  return pixEv("#pixEvidenciasSection");
-}
-
-function mensagemPixEvidencia(
-  texto,
-  tipo = ""
-) {
-  const elemento =
-    pixEv("#pixEvidenciaMensagem");
-
-  if (!elemento) {
-    return;
-  }
-
-  elemento.className =
-    `pix-evidence-message ${tipo}`.trim();
-
-  elemento.textContent =
-    texto;
-}
-
-function renderizarPixEvidencias() {
-  const galeria =
-    pixEv("#pixEvidenciaGaleria");
-
-  const contador =
-    pixEv("#pixEvidenciaContador");
-
-  const legenda =
-    pixEv("#pixEvidenciaLegenda");
-
-  const contexto =
-    estadoPixEvidencias.contexto;
-
-  if (contador) {
-    contador.textContent =
-      `${contexto?.semana || "S-"} • ${estadoPixEvidencias.arquivos.length}/${CONFIG_PIX_EVIDENCIAS.limiteArquivos}`;
-  }
-
-  if (legenda) {
-    legenda.textContent =
-      contexto
-        ? `${contexto.competencia} • ${contexto.semana} • ${contexto.dn ? `${contexto.dn} - ` : ""}${contexto.filial}`
-        : "Selecione competência, semana e filial";
-  }
-
-  if (!galeria) {
-    return;
-  }
-
-  if (!estadoPixEvidencias.arquivos.length) {
-    galeria.innerHTML = `
-      <div class="pix-evidence-empty">
-        <strong>
-          Nenhuma evidência anexada
-        </strong>
-
-        <span>
-          As imagens desta semana e filial aparecerão aqui.
-        </span>
-      </div>
-    `;
-
-    return;
-  }
-
-  galeria.innerHTML =
-    estadoPixEvidencias.arquivos
-      .map(
-        arquivo => `
-          <article class="pix-evidence-card">
-            <button
-              type="button"
-              class="pix-evidence-image"
-              data-pix-evidence-open="${escaparPixEv(arquivo.url)}"
-            >
-              <img
-                src="${escaparPixEv(arquivo.url)}"
-                alt="Evidência do Pix ${escaparPixEv(contexto?.semana)}"
-                loading="lazy"
-              />
-            </button>
-
-            <div class="pix-evidence-card-info">
-              <span>
-                ${escaparPixEv(contexto?.semana)} — ${escaparPixEv(contexto?.filial)}
-              </span>
-
-              <button
-                type="button"
-                class="pix-evidence-remove"
-                data-pix-evidence-path="${escaparPixEv(arquivo.caminho)}"
-              >
-                Excluir
-              </button>
-            </div>
-          </article>
-        `
-      )
-      .join("");
-
-  galeria
-    .querySelectorAll("[data-pix-evidence-open]")
-    .forEach(
-      botao =>
-        botao.addEventListener(
-          "click",
-          () =>
-            abrirImagemPix(
-              botao.dataset.pixEvidenceOpen
-            )
-        )
-    );
-
-  galeria
-    .querySelectorAll("[data-pix-evidence-path]")
-    .forEach(
-      botao =>
-        botao.addEventListener(
-          "click",
-          () =>
-            excluirPixEvidencia(
-              botao.dataset.pixEvidencePath
-            )
-        )
-    );
-}
-
-async function carregarPixEvidencias() {
-  garantirHtmlEvidenciasPix();
-
-  const contexto =
-    contextoPixAtual();
-
-  estadoPixEvidencias.contexto =
-    contexto;
-
-  if (!contexto) {
-    estadoPixEvidencias.arquivos = [];
-
-    mensagemPixEvidencia(
-      "Selecione competência, semana e filial."
-    );
-
-    renderizarPixEvidencias();
-    return;
-  }
-
-  try {
-    mensagemPixEvidencia(
-      `Carregando evidências da ${contexto.semana}...`,
-      "loading"
-    );
-
-    estadoPixEvidencias.arquivos =
-      await listarEvidenciasContextoPix(
-        contexto
-      );
-
-    mensagemPixEvidencia(
-      estadoPixEvidencias.arquivos.length
-        ? `${estadoPixEvidencias.arquivos.length} evidência(s) encontrada(s) para a ${contexto.semana}.`
-        : `Nenhuma evidência cadastrada para a ${contexto.semana} desta filial.`,
-      estadoPixEvidencias.arquivos.length
-        ? "success"
-        : ""
-    );
-
-    renderizarPixEvidencias();
-  } catch (erro) {
-    console.error(
-      "[PIX EVIDÊNCIAS] Erro ao carregar:",
-      erro
-    );
-
-    estadoPixEvidencias.arquivos = [];
-
-    mensagemPixEvidencia(
-      erro.message ||
-      "Não foi possível carregar as evidências.",
-      "error"
-    );
-
-    renderizarPixEvidencias();
-  }
-}
-
-function validarArquivoPix(arquivo) {
-  if (
-    !CONFIG_PIX_EVIDENCIAS.tiposPermitidos.includes(
-      arquivo.type
-    )
-  ) {
-    throw new Error(
-      `${arquivo.name}: use JPG, PNG ou WEBP.`
-    );
-  }
-
-  const limite =
-    CONFIG_PIX_EVIDENCIAS.limiteMbOriginal *
-    1024 *
-    1024;
-
-  if (arquivo.size > limite) {
-    throw new Error(
-      `${arquivo.name}: máximo de ${CONFIG_PIX_EVIDENCIAS.limiteMbOriginal} MB.`
-    );
-  }
-}
-
-function carregarImagemLocalPix(arquivo) {
-  return new Promise(
-    (resolve, reject) => {
-      const imagem =
-        new Image();
-
-      const url =
-        URL.createObjectURL(
-          arquivo
-        );
-
-      imagem.onload = () => {
-        URL.revokeObjectURL(url);
-        resolve(imagem);
-      };
-
-      imagem.onerror = erro => {
-        URL.revokeObjectURL(url);
-        reject(erro);
-      };
-
-      imagem.src = url;
-    }
-  );
-}
-
-async function comprimirImagemPix(arquivo) {
-  validarArquivoPix(arquivo);
-
-  const imagem =
-    await carregarImagemLocalPix(
-      arquivo
-    );
-
-  const maiorLado =
-    Math.max(
-      imagem.naturalWidth,
-      imagem.naturalHeight
-    );
-
-  const escala =
-    maiorLado >
-    CONFIG_PIX_EVIDENCIAS.larguraMaxima
-      ? CONFIG_PIX_EVIDENCIAS.larguraMaxima /
-        maiorLado
-      : 1;
-
-  const largura =
-    Math.round(
-      imagem.naturalWidth *
-      escala
-    );
-
-  const altura =
-    Math.round(
-      imagem.naturalHeight *
-      escala
-    );
-
-  const canvas =
-    document.createElement(
-      "canvas"
-    );
-
-  canvas.width = largura;
-  canvas.height = altura;
-
-  canvas
-    .getContext("2d")
-    .drawImage(
-      imagem,
-      0,
-      0,
-      largura,
-      altura
-    );
-
-  return await new Promise(
-    (resolve, reject) => {
-      canvas.toBlob(
-        blob => {
-          if (blob) {
-            resolve(blob);
-          } else {
-            reject(
-              new Error(
-                "Não foi possível comprimir a imagem."
-              )
-            );
-          }
-        },
-        "image/jpeg",
-        CONFIG_PIX_EVIDENCIAS.qualidadeJpeg
-      );
-    }
-  );
-}
-
-function nomeArquivoPixEvidencia() {
-  const id =
-    crypto.randomUUID
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random()
-          .toString(36)
-          .slice(2)}`;
-
-  return `${Date.now()}-${id}.jpg`;
-}
-
-async function enviarPixEvidencias(
-  arquivosRecebidos
-) {
-  const contexto =
-    contextoPixAtual();
-
-  if (!contexto) {
-    alert(
-      "Selecione primeiro a competência, a semana e a filial."
-    );
-
-    return;
-  }
-
-  if (estadoPixEvidencias.enviando) {
-    return;
-  }
-
-  const arquivos =
-    [...arquivosRecebidos];
-
-  if (!arquivos.length) {
-    return;
-  }
-
-  const vagas =
-    CONFIG_PIX_EVIDENCIAS.limiteArquivos -
-    estadoPixEvidencias.arquivos.length;
-
-  if (arquivos.length > vagas) {
-    alert(
-      `Você pode adicionar somente mais ${vagas} imagem(ns).`
-    );
-
-    return;
-  }
-
-  try {
-    estadoPixEvidencias.enviando =
-      true;
-
-    pixEv("#pixEvidenciaDropzone")
-      ?.classList.add(
-        "uploading"
-      );
-
-    let numero = 0;
-
-    for (const arquivo of arquivos) {
-      numero += 1;
-
-      mensagemPixEvidencia(
-        `Preparando imagem ${numero} de ${arquivos.length}...`,
-        "loading"
-      );
-
-      const imagem =
-        await comprimirImagemPix(
-          arquivo
-        );
-
-      const caminho =
-        `${contexto.pasta}/${nomeArquivoPixEvidencia()}`;
-
-      const { error } = await supabase.storage
-        .from(SUPABASE_BUCKET)
-        .upload(
-          caminho,
-          imagem,
-          {
-            contentType:
-              "image/jpeg",
-            cacheControl:
-              "3600",
-            upsert:
-              false,
-            metadata: {
-              nome_original:
-                arquivo.name,
-              campanha:
-                "PIX_DO_PRESIDENTE",
-              competencia:
-                contexto.competencia,
-              semana:
-                contexto.semana,
-              numero_semana:
-                String(contexto.numeroSemana),
-              dn:
-                contexto.dn,
-              filial:
-                contexto.filial,
-              enviado_em:
-                new Date().toISOString()
-            }
-          }
-        );
-
-      if (error) {
-        throw error;
-      }
-
-      /*
-       * Atualização otimista: a evidência aparece imediatamente na
-       * galeria, sem depender de uma segunda listagem do Storage.
-       */
-      const registroVisual = {
-        nome:
-          caminho.split("/").pop(),
-        nomeOriginal:
-          arquivo.name,
-        caminho,
-        url:
-          urlPublicaPix(caminho),
-        criadoEm:
-          new Date().toISOString()
-      };
-
-      if (
-        estadoPixEvidencias.contexto?.pasta === contexto.pasta &&
-        !estadoPixEvidencias.arquivos.some(
-          item => item.caminho === caminho
-        )
-      ) {
-        estadoPixEvidencias.arquivos = [
-          ...estadoPixEvidencias.arquivos,
-          registroVisual
-        ];
-        renderizarPixEvidencias();
-      }
-    }
-
-    mensagemPixEvidencia(
-      `${arquivos.length} evidência(s) enviada(s) com sucesso para a ${contexto.semana} desta filial.`,
-      "success"
-    );
-
-    atualizarBotoesPixEvidencia();
-
-    alert(
-      `${arquivos.length} evidência(s) enviada(s) com sucesso para ${contexto.filial} — ${contexto.semana}.`
-    );
-
-    /*
-     * Confere o Storage em segundo plano depois que a interface já
-     * respondeu ao usuário. Isso mantém a galeria sincronizada sem
-     * deixar o salvamento esperando na tela.
-     */
-    window.setTimeout(
-      () => {
-        if (
-          contextoPixAtual()?.pasta === contexto.pasta
-        ) {
-          carregarPixEvidencias();
-        }
-      },
-      900
-    );
-  } catch (erro) {
-    console.error(
-      "[PIX EVIDÊNCIAS] Erro no envio:",
-      erro
-    );
-
-    alert(
-      erro.message ||
-      "Não foi possível enviar as evidências."
-    );
-
-    mensagemPixEvidencia(
-      erro.message ||
-      "Falha no envio.",
-      "error"
-    );
-  } finally {
-    estadoPixEvidencias.enviando =
-      false;
-
-    pixEv("#pixEvidenciaDropzone")
-      ?.classList.remove(
-        "uploading"
-      );
-
-    const input =
-      pixEv("#pixEvidenciaInput");
-
-    if (input) {
+      erro.hidden = false;
       input.value = "";
-    }
-  }
-}
+      input.focus();
+    };
 
-async function excluirPixEvidencia(caminho) {
-  if (
-    !confirm(
-      "Excluir esta evidência da semana selecionada?"
-    )
-  ) {
-    return;
-  }
+    overlay
+      .querySelector(
+        ".ev-password-confirm"
+      )
+      .addEventListener(
+        "click",
+        validar
+      );
 
-  try {
-    const { error } = await supabase.storage
-      .from(SUPABASE_BUCKET)
-      .remove([caminho]);
+    overlay
+      .querySelector(
+        ".ev-password-cancel"
+      )
+      .addEventListener(
+        "click",
+        () => fechar(false)
+      );
 
-    if (error) {
-      throw error;
-    }
+    input.addEventListener(
+      "keydown",
+      evento => {
+        if (evento.key === "Enter") {
+          validar();
+        }
 
-    await carregarPixEvidencias();
-
-    atualizarBotoesPixEvidencia();
-  } catch (erro) {
-    console.error(
-      "[PIX EVIDÊNCIAS] Erro ao excluir:",
-      erro
-    );
-
-    alert(
-      erro.message ||
-      "Não foi possível excluir a evidência."
-    );
-  }
-}
-
-function configurarUploadPix() {
-  const dropzone =
-    pixEv("#pixEvidenciaDropzone");
-
-  const input =
-    pixEv("#pixEvidenciaInput");
-
-  const botao =
-    pixEv("#btnSelecionarPixEvidencia");
-
-  if (!dropzone || !input) {
-    return;
-  }
-
-  botao?.addEventListener(
-    "click",
-    evento => {
-      evento.stopPropagation();
-      input.click();
-    }
-  );
-
-  dropzone.addEventListener(
-    "click",
-    evento => {
-      if (
-        !evento.target.closest(
-          "button, a"
-        )
-      ) {
-        input.click();
+        if (evento.key === "Escape") {
+          fechar(false);
+        }
       }
-    }
-  );
-
-  input.addEventListener(
-    "change",
-    () =>
-      enviarPixEvidencias(
-        input.files
-      )
-  );
-
-  [
-    "dragenter",
-    "dragover"
-  ].forEach(
-    nome =>
-      dropzone.addEventListener(
-        nome,
-        evento => {
-          evento.preventDefault();
-
-          dropzone.classList.add(
-            "dragging"
-          );
-        }
-      )
-  );
-
-  [
-    "dragleave",
-    "drop"
-  ].forEach(
-    nome =>
-      dropzone.addEventListener(
-        nome,
-        evento => {
-          evento.preventDefault();
-
-          dropzone.classList.remove(
-            "dragging"
-          );
-        }
-      )
-  );
-
-  dropzone.addEventListener(
-    "drop",
-    evento =>
-      enviarPixEvidencias(
-        evento.dataTransfer.files
-      )
-  );
-}
-
-/* =========================================================
-   VISUALIZADOR
-========================================================= */
-
-function garantirModalPixEvidencias() {
-  if (pixEv("#modalPixEvidencias")) {
-    return;
-  }
-
-  document.body.insertAdjacentHTML(
-    "beforeend",
-    `
-      <dialog
-        id="modalPixEvidencias"
-        class="pix-evidence-viewer-dialog"
-      >
-        <div class="pix-evidence-viewer">
-          <div class="pix-evidence-viewer-header">
-            <div>
-              <p class="eyebrow">
-                Pix do Presidente
-              </p>
-
-              <h2 id="pixEvidenceViewerTitle">
-                Evidências da semana
-              </h2>
-            </div>
-
-            <button
-              type="button"
-              id="fecharModalPixEvidencias"
-              class="icon-btn"
-            >
-              ×
-            </button>
-          </div>
-
-          <div
-            id="pixEvidenceViewerBody"
-            class="pix-evidence-viewer-body"
-          ></div>
-        </div>
-      </dialog>
-
-      <dialog
-        id="modalPixImagemEvidencia"
-        class="pix-evidence-image-dialog"
-      >
-        <button
-          type="button"
-          id="fecharPixImagemEvidencia"
-          class="pix-evidence-image-close"
-        >
-          ×
-        </button>
-
-        <img
-          id="pixImagemEvidenciaAmpliada"
-          alt="Evidência do Pix ampliada"
-        />
-      </dialog>
-    `
-  );
-
-  pixEv("#fecharModalPixEvidencias")
-    ?.addEventListener(
-      "click",
-      () =>
-        pixEv("#modalPixEvidencias")
-          ?.close()
     );
 
-  pixEv("#fecharPixImagemEvidencia")
-    ?.addEventListener(
-      "click",
-      () =>
-        pixEv("#modalPixImagemEvidencia")
-          ?.close()
+    input.focus();
+  });
+}
+
+async function listarDocumentosEvidencias() {
+  const snapshot =
+    await getDocs(
+      collection(
+        firestore,
+        EVIDENCIAS_COLLECTION
+      )
     );
+
+  return snapshot.docs.map(
+    documento => ({
+      id:
+        documento.id,
+      referencia:
+        documento.ref,
+      ...documento.data()
+    })
+  );
 }
 
-function abrirImagemPix(url) {
-  garantirModalPixEvidencias();
-
-  const imagem =
-    pixEv("#pixImagemEvidenciaAmpliada");
-
-  if (imagem) {
-    imagem.src = url;
-  }
-
-  pixEv("#modalPixImagemEvidencia")
-    ?.showModal();
-}
-
-async function abrirAlbumPix(
+async function buscarEvidenciaDaFilial(
   competencia,
-  semana,
   filial,
   dn = ""
 ) {
-  garantirModalPixEvidencias();
+  const documentos =
+    await listarDocumentosEvidencias();
 
+  const competenciaNormalizada =
+    String(
+      competencia || ""
+    );
+
+  const filialNormalizada =
+    normalizarEvidencia(
+      filial
+    );
+
+  const dnNormalizado =
+    String(
+      dn || ""
+    );
+
+  return documentos.find(
+    item =>
+      String(
+        item.competencia || ""
+      ) === competenciaNormalizada &&
+      normalizarEvidencia(
+        item.filial
+      ) === filialNormalizada &&
+      (
+        !dnNormalizado ||
+        !item.dn ||
+        String(item.dn) ===
+          dnNormalizado
+      )
+  ) || null;
+}
+
+function contextoDoDocumentoEvidencia(
+  documento
+) {
+  return {
+    chave:
+      documento.id,
+
+    competencia:
+      documento.competencia ||
+      "",
+
+    filial:
+      documento.filial ||
+      "",
+
+    dn:
+      documento.dn ||
+      "",
+
+    lancamentoId:
+      documento.matrizLancamentoId ||
+      "",
+
+    funcionarioId:
+      documento.matrizFuncionarioId ||
+      "",
+
+    funcionarioNome:
+      documento.matrizNome ||
+      "Não informado"
+  };
+}
+
+async function excluirImagemPorDocumento(
+  documento,
+  imagem
+) {
+  if (imagem?.caminho) {
+    await removerArquivoSupabase(
+      imagem.caminho
+    ).catch(
+      erro => {
+        const mensagem =
+          String(
+            erro?.message ||
+            ""
+          ).toLowerCase();
+
+        if (
+          !mensagem.includes(
+            "not found"
+          )
+        ) {
+          throw erro;
+        }
+      }
+    );
+  }
+
+  await setDoc(
+    documento.referencia,
+    {
+      imagens:
+        arrayRemove(
+          imagem
+        ),
+      atualizadoEm:
+        serverTimestamp()
+    },
+    {
+      merge: true
+    }
+  );
+}
+
+async function enviarArquivosParaDocumento(
+  arquivos,
+  documento
+) {
   const contexto =
-    construirContextoPix(
+    contextoDoDocumentoEvidencia(
+      documento
+    );
+
+  const imagensAtuais =
+    Array.isArray(
+      documento.imagens
+    )
+      ? documento.imagens
+      : [];
+
+  const lista =
+    [...arquivos];
+
+  const vagas =
+    MAX_ARQUIVOS -
+    imagensAtuais.length;
+
+  if (
+    !lista.length ||
+    vagas <= 0
+  ) {
+    return;
+  }
+
+  if (lista.length > vagas) {
+    throw new Error(
+      `Você pode adicionar somente mais ${vagas} arquivo(s).`
+    );
+  }
+
+  lista.forEach(
+    validarArquivoEvidencia
+  );
+
+  for (const arquivo of lista) {
+    const id =
+      gerarIdEvidencia();
+
+    const extensao =
+      arquivo.name
+        .split(".")
+        .pop()
+        ?.toLowerCase() ||
+      "jpg";
+
+    const caminho =
+      [
+        "produtivos",
+        contexto.competencia,
+        [
+          contexto.dn ||
+            "sem-dn",
+          slugEvidencia(
+            contexto.filial
+          )
+        ].join("-"),
+        `${id}.${extensao}`
+      ].join("/");
+
+    const upload =
+      await enviarArquivoSupabase(
+        caminho,
+        arquivo
+      );
+
+    const imagem = {
+      id,
+      nome:
+        arquivo.name,
+      url:
+        upload.url,
+      caminho:
+        upload.caminho,
+      tamanho:
+        arquivo.size,
+      tipo:
+        arquivo.type,
+      criadoEmCliente:
+        new Date().toISOString(),
+      enviadoPorLancamentoId:
+        contexto.lancamentoId,
+      enviadoPorFuncionarioId:
+        contexto.funcionarioId,
+      enviadoPorNome:
+        contexto.funcionarioNome
+    };
+
+    await setDoc(
+      documento.referencia,
+      {
+        imagens:
+          arrayUnion(
+            imagem
+          ),
+        atualizadoEm:
+          serverTimestamp()
+      },
+      {
+        merge: true
+      }
+    );
+  }
+}
+
+async function abrirVisualizadorEvidencias(
+  competencia,
+  filial,
+  dn = ""
+) {
+  garantirCssVisualizadorEvidencias();
+
+  const documento =
+    await buscarEvidenciaDaFilial(
       competencia,
-      semana,
       filial,
       dn
     );
 
-  if (!contexto) {
-    return;
-  }
-
-  const titulo =
-    pixEv("#pixEvidenceViewerTitle");
-
-  const corpo =
-    pixEv("#pixEvidenceViewerBody");
-
-  if (titulo) {
-    titulo.textContent =
-      `${contexto.competencia} • ${contexto.semana} • ${contexto.dn ? `${contexto.dn} - ` : ""}${contexto.filial}`;
-  }
-
-  if (corpo) {
-    corpo.innerHTML =
-      `<div class="pix-evidence-viewer-empty">Carregando...</div>`;
-  }
-
-  pixEv("#modalPixEvidencias")
-    ?.showModal();
-
-  try {
-    const arquivos =
-      await listarEvidenciasContextoPix(
-        contexto
-      );
-
-    if (!corpo) {
-      return;
-    }
-
-    corpo.innerHTML =
-      arquivos.length
-        ? arquivos.map(
-            arquivo => `
-              <button
-                type="button"
-                class="pix-evidence-viewer-card"
-                data-pix-view-image="${escaparPixEv(arquivo.url)}"
-              >
-                <img
-                  src="${escaparPixEv(arquivo.url)}"
-                  alt="Evidência do Pix ${escaparPixEv(contexto.semana)}"
-                  loading="lazy"
-                />
-
-                <span>
-                  ${escaparPixEv(contexto.semana)} — ${escaparPixEv(contexto.filial)}
-                </span>
-              </button>
-            `
-          ).join("")
-        : `
-          <div class="pix-evidence-viewer-empty">
-            Nenhuma evidência encontrada para a
-            ${escaparPixEv(contexto.semana)}.
-          </div>
-        `;
-
-    corpo
-      .querySelectorAll("[data-pix-view-image]")
-      .forEach(
-        botao =>
-          botao.addEventListener(
-            "click",
-            () =>
-              abrirImagemPix(
-                botao.dataset.pixViewImage
-              )
-          )
-      );
-  } catch (erro) {
-    console.error(
-      "[PIX EVIDÊNCIAS] Erro ao abrir álbum:",
-      erro
-    );
-
-    if (corpo) {
-      corpo.innerHTML = `
-        <div class="pix-evidence-viewer-empty error">
-          Não foi possível carregar as evidências.
-        </div>
-      `;
-    }
-  }
-}
-
-function dadosLinhaPix(linha) {
-  const celulas =
-    [...linha.children];
-
-  return {
-    competencia:
-      celulas[0]?.textContent?.trim() || "",
-    semana:
-      celulas[1]?.textContent?.trim() || "",
-    filial:
-      celulas[2]?.textContent?.trim() || ""
-  };
-}
-
-function adicionarBotaoPixNaLinha(linha) {
-  if (
-    linha.querySelector(
-      ".pix-evidence-row-button"
+  const imagens =
+    Array.isArray(
+      documento?.imagens
     )
-  ) {
-    return;
-  }
-
-  const dados =
-    dadosLinhaPix(linha);
-
-  if (
-    !dados.competencia ||
-    !dados.filial
-  ) {
-    return;
-  }
-
-  const destino =
-    linha.lastElementChild;
-
-  if (!destino) {
-    return;
-  }
-
-  const botao =
-    document.createElement(
-      "button"
-    );
-
-  botao.type =
-    "button";
-
-  botao.className =
-    "mini-btn pix-evidence-row-button";
-
-  botao.innerHTML =
-    `📷 Evidência ${normalizarSemanaPixEvidencia(dados.semana)}`;
-
-  botao.addEventListener(
-    "click",
-    evento => {
-      evento.preventDefault();
-      evento.stopPropagation();
-
-      abrirAlbumPix(
-        dados.competencia,
-        dados.semana,
-        dados.filial
-      );
-    }
-  );
-
-  let acoes =
-    destino.querySelector(
-      ".actions"
-    );
-
-  if (!acoes) {
-    acoes =
-      document.createElement(
-        "div"
-      );
-
-    acoes.className =
-      "actions";
-
-    destino.appendChild(
-      acoes
-    );
-  }
-
-  acoes.prepend(botao);
-}
-
-function atualizarBotoesPixEvidencia() {
-  pixEvTodos(
-    "#pixTabelaLancamentos tr"
-  ).forEach(
-    adicionarBotaoPixNaLinha
-  );
-
-  /*
-   * Na apuração não há coluna de ações.
-   * Criamos uma pequena célula somente se necessário.
-   */
-  pixEvTodos(
-    "#pixTabelaApuracao tr"
-  ).forEach(
-    linha => {
-      if (
-        linha.querySelector(
-          ".pix-evidence-row-button"
-        )
-      ) {
-        return;
-      }
-
-      const dados =
-        dadosLinhaPix(linha);
-
-      if (
-        !dados.competencia ||
-        !dados.filial
-      ) {
-        return;
-      }
-
-      const ultima =
-        linha.lastElementChild;
-
-      if (!ultima) {
-        return;
-      }
-
-      const botao =
-        document.createElement(
-          "button"
-        );
-
-      botao.type =
-        "button";
-
-      botao.className =
-        "mini-btn pix-evidence-row-button";
-
-      botao.innerHTML =
-        "📷 Evidência";
-
-      botao.addEventListener(
-        "click",
-        evento => {
-          evento.preventDefault();
-          evento.stopPropagation();
-
-          abrirAlbumPix(
-            dados.competencia,
-            dados.semana,
-            dados.filial
-          );
-        }
-      );
-
-      ultima.appendChild(botao);
-    }
-  );
-}
-
-function observarTabelasPix() {
-  [
-    "#pixTabelaLancamentos",
-    "#pixTabelaApuracao"
-  ].forEach(
-    seletor => {
-      const tabela =
-        pixEv(seletor);
-
-      if (!tabela) {
-        return;
-      }
-
-      new MutationObserver(
-        atualizarBotoesPixEvidencia
-      ).observe(
-        tabela,
-        {
-          childList: true,
-          subtree: true
-        }
-      );
-    }
-  );
-
-  atualizarBotoesPixEvidencia();
-}
-
-/* =========================================================
-   DADOS EXCLUSIVOS DO PIX PARA EXPORTAÇÃO
-========================================================= */
-
-function mapaCabecalhoPix(tabela) {
-  const cabecalhos =
-    [...tabela.querySelectorAll("thead th")];
-
-  const mapa = {};
-
-  cabecalhos.forEach(
-    (th, indice) => {
-      const texto =
-        normalizarPixEv(
-          th.textContent
-        );
-
-      if (texto.includes("COMPET")) mapa.competencia = indice;
-      if (texto.includes("SEMANA")) mapa.semana = indice;
-      if (texto.includes("FILIAL")) mapa.filial = indice;
-      if (texto.includes("COLABORADOR")) mapa.colaborador = indice;
-      if (texto.includes("CARGO")) mapa.cargo = indice;
-      if (texto.includes("INDICADORES")) mapa.indicadores = indice;
-      if (texto.includes("BONIF") && texto.includes("FAT")) mapa.bonusFaturamento = indice;
-      if (texto.includes("TICKET")) mapa.bonusTicket = indice;
-      if (texto === "NPS") mapa.nps = indice;
-      if (texto.includes("PENALIDADE")) mapa.penalidade = indice;
-      if (texto === "TOTAL") mapa.total = indice;
-      if (texto.includes("STATUS")) mapa.status = indice;
-    }
-  );
-
-  return mapa;
-}
-
-function normalizarCompetenciaPixExportacao(valor) {
-  const texto =
-    String(valor ?? "").trim();
-
-  if (/^\d{4}-\d{2}$/.test(texto)) {
-    return texto;
-  }
-
-  const formatoBr =
-    texto.match(
-      /^(\d{2})\/(\d{4})$/
-    );
-
-  if (formatoBr) {
-    return `${formatoBr[2]}-${formatoBr[1]}`;
-  }
-
-  return texto;
-}
-
-function tipoExportacaoPixAtual() {
-  const valorOriginal =
-    pixEv("#tipoExportacao")?.value ||
-    pixEv("#pixTipoExportacao")?.value ||
-    "habilitados";
-
-  const valor =
-    normalizarPixEv(
-      valorOriginal
-    )
-      .replace(/\s+/g, "-")
-      .toLowerCase();
-
-  const mapa = {
-    todos: {
-      chave: "todos",
-      somenteHabilitados: false,
-      semana: ""
-    },
-
-    habilitados: {
-      chave: "habilitados",
-      somenteHabilitados: true,
-      semana: ""
-    },
-
-    "habilitados-s1": {
-      chave: "habilitados-s1",
-      somenteHabilitados: true,
-      semana: "S1"
-    },
-
-    "habilitados-s2": {
-      chave: "habilitados-s2",
-      somenteHabilitados: true,
-      semana: "S2"
-    },
-
-    "habilitados-s3": {
-      chave: "habilitados-s3",
-      somenteHabilitados: true,
-      semana: "S3"
-    },
-
-    "habilitados-s4": {
-      chave: "habilitados-s4",
-      somenteHabilitados: true,
-      semana: "S4"
-    }
-  };
-
-  return (
-    mapa[valor] ||
-    mapa.habilitados
-  );
-}
-
-function rotuloTipoExportacaoPix(
-  filtro = tipoExportacaoPixAtual()
-) {
-  const rotulos = {
-    todos:
-      "Todas",
-
-    habilitados:
-      "Somente habilitados",
-
-    "habilitados-s1":
-      "Somente habilitados S1",
-
-    "habilitados-s2":
-      "Somente habilitados S2",
-
-    "habilitados-s3":
-      "Somente habilitados S3",
-
-    "habilitados-s4":
-      "Somente habilitados S4"
-  };
-
-  return (
-    rotulos[filtro.chave] ||
-    "Somente habilitados"
-  );
-}
-
-function filialExportacaoPixAtual() {
-  const select =
-    pixEv(
-      "#pixFilialExportacao"
-    );
-
-  const valor =
-    select?.value ||
-    "";
-
-  return String(
-    valor
-  )
-    .replace(
-      /[\u200B-\u200D\uFEFF]/g,
-      ""
-    )
-    .replace(
-      /\u00A0/g,
-      " "
-    )
-    .replace(
-      /^\s*\d+\s*-\s*/,
-      ""
-    )
-    .replace(
-      /\s+/g,
-      " "
-    )
-    .trim();
-}
-
-function filialExportacaoPixNormalizada() {
-  return normalizarPixEv(
-    filialExportacaoPixAtual()
-  );
-}
-
-function grupoEvidenciaPertenceFilialPix(
-  grupo
-) {
-  const filialSelecionada =
-    filialExportacaoPixNormalizada();
-
-  if (!filialSelecionada) {
-    return true;
-  }
-
-  return (
-    normalizarPixEv(
-      grupo?.filial
-    ) ===
-    filialSelecionada
-  );
-}
-
-function normalizarSemanaPixExportacao(
-  valor
-) {
-  const texto =
-    normalizarPixEv(valor)
-      .replace(/\s+/g, "");
-
-  const correspondencia =
-    texto.match(/(?:SEMANA)?([1-4])/);
-
-  return correspondencia
-    ? `S${correspondencia[1]}`
-    : texto;
-}
-
-function garantirOpcoesExportacaoPix() {
-  const select =
-    pixEv("#tipoExportacao") ||
-    pixEv("#pixTipoExportacao");
-
-  if (!select) {
-    return;
-  }
-
-  /*
-   * Só troca as opções enquanto o módulo Pix estiver ativo.
-   * Assim a Campanha dos Produtivos continua independente.
-   */
-  const pixAtivo =
-    document.body.classList.contains(
-      "modulo-pix-ativo"
-    ) ||
-    pixEv("#pixPresidente.active") ||
-    pixEv('[data-module-group="pix"].open');
-
-  if (!pixAtivo) {
-    return;
-  }
-
-  const valorAtual =
-    select.value;
-
-  const opcoes = [
-    {
-      value: "habilitados",
-      label: "Somente habilitados"
-    },
-    {
-      value: "habilitados-s1",
-      label: "Somente habilitados S1"
-    },
-    {
-      value: "habilitados-s2",
-      label: "Somente habilitados S2"
-    },
-    {
-      value: "habilitados-s3",
-      label: "Somente habilitados S3"
-    },
-    {
-      value: "habilitados-s4",
-      label: "Somente habilitados S4"
-    },
-    {
-      value: "todos",
-      label: "TODAS"
-    }
-  ];
-
-  const assinaturaEsperada =
-    opcoes
-      .map(opcao => opcao.value)
-      .join("|");
-
-  const assinaturaAtual =
-    [...select.options]
-      .map(opcao => opcao.value)
-      .join("|");
-
-  if (
-    assinaturaAtual !==
-    assinaturaEsperada
-  ) {
-    select.innerHTML =
-      opcoes
-        .map(
-          opcao => `
-            <option value="${opcao.value}">
-              ${opcao.label}
-            </option>
-          `
-        )
-        .join("");
-  }
-
-  const valorValido =
-    opcoes.some(
-      opcao =>
-        opcao.value === valorAtual
-    );
-
-  select.value =
-    valorValido
-      ? valorAtual
-      : "habilitados";
-}
-
-function tabelasPixDisponiveis() {
-  const seletores = [
-    "#pixTabelaApuracao",
-    "#tabelaPixApuracao",
-    "#pixTabelaLancamentos",
-    "#tabelaPixLancamentos",
-    "#pixHistoricoTabelaBody",
-    "#pixHistoricoTabela tbody"
-  ];
-
-  const tabelas = [];
-
-  for (const seletor of seletores) {
-    const elemento =
-      pixEv(seletor);
-
-    if (!elemento) {
-      continue;
-    }
-
-    const tabela =
-      elemento.tagName === "TABLE"
-        ? elemento
-        : elemento.closest("table");
-
-    if (
-      tabela &&
-      !tabelas.includes(tabela)
-    ) {
-      tabelas.push(tabela);
-    }
-  }
-
-  return tabelas;
-}
-
-function quantidadeLinhasValidasPix(tabela) {
-  return [
-    ...tabela.querySelectorAll(
-      "tbody tr"
-    )
-  ].filter(
-    linha => {
-      const texto =
-        normalizarPixEv(
-          linha.textContent
-        );
-
-      return (
-        linha.children.length >= 5 &&
-        texto &&
-        !texto.includes("NENHUM") &&
-        !texto.includes("CARREGANDO")
-      );
-    }
-  ).length;
-}
-
-function tabelaPixComResultados() {
-  const tabelas =
-    tabelasPixDisponiveis();
-
-  return tabelas
-    .map(
-      tabela => ({
-        tabela,
-        quantidade:
-          quantidadeLinhasValidasPix(
-            tabela
-          )
-      })
-    )
-    .sort(
-      (a, b) =>
-        b.quantidade -
-        a.quantidade
-    )[0]?.tabela || null;
-}
-
-function limparStatusPixExportacao(valor) {
-  const texto =
-    normalizarPixEv(valor);
-
-  /*
-   * A célula de ações pode acrescentar textos como:
-   * "Evidência", "Editar" e "Excluir".
-   *
-   * Para o relatório, mantemos somente o status real.
-   */
-  if (
-    texto.includes("NAO HABILITADO") ||
-    texto.includes("NÃO HABILITADO")
-  ) {
-    return "NÃO HABILITADO";
-  }
-
-  if (texto.includes("HABILITADO")) {
-    return "HABILITADO";
-  }
-
-  return texto || "NÃO HABILITADO";
-}
-
-const DNs_PIX_POR_FILIAL = {
-  "ANANINDEUA": "4700",
-  "SAO LUIS": "4731",
-  "BACABAL": "1960",
-  "MACAPA": "4756",
-  "TERESINA": "4730",
-  "URUCUI": "4730",
-  "SINOP": "1928",
-  "CUIABA": "4738",
-  "AGUA BOA": "4738",
-  "RONDONOPOLIS": "4774"
-};
-
-function resolverDnPixPorFilial(
-  filialRecebida,
-  dnRecebido = ""
-) {
-  const dnLimpo =
-    String(dnRecebido || "")
-      .replace(/\D/g, "");
-
-  if (dnLimpo) {
-    return dnLimpo;
-  }
-
-  const filial =
-    normalizarPixEv(filialRecebida);
-
-  /*
-   * Primeiro procura o DN nas opções já carregadas no sistema.
-   */
-  const opcoes =
-    [
-      ...document.querySelectorAll(
-        "select option"
+      ? documento.imagens
+      : [];
+
+  const overlay =
+    document.createElement("div");
+
+  overlay.className =
+    "ev-viewer-overlay";
+
+  const renderizar = (
+    gerenciar = false
+  ) => {
+    const imagensAtuais =
+      Array.isArray(
+        documento?.imagens
       )
-    ];
+        ? documento.imagens
+        : [];
 
-  for (const opcao of opcoes) {
-    const texto =
-      normalizarPixEv(
-        opcao.textContent
-      );
+    overlay.innerHTML = `
+      <div class="ev-viewer-card">
+        <header class="ev-viewer-header">
+          <div>
+            <small>
+              EVIDÊNCIAS DA FILIAL
+            </small>
 
-    const filialOpcao =
-      normalizarPixEv(
-        opcao.dataset?.filial ||
-        texto.replace(
-          /^\d+\s*-\s*/,
-          ""
-        )
-      );
+            <h2>
+              ${escaparHtmlEvidencia(
+                filial
+              )}
+            </h2>
 
-    if (
-      filialOpcao === filial ||
-      texto.endsWith(`- ${filial}`) ||
-      texto === filial
-    ) {
-      const dn =
-        String(
-          opcao.dataset?.dn ||
-          texto.match(
-            /^\s*(\d+)\s*-/
-          )?.[1] ||
-          ""
-        ).replace(/\D/g, "");
+            <p>
+              Competência
+              ${escaparHtmlEvidencia(
+                competencia
+              )}
+              · DN
+              ${escaparHtmlEvidencia(
+                dn ||
+                documento?.dn ||
+                "não informado"
+              )}
+            </p>
+          </div>
 
-      if (dn) {
-        return dn;
-      }
-    }
-  }
+          <button
+            type="button"
+            class="ev-viewer-close"
+            aria-label="Fechar"
+          >
+            ×
+          </button>
+        </header>
 
-  /*
-   * Fallback para as filiais já conhecidas pelo módulo.
-   * BACABAL = DN 1960.
-   */
-  return (
-    DNs_PIX_POR_FILIAL[filial] ||
-    ""
-  );
-}
+        <div class="ev-viewer-body">
+          <div class="ev-audit-grid">
+            <div class="ev-audit-card">
+              <small>Total de evidências</small>
+              <strong>
+                ${imagensAtuais.length}
+              </strong>
+            </div>
 
-function dadosPixParaExportar() {
-  const tabela =
-    tabelaPixComResultados();
+            <div class="ev-audit-card">
+              <small>Competência</small>
+              <strong>
+                ${escaparHtmlEvidencia(
+                  competencia
+                )}
+              </strong>
+            </div>
 
-  if (!tabela) {
-    console.warn(
-      "[PIX EXPORTAÇÃO] Nenhuma tabela do Pix foi encontrada."
-    );
+            <div class="ev-audit-card">
+              <small>Última atualização</small>
+              <strong>
+                ${escaparHtmlEvidencia(
+                  formatarDataEvidencia(
+                    documento?.atualizadoEm
+                  )
+                )}
+              </strong>
+            </div>
 
-    return [];
-  }
+            <div class="ev-audit-card">
+              <small>Armazenamento</small>
+              <strong>
+                Supabase Storage
+              </strong>
+            </div>
+          </div>
 
-  const tbody =
-    tabela.querySelector("tbody");
+          <div class="ev-viewer-toolbar">
+            <p>
+              As evidências pertencem à filial e à
+              competência, portanto são válidas para
+              todos os colaboradores desta unidade.
+            </p>
 
-  if (!tbody) {
-    return [];
-  }
+            ${
+              documento
+                ? gerenciar
+                  ? `
+                    <label
+                      class="ev-add-btn"
+                      role="button"
+                    >
+                      + Adicionar imagens
 
-  const mapa =
-    mapaCabecalhoPix(tabela);
-
-  const competenciaSelecionada =
-    normalizarCompetenciaPixExportacao(
-      competenciaPixAtiva()
-    );
-
-  const filtro =
-    tipoExportacaoPixAtual();
-
-  const resultados = [
-    ...tbody.querySelectorAll("tr")
-  ]
-    .map(
-      linha => {
-        const celulas =
-          [...linha.children];
-
-        if (celulas.length < 5) {
-          return null;
-        }
-
-        const valor = indice =>
-          indice === undefined
-            ? ""
-            : celulas[indice]
-                ?.textContent
-                ?.replace(/\s+/g, " ")
-                ?.trim() || "";
-
-        /*
-         * As tabelas de Lançamentos e Apuração possuem
-         * cabeçalhos completos. O Histórico mensal possui
-         * outra estrutura; por isso usamos os nomes do
-         * cabeçalho quando disponíveis e índices de apoio.
-         */
-        const competenciaBruta =
-          valor(
-            mapa.competencia ?? 0
-          );
-
-        const statusBruto =
-          valor(
-            mapa.status ??
-            Math.max(
-              0,
-              celulas.length - 2
-            )
-          );
-
-        const item = {
-          competencia:
-            normalizarCompetenciaPixExportacao(
-              competenciaBruta ||
-              competenciaSelecionada
-            ),
-          semana:
-            valor(mapa.semana ?? 1),
-          filial:
-            valor(mapa.filial ?? 2),
-          colaborador:
-            valor(mapa.colaborador ?? 3),
-          cargo:
-            valor(mapa.cargo ?? 4),
-          indicadores:
-            valor(mapa.indicadores ?? 5),
-          bonusFaturamento:
-            numeroPixEv(
-              valor(
-                mapa.bonusFaturamento ?? 6
-              )
-            ),
-          bonusTicket:
-            numeroPixEv(
-              valor(
-                mapa.bonusTicket ?? 7
-              )
-            ),
-          nps:
-            numeroPixEv(
-              valor(mapa.nps ?? 8)
-            ),
-          penalidade:
-            numeroPixEv(
-              valor(
-                mapa.penalidade ?? 9
-              )
-            ),
-          total:
-            numeroPixEv(
-              valor(
-                mapa.total ??
-                Math.max(
-                  0,
-                  celulas.length - 3
-                )
-              )
-            ),
-          status:
-            limparStatusPixExportacao(
-              statusBruto
-            )
-        };
-
-        if (
-          !item.colaborador ||
-          normalizarPixEv(
-            item.colaborador
-          ).includes("NENHUM")
-        ) {
-          return null;
-        }
-
-        if (
-          competenciaSelecionada &&
-          item.competencia &&
-          item.competencia !==
-            competenciaSelecionada
-        ) {
-          return null;
-        }
-
-        const statusNormalizado =
-          limparStatusPixExportacao(
-            item.status
-          );
-
-        const semanaNormalizada =
-          normalizarSemanaPixExportacao(
-            item.semana
-          );
-
-        item.semana =
-          semanaNormalizada;
-
-        if (
-          filtro.somenteHabilitados &&
-          statusNormalizado !==
-            "HABILITADO"
-        ) {
-          return null;
-        }
-
-        if (
-          filtro.semana &&
-          semanaNormalizada !==
-            filtro.semana
-        ) {
-          return null;
-        }
-
-        const filialSelecionada =
-          filialExportacaoPixNormalizada();
-
-        if (
-          filialSelecionada &&
-          normalizarPixEv(
-            item.filial
-          ) !==
-            filialSelecionada
-        ) {
-          return null;
-        }
-
-        return item;
-      }
-    )
-    .filter(Boolean);
-
-  console.info(
-    `[PIX EXPORTAÇÃO] ${resultados.length} resultado(s) preparado(s).`,
-    {
-      competencia:
-        competenciaSelecionada,
-      filtro:
-        filtro.chave,
-      filial:
-        filialExportacaoPixAtual() ||
-        "Todas as filiais",
-      tabela:
-        tabela.id || "sem-id"
-    }
-  );
-
-  /*
-   * ORDEM PARA PAGAMENTO DO FINANCEIRO
-   *
-   * A exportação em PDF e Excel passa a seguir:
-   * 1. Filial em ordem alfabética;
-   * 2. Cargo em ordem alfabética;
-   * 3. Colaborador em ordem alfabética.
-   *
-   * A ordenação afeta somente a apresentação dos relatórios.
-   * Nenhum cálculo, filtro, lançamento, evidência ou dado do
-   * Firebase/Supabase é alterado.
-   */
-  resultados.sort(
-    (a, b) => {
-      const comparar =
-        (
-          primeiro,
-          segundo
-        ) =>
-          String(
-            primeiro || ""
-          ).localeCompare(
-            String(
-              segundo || ""
-            ),
-            "pt-BR",
-            {
-              sensitivity:
-                "base",
-              numeric:
-                true
+                      <input
+                        type="file"
+                        class="ev-add-input"
+                        accept="image/jpeg,image/png,image/webp"
+                        multiple
+                        hidden
+                      >
+                    </label>
+                  `
+                  : `
+                    <button
+                      type="button"
+                      class="ev-manage-btn"
+                    >
+                      🔒 Gerenciar evidências
+                    </button>
+                  `
+                : ""
             }
-          );
+          </div>
 
-      return (
-        comparar(
-          a.filial,
-          b.filial
-        ) ||
-        comparar(
-          a.cargo,
-          b.cargo
-        ) ||
-        comparar(
-          a.colaborador,
-          b.colaborador
-        )
+          ${
+            imagensAtuais.length
+              ? `
+                <div class="ev-gallery">
+                  ${imagensAtuais.map(
+                    imagem => `
+                      <article class="ev-image-card">
+                        <a
+                          href="${escaparHtmlEvidencia(
+                            imagem.url
+                          )}"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <img
+                            src="${escaparHtmlEvidencia(
+                              imagem.url
+                            )}"
+                            alt="Evidência da filial"
+                            loading="lazy"
+                          >
+                        </a>
+
+                        <div class="ev-image-info">
+                          <strong
+                            title="${escaparHtmlEvidencia(
+                              imagem.nome ||
+                              "Evidência"
+                            )}"
+                          >
+                            ${escaparHtmlEvidencia(
+                              imagem.nome ||
+                              "Evidência"
+                            )}
+                          </strong>
+
+                          <span>
+                            Enviado por:
+                            ${escaparHtmlEvidencia(
+                              imagem.enviadoPorNome ||
+                              "Não informado"
+                            )}
+                          </span>
+
+                          <span>
+                            Data:
+                            ${escaparHtmlEvidencia(
+                              formatarDataEvidencia(
+                                imagem.criadoEmCliente
+                              )
+                            )}
+                          </span>
+
+                          ${
+                            gerenciar
+                              ? `
+                                <button
+                                  type="button"
+                                  class="ev-delete-btn"
+                                  data-imagem-id="${escaparHtmlEvidencia(
+                                    imagem.id
+                                  )}"
+                                >
+                                  Excluir evidência
+                                </button>
+                              `
+                              : ""
+                          }
+                        </div>
+                      </article>
+                    `
+                  ).join("")}
+                </div>
+              `
+              : `
+                <div class="ev-empty">
+                  <strong>
+                    Nenhuma evidência registrada
+                  </strong>
+
+                  <p>
+                    Ainda não existem imagens vinculadas
+                    a esta filial nesta competência.
+                  </p>
+                </div>
+              `
+          }
+        </div>
+      </div>
+    `;
+
+    overlay
+      .querySelector(
+        ".ev-viewer-close"
+      )
+      .addEventListener(
+        "click",
+        () => overlay.remove()
       );
-    }
-  );
 
-  return resultados;
-}
-function competenciaExibicaoPix(
-  competencia
-) {
-  if (!competencia) {
-    return "";
-  }
+    overlay
+      .querySelector(
+        ".ev-manage-btn"
+      )
+      ?.addEventListener(
+        "click",
+        async () => {
+          const autorizado =
+            await solicitarSenhaEvidencias();
 
-  const [ano, mes] =
-    competencia.split("-");
-
-  return `${mes}/${ano}`;
-}
-
-function nomeRelatorioPix(
-  extensao
-) {
-  const competencia =
-    competenciaPixAtiva() ||
-    "sem-competencia";
-
-  const filtro =
-    tipoExportacaoPixAtual();
-
-  const filial =
-    filialExportacaoPixAtual();
-
-  const sufixoFilial =
-    filial
-      ? `-${normalizarPixEv(
-          filial
-        )
-          .toLowerCase()
-          .replace(
-            /[^a-z0-9]+/g,
-            "-"
-          )
-          .replace(
-            /^-|-$/g,
-            ""
-          )}`
-      : "-todas-as-filiais";
-
-  return `pix-do-presidente-${competencia}-${filtro.chave}${sufixoFilial}.${extensao}`;
-}
-
-/* =========================================================
-   BUSCA DE TODAS AS EVIDÊNCIAS DO PIX NA COMPETÊNCIA
-========================================================= */
-
-async function buscarEvidenciasPixCompetencia(
-  competencia,
-  semanaFiltro = ""
-) {
-  if (!competencia) {
-    return [];
-  }
-
-  const semanaNormalizada =
-    normalizarSemanaPixEvidencia(
-      semanaFiltro
-    );
-
-  const semanas =
-    semanaNormalizada
-      ? [semanaNormalizada]
-      : ["S1", "S2", "S3", "S4"];
-
-  const grupos = [];
-
-  for (const semana of semanas) {
-    const numeroSemana =
-      numeroSemanaPixEvidencia(
-        semana
-      );
-
-    const pastaSemana =
-      `${CONFIG_PIX_EVIDENCIAS.pastaRaiz}/${competencia}/semana-${numeroSemana}`;
-
-    const {
-      data: pastas,
-      error
-    } = await supabase.storage
-      .from(SUPABASE_BUCKET)
-      .list(
-        pastaSemana,
-        {
-          limit: 200,
-          sortBy: {
-            column: "name",
-            order: "asc"
+          if (autorizado) {
+            renderizar(true);
           }
         }
       );
 
-    if (error) {
-      console.warn(
-        `[PIX EVIDÊNCIAS] Não foi possível listar ${semana}:`,
-        error
+    overlay
+      .querySelector(
+        ".ev-add-input"
+      )
+      ?.addEventListener(
+        "change",
+        async evento => {
+          try {
+            await enviarArquivosParaDocumento(
+              evento.target.files,
+              documento
+            );
+
+            const atualizado =
+              await buscarEvidenciaDaFilial(
+                competencia,
+                filial,
+                dn
+              );
+
+            Object.assign(
+              documento,
+              atualizado
+            );
+
+            renderizar(true);
+          } catch (erro) {
+            alert(
+              erro.message ||
+              "Não foi possível adicionar as imagens."
+            );
+          }
+        }
       );
 
-      continue;
-    }
-
-    const gruposSemana =
-      await Promise.all(
-        (pastas || [])
-          .filter(
-            item =>
-              !item.id &&
-              item.name
-          )
-          .map(
-            async pasta => {
-              const caminho =
-                `${pastaSemana}/${pasta.name}`;
-
-              const {
-                data: arquivos,
-                error: erroArquivos
-              } = await supabase.storage
-                .from(SUPABASE_BUCKET)
-                .list(
-                  caminho,
-                  {
-                    limit:
-                      CONFIG_PIX_EVIDENCIAS.limiteArquivos,
-                    sortBy: {
-                      column:
-                        "created_at",
-                      order:
-                        "asc"
-                    }
-                  }
+    overlay
+      .querySelectorAll(
+        ".ev-delete-btn"
+      )
+      .forEach(
+        botao =>
+          botao.addEventListener(
+            "click",
+            async () => {
+              const imagem =
+                documento.imagens.find(
+                  item =>
+                    item.id ===
+                    botao.dataset.imagemId
                 );
 
-              if (erroArquivos) {
-                throw erroArquivos;
+              if (!imagem) {
+                return;
               }
-
-              let dn = "";
-              let filial = "";
 
               if (
-                pasta.name.startsWith(
-                  "sem-dn-"
+                !confirm(
+                  "Excluir esta evidência para toda a filial?"
                 )
               ) {
-                filial =
-                  pasta.name
-                    .slice(
-                      "sem-dn-".length
-                    )
-                    .replace(
-                      /-/g,
-                      " "
-                    )
-                    .toUpperCase();
-              } else {
-                const partes =
-                  pasta.name.split("-");
-
-                dn =
-                  /^\d+$/.test(partes[0])
-                    ? partes.shift()
-                    : "";
-
-                filial =
-                  partes
-                    .join(" ")
-                    .toUpperCase();
+                return;
               }
 
-              dn =
-                resolverDnPixPorFilial(
-                  filial,
-                  dn
+              await excluirImagemPorDocumento(
+                documento,
+                imagem
+              );
+
+              documento.imagens =
+                documento.imagens.filter(
+                  item =>
+                    item.id !== imagem.id
                 );
 
-              return {
-                competencia,
-                semana,
-                numeroSemana,
-                dn,
-                filial,
-                imagens:
-                  (arquivos || [])
-                    .filter(
-                      item =>
-                        item.id &&
-                        item.name
-                    )
-                    .map(
-                      item => {
-                        const caminhoImagem =
-                          `${caminho}/${item.name}`;
-
-                        return {
-                          nome:
-                            item.name,
-                          nomeOriginal:
-                            item.metadata?.nome_original ||
-                            item.name,
-                          caminho:
-                            caminhoImagem,
-                          url:
-                            urlPublicaPix(
-                              caminhoImagem
-                            )
-                        };
-                      }
-                    )
-              };
+              renderizar(true);
             }
           )
       );
+  };
 
-    grupos.push(
-      ...gruposSemana.filter(
-        grupo =>
-          grupo.imagens.length
-      )
-    );
-  }
+  renderizar(false);
 
-  return grupos.sort(
-    (a, b) =>
-      a.numeroSemana - b.numeroSemana ||
-      a.filial.localeCompare(
-        b.filial,
-        "pt-BR"
-      )
+  document.body.appendChild(
+    overlay
+  );
+
+  overlay.addEventListener(
+    "click",
+    evento => {
+      if (
+        evento.target === overlay
+      ) {
+        overlay.remove();
+      }
+    }
   );
 }
 
-function imagemRemotaParaDataPix(url) {
+async function converterImagemParaPngDataUrl(
+  url
+) {
   return new Promise(
     (resolve, reject) => {
       const imagem =
@@ -2568,33 +1589,31 @@ function imagemRemotaParaDataPix(url) {
           );
 
         canvas.width =
-          imagem.naturalWidth;
+          imagem.naturalWidth ||
+          imagem.width;
 
         canvas.height =
-          imagem.naturalHeight;
+          imagem.naturalHeight ||
+          imagem.height;
 
-        canvas
-          .getContext("2d")
-          .drawImage(
-            imagem,
-            0,
-            0
-          );
+        const contexto =
+          canvas.getContext("2d");
 
-        const dataUrl =
-          canvas.toDataURL(
-            "image/jpeg",
-            0.88
-          );
+        contexto.drawImage(
+          imagem,
+          0,
+          0
+        );
 
         resolve({
-          dataUrl,
-          base64:
-            dataUrl.split(",")[1],
+          dataUrl:
+            canvas.toDataURL(
+              "image/png"
+            ),
           largura:
-            imagem.naturalWidth,
+            canvas.width,
           altura:
-            imagem.naturalHeight
+            canvas.height
         });
       };
 
@@ -2602,413 +1621,270 @@ function imagemRemotaParaDataPix(url) {
         () =>
           reject(
             new Error(
-              "Não foi possível carregar uma evidência."
+              "Não foi possível carregar a imagem da evidência."
             )
           );
 
-      imagem.src = url;
+      imagem.src =
+        `${url}${
+          url.includes("?")
+            ? "&"
+            : "?"
+        }auditoria=${Date.now()}`;
     }
   );
 }
 
-/* =========================================================
-   PDF EXCLUSIVO DO PIX
-========================================================= */
-
-async function exportarPdfPixIndependente() {
+function filiaisPermitidasDaExportacao(
+  opcoes = {}
+) {
   const resultados =
-    dadosPixParaExportar();
+    Array.isArray(
+      opcoes.resultados
+    )
+      ? opcoes.resultados
+      : [];
 
-  if (!resultados.length) {
-    alert(
-      "Não existem resultados do Pix para a competência e o filtro selecionados. Verifique o mês e altere para Todos os resultados, se necessário."
+  return new Set(
+    resultados.map(
+      item =>
+        normalizarEvidencia(
+          item.filial
+        )
+    )
+  );
+}
+
+async function documentosParaExportacao(
+  competencia,
+  opcoes = {}
+) {
+  const permitidas =
+    filiaisPermitidasDaExportacao(
+      opcoes
     );
 
+  const documentos =
+    await listarDocumentosEvidencias();
+
+  return documentos.filter(
+    item =>
+      String(
+        item.competencia ||
+        ""
+      ) === String(
+        competencia || ""
+      ) &&
+      (
+        !permitidas.size ||
+        permitidas.has(
+          normalizarEvidencia(
+            item.filial
+          )
+        )
+      ) &&
+      Array.isArray(
+        item.imagens
+      ) &&
+      item.imagens.length
+  );
+}
+
+async function anexarAoPdf(
+  pdf,
+  competencia,
+  opcoes = {}
+) {
+  const documentos =
+    await documentosParaExportacao(
+      competencia,
+      opcoes
+    );
+
+  if (!documentos.length) {
     return;
   }
 
-  if (
-    !window.jspdf?.jsPDF
-  ) {
-    throw new Error(
-      "Biblioteca jsPDF não encontrada."
-    );
-  }
-
-  const competencia =
-    competenciaPixAtiva();
-
-  const filtroExportacao =
-    tipoExportacaoPixAtual();
-
-  const tipo =
-    rotuloTipoExportacaoPix(
-      filtroExportacao
+  for (const documento of documentos) {
+    pdf.addPage(
+      "a4",
+      "landscape"
     );
 
-  const documento =
-    new window.jspdf.jsPDF({
-      orientation:
-        "landscape",
-      unit:
-        "mm",
-      format:
-        "a4"
-    });
+    const larguraPagina =
+      pdf.internal.pageSize.getWidth();
 
-  documento.setFillColor(
-    11,
-    49,
-    84
-  );
-
-  documento.rect(
-    0,
-    0,
-    297,
-    34,
-    "F"
-  );
-
-  documento.setTextColor(
-    255,
-    255,
-    255
-  );
-
-  documento.setFont(
-    "helvetica",
-    "bold"
-  );
-
-  documento.setFontSize(
-    20
-  );
-
-  documento.text(
-    "PIX DO PRESIDENTE",
-    12,
-    14
-  );
-
-  documento.setFont(
-    "helvetica",
-    "normal"
-  );
-
-  documento.setFontSize(
-    9
-  );
-
-  documento.text(
-    `Competência: ${competenciaExibicaoPix(competencia)}`,
-    12,
-    23
-  );
-
-  documento.text(
-    `Exportação: ${tipo} | Filial: ${
-      filialExportacaoPixAtual() ||
-      "Todas as filiais"
-    }`,
-    12,
-    29
-  );
-
-  const total =
-    resultados.reduce(
-      (soma, item) =>
-        soma + item.total,
-      0
+    pdf.setFillColor(
+      7,
+      43,
+      77
     );
 
-  const filiais =
-    new Set(
-      resultados.map(
-        item =>
-          item.filial
-      )
-    ).size;
-
-  documento.autoTable({
-    startY: 40,
-    margin: {
-      left: 10,
-      right: 10
-    },
-    head: [[
-      "Competência",
-      "Semana",
-      "Filial",
-      "Colaborador",
-      "Cargo",
-      "Indicadores",
-      "Bonif. faturamento",
-      "Bônus ticket",
-      "NPS",
-      "Penalidade",
-      "Total",
-      "Status"
-    ]],
-    body:
-      resultados.map(
-        item => [
-          competenciaExibicaoPix(
-            item.competencia
-          ),
-          item.semana,
-          item.filial,
-          item.colaborador,
-          item.cargo,
-          item.indicadores,
-          moedaPixEv(
-            item.bonusFaturamento
-          ),
-          moedaPixEv(
-            item.bonusTicket
-          ),
-          moedaPixEv(
-            item.nps
-          ),
-          moedaPixEv(
-            item.penalidade
-          ),
-          moedaPixEv(
-            item.total
-          ),
-          limparStatusPixExportacao(
-            item.status
-          )
-        ]
-      ),
-    theme:
-      "grid",
-    styles: {
-      font:
-        "helvetica",
-      fontSize:
-        6.2,
-      cellPadding:
-        1.7,
-      valign:
-        "middle",
-      lineColor:
-        [222, 230, 235],
-      lineWidth:
-        0.15
-    },
-    headStyles: {
-      fillColor:
-        [11, 122, 83],
-      textColor:
-        [255, 255, 255],
-      fontStyle:
-        "bold"
-    },
-    alternateRowStyles: {
-      fillColor:
-        [247, 250, 252]
-    },
-    didParseCell:
-      dados => {
-        if (
-          dados.section === "body" &&
-          dados.column.index === 11
-        ) {
-          const status =
-            limparStatusPixExportacao(
-              dados.cell.raw
-            );
-
-          dados.cell.text = [
-            status
-          ];
-
-          const habilitado =
-            status ===
-            "HABILITADO";
-
-          dados.cell.styles.fontStyle =
-            "bold";
-
-          dados.cell.styles.textColor =
-            habilitado
-              ? [8, 115, 68]
-              : [164, 33, 33];
-        }
-      }
-  });
-
-  const evidencias =
-    (
-      await buscarEvidenciasPixCompetencia(
-        competencia,
-        filtroExportacao.semana
-      )
-    ).filter(
-      grupoEvidenciaPertenceFilialPix
+    pdf.rect(
+      0,
+      0,
+      larguraPagina,
+      27,
+      "F"
     );
 
-  for (const grupo of evidencias) {
-    documento.addPage();
-
-    documento.setTextColor(
-      15,
-      35,
-      52
+    pdf.setTextColor(
+      255,
+      255,
+      255
     );
 
-    documento.setFont(
+    pdf.setFont(
       "helvetica",
       "bold"
     );
 
-    documento.setFontSize(
-      16
-    );
+    pdf.setFontSize(15);
 
-    documento.text(
-      `EVIDÊNCIAS — PIX DO PRESIDENTE — ${grupo.semana}`,
-      14,
-      17
-    );
-
-    documento.setFontSize(
+    pdf.text(
+      "EVIDÊNCIAS PARA AUDITORIA",
+      12,
       11
     );
 
-    documento.text(
-      `Semana: ${grupo.semana} | Filial: ${grupo.dn ? `${grupo.dn} - ` : ""}${grupo.filial}`,
-      14,
-      26
+    pdf.setFontSize(9);
+
+    pdf.setFont(
+      "helvetica",
+      "normal"
     );
 
-    documento.text(
-      `Competência: ${competenciaExibicaoPix(competencia)}`,
-      14,
-      33
+    pdf.text(
+      `${documento.dn || "DN não informado"} - ${documento.filial || ""} · Competência ${competencia}`,
+      12,
+      19
     );
 
+    pdf.setTextColor(
+      35,
+      49,
+      60
+    );
+
+    pdf.setFontSize(8);
+
+    pdf.text(
+      `Total de evidências anexadas: ${documento.imagens.length}`,
+      12,
+      34
+    );
+
+    let x = 12;
     let y = 41;
+    const larguraImagem = 82;
+    const alturaImagem = 55;
+    const espacamento = 7;
 
-    for (const item of grupo.imagens) {
+    for (
+      let indice = 0;
+      indice < documento.imagens.length;
+      indice += 1
+    ) {
       const imagem =
-        await imagemRemotaParaDataPix(
-          item.url
-        );
-
-      const proporcao =
-        Math.min(
-          255 /
-          imagem.largura,
-          125 /
-          imagem.altura
-        );
-
-      const largura =
-        imagem.largura *
-        proporcao;
-
-      const altura =
-        imagem.altura *
-        proporcao;
+        documento.imagens[indice];
 
       if (
-        y +
-        altura +
-        16 >
-        195
+        x + larguraImagem >
+        larguraPagina - 10
       ) {
-        documento.addPage();
-        y = 18;
+        x = 12;
+        y += alturaImagem + 18;
       }
 
-      const x =
-        (297 - largura) /
-        2;
+      if (y + alturaImagem > 190) {
+        pdf.addPage(
+          "a4",
+          "landscape"
+        );
 
-      documento.addImage(
-        imagem.dataUrl,
-        "JPEG",
+        y = 20;
+        x = 12;
+      }
+
+      try {
+        const convertida =
+          await converterImagemParaPngDataUrl(
+            imagem.url
+          );
+
+        pdf.addImage(
+          convertida.dataUrl,
+          "PNG",
+          x,
+          y,
+          larguraImagem,
+          alturaImagem,
+          undefined,
+          "FAST"
+        );
+      } catch {
+        pdf.setDrawColor(
+          190,
+          202,
+          210
+        );
+
+        pdf.rect(
+          x,
+          y,
+          larguraImagem,
+          alturaImagem
+        );
+
+        pdf.text(
+          "Imagem indisponível",
+          x + 5,
+          y + 12
+        );
+      }
+
+      pdf.setFontSize(6.5);
+
+      pdf.text(
+        `${indice + 1}. ${(imagem.nome || "Evidência").slice(0, 45)}`,
         x,
-        y,
-        largura,
-        altura
+        y + alturaImagem + 5
       );
 
-      y += altura + 5;
-
-      documento.setFont(
-        "helvetica",
-        "normal"
+      pdf.text(
+        `Enviado por: ${(imagem.enviadoPorNome || "Não informado").slice(0, 40)}`,
+        x,
+        y + alturaImagem + 9
       );
 
-      documento.setFontSize(
-        9
-      );
-
-      documento.text(
-        `${grupo.semana} — ${grupo.dn ? `${grupo.dn} - ` : ""}${grupo.filial}`,
-        14,
-        y
-      );
-
-      y += 12;
+      x +=
+        larguraImagem +
+        espacamento;
     }
   }
-
-  documento.save(
-    nomeRelatorioPix("pdf")
-  );
 }
 
-/* =========================================================
-   EXCEL EXCLUSIVO DO PIX
-========================================================= */
-
-async function exportarExcelPixIndependente() {
-  const resultados =
-    dadosPixParaExportar();
-
-  if (!resultados.length) {
-    alert(
-      "Não existem resultados do Pix para a competência e o filtro selecionados. Verifique o mês e altere para Todos os resultados, se necessário."
+async function anexarAoExcel(
+  livro,
+  competencia,
+  opcoes = {}
+) {
+  const documentos =
+    await documentosParaExportacao(
+      competencia,
+      opcoes
     );
 
+  if (!documentos.length) {
     return;
   }
 
-  if (!window.ExcelJS) {
-    throw new Error(
-      "Biblioteca ExcelJS não encontrada."
-    );
-  }
-
-  const competencia =
-    competenciaPixAtiva();
-
-  const filtroExportacao =
-    tipoExportacaoPixAtual();
-
-  const workbook =
-    new ExcelJS.Workbook();
-
-  workbook.creator =
-    "Sistema de Campanhas Pós-Vendas";
-
-  workbook.created =
-    new Date();
-
   const planilha =
-    workbook.addWorksheet(
-      "Pix do Presidente",
+    livro.addWorksheet(
+      "Evidências",
       {
         views: [
           {
-            state:
-              "frozen",
-            ySplit:
-              8,
             showGridLines:
               false
           }
@@ -3017,237 +1893,160 @@ async function exportarExcelPixIndependente() {
     );
 
   planilha.columns = [
-    { key: "competencia", width: 14 },
-    { key: "semana", width: 11 },
-    { key: "filial", width: 18 },
-    { key: "colaborador", width: 29 },
-    { key: "cargo", width: 29 },
-    { key: "indicadores", width: 42 },
-    { key: "bonusFaturamento", width: 19 },
-    { key: "bonusTicket", width: 17 },
-    { key: "nps", width: 14 },
-    { key: "penalidade", width: 15 },
-    { key: "total", width: 16 },
-    { key: "status", width: 18 }
+    {
+      key: "a",
+      width: 18
+    },
+    {
+      key: "b",
+      width: 25
+    },
+    {
+      key: "c",
+      width: 25
+    },
+    {
+      key: "d",
+      width: 25
+    },
+    {
+      key: "e",
+      width: 25
+    },
+    {
+      key: "f",
+      width: 25
+    }
   ];
 
-  planilha.mergeCells(
-    "A1:L2"
-  );
+  let linha = 1;
 
-  const titulo =
-    planilha.getCell(
-      "A1"
+  for (const documento of documentos) {
+    planilha.mergeCells(
+      linha,
+      1,
+      linha,
+      6
     );
 
-  titulo.value =
-    "PIX DO PRESIDENTE";
-
-  titulo.font = {
-    bold:
-      true,
-    size:
-      20,
-    color: {
-      argb:
-        "FFFFFFFF"
-    }
-  };
-
-  titulo.fill = {
-    type:
-      "pattern",
-    pattern:
-      "solid",
-    fgColor: {
-      argb:
-        "FF0B3154"
-    }
-  };
-
-  titulo.alignment = {
-    vertical:
-      "middle",
-    horizontal:
-      "left"
-  };
-
-  planilha.mergeCells(
-    "A3:L3"
-  );
-
-  planilha.getCell(
-    "A3"
-  ).value =
-    `Competência: ${competenciaExibicaoPix(competencia)} | Filial: ${
-      filialExportacaoPixAtual() ||
-      "Todas as filiais"
-    }`;
-
-  planilha.getCell(
-    "A3"
-  ).font = {
-    bold:
-      true,
-    color: {
-      argb:
-        "FF0B3154"
-    }
-  };
-
-  const total =
-    resultados.reduce(
-      (soma, item) =>
-        soma + item.total,
-      0
-    );
-
-  const habilitados =
-    resultados.filter(
-      item =>
-        normalizarPixEv(
-          item.status
-        ) === "HABILITADO"
-    ).length;
-
-  const filiais =
-    new Set(
-      resultados.map(
-        item =>
-          item.filial
-      )
-    ).size;
-
-  planilha.getCell("A5").value = "Resultados";
-  planilha.getCell("A6").value = resultados.length;
-  planilha.getCell("D5").value = "Habilitados";
-  planilha.getCell("D6").value = habilitados;
-  planilha.getCell("G5").value = "Filiais";
-  planilha.getCell("G6").value = filiais;
-  planilha.getCell("J5").value = "Total";
-  planilha.getCell("J6").value = total;
-
-  ["A5", "D5", "G5", "J5"].forEach(
-    endereco => {
-      planilha.getCell(endereco).font = {
-        color: {
-          argb:
-            "FF526572"
-        }
-      };
-    }
-  );
-
-  planilha.getCell("J6").numFmt =
-    'R$ #,##0.00';
-
-  const cabecalho =
-    [
-      "Competência",
-      "Semana",
-      "Filial",
-      "Colaborador",
-      "Cargo",
-      "Indicadores",
-      "Bonif. faturamento",
-      "Bônus ticket",
-      "NPS",
-      "Penalidade",
-      "Total",
-      "Status"
-    ];
-
-  planilha.addRow([]);
-
-  const linhaCabecalho =
-    planilha.addRow(
-      cabecalho
-    );
-
-  linhaCabecalho.eachCell(
-    celula => {
-      celula.font = {
-        bold:
-          true,
-        color: {
-          argb:
-            "FFFFFFFF"
-        }
-      };
-
-      celula.fill = {
-        type:
-          "pattern",
-        pattern:
-          "solid",
-        fgColor: {
-          argb:
-            "FF0B7A53"
-        }
-      };
-
-      celula.alignment = {
-        vertical:
-          "middle",
-        horizontal:
-          "center"
-      };
-    }
-  );
-
-  resultados.forEach(
-    item => {
-      const linha =
-        planilha.addRow([
-          competenciaExibicaoPix(
-            item.competencia
-          ),
-          item.semana,
-          item.filial,
-          item.colaborador,
-          item.cargo,
-          item.indicadores,
-          item.bonusFaturamento,
-          item.bonusTicket,
-          item.nps,
-          item.penalidade,
-          item.total,
-          limparStatusPixExportacao(
-            item.status
-          )
-        ]);
-
-      [7, 8, 9, 10, 11].forEach(
-        coluna => {
-          linha.getCell(coluna).numFmt =
-            'R$ #,##0.00';
-        }
+    const titulo =
+      planilha.getCell(
+        linha,
+        1
       );
 
-      const status =
-        linha.getCell(12);
+    titulo.value =
+      `${documento.dn || "DN não informado"} - ${documento.filial || ""} · ${competencia}`;
 
-      status.font = {
-        bold:
-          true,
-        color: {
-          argb:
-            normalizarPixEv(
-              limparStatusPixExportacao(
-                item.status
-              )
-            ) === "HABILITADO"
-              ? "FF087344"
-              : "FFA42121"
-        }
+    titulo.font = {
+      bold: true,
+      color: {
+        argb: "FFFFFFFF"
+      },
+      size: 13
+    };
+
+    titulo.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: {
+        argb: "FF0B7A53"
+      }
+    };
+
+    titulo.alignment = {
+      vertical: "middle"
+    };
+
+    planilha.getRow(
+      linha
+    ).height = 27;
+
+    linha += 1;
+
+    planilha.mergeCells(
+      linha,
+      1,
+      linha,
+      6
+    );
+
+    planilha.getCell(
+      linha,
+      1
+    ).value =
+      `Total de evidências: ${documento.imagens.length} | Última atualização: ${formatarDataEvidencia(documento.atualizadoEm)}`;
+
+    linha += 2;
+
+    let coluna = 1;
+
+    for (const imagem of documento.imagens) {
+      if (coluna > 3) {
+        coluna = 1;
+        linha += 12;
+      }
+
+      try {
+        const convertida =
+          await converterImagemParaPngDataUrl(
+            imagem.url
+          );
+
+        const idImagem =
+          livro.addImage({
+            base64:
+              convertida.dataUrl,
+            extension:
+              "png"
+          });
+
+        planilha.addImage(
+          idImagem,
+          {
+            tl: {
+              col:
+                coluna - 1,
+              row:
+                linha - 1
+            },
+            ext: {
+              width: 220,
+              height: 135
+            }
+          }
+        );
+      } catch {
+        planilha.getCell(
+          linha,
+          coluna
+        ).value =
+          "Imagem indisponível";
+      }
+
+      const celulaLegenda =
+        planilha.getCell(
+          linha + 9,
+          coluna
+        );
+
+      celulaLegenda.value =
+        `${imagem.nome || "Evidência"}\nEnviado por: ${imagem.enviadoPorNome || "Não informado"}\nData: ${formatarDataEvidencia(imagem.criadoEmCliente)}`;
+
+      celulaLegenda.alignment = {
+        wrapText: true,
+        vertical: "top"
       };
-    }
-  );
 
-  planilha.autoFilter = {
-    from: "A8",
-    to: "L8"
-  };
+      celulaLegenda.font = {
+        size: 9
+      };
+
+      coluna += 2;
+    }
+
+    linha += 13;
+  }
 
   planilha.pageSetup = {
     orientation:
@@ -3257,833 +2056,1477 @@ async function exportarExcelPixIndependente() {
     fitToWidth:
       1,
     fitToHeight:
-      0,
-    paperSize:
-      9
+      0
   };
-
-  const evidencias =
-    (
-      await buscarEvidenciasPixCompetencia(
-        competencia,
-        filtroExportacao.semana
-      )
-    ).filter(
-      grupoEvidenciaPertenceFilialPix
-    );
-
-  const planilhaEvidencias =
-    workbook.addWorksheet(
-      "Evidências Pix",
-      {
-        views: [
-          {
-            showGridLines:
-              false
-          }
-        ]
-      }
-    );
-
-  planilhaEvidencias.columns = [
-    { width: 4 },
-    { width: 23 },
-    { width: 23 },
-    { width: 23 },
-    { width: 23 },
-    { width: 4 }
-  ];
-
-  planilhaEvidencias.mergeCells(
-    "A1:F2"
-  );
-
-  const tituloEvidencias =
-    planilhaEvidencias.getCell(
-      "A1"
-    );
-
-  tituloEvidencias.value =
-    "EVIDÊNCIAS — PIX DO PRESIDENTE";
-
-  tituloEvidencias.font = {
-    bold:
-      true,
-    size:
-      18,
-    color: {
-      argb:
-        "FFFFFFFF"
-    }
-  };
-
-  tituloEvidencias.fill = {
-    type:
-      "pattern",
-    pattern:
-      "solid",
-    fgColor: {
-      argb:
-        "FF0B3154"
-    }
-  };
-
-  tituloEvidencias.alignment = {
-    vertical:
-      "middle",
-    horizontal:
-      "left"
-  };
-
-  let linhaAtual = 4;
-
-  if (!evidencias.length) {
-    planilhaEvidencias.mergeCells(
-      `A${linhaAtual}:F${linhaAtual + 1}`
-    );
-
-    planilhaEvidencias.getCell(
-      `A${linhaAtual}`
-    ).value =
-      "Nenhuma evidência cadastrada para a competência e semana selecionadas.";
-  }
-
-  for (const grupo of evidencias) {
-    planilhaEvidencias.mergeCells(
-      `A${linhaAtual}:F${linhaAtual}`
-    );
-
-    const cabecalhoFilial =
-      planilhaEvidencias.getCell(
-        `A${linhaAtual}`
-      );
-
-    cabecalhoFilial.value =
-      `${grupo.semana} — ${grupo.dn ? `${grupo.dn} - ` : ""}${grupo.filial}`;
-
-    cabecalhoFilial.font = {
-      bold:
-        true,
-      size:
-        13,
-      color: {
-        argb:
-          "FFFFFFFF"
-      }
-    };
-
-    cabecalhoFilial.fill = {
-      type:
-        "pattern",
-      pattern:
-        "solid",
-      fgColor: {
-        argb:
-          "FF0B7A53"
-      }
-    };
-
-    linhaAtual += 1;
-
-    let colunaImagem = 1;
-
-    for (const item of grupo.imagens) {
-      if (colunaImagem > 3) {
-        colunaImagem = 1;
-        linhaAtual += 11;
-      }
-
-      const imagem =
-        await imagemRemotaParaDataPix(
-          item.url
-        );
-
-      const imagemId =
-        workbook.addImage({
-          base64:
-            imagem.base64,
-          extension:
-            "jpeg"
-        });
-
-      const colunaInicial =
-        colunaImagem === 1
-          ? 1
-          : colunaImagem === 2
-            ? 3
-            : 5;
-
-      planilhaEvidencias.addImage(
-        imagemId,
-        {
-          tl: {
-            col:
-              colunaInicial - 1,
-            row:
-              linhaAtual - 1
-          },
-          ext: {
-            width:
-              180,
-            height:
-              120
-          },
-          editAs:
-            "oneCell"
-        }
-      );
-
-      planilhaEvidencias.getRow(
-        linhaAtual
-      ).height = 92;
-
-      planilhaEvidencias.getCell(
-        linhaAtual + 8,
-        colunaInicial
-      ).value =
-        `${grupo.semana} — ${grupo.filial}`;
-
-      planilhaEvidencias.getCell(
-        linhaAtual + 8,
-        colunaInicial
-      ).font = {
-        bold:
-          true,
-        size:
-          9
-      };
-
-      colunaImagem += 1;
-    }
-
-    linhaAtual += 13;
-  }
-
-  const buffer =
-    await workbook.xlsx.writeBuffer();
-
-  const blob =
-    new Blob(
-      [buffer],
-      {
-        type:
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      }
-    );
-
-  const link =
-    document.createElement(
-      "a"
-    );
-
-  link.href =
-    URL.createObjectURL(
-      blob
-    );
-
-  link.download =
-    nomeRelatorioPix("xlsx");
-
-  link.click();
-
-  URL.revokeObjectURL(
-    link.href
-  );
 }
 
-/* =========================================================
-   INTERCEPTAÇÃO INDEPENDENTE DOS BOTÕES
-========================================================= */
-
-function configurarExportacaoPixIndependente() {
-  const botaoExcel =
-    pixEv("#btnExportarExcel");
-
-  const botaoPdf =
-    pixEv("#btnExportarPdf");
-
-  botaoExcel?.addEventListener(
-    "click",
-    evento => {
-      if (!moduloPixAtivo()) {
-        return;
-      }
-
-      evento.preventDefault();
-      evento.stopPropagation();
-      evento.stopImmediatePropagation();
-
-      exportarExcelPixIndependente()
-        .catch(
-          erro => {
-            console.error(
-              "[PIX EXCEL] Erro:",
-              erro
-            );
-
-            alert(
-              erro.message ||
-              "Não foi possível exportar o Excel do Pix."
-            );
-          }
-        );
-    },
-    true
-  );
-
-  botaoPdf?.addEventListener(
-    "click",
-    evento => {
-      if (!moduloPixAtivo()) {
-        return;
-      }
-
-      evento.preventDefault();
-      evento.stopPropagation();
-      evento.stopImmediatePropagation();
-
-      exportarPdfPixIndependente()
-        .catch(
-          erro => {
-            console.error(
-              "[PIX PDF] Erro:",
-              erro
-            );
-
-            alert(
-              erro.message ||
-              "Não foi possível exportar o PDF do Pix."
-            );
-          }
-        );
-    },
-    true
-  );
-}
-
-function configurarContextoPixEvidencias() {
-  garantirHtmlEvidenciasPix();
-
-  [
-    pixCampoCompetencia(),
-    pixCampoSemana(),
-    pixCampoFilial(),
-    pixCampoParticipante()
-  ]
-    .filter(Boolean)
-    .forEach(campo => {
-      if (campo.dataset.pixEvidenceBound === "true") {
-        return;
-      }
-
-      campo.dataset.pixEvidenceBound = "true";
-
-      campo.addEventListener(
-        "change",
-        carregarPixEvidencias
-      );
-    });
-
-  document.addEventListener(
-    "click",
-    evento => {
-      if (
-        evento.target.closest(
-          "#btnNovoLancamentoPix, " +
-          "#btnNovoPixPresidente, " +
-          "[data-pix-edit]"
-        )
-      ) {
-        setTimeout(
-          carregarPixEvidencias,
-          180
-        );
-      }
-    }
-  );
-}
-
-function iniciarPixEvidencias() {
-  garantirHtmlEvidenciasPix();
-  garantirModalPixEvidencias();
-  configurarContextoPixEvidencias();
-  observarTabelasPix();
-  configurarExportacaoPixIndependente();
-  garantirOpcoesExportacaoPix();
-  renderizarPixEvidencias();
-
-  console.info(
-    "[PIX EVIDÊNCIAS] Módulo independente carregado."
-  );
-}
-
-if (
-  document.readyState ===
-  "loading"
-) {
-  document.addEventListener(
-    "DOMContentLoaded",
-    iniciarPixEvidencias,
-    {
-      once: true
-    }
-  );
-} else {
-  iniciarPixEvidencias();
-}
-
-
-document.addEventListener(
-  "click",
-  evento => {
-    const abriuModalPix =
-      evento.target.closest(
-        "#btnNovoLancamentoPix, " +
-        "#btnNovoPixPresidente, " +
-        "#pixBtnNovoLancamento, " +
-        "#pix-lancamentos .primary, " +
-        "#pixTabelaLancamentos .mini-btn"
-      );
-
-    if (!abriuModalPix) {
-      return;
-    }
-
-    setTimeout(
-      () => {
-        garantirHtmlEvidenciasPix();
-        carregarPixEvidencias();
-      },
-      220
-    );
-  },
-  true
-);
-
-
-/*
- * Atualiza as opções do seletor ao entrar no Pix.
- * O pequeno atraso permite que o module-switcher finalize
- * a troca de módulo antes da leitura do estado.
- */
-document.addEventListener(
-  "click",
-  evento => {
-    if (
-      evento.target.closest(
-        '[data-module-toggle="pix"], ' +
-        '.pix-menu-btn, ' +
-        '[data-pix-view]'
-      )
-    ) {
-      setTimeout(
-        garantirOpcoesExportacaoPix,
-        120
-      );
-    }
-  },
-  true
-);
-
-new MutationObserver(
-  () => {
-    if (
-      document.body.classList.contains(
-        "modulo-pix-ativo"
-      )
-    ) {
-      garantirOpcoesExportacaoPix();
-    }
-  }
-).observe(
-  document.body,
-  {
-    attributes: true,
-    attributeFilter: [
-      "class"
-    ],
-    subtree: false
-  }
-);
-
-window.evidenciasPix = {
-  carregar:
-    carregarPixEvidencias,
-  abrir:
-    abrirAlbumPix,
-  exportarPdf:
-    exportarPdfPixIndependente,
-  exportarExcel:
-    exportarExcelPixIndependente,
-  buscarPorCompetencia:
-    buscarEvidenciasPixCompetencia,
-  buscarPorCompetenciaESemana:
-    buscarEvidenciasPixCompetencia
-};
-
-
-/* =========================================================
-   BARRA HORIZONTAL SUPERIOR — APURAÇÃO DO PIX
-   Versão: 2026.08.06-01
-
-   Esta implementação é adicional:
-   - não substitui funções existentes;
-   - não altera cálculos, filtros ou exportações;
-   - mantém a barra original inferior;
-   - cria uma segunda barra sincronizada acima da tabela.
-========================================================= */
-
-function garantirEstiloBarraSuperiorPix() {
+function configurarBotoesVisualizacaoEvidencias() {
   if (
-    document.querySelector(
-      "#pixBarraHorizontalSuperiorStyle"
-    )
+    document.documentElement.dataset
+      .evidenciasProdutivosCliqueConfigurado === "true"
   ) {
     return;
   }
 
-  const estilo =
-    document.createElement(
-      "style"
-    );
+  document.documentElement.dataset
+    .evidenciasProdutivosCliqueConfigurado = "true";
 
-  estilo.id =
-    "pixBarraHorizontalSuperiorStyle";
+  document.addEventListener(
+    "click",
+    evento => {
+      const botao =
+        evento.target.closest(
+          ".evidence-view-btn"
+        );
 
-  estilo.textContent = `
-    .pix-scroll-superior {
-      display: none;
-      width: 100%;
-      height: 18px;
-      margin: 0 0 8px;
-      overflow-x: auto;
-      overflow-y: hidden;
-      border: 1px solid #d8e2ea;
-      border-radius: 8px;
-      background: #f5f8fa;
-      scrollbar-color: #647b8d #e7edf2;
-      scrollbar-width: auto;
+      if (!botao) {
+        return;
+      }
+
+      evento.preventDefault();
+      evento.stopPropagation();
+
+      abrirVisualizadorEvidencias(
+        botao.dataset
+          .evidenciaCompetencia,
+        botao.dataset
+          .evidenciaFilial,
+        botao.dataset
+          .evidenciaDn
+      ).catch(
+        erro => {
+          console.error(
+            "Erro ao abrir evidências:",
+            erro
+          );
+
+          alert(
+            erro.message ||
+            "Não foi possível abrir as evidências."
+          );
+        }
+      );
     }
-
-    .pix-scroll-superior.ativo {
-      display: block;
-    }
-
-    .pix-scroll-superior-conteudo {
-      height: 1px;
-      min-width: 100%;
-      pointer-events: none;
-    }
-
-    .pix-scroll-superior::-webkit-scrollbar {
-      height: 13px;
-    }
-
-    .pix-scroll-superior::-webkit-scrollbar-track {
-      border-radius: 8px;
-      background: #e7edf2;
-    }
-
-    .pix-scroll-superior::-webkit-scrollbar-thumb {
-      border: 3px solid #e7edf2;
-      border-radius: 999px;
-      background: #647b8d;
-    }
-
-    .pix-scroll-superior::-webkit-scrollbar-thumb:hover {
-      background: #38556c;
-    }
-  `;
-
-  document.head.appendChild(
-    estilo
   );
 }
 
-function localizarTabelaApuracaoPixCompleta() {
-  const corpo =
-    document.querySelector(
-      "#pixTabelaApuracao"
+function normalizarEvidencia(valor) {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toUpperCase();
+}
+
+function slugEvidencia(valor) {
+  return normalizarEvidencia(valor)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function contextoEvidenciaAtual() {
+  const competencia =
+    String(
+      evidEl(
+        "#lancamentoCompetencia"
+      )?.value ||
+      ""
+    ).trim();
+
+  const filialSelect =
+    evidEl(
+      "#lancamentoFilial"
     );
 
-  if (!corpo) {
+  const funcionarioSelect =
+    evidEl(
+      "#lancamentoFuncionario"
+    );
+
+  const funcionarioId =
+    String(
+      funcionarioSelect?.value ||
+      ""
+    ).trim();
+
+  const funcionario =
+    typeof window.funcionarioPorId ===
+    "function"
+      ? window.funcionarioPorId(
+          funcionarioId
+        )
+      : null;
+
+  /*
+   * A filial pode vir do select ou do próprio funcionário.
+   * Essa redundância evita que o upload fique bloqueado
+   * quando outro trecho do sistema preenche os campos
+   * programaticamente.
+   */
+  const filialTexto =
+    String(
+      filialSelect
+        ?.selectedOptions?.[0]
+        ?.textContent ||
+      ""
+    )
+      .replace(
+        /^\d+\s*-\s*/,
+        ""
+      )
+      .trim();
+
+  const filial =
+    String(
+      funcionario?.filial ||
+      filialSelect?.value ||
+      filialTexto ||
+      ""
+    ).trim();
+
+  const dn =
+    String(
+      funcionario?.dn ||
+      filialSelect
+        ?.selectedOptions?.[0]
+        ?.textContent
+        ?.match(/^\d+/)?.[0] ||
+      ""
+    ).trim();
+
+  if (
+    !competencia ||
+    !filial
+  ) {
     return null;
   }
 
-  return corpo.closest(
-    "table"
+  const chave = [
+    competencia,
+    dn || "sem-dn",
+    slugEvidencia(filial)
+  ].join("__");
+
+  const lancamentoId =
+    evidEl(
+      "#lancamentoId"
+    )?.value ||
+    "";
+
+  const contextoResolvido = {
+    chave,
+    competencia,
+    filial,
+    dn,
+    lancamentoId,
+    funcionarioId,
+    funcionarioNome:
+      funcionario?.nome ||
+      funcionarioSelect
+        ?.selectedOptions?.[0]
+        ?.textContent
+        ?.split("—")?.[0]
+        ?.trim() ||
+      ""
+  };
+
+  estadoEvidencias.ultimoContextoValido =
+    contextoResolvido;
+
+  return contextoResolvido;
+}
+
+
+function chaveEvidenciaPorLancamento(
+  lancamento
+) {
+  const competencia =
+    String(
+      lancamento?.competencia ||
+      ""
+    );
+
+  const filial =
+    String(
+      lancamento?.filial ||
+      ""
+    );
+
+  const dn =
+    String(
+      lancamento?.dn ||
+      "sem-dn"
+    );
+
+  if (
+    !competencia ||
+    !filial
+  ) {
+    return "";
+  }
+
+  return [
+    competencia,
+    dn,
+    slugEvidencia(filial)
+  ].join("__");
+}
+
+function ordenarLancamentosDaCasa(
+  lancamentos
+) {
+  return [...lancamentos]
+    .sort(
+      (a, b) =>
+        String(
+          a.nome || ""
+        ).localeCompare(
+          String(
+            b.nome || ""
+          ),
+          "pt-BR"
+        )
+    );
+}
+
+async function removerDocumentoEvidencias(
+  referenciaDocumento,
+  imagens
+) {
+  for (
+    const imagem
+    of imagens
+  ) {
+    if (!imagem?.caminho) {
+      continue;
+    }
+
+    await removerArquivoSupabase(
+      imagem.caminho
+    ).catch(
+      erro => {
+        /*
+         * Se o arquivo já tiver sido removido do Supabase,
+         * a referência no Firestore ainda poderá ser limpa.
+         */
+        const mensagem =
+          String(
+            erro?.message ||
+            ""
+          ).toLowerCase();
+
+        if (
+          !mensagem.includes(
+            "not found"
+          ) &&
+          !mensagem.includes(
+            "não encontrado"
+          )
+        ) {
+          throw erro;
+        }
+      }
+    );
+  }
+
+  await deleteDoc(
+    referenciaDocumento
   );
 }
 
-function configurarBarraHorizontalSuperiorPix() {
-  garantirEstiloBarraSuperiorPix();
+async function antesDeExcluirLancamento({
+  lancamento,
+  restantes = []
+}) {
+  const chave =
+    chaveEvidenciaPorLancamento(
+      lancamento
+    );
 
-  const tabela =
-    localizarTabelaApuracaoPixCompleta();
-
-  if (!tabela) {
+  if (!chave) {
     return;
   }
 
-  const envoltorio =
-    tabela.closest(
-      ".table-wrap"
-    ) ||
-    tabela.parentElement;
+  const referenciaDocumento =
+    doc(
+      firestore,
+      EVIDENCIAS_COLLECTION,
+      chave
+    );
 
-  if (!envoltorio) {
+  const snapshot =
+    await getDoc(
+      referenciaDocumento
+    );
+
+  if (!snapshot.exists()) {
     return;
   }
 
-  let barra =
-    envoltorio.querySelector(
-      ":scope > .pix-scroll-superior"
-    );
+  const dados =
+    snapshot.data() ||
+    {};
 
-  if (!barra) {
-    barra =
-      document.createElement(
-        "div"
-      );
+  const imagens =
+    Array.isArray(
+      dados.imagens
+    )
+      ? dados.imagens
+      : [];
 
-    barra.className =
-      "pix-scroll-superior";
-
-    barra.setAttribute(
-      "role",
-      "scrollbar"
-    );
-
-    barra.setAttribute(
-      "aria-label",
-      "Rolagem horizontal superior da tabela de apuração do Pix"
-    );
-
-    const conteudo =
-      document.createElement(
-        "div"
-      );
-
-    conteudo.className =
-      "pix-scroll-superior-conteudo";
-
-    barra.appendChild(
-      conteudo
-    );
-
-    envoltorio.insertBefore(
-      barra,
-      tabela
-    );
-  }
-
-  const conteudo =
-    barra.querySelector(
-      ".pix-scroll-superior-conteudo"
-    );
-
-  if (!conteudo) {
+  if (!imagens.length) {
     return;
   }
 
-  const atualizarDimensoes =
-    () => {
-      const larguraTabela =
-        Math.max(
-          tabela.scrollWidth,
-          tabela.offsetWidth
-        );
+  const lancamentoId =
+    String(
+      lancamento.id ||
+      ""
+    );
 
-      conteudo.style.width =
-        `${larguraTabela}px`;
+  const restantesOrdenados =
+    ordenarLancamentosDaCasa(
+      restantes
+    );
 
-      const possuiRolagem =
-        larguraTabela >
-        envoltorio.clientWidth + 2;
+  /*
+   * Documentos antigos não tinham matriz registrada.
+   * Nesse caso, o lançamento atual só é tratado como matriz
+   * quando ele é o primeiro da ordem da casa. Dessa forma,
+   * excluir outro colaborador nunca remove a evidência.
+   */
+  const matrizAtualId =
+    String(
+      dados.matrizLancamentoId ||
+      ""
+    );
 
-      barra.classList.toggle(
-        "ativo",
-        possuiRolagem
-      );
+  const ehMatrizRegistrada =
+    matrizAtualId &&
+    matrizAtualId ===
+      lancamentoId;
 
-      barra.setAttribute(
-        "aria-valuemin",
-        "0"
-      );
+  const ehUltimoLancamento =
+    restantesOrdenados.length ===
+    0;
 
-      barra.setAttribute(
-        "aria-valuemax",
-        String(
-          Math.max(
-            0,
-            larguraTabela -
-            envoltorio.clientWidth
-          )
-        )
-      );
+  if (ehUltimoLancamento) {
+    await removerDocumentoEvidencias(
+      referenciaDocumento,
+      imagens
+    );
 
-      barra.setAttribute(
-        "aria-valuenow",
-        String(
-          Math.round(
-            envoltorio.scrollLeft
-          )
-        )
-      );
-
-      if (
-        Math.abs(
-          barra.scrollLeft -
-          envoltorio.scrollLeft
-        ) > 1
-      ) {
-        barra.scrollLeft =
-          envoltorio.scrollLeft;
-      }
-    };
+    return;
+  }
 
   if (
-    barra.dataset.pixScrollBound !==
-    "true"
+    matrizAtualId &&
+    !ehMatrizRegistrada
   ) {
-    barra.dataset.pixScrollBound =
-      "true";
+    /*
+     * Não é o colaborador matriz:
+     * mantém todas as evidências intactas.
+     */
+    return;
+  }
 
-    let sincronizandoPelaBarra =
-      false;
+  const proximoMatriz =
+    restantesOrdenados[0];
 
-    let sincronizandoPelaTabela =
-      false;
+  await setDoc(
+    referenciaDocumento,
+    {
+      matrizLancamentoId:
+        proximoMatriz.id,
 
-    barra.addEventListener(
-      "scroll",
-      () => {
-        if (sincronizandoPelaTabela) {
-          return;
+      matrizFuncionarioId:
+        proximoMatriz.funcionarioId ||
+        "",
+
+      matrizNome:
+        proximoMatriz.nome ||
+        "",
+
+      matrizAtualizadaEm:
+        serverTimestamp(),
+
+      atualizadoEm:
+        serverTimestamp()
+    },
+    {
+      merge: true
+    }
+  );
+}
+
+function mensagemEvidencia(texto, tipo = "") {
+  const elemento =
+    evidEl("#evidenciaMensagem");
+
+  if (!elemento) {
+    return;
+  }
+
+  elemento.className =
+    `evidence-message ${tipo}`.trim();
+
+  elemento.textContent =
+    texto;
+}
+
+function atualizarResumoEvidencia() {
+  const contador =
+    evidEl("#evidenciaContador");
+
+  const status =
+    evidEl("#evidenciaStatusFilial");
+
+  if (contador) {
+    contador.textContent =
+      `${estadoEvidencias.imagens.length}/${MAX_ARQUIVOS}`;
+  }
+
+  if (status) {
+    status.innerHTML =
+      estadoEvidencias.imagens.length
+        ? `
+          <span class="evidence-shared-badge ok">
+            ${estadoEvidencias.imagens.length}
+            evidência(s) compartilhada(s) nesta filial
+          </span>
+        `
+        : `
+          <span class="evidence-shared-badge neutral">
+            Nenhuma evidência adicionada nesta filial
+          </span>
+        `;
+  }
+}
+
+function renderizarEvidencias() {
+  const galeria =
+    evidEl("#evidenciaGaleria");
+
+  if (!galeria) {
+    return;
+  }
+
+  /*
+   * Vinculação direta e idempotente. Não depende do listener global nem do
+   * estado deixado por uma versão anterior do módulo no documento.
+   */
+  galeria.onclick = evento => {
+    const botaoExcluir = evento.target.closest("[data-evidence-id]");
+    if (!botaoExcluir || !galeria.contains(botaoExcluir)) return;
+
+    evento.preventDefault();
+    evento.stopPropagation();
+    excluirEvidencia(String(botaoExcluir.dataset.evidenceId || ""), botaoExcluir);
+  };
+
+  atualizarResumoEvidencia();
+
+  const assinaturaVisual = JSON.stringify(
+    estadoEvidencias.imagens.map(imagem => [
+      imagem.id || "",
+      imagem.caminho || "",
+      imagem.url || "",
+      imagem.nome || ""
+    ])
+  );
+
+  if (
+    estadoEvidencias.assinaturaVisual === assinaturaVisual &&
+    galeria.childElementCount
+  ) {
+    return;
+  }
+
+  estadoEvidencias.assinaturaVisual = assinaturaVisual;
+
+  galeria.innerHTML =
+    estadoEvidencias.imagens.length
+      ? estadoEvidencias.imagens.map(
+          imagem => `
+            <article class="evidence-card evidence-card-loading">
+              <a
+                href="${imagem.url}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="evidence-image-link"
+                title="Abrir imagem"
+              >
+                <img
+                  src="${imagem.url}"
+                  alt="${imagem.nome || "Evidência da filial"}"
+                  loading="lazy"
+                  decoding="async"
+                  crossorigin="anonymous"
+                  referrerpolicy="no-referrer"
+                  onload="this.closest('.evidence-card')?.classList.remove('evidence-card-loading')"
+                  onerror="this.closest('.evidence-card')?.classList.remove('evidence-card-loading')"
+                />
+              </a>
+
+              <div class="evidence-card-info">
+                <span title="${imagem.nome || ""}">
+                  ${imagem.nome || "Evidência"}
+                </span>
+
+                <button
+                  type="button"
+                  class="evidence-remove-btn"
+                  data-evidence-id="${imagem.id}"
+                  title="Excluir evidência"
+                  onclick="return window.excluirEvidenciaProdutivosDireta(event, this)"
+                >
+                  Excluir
+                </button>
+              </div>
+            </article>
+          `
+        ).join("")
+      : `
+        <div class="evidence-empty">
+          <strong>Nenhuma imagem anexada</strong>
+          <span>
+            Esta evidência é opcional e não interfere
+            na habilitação da campanha.
+          </span>
+        </div>
+      `;
+
+}
+
+function encerrarEscutaEvidencia() {
+  if (
+    typeof estadoEvidencias.unsubscribe ===
+    "function"
+  ) {
+    estadoEvidencias.unsubscribe();
+  }
+
+  estadoEvidencias.unsubscribe =
+    null;
+}
+
+async function recuperarEvidenciasDiretoDoStorage(contexto) {
+  if (!contexto) return [];
+
+  const pasta = [
+    "produtivos",
+    contexto.competencia,
+    [
+      contexto.dn || "sem-dn",
+      slugEvidencia(contexto.filial)
+    ].join("-")
+  ].join("/");
+
+  const { data, error } = await supabase.storage
+    .from(SUPABASE_BUCKET)
+    .list(pasta, {
+      limit: MAX_ARQUIVOS,
+      sortBy: {
+        column: "created_at",
+        order: "asc"
+      }
+    });
+
+  if (error) {
+    console.warn("Falha ao conferir evidências no Storage:", error);
+    return [];
+  }
+
+  return (data || [])
+    .filter(item => item?.name && item.name !== ".emptyFolderPlaceholder")
+    .map(item => {
+      const caminho = `${pasta}/${item.name}`;
+      const { data: publica } = supabase.storage
+        .from(SUPABASE_BUCKET)
+        .getPublicUrl(caminho);
+
+      return {
+        id: item.name.replace(/\.[^.]+$/, ""),
+        nome: item.metadata?.nome_original || item.name,
+        url: publica?.publicUrl || "",
+        caminho,
+        tamanho: item.metadata?.size || 0,
+        tipo: item.metadata?.mimetype || "image/jpeg",
+        criadoEmCliente: item.created_at || new Date().toISOString(),
+        enviadoPorLancamentoId: contexto.lancamentoId || "",
+        enviadoPorFuncionarioId: contexto.funcionarioId || "",
+        enviadoPorNome: contexto.funcionarioNome || "Não informado"
+      };
+    })
+    .filter(item => item.url);
+}
+
+function observarEvidenciasDaFilial() {
+  const contextoAtual =
+    contextoEvidenciaAtual();
+
+  const modalAberto =
+    Boolean(evidEl("#modalLancamento")?.open);
+
+  const contexto = contextoAtual ||
+    (modalAberto
+      ? estadoEvidencias.ultimoContextoValido
+      : null);
+
+  if (!contexto) {
+    if (modalAberto && estadoEvidencias.ultimoContextoValido) {
+      return;
+    }
+
+    encerrarEscutaEvidencia();
+    estadoEvidencias.chaveAtual =
+      "";
+
+    estadoEvidencias.imagens =
+      [];
+
+    mensagemEvidencia(
+      "Selecione a competência e a filial para visualizar as evidências."
+    );
+
+    renderizarEvidencias();
+    return;
+  }
+
+  estadoEvidencias.chaveAtual =
+    contexto.chave;
+
+  mensagemEvidencia(
+    `Evidências compartilhadas de ${contexto.filial} — ${contexto.competencia}.`
+  );
+
+  const referenciaDocumento =
+    doc(
+      firestore,
+      EVIDENCIAS_COLLECTION,
+      contexto.chave
+    );
+
+  estadoEvidencias.unsubscribe =
+    onSnapshot(
+      referenciaDocumento,
+      async snapshot => {
+        const dados =
+          snapshot.exists()
+            ? snapshot.data()
+            : {};
+
+        let imagens =
+          Array.isArray(dados.imagens)
+            ? dados.imagens
+            : [];
+
+        if (!imagens.length) {
+          imagens = await recuperarEvidenciasDiretoDoStorage(
+            contexto
+          );
+
+          if (imagens.length) {
+            await setDoc(
+              referenciaDocumento,
+              {
+                campanha: "PRODUTIVOS",
+                competencia: contexto.competencia,
+                filial: contexto.filial,
+                dn: contexto.dn,
+                imagens,
+                atualizadoEm: serverTimestamp()
+              },
+              { merge: true }
+            ).catch(erro =>
+              console.warn(
+                "Imagens recuperadas; vínculo pendente de reparo:",
+                erro
+              )
+            );
+          }
         }
 
-        sincronizandoPelaBarra =
-          true;
+        estadoEvidencias.imagens = imagens;
 
-        envoltorio.scrollLeft =
-          barra.scrollLeft;
+        renderizarEvidencias();
+      },
+      erro => {
+        console.error(
+          "Erro ao carregar evidências:",
+          erro
+        );
 
-        barra.setAttribute(
-          "aria-valuenow",
-          String(
-            Math.round(
-              barra.scrollLeft
+        mensagemEvidencia(
+          "Não foi possível carregar as evidências.",
+          "error"
+        );
+      }
+    );
+}
+
+function validarArquivoEvidencia(arquivo) {
+  if (
+    !TIPOS_PERMITIDOS.includes(
+      arquivo.type
+    )
+  ) {
+    throw new Error(
+      `${arquivo.name}: use apenas JPG, PNG ou WEBP.`
+    );
+  }
+
+  const limite =
+    MAX_TAMANHO_MB *
+    1024 *
+    1024;
+
+  if (arquivo.size > limite) {
+    throw new Error(
+      `${arquivo.name}: o limite é ${MAX_TAMANHO_MB} MB.`
+    );
+  }
+}
+
+function gerarIdEvidencia() {
+  return crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2)}`;
+}
+
+
+function garantirContextoAntesDoUpload() {
+  const contexto =
+    contextoEvidenciaAtual() ||
+    estadoEvidencias.ultimoContextoValido;
+
+  if (contexto) {
+    observarEvidenciasDaFilial();
+    return contexto;
+  }
+
+  mensagemEvidencia(
+    "Selecione a competência, a filial e o colaborador antes de anexar.",
+    "error"
+  );
+
+  return null;
+}
+
+async function enviarArquivosEvidencia(
+  arquivos
+) {
+  const contexto =
+    garantirContextoAntesDoUpload();
+
+  if (!contexto) {
+    return;
+  }
+
+  const lista =
+    [...arquivos];
+
+  if (!lista.length) {
+    return;
+  }
+
+  const vagas =
+    MAX_ARQUIVOS -
+    estadoEvidencias.imagens.length;
+
+  if (vagas <= 0) {
+    alert(
+      `Esta filial já possui o limite de ${MAX_ARQUIVOS} evidências.`
+    );
+
+    return;
+  }
+
+  if (lista.length > vagas) {
+    alert(
+      `Você pode adicionar somente mais ${vagas} arquivo(s).`
+    );
+
+    return;
+  }
+
+  try {
+    lista.forEach(
+      validarArquivoEvidencia
+    );
+
+    estadoEvidencias.enviando =
+      true;
+
+    const area =
+      evidEl("#evidenciaDropzone");
+
+    area?.classList.add(
+      "uploading"
+    );
+
+    mensagemEvidencia(
+      "Enviando evidências...",
+      "loading"
+    );
+
+    const imagensNovas = [];
+
+    for (const arquivo of lista) {
+      const id =
+        gerarIdEvidencia();
+
+      const extensao =
+        arquivo.name
+          .split(".")
+          .pop()
+          ?.toLowerCase() ||
+        "jpg";
+
+      const caminho =
+        [
+          "produtivos",
+          contexto.competencia,
+          [
+            contexto.dn ||
+              "sem-dn",
+            slugEvidencia(
+              contexto.filial
             )
-          )
+          ].join("-"),
+          `${id}.${extensao}`
+        ].join("/");
+
+      const uploadSupabase =
+        await enviarArquivoSupabase(
+          caminho,
+          arquivo
         );
 
-        requestAnimationFrame(
-          () => {
-            sincronizandoPelaBarra =
-              false;
-          }
-        );
+      const url =
+        uploadSupabase.url;
+
+      imagensNovas.push({
+        id,
+        nome:
+          arquivo.name,
+        url,
+        caminho:
+          uploadSupabase.caminho,
+        tamanho:
+          arquivo.size,
+        tipo:
+          arquivo.type,
+        criadoEmCliente:
+          new Date().toISOString(),
+
+        enviadoPorLancamentoId:
+          contexto.lancamentoId,
+
+        enviadoPorFuncionarioId:
+          contexto.funcionarioId,
+
+        enviadoPorNome:
+          contexto.funcionarioNome
+      });
+    }
+
+    const referenciaDocumento = doc(
+      firestore,
+      EVIDENCIAS_COLLECTION,
+      contexto.chave
+    );
+
+    const documentoAtual = await getDoc(
+      referenciaDocumento
+    );
+
+    const dadosAtuais = documentoAtual.exists()
+      ? documentoAtual.data()
+      : {};
+
+    const camposMatriz = dadosAtuais?.matrizLancamentoId
+      ? {}
+      : {
+          matrizLancamentoId: contexto.lancamentoId,
+          matrizFuncionarioId: contexto.funcionarioId,
+          matrizNome: contexto.funcionarioNome,
+          matrizCriadaEm: serverTimestamp()
+        };
+
+    await setDoc(
+      referenciaDocumento,
+      {
+        campanha: "PRODUTIVOS",
+        competencia: contexto.competencia,
+        filial: contexto.filial,
+        dn: contexto.dn,
+        ...camposMatriz,
+        imagens: arrayUnion(...imagensNovas),
+        atualizadoEm: serverTimestamp()
       },
       {
-        passive: true
+        merge: true
       }
     );
 
-    envoltorio.addEventListener(
-      "scroll",
-      () => {
-        if (sincronizandoPelaBarra) {
-          return;
+    /* Atualiza a tela sem depender de Realtime ou de uma nova consulta. */
+    const idsNovos = new Set(imagensNovas.map(imagem => imagem.id));
+    estadoEvidencias.imagens = [
+      ...estadoEvidencias.imagens.filter(imagem => !idsNovos.has(imagem.id)),
+      ...imagensNovas
+    ];
+    estadoEvidencias.assinaturaVisual = null;
+    renderizarEvidencias();
+
+    mensagemEvidencia(
+      "Evidência adicionada para toda a filial.",
+      "success"
+    );
+  } catch (erro) {
+    console.error(
+      "Erro ao enviar evidência:",
+      erro
+    );
+
+    mensagemEvidencia(
+      erro.message ||
+      "Não foi possível enviar a evidência.",
+      "error"
+    );
+
+    alert(
+      erro.message ||
+      "Não foi possível enviar a evidência."
+    );
+  } finally {
+    estadoEvidencias.enviando =
+      false;
+
+    evidEl(
+      "#evidenciaDropzone"
+    )?.classList.remove(
+      "uploading"
+    );
+
+    const input =
+      evidEl(
+        "#evidenciaInput"
+      );
+
+    if (input) {
+      input.value =
+        "";
+    }
+  }
+}
+
+function confirmarExclusaoEvidenciaPremium() {
+  return new Promise(resolve => {
+    document.querySelector("#evidenciaConfirmacaoPremium")?.remove();
+
+    if (!document.querySelector("#evidenciaConfirmacaoPremiumCss")) {
+      const estilo = document.createElement("style");
+      estilo.id = "evidenciaConfirmacaoPremiumCss";
+      estilo.textContent = `
+        @keyframes evidenciaConfirmarEntrada {
+          from { opacity: 0; transform: translateY(16px) scale(.96); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
         }
+        #evidenciaConfirmacaoPremium .ev-confirm-card {
+          animation: evidenciaConfirmarEntrada .24s cubic-bezier(.2,.8,.2,1);
+        }
+        #evidenciaConfirmacaoPremium button:focus-visible {
+          outline: 3px solid rgba(16,185,129,.28);
+          outline-offset: 2px;
+        }
+      `;
+      document.head.appendChild(estilo);
+    }
 
-        sincronizandoPelaTabela =
-          true;
+    const overlay = document.createElement("dialog");
+    overlay.id = "evidenciaConfirmacaoPremium";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-labelledby", "evConfirmTitulo");
+    overlay.style.cssText = `
+      position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;
+      margin:0;border:0;display:grid;place-items:center;padding:20px;
+      background:rgba(2,20,35,.68);backdrop-filter:blur(7px);
+    `;
+    overlay.innerHTML = `
+      <section class="ev-confirm-card" style="width:min(440px,100%);background:#fff;border:1px solid rgba(15,118,90,.14);border-radius:22px;padding:26px;box-shadow:0 28px 80px rgba(2,20,35,.34);font-family:inherit;">
+        <div style="width:54px;height:54px;border-radius:17px;display:grid;place-items:center;background:linear-gradient(145deg,#fff1f2,#ffe4e6);color:#dc2626;margin-bottom:18px;">
+          <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg>
+        </div>
+        <p style="margin:0 0 6px;color:#047857;font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;">Evidências da filial</p>
+        <h3 id="evConfirmTitulo" style="margin:0;color:#102a3a;font-size:22px;line-height:1.25;">Excluir esta evidência?</h3>
+        <p style="margin:10px 0 22px;color:#64748b;font-size:14px;line-height:1.6;">A imagem será removida para toda a filial e não aparecerá mais nos relatórios desta competência.</p>
+        <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
+          <button type="button" data-ev-confirmar="cancelar" style="min-height:44px;padding:0 18px;border:1px solid #dbe4e8;border-radius:12px;background:#fff;color:#334155;font-weight:800;cursor:pointer;">Cancelar</button>
+          <button type="button" data-ev-confirmar="excluir" style="min-height:44px;padding:0 18px;border:0;border-radius:12px;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;font-weight:900;cursor:pointer;box-shadow:0 10px 24px rgba(220,38,38,.22);">Excluir evidência</button>
+        </div>
+      </section>
+    `;
 
-        barra.scrollLeft =
-          envoltorio.scrollLeft;
+    const suportaDialogModal =
+      typeof overlay.showModal === "function";
 
-        barra.setAttribute(
-          "aria-valuenow",
-          String(
-            Math.round(
-              envoltorio.scrollLeft
+    const finalizar = resultado => {
+      document.removeEventListener("keydown", aoTeclado);
+      if (overlay.open) overlay.close();
+      overlay.remove();
+      resolve(resultado);
+    };
+    const aoTeclado = evento => {
+      if (evento.key === "Escape") finalizar(false);
+    };
+
+    overlay.addEventListener("click", evento => {
+      const acao = evento.target.closest("[data-ev-confirmar]")?.dataset.evConfirmar;
+      if (acao === "excluir") finalizar(true);
+      if (acao === "cancelar" || evento.target === overlay) finalizar(false);
+    });
+    overlay.addEventListener("cancel", evento => {
+      evento.preventDefault();
+      finalizar(false);
+    });
+    if (!suportaDialogModal) {
+      document.addEventListener("keydown", aoTeclado);
+    }
+    document.body.appendChild(overlay);
+    if (suportaDialogModal) {
+      overlay.showModal();
+    } else {
+      overlay.setAttribute("open", "");
+    }
+    overlay.querySelector('[data-ev-confirmar="cancelar"]')?.focus();
+  });
+}
+
+async function excluirEvidencia(
+  imagemId,
+  botao = null
+) {
+  const contexto =
+    contextoEvidenciaAtual() ||
+    estadoEvidencias.ultimoContextoValido;
+
+  const imagem =
+    estadoEvidencias.imagens.find(
+      item =>
+        String(item.id || "") === String(imagemId || "")
+    );
+
+  if (
+    !contexto ||
+    !imagem
+  ) {
+    return;
+  }
+
+  const confirmado =
+    await confirmarExclusaoEvidenciaPremium();
+
+  if (!confirmado) {
+    return;
+  }
+
+  encerrarEscutaEvidencia();
+
+  const imagensAnteriores =
+    [...estadoEvidencias.imagens];
+
+  try {
+    if (botao) {
+      botao.disabled = true;
+      botao.textContent = "Excluindo...";
+    }
+
+    estadoEvidencias.imagens =
+      estadoEvidencias.imagens.filter(
+        item => String(item.id || "") !== String(imagemId || "")
+      );
+    estadoEvidencias.assinaturaVisual = null;
+    renderizarEvidencias();
+
+    if (imagem.caminho) {
+      await removerArquivoSupabase(
+        imagem.caminho
+      ).catch(
+        erro => {
+          /*
+           * Se o arquivo já não existir no Supabase,
+           * ainda removemos a referência do Firestore.
+           */
+          const mensagem =
+            String(
+              erro?.message ||
+              ""
+            ).toLowerCase();
+
+          if (
+            !mensagem.includes(
+              "not found"
+            ) &&
+            !mensagem.includes(
+              "não encontrado"
             )
-          )
-        );
-
-        requestAnimationFrame(
-          () => {
-            sincronizandoPelaTabela =
-              false;
+          ) {
+            throw erro;
           }
-        );
-      },
-      {
-        passive: true
-      }
-    );
-
-    const observadorTabela =
-      new MutationObserver(
-        atualizarDimensoes
-      );
-
-    observadorTabela.observe(
-      tabela,
-      {
-        childList: true,
-        subtree: true,
-        characterData: true,
-        attributes: true
-      }
-    );
-
-    if (
-      "ResizeObserver" in window
-    ) {
-      const observadorTamanho =
-        new ResizeObserver(
-          atualizarDimensoes
-        );
-
-      observadorTamanho.observe(
-        tabela
-      );
-
-      observadorTamanho.observe(
-        envoltorio
+        }
       );
     }
 
-    window.addEventListener(
-      "resize",
-      atualizarDimensoes,
+    await setDoc(
+      doc(
+        firestore,
+        EVIDENCIAS_COLLECTION,
+        estadoEvidencias.chaveAtual ||
+          contexto.chave
+      ),
       {
-        passive: true
+        imagens:
+          estadoEvidencias.imagens,
+        atualizadoEm:
+          serverTimestamp()
+      },
+      {
+        merge: true
       }
     );
+
+    mensagemEvidencia(
+      "Evidência excluída.",
+      "success"
+    );
+  } catch (erro) {
+    estadoEvidencias.imagens =
+      imagensAnteriores;
+    estadoEvidencias.assinaturaVisual = null;
+    renderizarEvidencias();
+
+    console.error(
+      "Erro ao excluir evidência:",
+      erro
+    );
+
+    alert(
+      "Não foi possível excluir a evidência."
+    );
+  }
+}
+
+function prepararDropzoneEvidencia() {
+  const dropzone =
+    evidEl(
+      "#evidenciaDropzone"
+    );
+
+  const input =
+    evidEl(
+      "#evidenciaInput"
+    );
+
+  const selecionar =
+    evidEl(
+      "#btnSelecionarEvidencia"
+    );
+
+  if (
+    !dropzone ||
+    !input ||
+    !selecionar
+  ) {
+    console.warn(
+      "Área de evidências não encontrada no modal."
+    );
+
+    return;
   }
 
-  requestAnimationFrame(
-    atualizarDimensoes
+  if (
+    dropzone.dataset
+      .evidenciaPreparada === "true"
+  ) {
+    return;
+  }
+
+  dropzone.dataset
+    .evidenciaPreparada = "true";
+
+  const abrirSeletor = evento => {
+    evento?.preventDefault();
+    evento?.stopPropagation();
+
+    const contexto =
+      garantirContextoAntesDoUpload();
+
+    if (!contexto) {
+      return;
+    }
+
+    input.value = "";
+    input.click();
+  };
+
+  selecionar.addEventListener(
+    "click",
+    abrirSeletor
+  );
+
+  dropzone.addEventListener(
+    "click",
+    evento => {
+      if (
+        evento.target.closest(
+          "button, a, input"
+        )
+      ) {
+        return;
+      }
+
+      abrirSeletor(evento);
+    }
+  );
+
+  input.addEventListener(
+    "change",
+    async () => {
+      const arquivos =
+        input.files;
+
+      if (
+        !arquivos ||
+        !arquivos.length
+      ) {
+        return;
+      }
+
+      await enviarArquivosEvidencia(
+        arquivos
+      );
+
+      input.value = "";
+    }
+  );
+
+  [
+    "dragenter",
+    "dragover"
+  ].forEach(
+    eventoNome =>
+      dropzone.addEventListener(
+        eventoNome,
+        evento => {
+          evento.preventDefault();
+          evento.stopPropagation();
+
+          if (
+            garantirContextoAntesDoUpload()
+          ) {
+            dropzone.classList.add(
+              "dragging"
+            );
+          }
+        }
+      )
+  );
+
+  [
+    "dragleave",
+    "drop"
+  ].forEach(
+    eventoNome =>
+      dropzone.addEventListener(
+        eventoNome,
+        evento => {
+          evento.preventDefault();
+          evento.stopPropagation();
+
+          dropzone.classList.remove(
+            "dragging"
+          );
+        }
+      )
+  );
+
+  dropzone.addEventListener(
+    "drop",
+    async evento => {
+      const contexto =
+        garantirContextoAntesDoUpload();
+
+      if (!contexto) {
+        return;
+      }
+
+      const arquivos =
+        evento.dataTransfer?.files;
+
+      if (
+        arquivos &&
+        arquivos.length
+      ) {
+        await enviarArquivosEvidencia(
+          arquivos
+        );
+      }
+    }
   );
 }
 
-function iniciarBarraHorizontalSuperiorPix() {
-  configurarBarraHorizontalSuperiorPix();
 
-  const observadorPagina =
+let intervaloContextoEvidencia =
+  null;
+
+function atualizarContextoEvidenciaAgora() {
+  window.clearTimeout(
+    atualizarContextoEvidenciaAgora
+      .temporizador
+  );
+
+  atualizarContextoEvidenciaAgora
+    .temporizador =
+      window.setTimeout(
+        observarEvidenciasDaFilial,
+        30
+      );
+}
+
+
+let observerContextoEvidencia =
+  null;
+
+function iniciarObserverContextoEvidencia() {
+  observerContextoEvidencia
+    ?.disconnect();
+
+  const modal =
+    evidEl(
+      "#modalLancamento"
+    );
+
+  if (!modal) {
+    return;
+  }
+
+  observerContextoEvidencia =
     new MutationObserver(
       () => {
-        configurarBarraHorizontalSuperiorPix();
+        if (modal.open) {
+          atualizarContextoEvidenciaAgora();
+        }
       }
     );
 
-  observadorPagina.observe(
-    document.body,
+  observerContextoEvidencia.observe(
+    modal,
     {
+      attributes: true,
       childList: true,
-      subtree: true
+      subtree: true,
+      attributeFilter: [
+        "open",
+        "value",
+        "selected"
+      ]
+    }
+  );
+}
+
+function iniciarMonitoramentoContextoEvidencia() {
+  window.clearInterval(
+    intervaloContextoEvidencia
+  );
+
+  intervaloContextoEvidencia =
+    window.setInterval(
+      () => {
+        const modal =
+          evidEl(
+            "#modalLancamento"
+          );
+
+        if (
+          modal?.open
+        ) {
+          const contexto =
+            contextoEvidenciaAtual();
+
+          const novaChave =
+            contexto?.chave ||
+            "";
+
+          if (
+            novaChave !==
+            estadoEvidencias.chaveAtual
+          ) {
+            observarEvidenciasDaFilial();
+          }
+        }
+      },
+      400
+    );
+}
+
+function configurarContextoEvidencia() {
+  [
+    "#lancamentoCompetencia",
+    "#lancamentoFilial",
+    "#lancamentoFuncionario"
+  ].forEach(
+    seletor => {
+      const campo =
+        evidEl(seletor);
+
+      [
+        "change",
+        "input"
+      ].forEach(
+        eventoNome =>
+          campo?.addEventListener(
+            eventoNome,
+            atualizarContextoEvidenciaAgora
+          )
+      );
+    }
+  );
+
+  /*
+   * Não usamos MutationObserver nem polling aqui. Eles observavam mudanças
+   * produzidas pelo próprio modal e criavam um ciclo infinito de recarga.
+   * Os eventos change/input e os botões abrir/editar já cobrem o contexto.
+   */
+
+  const modal =
+    evidEl(
+      "#modalLancamento"
+    );
+
+  modal?.addEventListener(
+    "close",
+    encerrarEscutaEvidencia
+  );
+
+  const botaoNovo =
+    evidEl(
+      "#btnNovoLancamento"
+    );
+
+  botaoNovo?.addEventListener(
+    "click",
+    () => {
+      estadoEvidencias.ultimoContextoValido = null;
+      estadoEvidencias.chaveAtual = "";
+      setTimeout(
+        atualizarContextoEvidenciaAgora,
+        100
+      );
     }
   );
 
@@ -4092,37 +3535,95 @@ function iniciarBarraHorizontalSuperiorPix() {
     evento => {
       if (
         evento.target.closest(
-          '[data-pix-view="apuracao"], ' +
-          '[data-module="pix"], ' +
-          '#pix-apuracao, ' +
-          '#pixTabelaApuracao'
+          "[data-edit-lancamento], [data-action='editar-lancamento']"
         )
       ) {
-        window.setTimeout(
-          configurarBarraHorizontalSuperiorPix,
-          80
+        setTimeout(
+          atualizarContextoEvidenciaAgora,
+          150
         );
       }
-    },
-    true
-  );
-
-  console.info(
-    "[PIX APURAÇÃO] Barra horizontal superior ativada."
+    }
   );
 }
 
-if (
-  document.readyState ===
-  "loading"
-) {
+window.evidenciasProdutivos = {
+  ...(window.evidenciasProdutivos || {}),
+
+  antesDeExcluirLancamento,
+
+  atualizarContexto:
+    atualizarContextoEvidenciaAgora,
+
+  abrirVisualizador:
+    abrirVisualizadorEvidencias,
+
+  anexarAoPdf,
+
+  anexarAoExcel,
+
+  versao:
+    "2026.08.04-SUPABASE-AUDITORIA-03-SEM-MATRIZ-VISIVEL"
+};
+
+function inicializarModuloEvidenciasProdutivos() {
+  garantirCssVisualizadorEvidencias();
+  prepararDropzoneEvidencia();
+  configurarContextoEvidencia();
+  configurarBotoesVisualizacaoEvidencias();
+  configurarExclusaoDelegadaEvidencias();
+  renderizarEvidencias();
+}
+
+/*
+ * Entrada pública usada diretamente pelo onclick de cada cartão. Isso evita
+ * que listeners globais de outros módulos bloqueiem o botão do modal.
+ */
+window.excluirEvidenciaProdutivosDireta = function(evento, botao) {
+  evento?.preventDefault();
+  evento?.stopPropagation();
+
+  const imagemId = String(botao?.dataset?.evidenceId || "");
+  if (!imagemId) {
+    console.error("[EVIDÊNCIAS] O botão não possui o ID da imagem.");
+    alert("Não foi possível identificar esta evidência.");
+    return false;
+  }
+
+  excluirEvidencia(imagemId, botao);
+  return false;
+};
+
+function configurarExclusaoDelegadaEvidencias() {
+  if (
+    document.documentElement.dataset
+      .evidenciasProdutivosExclusaoConfigurada === "true"
+  ) {
+    return;
+  }
+
+  document.documentElement.dataset
+    .evidenciasProdutivosExclusaoConfigurada = "true";
+
+  document.addEventListener("click", evento => {
+    const botao = evento.target.closest("[data-evidence-id]");
+    if (!botao) return;
+
+    evento.preventDefault();
+    evento.stopPropagation();
+
+    excluirEvidencia(botao.dataset.evidenceId, botao);
+  });
+}
+
+if (document.readyState === "loading") {
   document.addEventListener(
     "DOMContentLoaded",
-    iniciarBarraHorizontalSuperiorPix,
+    inicializarModuloEvidenciasProdutivos,
     {
       once: true
     }
   );
 } else {
-  iniciarBarraHorizontalSuperiorPix();
+  inicializarModuloEvidenciasProdutivos();
 }
