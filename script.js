@@ -949,9 +949,12 @@ function numero(valor) {
 }
 
 function mesAtual() {
-  return new Date()
-    .toISOString()
-    .slice(0, 7);
+  const agora = new Date();
+
+  return [
+    agora.getFullYear(),
+    String(agora.getMonth() + 1).padStart(2, "0")
+  ].join("-");
 }
 
 function mesAnterior() {
@@ -5553,7 +5556,8 @@ function abrirLancamento() {
   document.querySelector(
     "#lancamentoCompetencia"
   ).value =
-    mesAnterior();
+    document.querySelector("#competenciaGlobal")?.value ||
+    mesAtual();
 
   document.querySelector(
     "#lancamentoFuncionario"
@@ -7242,13 +7246,13 @@ function configurarEventos() {
     );
 
   /*
-   * A Campanha dos Produtivos é normalmente lançada no mês
-   * seguinte ao mês apurado. Por isso, ao abrir o módulo,
-   * a competência padrão é sempre o mês anterior.
+   * Ao abrir o sistema, Produtivos e Pix começam sempre na
+   * competência vigente. Depois disso, a navegação mensal e
+   * a escolha manual do usuário continuam funcionando normalmente.
    */
   competenciaGlobal.value =
     limitarCompetenciaHistorico(
-      mesAnterior()
+      mesAtual()
     );
 
   competenciaGlobal.min =

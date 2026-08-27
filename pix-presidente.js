@@ -1080,7 +1080,12 @@ function pixPct(valor) {
 }
 
 function pixMesAtual() {
-  return new Date().toISOString().slice(0, 7);
+  const agora = new Date();
+
+  return [
+    agora.getFullYear(),
+    String(agora.getMonth() + 1).padStart(2, "0")
+  ].join("-");
 }
 
 function pixFuncionarioPorId(id) {
