@@ -1218,15 +1218,84 @@ async function enviarPixEvidencias(
   }
 }
 
+function confirmarExclusaoPixPremium() {
+  return new Promise(resolve => {
+    pixEv("#pixConfirmacaoExclusaoPremium")?.remove();
+
+    if (!pixEv("#pixConfirmacaoExclusaoPremiumCss")) {
+      const estilo = document.createElement("style");
+      estilo.id = "pixConfirmacaoExclusaoPremiumCss";
+      estilo.textContent = `
+        @keyframes pixConfirmarEntrada {
+          from { opacity:0; transform:translateY(16px) scale(.96); }
+          to { opacity:1; transform:translateY(0) scale(1); }
+        }
+        #pixConfirmacaoExclusaoPremium .pix-confirm-card {
+          animation:pixConfirmarEntrada .24s cubic-bezier(.2,.8,.2,1);
+        }
+        #pixConfirmacaoExclusaoPremium button:focus-visible {
+          outline:3px solid rgba(202,158,45,.3);outline-offset:2px;
+        }
+      `;
+      document.head.appendChild(estilo);
+    }
+
+    const contexto = estadoPixEvidencias.contexto;
+    const semana = escaparPixEv(contexto?.semana || "semana selecionada");
+    const filial = escaparPixEv(contexto?.filial || "filial selecionada");
+    const modal = document.createElement("dialog");
+    modal.id = "pixConfirmacaoExclusaoPremium";
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-labelledby", "pixConfirmTitulo");
+    modal.style.cssText = `
+      position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;
+      margin:0;border:0;display:grid;place-items:center;padding:20px;
+      background:rgba(2,20,35,.68);backdrop-filter:blur(7px);
+    `;
+    modal.innerHTML = `
+      <section class="pix-confirm-card" style="width:min(440px,100%);background:#fff;border:1px solid rgba(202,158,45,.2);border-radius:22px;padding:26px;box-shadow:0 28px 80px rgba(2,20,35,.34);font-family:inherit;">
+        <div style="width:54px;height:54px;border-radius:17px;display:grid;place-items:center;background:linear-gradient(145deg,#fff8df,#ffefb0);color:#9a6b00;margin-bottom:18px;">
+          <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg>
+        </div>
+        <p style="margin:0 0 6px;color:#9a6b00;font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;">Pix do Presidente • ${semana}</p>
+        <h3 id="pixConfirmTitulo" style="margin:0;color:#102a3a;font-size:22px;line-height:1.25;">Excluir esta evidência?</h3>
+        <p style="margin:10px 0 22px;color:#64748b;font-size:14px;line-height:1.6;">A imagem será removida da <strong>${semana}</strong> de <strong>${filial}</strong> e não aparecerá mais nos relatórios.</p>
+        <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
+          <button type="button" data-pix-confirmar="cancelar" style="min-height:44px;padding:0 18px;border:1px solid #dbe4e8;border-radius:12px;background:#fff;color:#334155;font-weight:800;cursor:pointer;">Cancelar</button>
+          <button type="button" data-pix-confirmar="excluir" style="min-height:44px;padding:0 18px;border:0;border-radius:12px;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;font-weight:900;cursor:pointer;box-shadow:0 10px 24px rgba(220,38,38,.22);">Excluir evidência</button>
+        </div>
+      </section>
+    `;
+
+    const suportaDialog = typeof modal.showModal === "function";
+    const finalizar = resultado => {
+      if (modal.open) modal.close();
+      modal.remove();
+      resolve(resultado);
+    };
+
+    modal.addEventListener("click", evento => {
+      const acao = evento.target.closest("[data-pix-confirmar]")?.dataset.pixConfirmar;
+      if (acao === "excluir") finalizar(true);
+      if (acao === "cancelar" || evento.target === modal) finalizar(false);
+    });
+    modal.addEventListener("cancel", evento => {
+      evento.preventDefault();
+      finalizar(false);
+    });
+
+    document.body.appendChild(modal);
+    if (suportaDialog) modal.showModal();
+    else modal.setAttribute("open", "");
+    modal.querySelector('[data-pix-confirmar="cancelar"]')?.focus();
+  });
+}
+
 async function excluirPixEvidencia(
   caminho,
   botao = null
 ) {
-  if (
-    !confirm(
-      "Excluir esta evidência da semana selecionada?"
-    )
-  ) {
+  if (!(await confirmarExclusaoPixPremium())) {
     return;
   }
 
