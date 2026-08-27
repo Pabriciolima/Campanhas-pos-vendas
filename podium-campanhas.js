@@ -71,6 +71,23 @@ function normalizar(valor) {
     .trim();
 }
 
+function chaveFilialPodium(valor) {
+  return normalizar(valor)
+    .replace(/[^A-Z0-9]+/g, " ")
+    .replace(/\s+(MA|PI|MT|PA|RO|AP)$/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function rotuloFilialPodium(valor) {
+  const chave = chaveFilialPodium(valor);
+
+  if (chave === "SAO LUIS") return "SÃO LUÍS";
+  if (chave === "URUCUI") return "URUÇUÍ-PI";
+
+  return texto(valor);
+}
+
 function escapar(valor) {
   return String(valor ?? "")
     .replaceAll("&", "&amp;")
@@ -97,7 +114,7 @@ const PODIUM_BANDEIRAS=Object.freeze({
 });
 const PODIUM_NOME_UF=Object.freeze({PA:"Pará",MA:"Maranhão",PI:"Piauí",MT:"Mato Grosso",RO:"Rondônia",AP:"Amapá"});
 function podiumBandeiraEstado(filial){
- const uf=PODIUM_UF_POR_FILIAL[normalizar(filial)]||"";
+ const uf=PODIUM_UF_POR_FILIAL[chaveFilialPodium(filial)]||"";
  if(!uf)return "";
  const nome=PODIUM_NOME_UF[uf];
  return `<div class="podium-bandeira-estado" title="${escapar(nome)} · ${uf}">
@@ -359,7 +376,7 @@ function compararRankingJusto(a, b) {
 
 function rankingProdutivos(competencia, filial = "") {
   const filialChave =
-    normalizar(
+    chaveFilialPodium(
       filial
     );
 
@@ -391,7 +408,7 @@ function rankingProdutivos(competencia, filial = "") {
 
         if (
           filialChave &&
-          normalizar(
+          chaveFilialPodium(
             pessoa.filial
           ) !== filialChave
         ) {
@@ -596,7 +613,7 @@ function rotuloCategoriaPix(categoria) {
 
 function rankingPix(competencia, filial = "", categoria = "") {
   const filialChave =
-    normalizar(
+    chaveFilialPodium(
       filial
     );
 
@@ -656,7 +673,7 @@ function rankingPix(competencia, filial = "", categoria = "") {
 
         if (
           filialChave &&
-          normalizar(
+          chaveFilialPodium(
             pessoa.filial
           ) !== filialChave
         ) {
@@ -797,12 +814,25 @@ function filiaisDisponiveis(tipo, competencia) {
   const funcionarios =
     tipo === "pix" ? estado.funcionariosPix : estado.funcionariosProdutivos;
 
-  return [...new Set(
-    lancamentos
-      .filter(item => texto(item.competencia) === competencia)
-      .map(item => dadosPessoa(item, funcionarios).filial)
-      .filter(Boolean)
-  )].sort((a, b) => String(a).localeCompare(String(b), "pt-BR"));
+  const unidades = new Map();
+
+  lancamentos
+    .filter(item => texto(item.competencia) === competencia)
+    .map(item => dadosPessoa(item, funcionarios).filial)
+    .filter(Boolean)
+    .forEach(filial => {
+      const chave = chaveFilialPodium(filial);
+      if (chave && !unidades.has(chave)) {
+        unidades.set(chave, rotuloFilialPodium(filial));
+      }
+    });
+
+  if (!unidades.has("URUCUI")) {
+    unidades.set("URUCUI", "URUÇUÍ-PI");
+  }
+
+  return [...unidades.values()]
+    .sort((a, b) => String(a).localeCompare(String(b), "pt-BR"));
 }
 
 function coroaSvg(classe) {
@@ -1970,8 +2000,8 @@ function htmlPainelPixCategoria(
                   <option
                     value="${escapar(unidade)}"
                     ${
-                      normalizar(unidade) ===
-                      normalizar(filial)
+                      chaveFilialPodium(unidade) ===
+                      chaveFilialPodium(filial)
                         ? "selected"
                         : ""
                     }
@@ -2134,8 +2164,8 @@ function htmlPainel(tipo) {
                   <option
                     value="${escapar(unidade)}"
                     ${
-                      normalizar(unidade) ===
-                      normalizar(filial)
+                      chaveFilialPodium(unidade) ===
+                      chaveFilialPodium(filial)
                         ? "selected"
                         : ""
                     }

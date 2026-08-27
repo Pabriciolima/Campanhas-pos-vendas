@@ -39,6 +39,7 @@
               let crmSyncTimer = null;
               let crmImportSyncTimer = null;
               let crmRealtimeChannels = [];
+              let crmCabecalhoCompartilhadoOriginal = null;
 
 
               const $ = (selector, root = document) => root.querySelector(selector);
@@ -3905,6 +3906,21 @@
               function sincronizarCabecalhoCRM() {
                 const c = localizarControlesGlobaisCRM();
 
+                /*
+                 * O topo é compartilhado por CRM, Pix e Produtivos.
+                 * Guardamos a lista real de filiais antes de o CRM
+                 * transformá-la temporariamente em uma lista de marcas.
+                 */
+                if (
+                  !crmCabecalhoCompartilhadoOriginal &&
+                  c.filialFilter
+                ) {
+                  crmCabecalhoCompartilhadoOriginal = {
+                    filialHTML: c.filialFilter.innerHTML,
+                    filialValor: c.filialFilter.value || ""
+                  };
+                }
+
                 document.body.classList.add("crm-mode-active");
 
                 if (c.pageTitle) {
@@ -6026,7 +6042,73 @@
                 reafirmarCabecalhoCRM();
               }
 
-              function sairDoCRM() {
+              function restaurarCabecalhoCampanha(moduloDestino = "") {
+                const c = localizarControlesGlobaisCRM();
+
+                const modulo =
+                  moduloDestino ||
+                  (document.body.classList.contains("modulo-pix-ativo")
+                    ? "pix"
+                    : "produtivos");
+
+                if (c.exportOption) {
+                  const valorAtual = c.exportOption.value;
+
+                  if (modulo === "pix") {
+                    c.exportOption.innerHTML = `
+                      <option value="habilitados">Somente habilitados</option>
+                      <option value="habilitados-s1">Somente habilitados S1</option>
+                      <option value="habilitados-s2">Somente habilitados S2</option>
+                      <option value="habilitados-s3">Somente habilitados S3</option>
+                      <option value="habilitados-s4">Somente habilitados S4</option>
+                      <option value="todos">TODAS</option>
+                    `;
+                  } else {
+                    c.exportOption.innerHTML = `
+                      <option value="habilitados">Somente habilitados</option>
+                      <option value="todos">Todos os resultados</option>
+                    `;
+                  }
+
+                  c.exportOption.value =
+                    [...c.exportOption.options].some(
+                      opcao => opcao.value === valorAtual
+                    )
+                      ? valorAtual
+                      : "habilitados";
+                }
+
+                if (c.filialLabel) {
+                  c.filialLabel.hidden = false;
+
+                  const titulo =
+                    c.filialLabel.querySelector("span");
+
+                  if (titulo) titulo.textContent = "Filial";
+                }
+
+                if (
+                  c.filialFilter &&
+                  crmCabecalhoCompartilhadoOriginal?.filialHTML
+                ) {
+                  c.filialFilter.innerHTML =
+                    crmCabecalhoCompartilhadoOriginal.filialHTML;
+
+                  const valorAnterior =
+                    crmCabecalhoCompartilhadoOriginal.filialValor;
+
+                  c.filialFilter.value =
+                    [...c.filialFilter.options].some(
+                      opcao => opcao.value === valorAnterior
+                    )
+                      ? valorAnterior
+                      : "";
+                }
+
+                window.__crmMarcaGlobal = "";
+              }
+
+              function sairDoCRM(moduloDestino = "") {
                 $("#crmCampanhas")
                   ?.classList.remove("active");
 
@@ -6048,6 +6130,21 @@
                     "Abrir auditoria";
                   delete botaoAuditoria.dataset.crmVisual;
                 }
+
+                /*
+                 * Aguarda o controlador principal concluir a troca e
+                 * reafirma o cabeçalho correto. Não recria botões nem
+                 * remove listeners já instalados pelos outros módulos.
+                 */
+                [0, 40, 140].forEach(atraso => {
+                  window.setTimeout(
+                    () => {
+                      if (crmEstaAtivo()) return;
+                      restaurarCabecalhoCampanha(moduloDestino);
+                    },
+                    atraso
+                  );
+                });
               }
 
               function conectarMenuExistente() {
@@ -6104,7 +6201,10 @@
                 ).forEach(botao => {
                   botao.addEventListener(
                     "click",
-                    () => sairDoCRM()
+                    () =>
+                      sairDoCRM(
+                        botao.dataset.moduleToggle || ""
+                      )
                   );
                 });
 
@@ -6112,7 +6212,12 @@
                   .forEach(botao => {
                     botao.addEventListener(
                       "click",
-                      () => sairDoCRM()
+                      () =>
+                        sairDoCRM(
+                          botao.classList.contains("pix-menu-btn")
+                            ? "pix"
+                            : "produtivos"
+                        )
                     );
                   });
               }

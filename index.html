@@ -1,4 +1,4 @@
-  <!doctype html>
+<!doctype html>
             <html lang="pt-BR">
 
             <head>
@@ -17,6 +17,28 @@
               <link rel="stylesheet" href="./importacao-funcionarios.css?v=20260716-01" />
               <link rel="stylesheet" href="./politicas-penalidades.css?v=20260717-01" />
               <link rel="stylesheet" href="./bloqueio-lancamentos.css?v=20260717-01" />
+
+              <style id="crm-sidebar-icon-contrast-v19">
+                /* Identidade visual exclusiva do CRM — alto contraste na sidebar */
+                .sidebar .module-icon-crm {
+                  color: #ffffff;
+                  background: linear-gradient(135deg, #8b5cf6 0%, #5b42d8 52%, #4338ca 100%);
+                  border: 1px solid rgba(221, 214, 254, 0.72);
+                  box-shadow:
+                    0 7px 18px rgba(91, 66, 216, 0.38),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.32);
+                  text-shadow: 0 1px 2px rgba(30, 20, 90, 0.5);
+                }
+
+                .sidebar .module-toggle:hover .module-icon-crm,
+                .sidebar .campaign-module-group.open .module-icon-crm {
+                  background: linear-gradient(135deg, #9f7aea 0%, #6d5dfc 48%, #4f46e5 100%);
+                  border-color: rgba(237, 233, 254, 0.95);
+                  box-shadow:
+                    0 9px 22px rgba(109, 93, 252, 0.5),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.38);
+                }
+              </style>
 
               <style id="importacao-relatorio-botoes-fixos-css">
                 .panel-header-actions {
@@ -1281,7 +1303,7 @@
 
               <script>
                 (() => {
-                  const versaoAtual = "20260827-18";
+                  const versaoAtual = "20260827-20";
                   const chave = "campanhas_app_versao";
 
                   if (localStorage.getItem(chave) === versaoAtual) {
@@ -1328,7 +1350,7 @@
               <script src="./podium-homenagem-premium-v01.js?v=20260819-01"></script>
               <!-- Leitura de XLSX, XLS e CSV -->
               <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-              <script type="module" src="./crm-module.js?v=20260826-167-supabase"></script>
+              <script type="module" src="./crm-module.js?v=20260827-20"></script>
 
 
               <script>
