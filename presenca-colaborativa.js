@@ -17,7 +17,6 @@ const PC_FILIAIS = [
   "ÁGUA BOA-MT",
   "ANANINDEUA-PA",
   "BACABAL-MA",
-  "BELÉM-PA",
   "CUIABÁ-MT",
   "JI-PARANÁ-RO",
   "MACAPÁ-AP",
