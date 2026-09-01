@@ -77,6 +77,7 @@ a função resolverAutor() pode ser ligada ao usuário autenticado.
 */
 
 import { firestore } from "./firebase-config.js";
+import { supabase } from "./supabase-config.js";
 
 import {
   collection,
@@ -88,7 +89,7 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
-const AUDITORIA_VERSAO = "2026.08.19-09";
+const AUDITORIA_VERSAO = "2026.09.01-10-SUPABASE-INTEGRAL";
 const COLECAO_AUDITORIA = "auditoria_campanhas";
 
 const FONTES_AUDITORIA = [
@@ -4565,6 +4566,52 @@ function exportarAuditoriaPdf() {
   );
 }
 
+let logsAuditoriaFirebase = [];
+let logsAuditoriaSupabase = [];
+
+function consolidarLogsAuditoria() {
+  const unicos = new Map();
+
+  [...logsAuditoriaFirebase, ...logsAuditoriaSupabase]
+    .forEach(log => {
+      unicos.set(log.id, log);
+    });
+
+  estadoAuditoria.logs = [...unicos.values()]
+    .sort(
+      (a, b) =>
+        millisDoLog(b) -
+        millisDoLog(a)
+    );
+
+  preencherFiltroFiliaisAuditoria();
+  renderizarAuditoria();
+}
+
+async function carregarLogsAuditoriaSupabase() {
+  const { data, error } = await supabase
+    .from(COLECAO_AUDITORIA)
+    .select("id,payload,registrado_em")
+    .order("registrado_em", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  logsAuditoriaSupabase = (data || []).map(linha => ({
+    id: linha.id,
+    ...(linha.payload || {}),
+    registradoEm:
+      linha.payload?.registradoEm ||
+      linha.registrado_em,
+    registradoEmCliente:
+      linha.payload?.registradoEmCliente ||
+      linha.registrado_em
+  }));
+
+  consolidarLogsAuditoria();
+}
+
 function observarLogsAuditoria() {
   try {
     /*
@@ -4584,7 +4631,7 @@ function observarLogsAuditoria() {
     onSnapshot(
       consulta,
       snapshot => {
-        estadoAuditoria.logs =
+        logsAuditoriaFirebase =
           snapshot.docs
             .map(
               documento => ({
@@ -4599,8 +4646,7 @@ function observarLogsAuditoria() {
                 millisDoLog(a)
             );
 
-        preencherFiltroFiliaisAuditoria();
-        renderizarAuditoria();
+        consolidarLogsAuditoria();
       },
       erro => {
         console.error(
@@ -4615,6 +4661,39 @@ function observarLogsAuditoria() {
       erro
     );
   }
+
+  carregarLogsAuditoriaSupabase().catch(erro => {
+    console.error(
+      "[AUDITORIA] Erro ao carregar os registros do Supabase:",
+      erro
+    );
+  });
+
+  let temporizadorSupabase = null;
+
+  supabase
+    .channel("auditoria-campanhas-integral-v10")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: COLECAO_AUDITORIA
+      },
+      () => {
+        window.clearTimeout(temporizadorSupabase);
+        temporizadorSupabase = window.setTimeout(
+          () => carregarLogsAuditoriaSupabase().catch(erro => {
+            console.error(
+              "[AUDITORIA] Falha ao atualizar o histórico do Supabase:",
+              erro
+            );
+          }),
+          250
+        );
+      }
+    )
+    .subscribe();
 }
 
 
@@ -4798,9 +4877,15 @@ function iniciarAuditoria() {
   inserirBotoesAuditoria();
   observarLogsAuditoria();
 
-  FONTES_AUDITORIA.forEach(
-    observarFonte
-  );
+  FONTES_AUDITORIA
+    .filter(
+      fonte =>
+        fonte.colecao !==
+        "produtivos_lancamentos"
+    )
+    .forEach(
+      observarFonte
+    );
 
   let timerObserverAuditoria =
     null;

@@ -447,6 +447,61 @@ const DB_KEY = "campanha_oficina_mvp_v1";
 
 const HISTORICO_INICIO = "2026-06";
 
+/*
+ * Mantém toda competência no padrão calendário AAAA-MM.
+ * Registros antigos com mês acima de 12 são transportados para
+ * o ano correto (ex.: 2026-13 vira 2027-01), sem perder dados.
+ */
+function normalizarCompetencia12Meses(valor, fallback = "") {
+  const textoValor = String(valor || "").trim();
+  const correspondencia = textoValor.match(/^(\d{4})-(\d{1,2})$/);
+
+  if (!correspondencia) {
+    return fallback;
+  }
+
+  const ano = Number(correspondencia[1]);
+  const mes = Number(correspondencia[2]);
+
+  if (!Number.isInteger(ano) || !Number.isInteger(mes) || mes < 1) {
+    return fallback;
+  }
+
+  const dataNormalizada = new Date(ano, mes - 1, 1);
+
+  return `${dataNormalizada.getFullYear()}-${String(
+    dataNormalizada.getMonth() + 1
+  ).padStart(2, "0")}`;
+}
+
+function competenciasDoAno(ano) {
+  const anoValido = /^\d{4}$/.test(String(ano || ""))
+    ? String(ano)
+    : String(new Date().getFullYear());
+
+  return Array.from(
+    { length: 12 },
+    (_, indice) => `${anoValido}-${String(indice + 1).padStart(2, "0")}`
+  );
+}
+
+function normalizarCompetenciaLancamento(lancamento) {
+  if (!lancamento || typeof lancamento !== "object") {
+    return lancamento;
+  }
+
+  const competenciaOriginal = lancamento.competencia;
+  const competenciaNormalizada = normalizarCompetencia12Meses(
+    competenciaOriginal,
+    ""
+  );
+
+  return {
+    ...lancamento,
+    competencia: competenciaNormalizada || competenciaOriginal || ""
+  };
+}
+
 let db = carregarDB();
 let apuracaoAtual = [];
 let funcionariosCarregados = false;
@@ -1382,11 +1437,11 @@ function normalizarLancamentoFirebase(
   const dados =
     documento.data();
 
-  return {
+  return normalizarCompetenciaLancamento({
     ...dados,
     id:
       documento.id
-  };
+  });
 }
 
 async function migrarLancamentosLocaisParaFirebase() {
@@ -1614,7 +1669,7 @@ async function atualizarLancamentosFirebaseAgora(
     if (error) throw error;
 
     db.lancamentos = ordenarLancamentosFirebase(
-      (data || []).map(linha => ({
+      (data || []).map(linha => normalizarCompetenciaLancamento({
         ...(linha.dados || {}),
         id: linha.id
       }))
@@ -3753,6 +3808,11 @@ function compararCompetencias(
 function limitarCompetenciaHistorico(
   competencia
 ) {
+  competencia = normalizarCompetencia12Meses(
+    competencia,
+    mesAtual()
+  );
+
   const atual =
     mesAtual();
 
@@ -3781,6 +3841,11 @@ function alterarCompetencia(
   competencia,
   quantidadeMeses
 ) {
+  competencia = normalizarCompetencia12Meses(
+    competencia,
+    mesAtual()
+  );
+
   const [
     ano,
     mes
@@ -4971,17 +5036,6 @@ function resumoAgrupado(
 }
 
 function atualizarFiltrosCompetencia() {
-  const competencias = [
-    ...new Set(
-      db.lancamentos.map(
-        item => item.competencia
-      )
-    )
-  ]
-    .filter(Boolean)
-    .sort()
-    .reverse();
-
   [
     "filtroCompetenciaLancamento",
     "filtroCompetenciaApuracao"
@@ -4991,8 +5045,24 @@ function atualizarFiltrosCompetencia() {
         `#${id}`
       );
 
-    const valorAtual =
-      elemento.value;
+    if (!elemento) {
+      return;
+    }
+
+    const valorAtual = normalizarCompetencia12Meses(
+      elemento.value,
+      ""
+    );
+
+    const competenciaReferencia =
+      valorAtual ||
+      normalizarCompetencia12Meses(
+        document.querySelector("#competenciaGlobal")?.value,
+        mesAtual()
+      );
+
+    const anoReferencia = competenciaReferencia.slice(0, 4);
+    const competencias = competenciasDoAno(anoReferencia).reverse();
 
     preencherSelect(
       elemento,
@@ -5007,7 +5077,9 @@ function atualizarFiltrosCompetencia() {
       "Todas as competências"
     );
 
-    elemento.value = valorAtual;
+    elemento.value = competencias.includes(valorAtual)
+      ? valorAtual
+      : "";
   });
 }
 
