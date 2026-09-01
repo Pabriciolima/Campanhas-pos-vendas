@@ -167,6 +167,10 @@ import {
 } from "./firebase-config.js";
 
 import {
+  supabase
+} from "./supabase-config.js";
+
+import {
   collection,
   getDocs,
   doc,
@@ -182,7 +186,7 @@ firebase-config.js. Isso evita duas inicializações diferentes do
 Firestore e mantém o long polling usado pelo restante do sistema.
 */
 
-const VERSAO = "2026.08.19-33";
+const VERSAO = "2026.09.01-34-PIX-SUPABASE-OFICIAL";
 const TAMANHO_LOTE = 400;
 const TIMEOUT_OPERACAO = 90000;
 const DB_PRODUTIVOS = "campanha_oficina_mvp_v1";
@@ -576,8 +580,8 @@ const CONFIG = {
       "#pix-lancamentos"
     ],
 
-    funcionarios: "pix_presidente_funcionarios",
-    lancamentos: "pix_presidente_lancamentos"
+    funcionarios: "pix_funcionarios",
+    lancamentos: "pix_lancamentos"
   },
 
   produtivos: {
@@ -1911,6 +1915,26 @@ function encontrarMelhorFuncionario(
 }
 
 async function buscarColecao(nomeColecao) {
+  if (
+    nomeColecao === "pix_funcionarios" ||
+    nomeColecao === "pix_lancamentos"
+  ) {
+    const { data, error } = await supabase
+      .from(nomeColecao)
+      .select("id,dados");
+
+    if (error) {
+      throw new Error(
+        `Não foi possível carregar ${nomeColecao} do Supabase: ${error.message}`
+      );
+    }
+
+    return (data || []).map(linha => ({
+      ...(linha.dados || {}),
+      id: linha.id
+    }));
+  }
+
   const snapshot =
     await comTimeout(
       getDocs(
@@ -1932,6 +1956,132 @@ async function buscarColecao(nomeColecao) {
     */
     id: documento.id
   }));
+}
+
+function serializarValorFirebase(valor) {
+  if (valor === null || valor === undefined) return valor;
+
+  if (typeof valor?.toDate === "function") {
+    return valor.toDate().toISOString();
+  }
+
+  if (Array.isArray(valor)) {
+    return valor.map(serializarValorFirebase);
+  }
+
+  if (typeof valor === "object") {
+    return Object.fromEntries(
+      Object.entries(valor).map(([chave, item]) => [
+        chave,
+        serializarValorFirebase(item)
+      ])
+    );
+  }
+
+  return valor;
+}
+
+async function recuperarLancamentosPixPresosNoFirebase() {
+  const chaveRecuperacao =
+    "pix_recuperacao_firebase_supabase_20260901_34";
+
+  if (localStorage.getItem(chaveRecuperacao) === "concluida") {
+    return { recuperados: 0, jaExecutada: true };
+  }
+
+  const [snapshotFirebase, atuaisSupabase] = await Promise.all([
+    getDocs(collection(firestore, "pix_presidente_lancamentos")),
+    buscarColecao("pix_lancamentos")
+  ]);
+
+  const chavesExistentes = new Set(
+    atuaisSupabase.map(chaveLancamentoPix)
+  );
+
+  const pendentes = snapshotFirebase.docs
+    .map(documento => ({
+      id: documento.id,
+      ...serializarValorFirebase(documento.data())
+    }))
+    .filter(item => {
+      const chave = chaveLancamentoPix(item);
+
+      if (!item.funcionarioId || !item.competencia || !Number(item.semana)) {
+        return false;
+      }
+
+      if (chavesExistentes.has(chave)) return false;
+
+      chavesExistentes.add(chave);
+      return true;
+    });
+
+  const lotes = dividirEmLotes(pendentes, 100);
+  let recuperados = 0;
+
+  for (const lote of lotes) {
+    const agora = new Date().toISOString();
+    const linhas = lote.map(item => {
+      const dados = {
+        ...item,
+        recuperadoDoFirebase: true,
+        recuperadoEm: agora
+      };
+      delete dados.id;
+
+      return {
+        id: item.id,
+        competencia: String(item.competencia || ""),
+        semana: String(item.semana || ""),
+        filial: String(item.filial || item.unidade || ""),
+        colaborador: String(
+          item.colaborador || item.nome || item.funcionarioId || ""
+        ),
+        dados,
+        updated_at: agora
+      };
+    });
+
+    const { error } = await supabase
+      .from("pix_lancamentos")
+      .upsert(linhas, { onConflict: "id" });
+
+    if (error) {
+      throw new Error(
+        `Falha ao recuperar lançamentos antigos do Pix: ${error.message}`
+      );
+    }
+
+    recuperados += linhas.length;
+  }
+
+  const conferidos = await buscarColecao("pix_lancamentos");
+  const chavesConferidas = new Set(conferidos.map(chaveLancamentoPix));
+  const naoConfirmados = pendentes.filter(
+    item => !chavesConferidas.has(chaveLancamentoPix(item))
+  );
+
+  if (naoConfirmados.length) {
+    throw new Error(
+      `${naoConfirmados.length} lançamento(s) recuperado(s) não foram confirmados no Supabase.`
+    );
+  }
+
+  localStorage.setItem(chaveRecuperacao, "concluida");
+
+  if (recuperados > 0) {
+    window.dispatchEvent(
+      new CustomEvent("pix:importacao-concluida", {
+        detail: { recuperados, origem: "Firebase legado" }
+      })
+    );
+  }
+
+  console.info(
+    `[PIX/SUPABASE] Recuperação concluída: ${recuperados} lançamento(s).`
+  );
+
+  return { recuperados, jaExecutada: false };
 }
 
 function deveAtualizarNome(
@@ -3031,11 +3181,7 @@ async function salvarParticipantesNovosPix(
     return 0;
   }
 
-  const lotes =
-    dividirEmLotes(
-      unicos,
-      TAMANHO_LOTE
-    );
+  const lotes = dividirEmLotes(unicos, 100);
 
   let criados = 0;
 
@@ -3049,52 +3195,35 @@ async function salvarParticipantesNovosPix(
 
     renderizar();
 
-    const batch =
-      writeBatch(
-        firestore
+    const agora = new Date().toISOString();
+    const linhas = lotes[indice].map(participante => {
+      const dados = {
+        ...participante,
+        ativo: true,
+        criadoPorImportacao: true,
+        criadoEm: participante.criadoEm || agora,
+        atualizadoEm: agora
+      };
+
+      return {
+        id: participante.id,
+        ativo: true,
+        dados,
+        updated_at: agora
+      };
+    });
+
+    const { error } = await supabase
+      .from("pix_funcionarios")
+      .upsert(linhas, { onConflict: "id" });
+
+    if (error) {
+      throw new Error(
+        `O Supabase não conseguiu criar os participantes do Pix: ${error.message}`
       );
+    }
 
-    lotes[indice].forEach(
-      participante => {
-        batch.set(
-          doc(
-            firestore,
-            CONFIG.pix.funcionarios,
-            participante.id
-          ),
-          {
-            nome:
-              participante.nome,
-            cargo:
-              participante.cargo,
-            filial:
-              participante.filial,
-            dn:
-              participante.dn,
-            ativo:
-              true,
-            criadoPorImportacao:
-              true,
-            criadoEm:
-              serverTimestamp(),
-            atualizadoEm:
-              serverTimestamp()
-          },
-          {
-            merge:
-              true
-          }
-        );
-
-        criados += 1;
-      }
-    );
-
-    await comTimeout(
-      batch.commit(),
-      TIMEOUT_OPERACAO,
-      "O Firebase demorou para criar os participantes do Pix."
-    );
+    criados += linhas.length;
   }
 
   return criados;
@@ -3195,6 +3324,40 @@ async function atualizarNomesBase(
       ])
     ).values()
   ];
+
+  if (state.tipo === "pix") {
+    let atualizadosPix = 0;
+
+    for (const item of unicas) {
+      const atual = state.funcionariosCache.find(
+        funcionario => String(funcionario.id) === String(item.funcionarioId)
+      ) || {};
+      const agora = new Date().toISOString();
+      const dados = {
+        ...atual,
+        nome: item.nomeNovo,
+        nomeAnteriorImportacao: item.nomeAnterior,
+        nomeAtualizadoPorImportacao: true,
+        nomeAtualizadoEm: agora
+      };
+      delete dados.id;
+
+      const { error } = await supabase
+        .from("pix_funcionarios")
+        .update({ dados, updated_at: agora })
+        .eq("id", item.funcionarioId);
+
+      if (error) {
+        throw new Error(
+          `Não foi possível atualizar o nome no Supabase: ${error.message}`
+        );
+      }
+
+      atualizadosPix += 1;
+    }
+
+    return atualizadosPix;
+  }
 
   const lotes =
     dividirEmLotes(
@@ -3403,18 +3566,8 @@ async function salvarPixEmLotes() {
      */
     if (existente) {
       operacoes.push({
-        tipo: "update",
-        referencia:
-          doc(
-            firestore,
-            CONFIG.pix.lancamentos,
-            existente.id
-          ),
-        dados: {
-          ...registro,
-          atualizadoEm:
-            serverTimestamp()
-        }
+        id: existente.id,
+        dados: registro
       });
 
       atualizados += 1;
@@ -3423,31 +3576,15 @@ async function salvarPixEmLotes() {
         gerarIdDocumento(chave);
 
       operacoes.push({
-        tipo: "set",
-        referencia:
-          doc(
-            firestore,
-            CONFIG.pix.lancamentos,
-            idDocumento
-          ),
-        dados: {
-          ...registro,
-          criadoEm:
-            serverTimestamp(),
-          atualizadoEm:
-            serverTimestamp()
-        }
+        id: idDocumento,
+        dados: registro
       });
 
       criados += 1;
     }
   });
 
-  const lotes =
-    dividirEmLotes(
-      operacoes,
-      TAMANHO_LOTE
-    );
+  const lotes = dividirEmLotes(operacoes, 100);
 
   for (
     let indice = 0;
@@ -3458,30 +3595,52 @@ async function salvarPixEmLotes() {
       `Salvando lançamentos ${indice + 1}/${lotes.length}...`;
     renderizar();
 
-    const batch =
-      writeBatch(firestore);
+    const agora = new Date().toISOString();
+    const linhas = lotes[indice].map(operacao => {
+      const dados = {
+        ...operacao.dados,
+        criadoEm: operacao.dados.criadoEm || agora,
+        atualizadoEm: agora
+      };
 
-    lotes[indice].forEach(operacao => {
-      if (
-        operacao.tipo ===
-        "update"
-      ) {
-        batch.update(
-          operacao.referencia,
-          operacao.dados
-        );
-      } else {
-        batch.set(
-          operacao.referencia,
-          operacao.dados
-        );
-      }
+      return {
+        id: operacao.id,
+        competencia: String(dados.competencia || ""),
+        semana: String(dados.semana || ""),
+        filial: String(dados.filial || ""),
+        colaborador: String(
+          dados.colaborador || dados.nome || dados.funcionarioId || ""
+        ),
+        dados,
+        updated_at: agora
+      };
     });
 
-    await comTimeout(
-      batch.commit(),
-      TIMEOUT_OPERACAO,
-      "O Firebase demorou para salvar os lançamentos."
+    const { error } = await supabase
+      .from("pix_lancamentos")
+      .upsert(linhas, { onConflict: "id" });
+
+    if (error) {
+      throw new Error(
+        `O Supabase não conseguiu salvar os lançamentos do Pix: ${error.message}`
+      );
+    }
+  }
+
+  state.progresso = "Confirmando os lançamentos no Supabase...";
+  renderizar();
+
+  const confirmados = await buscarColecao("pix_lancamentos");
+  const chavesConfirmadas = new Set(
+    confirmados.map(chaveLancamentoPix)
+  );
+  const ausentes = state.gerados.filter(
+    registro => !chavesConfirmadas.has(chaveLancamentoPix(registro))
+  );
+
+  if (ausentes.length) {
+    throw new Error(
+      `${ausentes.length} lançamento(s) não foram confirmados no Supabase. Nenhum falso sucesso será exibido.`
     );
   }
 
@@ -3956,7 +4115,7 @@ async function confirmarImportacao() {
       `${state.erros.length} linha(s) inválida(s) não importada(s)`,
       state.tipo === "produtivos"
         ? `Destino confirmado: ${resultadoFinal.destino}`
-        : "Destino confirmado: pix_presidente_lancamentos"
+        : "Destino confirmado: pix_lancamentos (Supabase)"
     ];
 
     if (state.avisos.length) {
@@ -5694,11 +5853,20 @@ function iniciar() {
       return abrir("pix");
     },
 
+    recuperarPixFirebase() {
+      localStorage.removeItem(
+        "pix_recuperacao_firebase_supabase_20260901_34"
+      );
+      return recuperarLancamentosPixPresosNoFirebase();
+    },
+
     diagnostico() {
       return {
         versao: VERSAO,
         xlsx: Boolean(window.XLSX),
         firestore: Boolean(firestore),
+        supabase: Boolean(supabase),
+        destinoPix: "pix_lancamentos",
         pixBotaoImportar: Boolean(
           document.querySelector("#btnImportarRelatorioPix")
         ),
@@ -5785,6 +5953,15 @@ function iniciar() {
   console.info(
     `[IMPORTAÇÃO INTELIGENTE] ${VERSAO} carregado`
   );
+
+  window.setTimeout(() => {
+    recuperarLancamentosPixPresosNoFirebase().catch(erro => {
+      console.error(
+        "[PIX/SUPABASE] Falha na recuperação automática:",
+        erro
+      );
+    });
+  }, 1200);
 }
 
 if (
