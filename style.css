@@ -3024,3 +3024,379 @@ table thead th:not(:last-child)::before {
     grid-template-columns: 1fr;
   }
 }
+
+/* =====================================================
+   FECHAMENTO GLOBAL PREMIUM — 2026.09.01
+   Ícone vetorial animado incorporado, sem dependência externa.
+===================================================== */
+
+button:is(
+  .icon-btn,
+  .irs-close,
+  .ev-viewer-close,
+  .about-system-close,
+  .campanha-ui-close,
+  .senha-exclusao-fechar,
+  .pix-senha-participante-fechar,
+  .auditoria-modal-close,
+  [aria-label="Fechar"],
+  [aria-label^="Fechar "]
+) {
+  position: relative !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  flex: 0 0 40px !important;
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(15, 65, 82, 0.10) !important;
+  border-radius: 14px !important;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.98), rgba(235,244,247,.96)) !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  text-indent: -9999px !important;
+  box-shadow:
+    0 7px 18px rgba(7, 42, 56, .10),
+    inset 0 1px 0 rgba(255,255,255,.95) !important;
+  cursor: pointer !important;
+  isolation: isolate;
+  transition:
+    transform .24s cubic-bezier(.2,.8,.2,1),
+    border-color .22s ease,
+    background .22s ease,
+    box-shadow .22s ease !important;
+}
+
+button:is(
+  .icon-btn,
+  .irs-close,
+  .ev-viewer-close,
+  .about-system-close,
+  .campanha-ui-close,
+  .senha-exclusao-fechar,
+  .pix-senha-participante-fechar,
+  .auditoria-modal-close,
+  [aria-label="Fechar"],
+  [aria-label^="Fechar "]
+) > * {
+  display: none !important;
+}
+
+button:is(
+  .icon-btn,
+  .irs-close,
+  .ev-viewer-close,
+  .about-system-close,
+  .campanha-ui-close,
+  .senha-exclusao-fechar,
+  .pix-senha-participante-fechar,
+  .auditoria-modal-close,
+  [aria-label="Fechar"],
+  [aria-label^="Fechar "]
+)::before,
+button:is(
+  .icon-btn,
+  .irs-close,
+  .ev-viewer-close,
+  .about-system-close,
+  .campanha-ui-close,
+  .senha-exclusao-fechar,
+  .pix-senha-participante-fechar,
+  .auditoria-modal-close,
+  [aria-label="Fechar"],
+  [aria-label^="Fechar "]
+)::after {
+  content: "" !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  z-index: 2 !important;
+  width: 17px !important;
+  height: 2px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #173b49 !important;
+  transform-origin: center !important;
+  transition:
+    width .22s ease,
+    background .22s ease,
+    transform .28s cubic-bezier(.2,.9,.25,1.25) !important;
+}
+
+button:is(
+  .icon-btn,
+  .irs-close,
+  .ev-viewer-close,
+  .about-system-close,
+  .campanha-ui-close,
+  .senha-exclusao-fechar,
+  .pix-senha-participante-fechar,
+  .auditoria-modal-close,
+  [aria-label="Fechar"],
+  [aria-label^="Fechar "]
+)::before {
+  transform: translate(-50%, -50%) rotate(45deg) !important;
+}
+
+button:is(
+  .icon-btn,
+  .irs-close,
+  .ev-viewer-close,
+  .about-system-close,
+  .campanha-ui-close,
+  .senha-exclusao-fechar,
+  .pix-senha-participante-fechar,
+  .auditoria-modal-close,
+  [aria-label="Fechar"],
+  [aria-label^="Fechar "]
+)::after {
+  transform: translate(-50%, -50%) rotate(-45deg) !important;
+}
+
+button:is(
+  .icon-btn,
+  .irs-close,
+  .ev-viewer-close,
+  .about-system-close,
+  .campanha-ui-close,
+  .senha-exclusao-fechar,
+  .pix-senha-participante-fechar,
+  .auditoria-modal-close,
+  [aria-label="Fechar"],
+  [aria-label^="Fechar "]
+):hover {
+  border-color: rgba(202, 47, 47, .24) !important;
+  background: linear-gradient(145deg, #fff7f6, #ffe8e5) !important;
+  box-shadow: 0 10px 24px rgba(174, 35, 35, .16) !important;
+  transform: translateY(-2px) rotate(4deg) !important;
+}
+
+button:is(
+  .icon-btn,
+  .irs-close,
+  .ev-viewer-close,
+  .about-system-close,
+  .campanha-ui-close,
+  .senha-exclusao-fechar,
+  .pix-senha-participante-fechar,
+  .auditoria-modal-close,
+  [aria-label="Fechar"],
+  [aria-label^="Fechar "]
+):hover::before {
+  background: #c52d2d !important;
+  transform: translate(-50%, -50%) rotate(135deg) !important;
+}
+
+button:is(
+  .icon-btn,
+  .irs-close,
+  .ev-viewer-close,
+  .about-system-close,
+  .campanha-ui-close,
+  .senha-exclusao-fechar,
+  .pix-senha-participante-fechar,
+  .auditoria-modal-close,
+  [aria-label="Fechar"],
+  [aria-label^="Fechar "]
+):hover::after {
+  background: #c52d2d !important;
+  transform: translate(-50%, -50%) rotate(45deg) !important;
+}
+
+button:is(
+  .icon-btn,
+  .irs-close,
+  .ev-viewer-close,
+  .about-system-close,
+  .campanha-ui-close,
+  .senha-exclusao-fechar,
+  .pix-senha-participante-fechar,
+  .auditoria-modal-close,
+  [aria-label="Fechar"],
+  [aria-label^="Fechar "]
+):active {
+  transform: translateY(0) scale(.91) !important;
+}
+
+button:is(
+  .icon-btn,
+  .irs-close,
+  .ev-viewer-close,
+  .about-system-close,
+  .campanha-ui-close,
+  .senha-exclusao-fechar,
+  .pix-senha-participante-fechar,
+  .auditoria-modal-close,
+  [aria-label="Fechar"],
+  [aria-label^="Fechar "]
+):focus-visible {
+  outline: 3px solid rgba(15, 145, 99, .25) !important;
+  outline-offset: 3px !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button:is(
+    .icon-btn,
+    .irs-close,
+    .ev-viewer-close,
+    .about-system-close,
+    .campanha-ui-close,
+    .senha-exclusao-fechar,
+    .pix-senha-participante-fechar,
+    .auditoria-modal-close,
+    [aria-label="Fechar"],
+    [aria-label^="Fechar "]
+  ),
+  button:is(
+    .icon-btn,
+    .irs-close,
+    .ev-viewer-close,
+    .about-system-close,
+    .campanha-ui-close,
+    .senha-exclusao-fechar,
+    .pix-senha-participante-fechar,
+    .auditoria-modal-close,
+    [aria-label="Fechar"],
+    [aria-label^="Fechar "]
+  )::before,
+  button:is(
+    .icon-btn,
+    .irs-close,
+    .ev-viewer-close,
+    .about-system-close,
+    .campanha-ui-close,
+    .senha-exclusao-fechar,
+    .pix-senha-participante-fechar,
+    .auditoria-modal-close,
+    [aria-label="Fechar"],
+    [aria-label^="Fechar "]
+  )::after {
+    transition: none !important;
+  }
+}
+
+/* =====================================================
+   FECHAR MINIMALISTA — AJUSTE FINAL
+   Neutraliza camadas e pseudo-elementos anteriores.
+===================================================== */
+
+button:is(
+  .icon-btn,
+  .irs-close,
+  .ev-viewer-close,
+  .about-system-close,
+  .campanha-ui-close,
+  .senha-exclusao-fechar,
+  .pix-senha-participante-fechar,
+  .auditoria-modal-close,
+  [aria-label="Fechar"],
+  [aria-label^="Fechar "]
+) {
+  width: 36px !important;
+  min-width: 36px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  flex-basis: 36px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  text-indent: -9999px !important;
+  box-shadow: none !important;
+  transform: none !important;
+  background-color: transparent !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23374f5b' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6L6 18'/%3E%3C/svg%3E") !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-size: 20px 20px !important;
+  transition:
+    background-color .18s ease,
+    opacity .18s ease,
+    transform .12s ease !important;
+}
+
+button:is(
+  .icon-btn,
+  .irs-close,
+  .ev-viewer-close,
+  .about-system-close,
+  .campanha-ui-close,
+  .senha-exclusao-fechar,
+  .pix-senha-participante-fechar,
+  .auditoria-modal-close,
+  [aria-label="Fechar"],
+  [aria-label^="Fechar "]
+)::before,
+button:is(
+  .icon-btn,
+  .irs-close,
+  .ev-viewer-close,
+  .about-system-close,
+  .campanha-ui-close,
+  .senha-exclusao-fechar,
+  .pix-senha-participante-fechar,
+  .auditoria-modal-close,
+  [aria-label="Fechar"],
+  [aria-label^="Fechar "]
+)::after {
+  content: none !important;
+  display: none !important;
+}
+
+button:is(
+  .icon-btn,
+  .irs-close,
+  .ev-viewer-close,
+  .about-system-close,
+  .campanha-ui-close,
+  .senha-exclusao-fechar,
+  .pix-senha-participante-fechar,
+  .auditoria-modal-close,
+  [aria-label="Fechar"],
+  [aria-label^="Fechar "]
+):hover {
+  border: 0 !important;
+  background-color: #eef3f5 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  opacity: 1 !important;
+}
+
+button:is(
+  .icon-btn,
+  .irs-close,
+  .ev-viewer-close,
+  .about-system-close,
+  .campanha-ui-close,
+  .senha-exclusao-fechar,
+  .pix-senha-participante-fechar,
+  .auditoria-modal-close,
+  [aria-label="Fechar"],
+  [aria-label^="Fechar "]
+):active {
+  background-color: #e3eaed !important;
+  transform: scale(.94) !important;
+}
+
+button:is(
+  .icon-btn,
+  .irs-close,
+  .ev-viewer-close,
+  .about-system-close,
+  .campanha-ui-close,
+  .senha-exclusao-fechar,
+  .pix-senha-participante-fechar,
+  .auditoria-modal-close,
+  [aria-label="Fechar"],
+  [aria-label^="Fechar "]
+):focus-visible {
+  outline: 2px solid rgba(17, 112, 82, .28) !important;
+  outline-offset: 2px !important;
+}
