@@ -9,12 +9,13 @@ Não altera lançamentos, regras, importação, exportação, auditoria ou Fireb
 */
 
 import { firestore } from "./firebase-config.js";
+import { supabase } from "./supabase-config.js";
 import {
   collection,
   onSnapshot
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
-const PODIUM_VERSAO = "2026.08.20-12";
+const PODIUM_VERSAO = "2026.09.01-13-SUPABASE-PRODUTIVOS";
 
 const estado = {
   funcionariosProdutivos: [],
@@ -429,14 +430,6 @@ function rankingProdutivos(competencia, filial = "") {
           return;
         }
 
-        if (
-          !produtivoBateuMeta(
-            item
-          )
-        ) {
-          return;
-        }
-
         const metaMonetaria =
           metaMonetariaProdutivo(
             item
@@ -549,9 +542,8 @@ function rankingProdutivos(competencia, filial = "") {
   ]
     .filter(
       item =>
-        numero(
-          item.percentualAtingimento
-        ) >= 100
+        numero(item.faturamento) > 0 &&
+        numero(item.percentualAtingimento) > 0
     )
     .sort(
       compararRankingJusto
@@ -887,8 +879,13 @@ function card(pessoa, posicao) {
       )
     );
 
+  const percentualPrincipal =
+    atingimento >= 100
+      ? superacao
+      : atingimento;
+
   const percentualFormatado =
-    superacao
+    percentualPrincipal
       .toFixed(1)
       .replace(
         ".",
@@ -1006,11 +1003,11 @@ function card(pessoa, posicao) {
 
       <div class="podium-superacao">
         <small>
-          SUPERAÇÃO DA META
+          ${atingimento >= 100 ? "SUPERAÇÃO DA META" : "ATINGIMENTO DA META"}
         </small>
 
         <strong>
-          +${percentualFormatado}%
+          ${atingimento >= 100 ? "+" : ""}${percentualFormatado}%
         </strong>
 
         <span>
@@ -2339,12 +2336,98 @@ function observar(nomeColecao, chave) {
   );
 }
 
+async function carregarProdutivosSupabasePodium() {
+  const [funcionariosResposta, lancamentosResposta] = await Promise.all([
+    supabase
+      .from("produtivos_funcionarios")
+      .select("id,dados,ativo"),
+    supabase
+      .from("produtivos_lancamentos")
+      .select("id,competencia,filial,colaborador,dados")
+  ]);
+
+  if (funcionariosResposta.error) {
+    throw funcionariosResposta.error;
+  }
+
+  if (lancamentosResposta.error) {
+    throw lancamentosResposta.error;
+  }
+
+  estado.funcionariosProdutivos = (funcionariosResposta.data || [])
+    .map(linha => ({
+      ...(linha.dados || {}),
+      id: linha.id,
+      ativo: linha.ativo !== false
+    }));
+
+  estado.lancamentosProdutivos = (lancamentosResposta.data || [])
+    .map(linha => ({
+      ...(linha.dados || {}),
+      id: linha.id,
+      competencia:
+        texto(linha.dados?.competencia) ||
+        texto(linha.competencia),
+      filial:
+        texto(linha.dados?.filial) ||
+        texto(linha.filial),
+      colaborador:
+        texto(linha.dados?.colaborador) ||
+        texto(linha.dados?.nome) ||
+        texto(linha.colaborador)
+    }));
+
+  renderizar();
+
+  console.info(
+    `[PÓDIO/SUPABASE] Produtivos sincronizados: ${estado.funcionariosProdutivos.length} funcionário(s) e ${estado.lancamentosProdutivos.length} lançamento(s).`
+  );
+}
+
+function observarProdutivosSupabasePodium() {
+  let temporizador = null;
+
+  const atualizar = () => {
+    window.clearTimeout(temporizador);
+    temporizador = window.setTimeout(() => {
+      carregarProdutivosSupabasePodium().catch(erro => {
+        console.error("[PÓDIO/SUPABASE] Falha ao carregar Produtivos:", erro);
+      });
+    }, 180);
+  };
+
+  carregarProdutivosSupabasePodium().catch(erro => {
+    console.error("[PÓDIO/SUPABASE] Falha na carga inicial dos Produtivos:", erro);
+  });
+
+  supabase
+    .channel("podium-produtivos-realtime-v13")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "produtivos_funcionarios"
+      },
+      atualizar
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "produtivos_lancamentos"
+      },
+      atualizar
+    )
+    .subscribe();
+}
+
 function iniciar() {
   garantirEstilos();
   eventos();
 
-  observar("funcionarios", "funcionariosProdutivos");
-  observar("produtivos_lancamentos", "lancamentosProdutivos");
+  observarProdutivosSupabasePodium();
   observar("pix_presidente_funcionarios", "funcionariosPix");
   observar("pix_presidente_lancamentos", "lancamentosPix");
 

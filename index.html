@@ -10,7 +10,7 @@
               <title>Sistema de Campanhas Pós-Vendas</title>
               <script>
                 (() => {
-                  const versaoBoot = "20260828-27";
+                  const versaoBoot = "20260901-04";
                   const chaveBoot = `campanhas_boot_${versaoBoot}`;
 
                   if (sessionStorage.getItem(chaveBoot)) return;
@@ -45,6 +45,7 @@
               <link rel="stylesheet" href="./importacao-funcionarios.css?v=20260716-01" />
               <link rel="stylesheet" href="./politicas-penalidades.css?v=20260717-01" />
               <link rel="stylesheet" href="./bloqueio-lancamentos.css?v=20260717-01" />
+              <link rel="stylesheet" href="./ui-premium.css?v=20260901-02" />
 
               <style id="crm-sidebar-icon-contrast-v19">
                 /* Identidade visual exclusiva do CRM — alto contraste na sidebar */
@@ -1373,7 +1374,8 @@
               <script type="module" src="./bloqueio-lancamentos.js?v=20260717-01"></script>
               <script src="./dashboard-pix-gestor-funcional.js?v=20260721-04"></script>
               <script type="module" src="./compras-module.js?v=20260723-11"></script>
-              <script type="module" src="./auditoria-campanhas.js?v=20260808-01"></script>
+              <script src="./auditoria-senha-sempre.js?v=20260901-03"></script>
+              <script type="module" src="./auditoria-campanhas.js?v=20260901-03"></script>
               <script type="module" src="./comparativo-mensal-campanhas.js?v=20260808-01"></script>
               <script src="./guia-campos-pendentes-pix-v01.js?v=20260819-01"></script>
               <script src="./podium-homenagem-premium-v01.js?v=20260819-01"></script>
@@ -1580,7 +1582,8 @@
                   );
                 })();
               </script>
-              <script type="module" src="./podium-campanhas.js?v=20260826-07"></script>
+              <script type="module" src="./podium-campanhas.js?v=20260901-13"></script>
+              <script src="./ui-premium.js?v=20260901-02"></script>
 
               <!-- Importação integrada aos módulos de Lançamentos -->
             </body>

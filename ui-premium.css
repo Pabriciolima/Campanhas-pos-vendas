@@ -1,0 +1,303 @@
+/* ================================================================
+   CAMADAS VISUAIS PREMIUM — CAMPANHAS PÓS-VENDAS
+   Arquivo de destino: ui-premium.css
+   Camada aditiva: não altera regras, dados ou eventos do sistema.
+   ================================================================ */
+
+:root {
+  --ui-ink: #102a43;
+  --ui-muted: #627d98;
+  --ui-line: rgba(148, 163, 184, .24);
+  --ui-surface: rgba(255, 255, 255, .92);
+  --ui-brand: #0f766e;
+  --ui-brand-2: #0ea5a4;
+  --ui-brand-soft: rgba(13, 148, 136, .12);
+  --ui-blue: #2563eb;
+  --ui-danger: #dc2626;
+  --ui-radius: 14px;
+  --ui-shadow: 0 10px 30px rgba(15, 23, 42, .08);
+  --ui-shadow-hover: 0 16px 36px rgba(15, 23, 42, .13);
+  --ui-ease: cubic-bezier(.2, .8, .2, 1);
+}
+
+/* O aprimoramento só é ativado depois que o JS está pronto. */
+html.ui-premium-ready body {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+html.ui-premium-ready button,
+html.ui-premium-ready [role="button"],
+html.ui-premium-ready select,
+html.ui-premium-ready input,
+html.ui-premium-ready textarea {
+  transition:
+    color .2s var(--ui-ease),
+    background-color .2s var(--ui-ease),
+    border-color .2s var(--ui-ease),
+    box-shadow .25s var(--ui-ease),
+    transform .2s var(--ui-ease),
+    opacity .2s var(--ui-ease);
+}
+
+html.ui-premium-ready button:not(:disabled):active,
+html.ui-premium-ready [role="button"]:not([aria-disabled="true"]):active {
+  transform: translateY(1px) scale(.985);
+}
+
+html.ui-premium-ready button:focus-visible,
+html.ui-premium-ready [role="button"]:focus-visible,
+html.ui-premium-ready a:focus-visible,
+html.ui-premium-ready input:focus-visible,
+html.ui-premium-ready select:focus-visible,
+html.ui-premium-ready textarea:focus-visible {
+  outline: 3px solid rgba(14, 165, 164, .24) !important;
+  outline-offset: 2px;
+}
+
+/* Ícones adicionados sem remover o texto original. */
+.ui-icon {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  display: inline-block;
+  vertical-align: -3px;
+  pointer-events: none;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ui-has-icon {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.module-dropdown .ui-has-icon {
+  justify-content: flex-start;
+}
+
+/* Botões de ação com brilho contido, inspirado em microinterações Uiverse. */
+html.ui-premium-ready button.primary,
+html.ui-premium-ready .primary.pix-primary-button,
+html.ui-premium-ready .evidence-select-button {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border-color: rgba(255, 255, 255, .22);
+  box-shadow: 0 8px 20px rgba(15, 118, 110, .2), inset 0 1px rgba(255, 255, 255, .2);
+}
+
+html.ui-premium-ready button.primary::after,
+html.ui-premium-ready .primary.pix-primary-button::after,
+html.ui-premium-ready .evidence-select-button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(110deg, transparent 15%, rgba(255,255,255,.24) 45%, transparent 72%);
+  transform: translateX(-130%);
+  transition: transform .6s var(--ui-ease);
+}
+
+html.ui-premium-ready button.primary:not(:disabled):hover,
+html.ui-premium-ready .primary.pix-primary-button:not(:disabled):hover,
+html.ui-premium-ready .evidence-select-button:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 13px 26px rgba(15, 118, 110, .27), inset 0 1px rgba(255,255,255,.28);
+}
+
+html.ui-premium-ready button.primary:hover::after,
+html.ui-premium-ready .primary.pix-primary-button:hover::after,
+html.ui-premium-ready .evidence-select-button:hover::after {
+  transform: translateX(130%);
+}
+
+html.ui-premium-ready button.secondary:not(:disabled):hover,
+html.ui-premium-ready .export-btn:not(:disabled):hover,
+html.ui-premium-ready .icon-btn:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 9px 22px rgba(15, 23, 42, .11);
+}
+
+/* Sidebar: selecionado nítido, ícones e movimento curto. */
+html.ui-premium-ready .module-toggle,
+html.ui-premium-ready .module-dropdown button {
+  position: relative;
+}
+
+html.ui-premium-ready .module-dropdown button::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 0;
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--ui-brand-2), var(--ui-brand));
+  transform: translateY(-50%);
+  transition: height .22s var(--ui-ease);
+}
+
+html.ui-premium-ready .module-dropdown button:hover::before,
+html.ui-premium-ready .module-dropdown button.active::before {
+  height: 56%;
+}
+
+html.ui-premium-ready .module-dropdown button:not(:disabled):hover {
+  transform: translateX(3px);
+}
+
+html.ui-premium-ready .module-chevron {
+  transition: transform .25s var(--ui-ease);
+}
+
+html.ui-premium-ready .campaign-module-group.open .module-chevron {
+  transform: rotate(180deg);
+}
+
+/* Cartões: profundidade uniforme sem mudar dimensões do layout. */
+html.ui-premium-ready :is(.card, .stat-card, .dashboard-card, .policy-card, .summary-card, .panel, .pix-dashboard-card) {
+  border-color: var(--ui-line);
+  box-shadow: var(--ui-shadow);
+}
+
+html.ui-premium-ready :is(.card, .stat-card, .dashboard-card, .policy-card, .summary-card, .pix-dashboard-card):hover {
+  border-color: rgba(13, 148, 136, .22);
+  box-shadow: var(--ui-shadow-hover);
+  transform: translateY(-2px);
+}
+
+/* Campos com foco premium e legível. */
+html.ui-premium-ready :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):hover {
+  border-color: rgba(13, 148, 136, .42);
+}
+
+html.ui-premium-ready :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):focus {
+  border-color: var(--ui-brand-2);
+  box-shadow: 0 0 0 4px var(--ui-brand-soft);
+}
+
+/* Tabelas: linha ativa fácil de acompanhar. */
+html.ui-premium-ready tbody tr {
+  transition: background-color .16s ease, box-shadow .16s ease;
+}
+
+html.ui-premium-ready tbody tr:hover {
+  background: rgba(13, 148, 136, .045);
+  box-shadow: inset 3px 0 0 rgba(13, 148, 136, .48);
+}
+
+/* Feedback de carregamento opt-in: basta usar aria-busy=true. */
+html.ui-premium-ready [aria-busy="true"] {
+  position: relative;
+  pointer-events: none;
+  cursor: wait;
+  opacity: .78;
+}
+
+html.ui-premium-ready button[aria-busy="true"] .ui-icon {
+  animation: ui-spin .72s linear infinite;
+}
+
+/* Tooltip somente quando o botão possui data-ui-tip. */
+[data-ui-tip] {
+  position: relative;
+}
+
+[data-ui-tip]::before,
+[data-ui-tip]::after {
+  position: absolute;
+  z-index: 9999;
+  left: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 5px);
+  transition: opacity .16s ease, transform .16s ease;
+}
+
+[data-ui-tip]::after {
+  content: attr(data-ui-tip);
+  bottom: calc(100% + 10px);
+  max-width: 220px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 9px;
+  color: #fff;
+  background: rgba(15, 23, 42, .96);
+  box-shadow: 0 9px 24px rgba(15, 23, 42, .22);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+[data-ui-tip]::before {
+  content: "";
+  bottom: calc(100% + 5px);
+  border: 5px solid transparent;
+  border-top-color: rgba(15, 23, 42, .96);
+}
+
+[data-ui-tip]:hover::before,
+[data-ui-tip]:hover::after,
+[data-ui-tip]:focus-visible::before,
+[data-ui-tip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+@keyframes ui-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 760px) {
+  .ui-icon { width: 16px; height: 16px; flex-basis: 16px; }
+  [data-ui-tip]::before, [data-ui-tip]::after { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.ui-premium-ready *,
+  html.ui-premium-ready *::before,
+  html.ui-premium-ready *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/*
+  Isolamento da presença colaborativa.
+  O painel Online conserva integralmente seus próprios tamanhos, animações,
+  cursores, botões e estados, sem receber componentes desta camada premium.
+*/
+#pcBotao,
+#pcPainel,
+#pcCadastro,
+#pcAcesso,
+#pcCursores,
+#pcBotao *,
+#pcPainel *,
+#pcCadastro *,
+#pcAcesso *,
+#pcCursores * {
+  --ui-premium-isolated: 1;
+}
+
+#pcBotao .ui-icon,
+#pcPainel .ui-icon,
+#pcCadastro .ui-icon,
+#pcAcesso .ui-icon,
+#pcCursores .ui-icon {
+  display: none !important;
+}
+
+#pcBotao.ui-has-icon,
+#pcPainel .ui-has-icon,
+#pcCadastro .ui-has-icon,
+#pcAcesso .ui-has-icon {
+  display: revert !important;
+}
