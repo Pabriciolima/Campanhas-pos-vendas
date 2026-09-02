@@ -4,40 +4,17 @@
             <head>
               <meta charset="UTF-8" />
               <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-              <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-              <meta http-equiv="Pragma" content="no-cache" />
-              <meta http-equiv="Expires" content="0" />
-              <title>Sistema de Campanhas Pós-Vendas</title>
-              <script>
-                (() => {
-                  const versaoBoot = "20260901-04";
-                  const chaveBoot = `campanhas_boot_${versaoBoot}`;
+<title>Sistema de Campanhas Pós-Vendas</title>
 
-                  if (sessionStorage.getItem(chaveBoot)) return;
-                  sessionStorage.setItem(chaveBoot, "1");
+              <!-- PERFORMANCE V3: conexões críticas antecipadas -->
+              <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+              <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+              <link rel="preconnect" href="https://ksyygambidrptnwndjhr.supabase.co" crossorigin />
+              <link rel="dns-prefetch" href="//cdn.jsdelivr.net" />
+              <link rel="dns-prefetch" href="//www.gstatic.com" />
 
-                  Promise.all([
-                    "serviceWorker" in navigator
-                      ? navigator.serviceWorker.getRegistrations()
-                          .then(registros => Promise.all(registros.map(registro => registro.unregister())))
-                          .catch(() => [])
-                      : Promise.resolve([]),
-                    "caches" in window
-                      ? caches.keys()
-                          .then(nomes => Promise.all(nomes.map(nome => caches.delete(nome))))
-                          .catch(() => [])
-                      : Promise.resolve([])
-                  ]).finally(() => {
-                    const url = new URL(window.location.href);
-                    if (url.searchParams.get("appv") !== versaoBoot) {
-                      url.searchParams.set("appv", versaoBoot);
-                      window.location.replace(url.toString());
-                    }
-                  });
-                })();
-              </script>
-              <script src="./dark-mode-premium.js?v=20260902-01"></script>
-              <script defer src="./contrast-audit-v2.js?v=20260902-02"></script>
+<script src="./dark-mode-premium.js?v=20260902-04-estavel"></script>
+              <script defer src="./contrast-audit-v2.js?v=20260902-10-safe"></script>
               <link rel="stylesheet" href="style.css?v=20260901-fechar-minimalista-02" />
               <link rel="stylesheet" href="./evidencias-produtivos.css?v=20260826-05" />
               <link rel="stylesheet" href="./crm-module.css?v=20260826-167-supabase" />
@@ -48,8 +25,8 @@
               <link rel="stylesheet" href="./politicas-penalidades.css?v=20260717-01" />
               <link rel="stylesheet" href="./bloqueio-lancamentos.css?v=20260717-01" />
               <link rel="stylesheet" href="./ui-premium.css?v=20260901-02" />
-              <link rel="stylesheet" href="./dark-mode-premium.css?v=20260902-01" />
-              <link rel="stylesheet" href="./contrast-responsive-v2.css?v=20260902-02" />
+              <link rel="stylesheet" href="./dark-mode-premium.css?v=20260902-04-estavel" />
+              <link rel="stylesheet" href="./contrast-responsive-v2.css?v=20260902-04-estavel" />
 
               <style id="crm-sidebar-icon-contrast-v19">
                 /* Identidade visual exclusiva do CRM — alto contraste na sidebar */
@@ -1333,37 +1310,7 @@
               </dialog>
 
               <div id="toast" class="toast"></div>
-
-              <script>
-                (() => {
-                  const versaoAtual = "20260828-27";
-                  const chave = "campanhas_app_versao";
-
-                  if (localStorage.getItem(chave) === versaoAtual) {
-                    return;
-                  }
-
-                  localStorage.setItem(chave, versaoAtual);
-
-                  if ("caches" in window) {
-                    caches.keys()
-                      .then(nomes => Promise.all(
-                        nomes.map(nome => caches.delete(nome))
-                      ))
-                      .catch(() => {});
-                  }
-
-                  const url = new URL(window.location.href);
-                  if (url.searchParams.get("appv") !== versaoAtual) {
-                    url.searchParams.set("appv", versaoAtual);
-                    window.location.replace(url.toString());
-                  }
-                })();
-              </script>
-
-              <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-              <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-              <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="./performance-vendors.js?v=20260902-03"></script>
               <script src="./alerts-premium.js?v=20260716-01"></script>
               <script type="module" src="./script.js?v=20260901-12meses-01"></script>
               <script type="module" src="./pix-presidente.js?v=20260827-18"></script>
@@ -1372,7 +1319,7 @@
               <script type="module" src="./evidencias-produtivos.js?v=20260827-16"></script>
               <script type="module" src="./evidencias-pix.js?v=20260827-17"></script>
               <script src="./module-switcher.js?v=20260826-05"></script>
-              <script type="module" src="./presenca-colaborativa.js?v=20260828-27"></script>
+              <script type="module" src="./presenca-colaborativa.js?v=20260902-09-hotfix"></script>
               <script src="./isolamento-competencias.js?v=20260724-02"></script>
               <script src="./politicas-penalidades.js?v=20260804-02"></script>
               <script type="module" src="./bloqueio-lancamentos.js?v=20260717-01"></script>
@@ -1384,8 +1331,7 @@
               <script src="./guia-campos-pendentes-pix-v01.js?v=20260819-01"></script>
               <script src="./podium-homenagem-premium-v01.js?v=20260819-01"></script>
               <!-- Leitura de XLSX, XLS e CSV -->
-              <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-              <script type="module" src="./crm-module.js?v=20260827-20"></script>
+<script type="module" src="./crm-module.js?v=20260827-20"></script>
 
 
               <script>
@@ -1590,6 +1536,7 @@
               <script src="./ui-premium.js?v=20260901-02"></script>
 
               <!-- Importação integrada aos módulos de Lançamentos -->
+                          <script src="./performance-runtime.js?v=20260902-03"></script>
             </body>
 
             </html>

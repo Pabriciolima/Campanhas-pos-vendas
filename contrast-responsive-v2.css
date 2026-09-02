@@ -615,3 +615,53 @@ dialog,
     overflow-y: auto;
   }
 }
+
+
+/* ================================================================
+   CONTRASTE ESTÁVEL V4 — CONTROLES FUNCIONAIS
+   ================================================================ */
+
+/*
+ * data-contrast-auto é reservado para conteúdo textual.
+ * Controles funcionais nunca devem receber a correção automática.
+ */
+:is(
+  button,
+  input,
+  select,
+  textarea,
+  option,
+  [role="button"],
+  .topbar-actions *,
+  .sidebar *,
+  #pcRaiz *,
+  .export-btn,
+  .primary,
+  .secondary
+)[data-contrast-auto] {
+  color: revert-layer !important;
+}
+
+/* Excel / PDF continuam legíveis em ambos os temas. */
+:is(
+  .export-btn,
+  #btnExportarExcel,
+  #btnExportarPdf,
+  [id*="ExportarExcel"],
+  [id*="ExportarPdf"]
+) {
+  --contrast-control-lock: 1;
+}
+
+/*
+ * Não animamos color/background por causa de renderizações internas.
+ * Esses estados só são animados quando html.theme-transitioning existe.
+ */
+html:not(.theme-transitioning) .topbar-actions :is(button,select,input),
+html:not(.theme-transitioning) .export-btn {
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease,
+    filter .18s ease,
+    border-color .18s ease !important;
+}

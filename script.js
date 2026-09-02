@@ -1394,7 +1394,7 @@ async function carregarFuncionariosProdutivosSupabase() {
     );
 
   funcionariosCarregados = true;
-  renderTudo();
+  agendarRenderTudo();
   console.info(
     `[PRODUTIVOS/SUPABASE] ${db.funcionarios.length} funcionário(s) carregado(s).`
   );
@@ -1641,7 +1641,7 @@ function aplicarSnapshotLancamentos(
     true;
 
   salvarBackupLocal();
-  renderTudo();
+  agendarRenderTudo();
 
   console.info(
     `${db.lancamentos.length} lançamento(s) dos Produtivos atualizado(s) pelo Firebase — ${origem}.`
@@ -1677,7 +1677,7 @@ async function atualizarLancamentosFirebaseAgora(
 
     lancamentosFirebaseCarregados = true;
     salvarBackupLocal();
-    renderTudo();
+    agendarRenderTudo();
 
     console.info(
       `[PRODUTIVOS/SUPABASE] ${db.lancamentos.length} lançamento(s) carregado(s) — ${origem}.`
@@ -2666,6 +2666,28 @@ function iniciarSelects() {
         ? "Todos os cargos"
         : "Selecione o cargo"
     );
+  });
+}
+
+
+let renderTudoPendente = false;
+
+/*
+ * Junta várias atualizações de dados recebidas praticamente ao mesmo tempo
+ * em uma única pintura do DOM.
+ *
+ * IMPORTANTE:
+ * renderTudo() continua existindo e continua síncrono quando chamado
+ * por ações do usuário. Somente cargas/realtime usam esta fila.
+ */
+function agendarRenderTudo() {
+  if (renderTudoPendente) return;
+
+  renderTudoPendente = true;
+
+  requestAnimationFrame(() => {
+    renderTudoPendente = false;
+    renderTudo();
   });
 }
 
@@ -6548,6 +6570,8 @@ function adicionarTabelaExcel(planilha, resultados) {
 
 
 async function exportarExcel() {
+  await window.CampanhasVendors?.excel?.();
+
   if (!funcionariosCarregados) {
     window.CampanhaUI.alert(
       "A base de funcionários ainda está carregando. Aguarde alguns segundos e tente novamente."
@@ -6662,6 +6686,8 @@ async function exportarExcel() {
 }
 
 async function exportarPdf() {
+  await window.CampanhasVendors?.pdf?.();
+
   if (!funcionariosCarregados) {
     window.CampanhaUI.alert(
       "A base de funcionários ainda está carregando. Aguarde alguns segundos e tente novamente."
@@ -7871,8 +7897,11 @@ document.addEventListener(
     garantirCssLancamentosAutomaticos();
     configurarEventos();
     atualizarNavegacaoHistorico();
-    renderTudo();
 
+    /*
+     * Não renderizamos tabelas vazias antes dos dados.
+     * Os carregamentos abaixo disparam a primeira renderização real.
+     */
     iniciarFuncionariosTempoReal();
     iniciarLancamentosTempoReal();
 

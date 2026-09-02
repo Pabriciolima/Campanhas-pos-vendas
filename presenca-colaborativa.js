@@ -10,7 +10,7 @@ Usa Supabase Realtime Presence. Não grava presença em tabelas.
 const PC_STORAGE = "campanhas_perfil_presenca_v1";
 const PC_SESSION = "campanhas_sessao_presenca_v1";
 const PC_CHANNEL = "hub-campanhas-presenca-v1";
-const PC_VERSION = "2026.09.02-06";
+const PC_VERSION = "2026.09.02-09-hotfix";
 const PC_SENHA_ONLINE = "123321";
 
 const PC_FILIAIS = [
@@ -41,11 +41,16 @@ let pcPerfil = lerPerfil();
 let pcSupabase = null;
 let pcCanal = null;
 let pcConectado = false;
+let pcConexaoPromise = null;
+let pcResolverConexao = null;
 let pcPainelAberto = false;
 let pcAcessoOnline = false;
 let pcUltimoEstado = "";
 let pcTimer = 0;
 let pcUltimoCursorEnviado = 0;
+let pcCursorRaf = 0;
+let pcCursorPendente = null;
+let pcObserverTimer = 0;
 
 const pcTimersCursores = new Map();
 
@@ -402,37 +407,55 @@ function limparCursoresForaDoContexto() {
 }
 
 function enviarCursor(evento) {
-  const agora = performance.now();
-
-  if (
-    !pcCanalEstaPronto() ||
-    document.hidden ||
-    agora - pcUltimoCursorEnviado < 250
-  ) {
+  if (!pcCanalEstaPronto() || document.hidden) {
     return;
   }
 
-  pcUltimoCursorEnviado = agora;
-
-  const atual = estadoAtual();
-
   /*
-   * Não aguardamos o cursor para não bloquear pointermove.
-   * O helper valida se o canal continua "joined".
+   * pointermove pode disparar dezenas de vezes por segundo.
+   * Guardamos apenas a posição mais recente e processamos no próximo frame.
    */
-  void pcEnviarBroadcast(
-    "cursor",
-    {
-      sessao: atual.sessao,
-      nome: atual.nome,
-      filial: atual.filial,
-      modulo: atual.modulo,
-      area: atual.area,
-      x: evento.clientX / Math.max(1, window.innerWidth),
-      y: evento.clientY / Math.max(1, window.innerHeight),
-      enviado_em: new Date().toISOString()
+  pcCursorPendente = {
+    x: evento.clientX,
+    y: evento.clientY
+  };
+
+  if (pcCursorRaf) return;
+
+  pcCursorRaf = window.requestAnimationFrame(() => {
+    pcCursorRaf = 0;
+
+    const ponto = pcCursorPendente;
+    pcCursorPendente = null;
+
+    if (!ponto || !pcCanalEstaPronto() || document.hidden) {
+      return;
     }
-  );
+
+    const agora = performance.now();
+
+    if (agora - pcUltimoCursorEnviado < 400) {
+      return;
+    }
+
+    pcUltimoCursorEnviado = agora;
+
+    const atual = estadoAtual();
+
+    void pcEnviarBroadcast(
+      "cursor",
+      {
+        sessao: atual.sessao,
+        nome: atual.nome,
+        filial: atual.filial,
+        modulo: atual.modulo,
+        area: atual.area,
+        x: ponto.x / Math.max(1, window.innerWidth),
+        y: ponto.y / Math.max(1, window.innerHeight),
+        enviado_em: new Date().toISOString()
+      }
+    );
+  });
 }
 
 function abrirPainel() {
@@ -475,35 +498,144 @@ function fecharCadastro() {
 }
 
 async function conectar() {
-  if (!pcPerfil || pcCanal) return;
+  if (!pcPerfil) {
+    return false;
+  }
 
-  const statusCadastro = document.querySelector("#pcStatusCadastro");
+  /*
+   * Se já estiver conectado, não recria canal nem aguarda novamente.
+   */
+  if (pcCanalEstaPronto()) {
+    return true;
+  }
+
+  /*
+   * Se uma conexão já está em andamento, todos aguardam a mesma Promise.
+   * Isso evita duas inscrições simultâneas e duas chamadas de track().
+   */
+  if (pcConexaoPromise) {
+    return pcConexaoPromise;
+  }
+
+  const statusCadastro =
+    document.querySelector("#pcStatusCadastro");
+
+  pcConexaoPromise = new Promise(resolve => {
+    pcResolverConexao = resolve;
+  });
+
+  const concluirConexao = resultado => {
+    const resolver = pcResolverConexao;
+
+    pcResolverConexao = null;
+    pcConexaoPromise = null;
+
+    resolver?.(resultado);
+  };
 
   try {
     if (!pcSupabase) {
-      const modulo = await import("./supabase-config.js");
+      const modulo =
+        await import("./supabase-config.js");
+
       pcSupabase = modulo.supabase;
     }
   } catch (erro) {
     if (statusCadastro) {
-      statusCadastro.textContent = "Não foi possível conectar ao servidor. Atualize a página e tente novamente.";
+      statusCadastro.textContent =
+        "Não foi possível conectar ao servidor. Atualize a página e tente novamente.";
       statusCadastro.classList.add("erro");
     }
-    console.error("[PRESENÇA] Falha ao carregar a conexão do Supabase.", erro);
+
+    console.error(
+      "[PRESENÇA] Falha ao carregar a conexão do Supabase.",
+      erro
+    );
+
+    concluirConexao(false);
     return false;
   }
 
-  pcCanal = pcSupabase.channel(PC_CHANNEL, {
-    config: { presence: { key: pcIdSessao() } }
-  });
+  /*
+   * Se existe um canal antigo que não está pronto, remove antes de criar
+   * outro. Isso evita canal "zumbi" após uma tentativa anterior.
+   */
+  if (pcCanal && !pcCanalEstaPronto()) {
+    try {
+      await pcSupabase.removeChannel(pcCanal);
+    } catch (_) {}
+
+    pcCanal = null;
+  }
+
+  pcCanal = pcSupabase.channel(
+    PC_CHANNEL,
+    {
+      config: {
+        presence: {
+          key: pcIdSessao()
+        }
+      }
+    }
+  );
+
+  let finalizado = false;
+
+  const finalizar = resultado => {
+    if (finalizado) return;
+    finalizado = true;
+    concluirConexao(resultado);
+  };
+
+  /*
+   * Timeout apenas para liberar a interface.
+   * Não fica mais fazendo polling a cada 120 ms por até 8 segundos.
+   */
+  const timeout =
+    window.setTimeout(
+      () => {
+        if (pcCanalEstaPronto()) {
+          finalizar(true);
+          return;
+        }
+
+        if (statusCadastro) {
+          statusCadastro.textContent =
+            "A conexão está demorando. Tente novamente.";
+          statusCadastro.classList.add("erro");
+        }
+
+        finalizar(false);
+      },
+      5000
+    );
+
   pcCanal
-    .on("presence", { event: "sync" }, renderizarPresencas)
-    .on("presence", { event: "join" }, renderizarPresencas)
-    .on("presence", { event: "leave" }, renderizarPresencas)
-    .on("broadcast", { event: "cursor" }, ({ payload }) => receberCursor(payload))
-    .subscribe(async status => {
+    .on(
+      "presence",
+      { event: "sync" },
+      renderizarPresencas
+    )
+    .on(
+      "presence",
+      { event: "join" },
+      renderizarPresencas
+    )
+    .on(
+      "presence",
+      { event: "leave" },
+      renderizarPresencas
+    )
+    .on(
+      "broadcast",
+      { event: "cursor" },
+      ({ payload }) =>
+        receberCursor(payload)
+    )
+    .subscribe(status => {
       if (status === "SUBSCRIBED") {
         pcConectado = true;
+        window.clearTimeout(timeout);
 
         if (statusCadastro) {
           statusCadastro.textContent =
@@ -511,8 +643,15 @@ async function conectar() {
           statusCadastro.classList.remove("erro");
         }
 
-        await publicarPresenca(true);
+        /*
+         * IMPORTANTE:
+         * Não esperamos track() para liberar a tela.
+         * O usuário entra imediatamente e a presença é publicada em background.
+         */
+        void publicarPresenca(true);
         renderizarPresencas();
+
+        finalizar(true);
         return;
       }
 
@@ -523,18 +662,26 @@ async function conectar() {
       ) {
         pcConectado = false;
 
-        /*
-         * Não destruímos a interface.
-         * O Supabase pode reconectar o canal automaticamente.
-         */
-        if (statusCadastro && status !== "CLOSED") {
+        if (
+          statusCadastro &&
+          status !== "CLOSED"
+        ) {
           statusCadastro.textContent =
             "Reconectando ao painel colaborativo...";
+        }
+
+        /*
+         * Só falha a tentativa inicial se ainda não chegou a SUBSCRIBED.
+         * Depois de conectado, o Supabase pode reconectar normalmente.
+         */
+        if (!finalizado) {
+          window.clearTimeout(timeout);
+          finalizar(false);
         }
       }
     });
 
-  return true;
+  return pcConexaoPromise;
 }
 
 function abrirAcessoOnline() {
@@ -617,42 +764,104 @@ function instalarInterface() {
   });
   document.querySelector("#pcFormulario")?.addEventListener("submit", async evento => {
     evento.preventDefault();
-    const nome = document.querySelector("#pcNome")?.value.trim();
-    const filial = document.querySelector("#pcFilial")?.value;
+
+    const nome =
+      document.querySelector("#pcNome")
+        ?.value
+        .trim();
+
+    const filial =
+      document.querySelector("#pcFilial")
+        ?.value;
+
     if (!nome || !filial) return;
-    salvarPerfil({ nome, filial });
-    const botaoEntrar = evento.submitter || document.querySelector("#pcFormulario .pc-entrar");
+
+    salvarPerfil({
+      nome,
+      filial
+    });
+
+    const botaoEntrar =
+      evento.submitter ||
+      document.querySelector(
+        "#pcFormulario .pc-entrar"
+      );
+
+    const status =
+      document.querySelector(
+        "#pcStatusCadastro"
+      );
+
     if (botaoEntrar) {
       botaoEntrar.disabled = true;
-      botaoEntrar.textContent = "Conectando...";
+      botaoEntrar.textContent =
+        "Conectando...";
     }
+
+    if (status) {
+      status.textContent =
+        "Conectando ao painel colaborativo...";
+      status.classList.remove("erro");
+    }
+
     pcUltimoEstado = "";
-    const iniciou = await conectar();
 
-    if (iniciou !== false) {
-      const limite = Date.now() + 8000;
-      while (!pcConectado && Date.now() < limite) {
-        await new Promise(resolve => setTimeout(resolve, 120));
+    const conectado =
+      await conectar();
+
+    if (conectado) {
+      /*
+       * Assim que o Supabase responde SUBSCRIBED, fecha imediatamente.
+       * Não existe mais um segundo track() bloqueando o botão.
+       */
+      document
+        .querySelector("#pcCadastro")
+        ?.classList
+        .remove("aberto");
+
+      if (botaoEntrar) {
+        botaoEntrar.disabled = false;
+        botaoEntrar.textContent =
+          "Entrar no sistema";
       }
+
+      return;
     }
 
-    if (pcConectado) {
-      document.querySelector("#pcCadastro")?.classList.remove("aberto");
-      await publicarPresenca(true);
-    } else {
-      const status = document.querySelector("#pcStatusCadastro");
-      if (status && !status.textContent) {
-        status.textContent = "A conexão demorou mais que o esperado. Verifique a internet e tente novamente.";
-        status.classList.add("erro");
-      }
+    /*
+     * Uma tentativa que falhou precisa permitir novo canal.
+     */
+    if (pcCanal && !pcCanalEstaPronto()) {
+      try {
+        await pcSupabase?.removeChannel?.(
+          pcCanal
+        );
+      } catch (_) {}
+
       pcCanal = null;
+    }
+
+    if (status) {
+      if (
+        !status.textContent ||
+        status.textContent.includes(
+          "Reconectando"
+        )
+      ) {
+        status.textContent =
+          "Não foi possível entrar agora. Clique em Entrar no sistema para tentar novamente.";
+      }
+
+      status.classList.add("erro");
     }
 
     if (botaoEntrar) {
       botaoEntrar.disabled = false;
-      botaoEntrar.textContent = "Entrar no sistema";
+      botaoEntrar.textContent =
+        "Tentar novamente";
     }
   });
+
   document.querySelector(".pc-voltar")?.addEventListener("click", fecharAcessoOnline);
   document.querySelector("#pcFormularioAcesso")?.addEventListener("submit", evento => {
     evento.preventDefault();
@@ -705,12 +914,30 @@ function instalarObservadores() {
 
   let contextoObservado = "";
   const observarContexto = new MutationObserver(() => {
-    const atual = estadoAtual();
-    const assinatura = `${atual.modulo}|${atual.area}|${atual.competencia}`;
-    if (assinatura === contextoObservado) return;
-    contextoObservado = assinatura;
-    limparCursoresForaDoContexto();
-    agendarPublicacao(true);
+    window.clearTimeout(pcObserverTimer);
+
+    pcObserverTimer = window.setTimeout(() => {
+      try {
+        const atual = estadoAtual();
+        const assinatura =
+          `${atual.modulo}|${atual.area}|${atual.competencia}`;
+
+        if (assinatura === contextoObservado) return;
+
+        contextoObservado = assinatura;
+        limparCursoresForaDoContexto();
+        agendarPublicacao(true);
+      } catch (erro) {
+        /*
+         * O observador é apenas um recurso auxiliar de presença.
+         * Nunca pode derrubar ou travar o restante do sistema.
+         */
+        console.debug(
+          "[PRESENÇA] Atualização de contexto ignorada:",
+          erro?.message || erro
+        );
+      }
+    }, 140);
   });
 
   observarContexto.observe(document.body, {
@@ -724,7 +951,23 @@ async function iniciarPresenca() {
   instalarInterface();
   instalarObservadores();
   abrirCadastro();
-  console.info(`[PRESENÇA] Módulo ativo — ${PC_VERSION}.`);
+
+  /*
+   * Pré-aquece apenas o módulo de conexão enquanto o usuário preenche
+   * nome/filial. Não cria canal, não envia presença e não consome Realtime.
+   * Quando ele clicar em "Entrar", a dependência já tende a estar em memória.
+   */
+  void import("./supabase-config.js")
+    .then(modulo => {
+      pcSupabase =
+        pcSupabase ||
+        modulo.supabase;
+    })
+    .catch(() => {});
+
+  console.info(
+    `[PRESENÇA] Módulo ativo — ${PC_VERSION}.`
+  );
 }
 
 if (document.readyState === "loading") {

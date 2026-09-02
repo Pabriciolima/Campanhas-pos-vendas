@@ -449,3 +449,82 @@ html.theme-transitioning body *:not(img):not(video):not(canvas) {
     transition:none !important;
   }
 }
+
+
+/* ================================================================
+   ESTABILIDADE DE TEMA V4
+   ================================================================ */
+
+/*
+ * Durante o boot não deve existir transição de cores.
+ * O JS só adiciona .theme-transitioning em uma troca MANUAL.
+ */
+html:not(.theme-transitioning) body,
+html:not(.theme-transitioning) .topbar,
+html:not(.theme-transitioning) .panel,
+html:not(.theme-transitioning) .card,
+html:not(.theme-transitioning) button,
+html:not(.theme-transitioning) input,
+html:not(.theme-transitioning) select,
+html:not(.theme-transitioning) textarea {
+  transition-property:
+    transform,
+    box-shadow,
+    border-color,
+    opacity !important;
+}
+
+/*
+ * Botões funcionais de cor sólida preservam SEMPRE sua identidade.
+ * O auditor de contraste não deve trocar suas cores.
+ */
+html[data-theme="dark"] :is(
+  .export-btn,
+  #btnExportarExcel,
+  #btnExportarPdf,
+  [id*="ExportarExcel"],
+  [id*="ExportarPdf"]
+) {
+  color: #ffffff !important;
+}
+
+html:not([data-theme="dark"]) :is(
+  .export-btn,
+  #btnExportarExcel,
+  #btnExportarPdf,
+  [id*="ExportarExcel"],
+  [id*="ExportarPdf"]
+) {
+  color: #ffffff !important;
+}
+
+/* Auditoria é deliberadamente um botão neutro nos dois temas. */
+html[data-theme="dark"] :is(
+  [id*="Auditoria"],
+  [class*="audit-button"],
+  [class*="auditoria-button"]
+) {
+  background: #f8fafc !important;
+  color: #142033 !important;
+  border-color: #d8e1e8 !important;
+}
+
+html:not([data-theme="dark"]) :is(
+  [id*="Auditoria"],
+  [class*="audit-button"],
+  [class*="auditoria-button"]
+) {
+  background: #ffffff !important;
+  color: #142033 !important;
+}
+
+/*
+ * Evita flash de controles nativos enquanto o navegador resolve color-scheme.
+ */
+html[data-theme="dark"] :is(input,select,textarea,button) {
+  color-scheme: dark;
+}
+
+html[data-theme="light"] :is(input,select,textarea,button) {
+  color-scheme: light;
+}
