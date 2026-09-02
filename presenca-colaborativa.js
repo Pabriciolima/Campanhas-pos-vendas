@@ -10,7 +10,7 @@ Usa Supabase Realtime Presence. Não grava presença em tabelas.
 const PC_STORAGE = "campanhas_perfil_presenca_v1";
 const PC_SESSION = "campanhas_sessao_presenca_v1";
 const PC_CHANNEL = "hub-campanhas-presenca-v1";
-const PC_VERSION = "2026.08.28-05";
+const PC_VERSION = "2026.09.02-06";
 const PC_SENHA_ONLINE = "123321";
 
 const PC_FILIAIS = [
@@ -46,7 +46,53 @@ let pcAcessoOnline = false;
 let pcUltimoEstado = "";
 let pcTimer = 0;
 let pcUltimoCursorEnviado = 0;
+
 const pcTimersCursores = new Map();
+
+/*
+ * ============================================================
+ * ESTADO SEGURO DO SUPABASE REALTIME
+ * ============================================================
+ * "pcConectado" sozinho não é suficiente durante reconexões.
+ * O canal também precisa estar efetivamente no estado "joined".
+ */
+function pcCanalEstaPronto() {
+  return Boolean(
+    pcCanal &&
+    pcConectado &&
+    pcCanal.state === "joined"
+  );
+}
+
+/*
+ * Broadcast transitório seguro.
+ *
+ * Usado SOMENTE para cursor/presença visual.
+ * Se o WebSocket estiver reconectando, o evento é descartado.
+ * Isso evita o fallback automático para REST e não afeta dados.
+ */
+async function pcEnviarBroadcast(evento, payload) {
+  if (!pcCanalEstaPronto() || document.hidden) {
+    return false;
+  }
+
+  try {
+    const resposta = await pcCanal.send({
+      type: "broadcast",
+      event: evento,
+      payload
+    });
+
+    return resposta === "ok" || resposta === undefined;
+  } catch (erro) {
+    console.debug(
+      "[PRESENÇA] Broadcast temporariamente ignorado:",
+      erro?.message || erro
+    );
+    return false;
+  }
+}
+
 
 function pcIdSessao() {
   let id = sessionStorage.getItem(PC_SESSION);
@@ -189,7 +235,7 @@ function estadoAtual() {
 }
 
 async function publicarPresenca(forcar = false) {
-  if (!pcPerfil || !pcConectado || !pcCanal || document.hidden) return;
+  if (!pcPerfil || !pcCanalEstaPronto() || document.hidden) return;
   const atual = estadoAtual();
   const assinatura = JSON.stringify({
     nome: atual.nome,
@@ -357,13 +403,26 @@ function limparCursoresForaDoContexto() {
 
 function enviarCursor(evento) {
   const agora = performance.now();
-  if (!pcConectado || !pcCanal || document.hidden || agora - pcUltimoCursorEnviado < 250) return;
+
+  if (
+    !pcCanalEstaPronto() ||
+    document.hidden ||
+    agora - pcUltimoCursorEnviado < 250
+  ) {
+    return;
+  }
+
   pcUltimoCursorEnviado = agora;
+
   const atual = estadoAtual();
-  pcCanal.send({
-    type: "broadcast",
-    event: "cursor",
-    payload: {
+
+  /*
+   * Não aguardamos o cursor para não bloquear pointermove.
+   * O helper valida se o canal continua "joined".
+   */
+  void pcEnviarBroadcast(
+    "cursor",
+    {
       sessao: atual.sessao,
       nome: atual.nome,
       filial: atual.filial,
@@ -373,7 +432,7 @@ function enviarCursor(evento) {
       y: evento.clientY / Math.max(1, window.innerHeight),
       enviado_em: new Date().toISOString()
     }
-  }).catch(() => {});
+  );
 }
 
 function abrirPainel() {
@@ -422,7 +481,7 @@ async function conectar() {
 
   try {
     if (!pcSupabase) {
-      const modulo = await import("./supabase-config.js?v=20260827-24");
+      const modulo = await import("./supabase-config.js");
       pcSupabase = modulo.supabase;
     }
   } catch (erro) {
@@ -445,12 +504,33 @@ async function conectar() {
     .subscribe(async status => {
       if (status === "SUBSCRIBED") {
         pcConectado = true;
+
         if (statusCadastro) {
-          statusCadastro.textContent = "Entrada confirmada. Você já está online.";
+          statusCadastro.textContent =
+            "Entrada confirmada. Você já está online.";
           statusCadastro.classList.remove("erro");
         }
+
         await publicarPresenca(true);
         renderizarPresencas();
+        return;
+      }
+
+      if (
+        status === "CHANNEL_ERROR" ||
+        status === "TIMED_OUT" ||
+        status === "CLOSED"
+      ) {
+        pcConectado = false;
+
+        /*
+         * Não destruímos a interface.
+         * O Supabase pode reconectar o canal automaticamente.
+         */
+        if (statusCadastro && status !== "CLOSED") {
+          statusCadastro.textContent =
+            "Reconectando ao painel colaborativo...";
+        }
       }
     });
 
@@ -610,10 +690,17 @@ function instalarObservadores() {
       try { await pcCanal.untrack(); } catch (_) {}
     } else {
       pcUltimoEstado = "";
-      await publicarPresenca(true);
+
+      if (pcCanalEstaPronto()) {
+        await publicarPresenca(true);
+      }
     }
   });
-  window.addEventListener("beforeunload", () => pcCanal?.untrack());
+  window.addEventListener("beforeunload", () => {
+    if (pcCanalEstaPronto()) {
+      void pcCanal.untrack();
+    }
+  });
   setInterval(() => publicarPresenca(true), 60000);
 
   let contextoObservado = "";
