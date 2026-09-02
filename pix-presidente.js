@@ -23,8 +23,8 @@
  * PATCH 2026.08.19 — COERÊNCIA DE CAMPOS + TRAVA DE BONIFICAÇÃO
  * Mantém todas as funções anteriores.
  *
- * - Consultor Técnico NÃO usa O.S. em aberto.
- * - O.S. em aberto só é exigida na S4 para cargos que realmente usam esse indicador.
+ * - Todos os cargos válidos informam O.S. em aberto na Semana 4.
+ * - O campo é obrigatório na S4 e participa da penalidade quando superar 28%.
  * - Ticket/Margem obrigatórios vazios impedem qualquer bonificação.
  * - O.S. obrigatória vazia impede qualquer bonificação até ser informada.
  * - NPS continua exclusivo da S4 e apenas para cargos com bônus de NPS.
@@ -1137,33 +1137,14 @@ function cargoUsaNpsPix(cargo) {
 }
 
 function cargoUsaOsPix(cargo) {
-  const c =
-    normalizarTextoPix(
-      cargo
-    );
-
   /*
    * REGRA OFICIAL DE O.S.:
-   * Consultor Técnico NÃO usa O.S.
-   * Peças e Orçamentista também não usam O.S.
-   *
-   * A informação de O.S. em aberto fica restrita aos
-   * cargos de gestão/assistência em que ela interfere
-   * na penalidade do fechamento da S4.
+   * Na Semana 4, todo cargo válido da campanha deve informar
+   * o percentual de O.S. em aberto. Acima de 28%, aplica-se
+   * a penalidade de 50% prevista nas políticas do sistema.
    */
-  return (
-    c === normalizarTextoPix(
-      "Supervisor de Assistência"
-    ) ||
-    c === normalizarTextoPix(
-      "Supervisor Pós-vendas"
-    ) ||
-    c === normalizarTextoPix(
-      "Coordenador"
-    ) ||
-    c === normalizarTextoPix(
-      "Gerente"
-    )
+  return Boolean(
+    pixPolitica(cargo)
   );
 }
 
