@@ -2663,11 +2663,17 @@ async function recuperarEvidenciasDiretoDoStorage(contexto) {
 }
 
 function observarEvidenciasDaFilial() {
+  const modalLancamento = evidEl("#modalLancamento");
+  if (!modalLancamento?.open) {
+    encerrarEscutaEvidencia();
+    return;
+  }
+
   const contextoAtual =
     contextoEvidenciaAtual();
 
   const modalAberto =
-    Boolean(evidEl("#modalLancamento")?.open);
+    true;
 
   const contexto = contextoAtual ||
     (modalAberto

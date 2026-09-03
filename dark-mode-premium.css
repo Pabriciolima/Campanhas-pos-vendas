@@ -414,11 +414,11 @@ html.theme-transitioning,
 html.theme-transitioning body,
 html.theme-transitioning body *:not(img):not(video):not(canvas) {
   transition:
-    background-color .25s ease,
-    background .25s ease,
-    color .22s ease,
-    border-color .25s ease,
-    box-shadow .25s ease !important;
+    background-color .58s cubic-bezier(.22,.61,.36,1),
+    color .48s cubic-bezier(.22,.61,.36,1),
+    border-color .52s cubic-bezier(.22,.61,.36,1),
+    box-shadow .58s cubic-bezier(.22,.61,.36,1),
+    opacity .42s ease !important;
 }
 
 @media (max-width: 760px) {
@@ -527,4 +527,137 @@ html[data-theme="dark"] :is(input,select,textarea,button) {
 
 html[data-theme="light"] :is(input,select,textarea,button) {
   color-scheme: light;
+}
+
+/* ================================================================
+   CORREÇÃO CONSERVADORA V4.1 — TRANSIÇÃO E CONTRASTE
+   Mantém todos os componentes e regras anteriores intactos.
+   ================================================================ */
+
+/* Textos escuros definidos diretamente nos módulos continuam legíveis. */
+html[data-theme="dark"] :is(
+  [style*="color: #0f172a"], [style*="color:#0f172a"],
+  [style*="color: #111827"], [style*="color:#111827"],
+  [style*="color: #1e293b"], [style*="color:#1e293b"],
+  [style*="color: #1f2937"], [style*="color:#1f2937"],
+  [style*="color: #334155"], [style*="color:#334155"],
+  [style*="color: #475569"], [style*="color:#475569"]
+) {
+  color:#e8eef6 !important;
+}
+
+/* Proteção adicional para títulos, textos e valores nas superfícies escuras. */
+html[data-theme="dark"] :is(
+  .panel,.card,.stat-card,.modal-card,.modal-content,.dialog-card,
+  .premium-card,.crm-panel,.crm-card,.evidence-card,.pix-evidence-card
+) :is(h1,h2,h3,h4,h5,h6,.title,.card-title,.value,.metric-value) {
+  color:#eaf1f8 !important;
+}
+
+html[data-theme="dark"] :is(
+  .panel,.card,.stat-card,.modal-card,.modal-content,.dialog-card,
+  .premium-card,.crm-panel,.crm-card,.evidence-card,.pix-evidence-card
+) :is(p,small,.subtitle,.description,.helper,.muted) {
+  color:#a7b8ca !important;
+}
+
+/* O próprio toggle continua com sua animação independente e suave. */
+.theme-premium-toggle,
+.theme-premium-toggle::before,
+.theme-premium-toggle::after {
+  transition-duration:.52s !important;
+  transition-timing-function:cubic-bezier(.22,.61,.36,1) !important;
+}
+
+/* Botões de exportação da Auditoria: não herdam texto claro do tema global. */
+html[data-theme="dark"] .auditoria-modal .auditoria-exportar.excel,
+html[data-theme="dark"] #auditoriaCampanhasModal .auditoria-exportar.excel {
+  background:#f0fbf6 !important;
+  color:#087346 !important;
+  border-color:#a9ddc8 !important;
+  -webkit-text-fill-color:#087346 !important;
+  opacity:1 !important;
+  visibility:visible !important;
+}
+
+html[data-theme="dark"] .auditoria-modal .auditoria-exportar.pdf,
+html[data-theme="dark"] #auditoriaCampanhasModal .auditoria-exportar.pdf {
+  background:#fff5f5 !important;
+  color:#b4232b !important;
+  border-color:#efc0c3 !important;
+  -webkit-text-fill-color:#b4232b !important;
+  opacity:1 !important;
+  visibility:visible !important;
+}
+
+html[data-theme="dark"] #auditoriaCampanhasModal .auditoria-exportar :is(svg,path),
+html[data-theme="dark"] .auditoria-modal .auditoria-exportar :is(svg,path) {
+  color:currentColor !important;
+  stroke:currentColor !important;
+}
+
+html[data-theme="dark"] #auditoriaCampanhasModal .auditoria-exportar:hover,
+html[data-theme="dark"] .auditoria-modal .auditoria-exportar:hover {
+  filter:brightness(.97);
+  transform:translateY(-1px);
+  box-shadow:0 8px 20px rgba(15,23,42,.13) !important;
+}
+
+/* Auditoria possui superfície clara própria nos dois temas. */
+html #auditoriaCampanhasModal .auditoria-card,
+html .auditoria-modal .auditoria-card {
+  background:#ffffff !important;
+  color:#17324a !important;
+}
+
+html #auditoriaCampanhasModal .auditoria-cabecalho h2,
+html .auditoria-modal .auditoria-cabecalho h2 {
+  color:#112a3f !important;
+  -webkit-text-fill-color:#112a3f !important;
+  opacity:1 !important;
+}
+
+/* Excel visível também no modo claro. */
+html:not([data-theme="dark"]) #auditoriaCampanhasModal .auditoria-exportar.excel,
+html:not([data-theme="dark"]) .auditoria-modal .auditoria-exportar.excel,
+html[data-theme="light"] #auditoriaCampanhasModal .auditoria-exportar.excel {
+  background:#f0fbf6 !important;
+  color:#087346 !important;
+  border-color:#a9ddc8 !important;
+  -webkit-text-fill-color:#087346 !important;
+  opacity:1 !important;
+  visibility:visible !important;
+}
+
+/* PDF visível também no modo claro. */
+html:not([data-theme="dark"]) #auditoriaCampanhasModal .auditoria-exportar.pdf,
+html:not([data-theme="dark"]) .auditoria-modal .auditoria-exportar.pdf,
+html[data-theme="light"] #auditoriaCampanhasModal .auditoria-exportar.pdf {
+  background:#fff5f5 !important;
+  color:#b4232b !important;
+  border-color:#efc0c3 !important;
+  -webkit-text-fill-color:#b4232b !important;
+  opacity:1 !important;
+  visibility:visible !important;
+}
+
+html:not([data-theme="dark"]) #auditoriaCampanhasModal .auditoria-exportar :is(svg,path),
+html:not([data-theme="dark"]) .auditoria-modal .auditoria-exportar :is(svg,path) {
+  color:currentColor !important;
+  stroke:currentColor !important;
+}
+
+/* Impede o auditor automático de esconder o texto interno do botão. */
+html #auditoriaCampanhasModal .auditoria-exportar.excel *,
+html .auditoria-modal .auditoria-exportar.excel * {
+  color:#087346 !important;
+  -webkit-text-fill-color:#087346 !important;
+  opacity:1 !important;
+}
+
+html #auditoriaCampanhasModal .auditoria-exportar.pdf *,
+html .auditoria-modal .auditoria-exportar.pdf * {
+  color:#b4232b !important;
+  -webkit-text-fill-color:#b4232b !important;
+  opacity:1 !important;
 }

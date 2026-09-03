@@ -119,12 +119,13 @@ const estadoAuditoria = {
   bases: new Map(),
   logs: [],
   pronto: false,
-
-  // A auditoria pode ser consultada somente após a senha.
-  acessoLiberado:
-    sessionStorage.getItem(
-      "auditoria_acesso_liberado_v1"
-    ) === "true"
+  acessoLiberado: false,
+  pagina: 1,
+  porPagina: 100,
+  total: 0,
+  carregando: false,
+  canalSupabase: null,
+  temporizadorSupabase: null
 };
 
 const SENHA_AUDITORIA = "123321";
@@ -1322,6 +1323,32 @@ function garantirInterfaceAuditoria() {
       padding:18px 20px 24px;
     }
 
+    .auditoria-paginacao {
+      flex:0 0 auto;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:14px;
+      padding:12px 20px;
+      border-top:1px solid #dfe9ed;
+      background:#fff;
+      color:#496272;
+      font-size:11px;
+      font-weight:800;
+    }
+    .auditoria-paginacao[hidden] { display:none; }
+    .auditoria-paginacao button {
+      min-width:92px;
+      min-height:34px;
+      border:1px solid #cddbe2;
+      border-radius:9px;
+      background:#f7fafb;
+      color:#17324a;
+      font:inherit;
+      cursor:pointer;
+    }
+    .auditoria-paginacao button:disabled { opacity:.45; cursor:not-allowed; }
+
     .auditoria-item {
       position:relative;
       margin-bottom:12px;
@@ -1788,6 +1815,12 @@ function garantirInterfaceAuditoria() {
             id="auditoriaCampanhasLista"
             class="auditoria-lista"
           ></div>
+
+          <footer class="auditoria-paginacao" id="auditoriaPaginacao" hidden>
+            <button type="button" id="auditoriaPaginaAnterior">Anterior</button>
+            <span id="auditoriaPaginaResumo"></span>
+            <button type="button" id="auditoriaPaginaProxima">Próxima</button>
+          </footer>
         </section>
       </div>
     `
@@ -1858,6 +1891,19 @@ function garantirInterfaceAuditoria() {
       "click",
       exportarAuditoriaPdf
     );
+
+  document.querySelector("#auditoriaPaginaAnterior")?.addEventListener("click", async () => {
+    if (estadoAuditoria.pagina <= 1 || estadoAuditoria.carregando) return;
+    estadoAuditoria.pagina -= 1;
+    await carregarLogsAuditoriaSupabase();
+  });
+
+  document.querySelector("#auditoriaPaginaProxima")?.addEventListener("click", async () => {
+    const totalPaginas = Math.max(1, Math.ceil(estadoAuditoria.total / estadoAuditoria.porPagina));
+    if (estadoAuditoria.pagina >= totalPaginas || estadoAuditoria.carregando) return;
+    estadoAuditoria.pagina += 1;
+    await carregarLogsAuditoriaSupabase();
+  });
 
   document.addEventListener(
     "keydown",
@@ -2117,11 +2163,6 @@ function solicitarSenhaAuditoria() {
             .acessoLiberado =
               true;
 
-          sessionStorage.setItem(
-            "auditoria_acesso_liberado_v1",
-            "true"
-          );
-
           finalizar(
             true
           );
@@ -2287,7 +2328,8 @@ async function abrirAuditoria(modulo = "") {
   document.body.style.overflow =
     "hidden";
 
-  renderizarAuditoria();
+  estadoAuditoria.pagina = 1;
+  await iniciarConsultaAuditoria();
 }
 
 function fecharAuditoria() {
@@ -2303,6 +2345,11 @@ function fecharAuditoria() {
   );
 
   document.body.style.overflow = "";
+
+  encerrarConsultaAuditoria();
+  estadoAuditoria.acessoLiberado = false;
+  estadoAuditoria.logs = [];
+  logsAuditoriaSupabase = [];
 }
 
 function logsAuditoriaFiltrados() {
@@ -2443,6 +2490,12 @@ function renderizarAuditoria() {
     return;
   }
 
+  if (estadoAuditoria.carregando) {
+    lista.innerHTML = `<div class="auditoria-vazio">Carregando página da auditoria...</div>`;
+    atualizarPaginacaoAuditoria();
+    return;
+  }
+
   const logs =
     logsAuditoriaFiltrados();
 
@@ -2452,6 +2505,7 @@ function renderizarAuditoria() {
         Nenhum registro de auditoria encontrado para os filtros selecionados.
       </div>
     `;
+    atualizarPaginacaoAuditoria();
     return;
   }
 
@@ -2784,6 +2838,22 @@ function renderizarAuditoria() {
         }
       )
       .join("");
+
+  atualizarPaginacaoAuditoria();
+}
+
+function atualizarPaginacaoAuditoria() {
+  const rodape = document.querySelector("#auditoriaPaginacao");
+  const resumo = document.querySelector("#auditoriaPaginaResumo");
+  const anterior = document.querySelector("#auditoriaPaginaAnterior");
+  const proxima = document.querySelector("#auditoriaPaginaProxima");
+  if (!rodape || !resumo) return;
+
+  const totalPaginas = Math.max(1, Math.ceil(estadoAuditoria.total / estadoAuditoria.porPagina));
+  rodape.hidden = estadoAuditoria.total === 0;
+  resumo.textContent = `Página ${estadoAuditoria.pagina} de ${totalPaginas} · ${estadoAuditoria.total} registros`;
+  if (anterior) anterior.disabled = estadoAuditoria.carregando || estadoAuditoria.pagina <= 1;
+  if (proxima) proxima.disabled = estadoAuditoria.carregando || estadoAuditoria.pagina >= totalPaginas;
 }
 
 function nomeArquivoAuditoria(
@@ -4589,14 +4659,26 @@ function consolidarLogsAuditoria() {
 }
 
 async function carregarLogsAuditoriaSupabase() {
-  const { data, error } = await supabase
+  if (!estadoAuditoria.acessoLiberado) return;
+
+  estadoAuditoria.carregando = true;
+  renderizarAuditoria();
+  const inicio = (estadoAuditoria.pagina - 1) * estadoAuditoria.porPagina;
+  const fim = inicio + estadoAuditoria.porPagina - 1;
+
+  const { data, error, count } = await supabase
     .from(COLECAO_AUDITORIA)
-    .select("id,payload,registrado_em")
-    .order("registrado_em", { ascending: false });
+    .select("id,payload,registrado_em", { count: "exact" })
+    .order("registrado_em", { ascending: false })
+    .range(inicio, fim);
 
   if (error) {
+    estadoAuditoria.carregando = false;
+    renderizarAuditoria();
     throw error;
   }
+
+  estadoAuditoria.total = Number(count || 0);
 
   logsAuditoriaSupabase = (data || []).map(linha => ({
     id: linha.id,
@@ -4609,69 +4691,21 @@ async function carregarLogsAuditoriaSupabase() {
       linha.registrado_em
   }));
 
+  estadoAuditoria.carregando = false;
   consolidarLogsAuditoria();
 }
 
-function observarLogsAuditoria() {
-  try {
-    /*
-     * Carrega TODOS os logs existentes na coleção.
-     * A versão anterior limitava a tela a 250 registros,
-     * o que escondia parte do histórico.
-     *
-     * A ordenação agora é feita no cliente usando,
-     * prioritariamente, o serverTimestamp do Firebase.
-     */
-    const consulta =
-      collection(
-        firestore,
-        COLECAO_AUDITORIA
-      );
+async function iniciarConsultaAuditoria() {
+  if (!estadoAuditoria.acessoLiberado) return;
 
-    onSnapshot(
-      consulta,
-      snapshot => {
-        logsAuditoriaFirebase =
-          snapshot.docs
-            .map(
-              documento => ({
-                id:
-                  documento.id,
-                ...documento.data()
-              })
-            )
-            .sort(
-              (a, b) =>
-                millisDoLog(b) -
-                millisDoLog(a)
-            );
-
-        consolidarLogsAuditoria();
-      },
-      erro => {
-        console.error(
-          "[AUDITORIA] Erro ao carregar histórico:",
-          erro
-        );
-      }
-    );
-  } catch (erro) {
-    console.error(
-      "[AUDITORIA] Falha ao iniciar consulta:",
-      erro
-    );
-  }
-
-  carregarLogsAuditoriaSupabase().catch(erro => {
-    console.error(
-      "[AUDITORIA] Erro ao carregar os registros do Supabase:",
-      erro
-    );
+  logsAuditoriaFirebase = [];
+  await carregarLogsAuditoriaSupabase().catch(erro => {
+    console.error("[AUDITORIA] Erro ao carregar os registros do Supabase:", erro);
   });
 
-  let temporizadorSupabase = null;
+  if (estadoAuditoria.canalSupabase) return;
 
-  supabase
+  estadoAuditoria.canalSupabase = supabase
     .channel("auditoria-campanhas-integral-v10")
     .on(
       "postgres_changes",
@@ -4681,8 +4715,8 @@ function observarLogsAuditoria() {
         table: COLECAO_AUDITORIA
       },
       () => {
-        window.clearTimeout(temporizadorSupabase);
-        temporizadorSupabase = window.setTimeout(
+        window.clearTimeout(estadoAuditoria.temporizadorSupabase);
+        estadoAuditoria.temporizadorSupabase = window.setTimeout(
           () => carregarLogsAuditoriaSupabase().catch(erro => {
             console.error(
               "[AUDITORIA] Falha ao atualizar o histórico do Supabase:",
@@ -4694,6 +4728,15 @@ function observarLogsAuditoria() {
       }
     )
     .subscribe();
+}
+
+function encerrarConsultaAuditoria() {
+  window.clearTimeout(estadoAuditoria.temporizadorSupabase);
+  estadoAuditoria.temporizadorSupabase = null;
+  if (estadoAuditoria.canalSupabase) {
+    supabase.removeChannel(estadoAuditoria.canalSupabase);
+    estadoAuditoria.canalSupabase = null;
+  }
 }
 
 
@@ -4875,7 +4918,6 @@ function iniciarAuditoria() {
 
   garantirInterfaceAuditoria();
   inserirBotoesAuditoria();
-  observarLogsAuditoria();
 
   FONTES_AUDITORIA
     .filter(

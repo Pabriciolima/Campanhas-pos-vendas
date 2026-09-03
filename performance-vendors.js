@@ -244,46 +244,6 @@
     true
   );
 
-  /*
-   * Preload ocioso: depois que a tela já está utilizável, aproveita
-   * tempo ocioso do navegador para deixar exportações prontas.
-   */
-  function preloadIdle() {
-    if (
-      navigator.connection?.saveData ||
-      ["slow-2g", "2g"].includes(
-        navigator.connection?.effectiveType
-      )
-    ) {
-      return;
-    }
-
-    const carregar = () => {
-      Promise.allSettled([
-        ensureExcel(),
-        ensureXlsx()
-      ]);
-    };
-
-    if ("requestIdleCallback" in window) {
-      requestIdleCallback(carregar, {
-        timeout: 8000
-      });
-    } else {
-      setTimeout(carregar, 4500);
-    }
-  }
-
-  if (document.readyState === "complete") {
-    preloadIdle();
-  } else {
-    window.addEventListener(
-      "load",
-      preloadIdle,
-      { once: true }
-    );
-  }
-
   window.CampanhasVendors = Object.freeze({
     ensure,
     excel: ensureExcel,

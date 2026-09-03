@@ -4161,6 +4161,7 @@ function configurarEventosPix() {
           evento.target.value,
           "pix"
         );
+        agendarConsultaLancamentosPix();
       }
     );
 
@@ -4177,6 +4178,7 @@ function configurarEventosPix() {
             evento.target.value,
             "global"
           );
+          agendarConsultaLancamentosPix();
         }
       }
     );
@@ -4312,7 +4314,10 @@ function configurarEventosPix() {
     seletor =>
       $(seletor)?.addEventListener(
         "change",
-        renderLancamentosPix
+        () => {
+          renderLancamentosPix();
+          agendarConsultaLancamentosPix();
+        }
       )
   );
 
@@ -4326,7 +4331,10 @@ function configurarEventosPix() {
     seletor =>
       $(seletor)?.addEventListener(
         "change",
-        renderApuracaoPix
+        () => {
+          renderApuracaoPix();
+          agendarConsultaLancamentosPix();
+        }
       )
   );
 }
@@ -4368,9 +4376,28 @@ async function carregarParticipantesPixUmaVez() {
 }
 
 async function carregarLancamentosPixUmaVez() {
-  const { data, error } = await supabase
+  const competencia = String(
+    $("#competenciaGlobal")?.value ||
+    $("#pixDashboardCompetencia")?.value ||
+    pixMesAtual()
+  ).trim();
+  const subviewAtiva = document.querySelector(".pix-subview.active")?.id || "pix-dashboard";
+  const seletorFilial = {
+    "pix-lancamentos": "#pixFiltroFilialLancamento",
+    "pix-apuracao": "#pixFiltroFilialApuracao"
+  }[subviewAtiva];
+  const filial = seletorFilial
+    ? String($(seletorFilial)?.value || "").trim()
+    : "";
+
+  let consulta = supabase
     .from("pix_lancamentos")
     .select("id,dados");
+
+  if (competencia) consulta = consulta.eq("competencia", competencia);
+  if (filial) consulta = consulta.eq("filial", filial);
+
+  const { data, error } = await consulta;
 
   if (error) throw error;
 
@@ -4388,6 +4415,16 @@ async function carregarLancamentosPixUmaVez() {
   renderTudoPix();
 
   return estadoPix.lancamentos;
+}
+
+function agendarConsultaLancamentosPix() {
+  window.clearTimeout(agendarConsultaLancamentosPix.timer);
+  agendarConsultaLancamentosPix.timer = window.setTimeout(
+    () => carregarLancamentosPixUmaVez().catch(erro =>
+      console.error("[PIX/SUPABASE] Falha ao aplicar filtros:", erro)
+    ),
+    120
+  );
 }
 
 async function iniciarFirebasePix() {
@@ -4414,21 +4451,27 @@ ${erro.message || erro}`
     );
   }
 
-  let timerFuncionarios = null;
-  let timerLancamentos = null;
-
   supabase
     .channel("pix-funcionarios-realtime")
     .on("postgres_changes", {
       event: "*",
       schema: "public",
       table: "pix_funcionarios"
-    }, () => {
-      window.clearTimeout(timerFuncionarios);
-      timerFuncionarios = window.setTimeout(
-        carregarParticipantesPixUmaVez,
-        350
-      );
+    }, evento => {
+      const linha = evento.new || evento.old || {};
+      const id = String(linha.id || "");
+      if (!id) return;
+      if (evento.eventType === "DELETE") {
+        estadoPix.funcionarios = estadoPix.funcionarios.filter(item => String(item.id) !== id);
+      } else {
+        const atualizado = { ...(linha.dados || {}), id, ativo: linha.ativo !== false };
+        const indice = estadoPix.funcionarios.findIndex(item => String(item.id) === id);
+        if (indice >= 0) estadoPix.funcionarios.splice(indice, 1, atualizado);
+        else estadoPix.funcionarios.push(atualizado);
+        estadoPix.funcionarios.sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"));
+      }
+      renderFuncionariosPix();
+      renderTudoPix();
     })
     .subscribe();
 
@@ -4438,12 +4481,19 @@ ${erro.message || erro}`
       event: "*",
       schema: "public",
       table: "pix_lancamentos"
-    }, () => {
-      window.clearTimeout(timerLancamentos);
-      timerLancamentos = window.setTimeout(
-        carregarLancamentosPixUmaVez,
-        350
-      );
+    }, evento => {
+      const linha = evento.new || evento.old || {};
+      const id = String(linha.id || "");
+      if (!id) return;
+      if (evento.eventType === "DELETE") {
+        estadoPix.lancamentos = estadoPix.lancamentos.filter(item => String(item.id) !== id);
+      } else {
+        const atualizado = { ...(linha.dados || {}), id };
+        const indice = estadoPix.lancamentos.findIndex(item => String(item.id) === id);
+        if (indice >= 0) estadoPix.lancamentos.splice(indice, 1, atualizado);
+        else estadoPix.lancamentos.push(atualizado);
+      }
+      renderTudoPix();
     })
     .subscribe();
 
@@ -4461,6 +4511,12 @@ document.addEventListener(
     renderTudoPix();
 
     await iniciarFirebasePix();
+
+    window.addEventListener("campanhas:viewready", evento => {
+      if (evento.detail?.modulo === "pix") {
+        agendarConsultaLancamentosPix();
+      }
+    });
 
     /* A recópia automática do Firebase foi desligada. */
   }

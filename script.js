@@ -1662,9 +1662,28 @@ async function atualizarLancamentosFirebaseAgora(
     true;
 
   try {
-    const { data, error } = await supabase
+    const competencia = normalizarCompetencia12Meses(
+      document.querySelector("#competenciaGlobal")?.value || mesAtual(),
+      mesAtual()
+    );
+    const viewAtiva = document.querySelector(".view.active")?.id || "dashboard";
+    const seletorFilial = {
+      dashboard: "#filtroFilialDashboardProdutivos",
+      lancamentos: "#filtroFilialLancamento",
+      apuracao: "#filtroFilialApuracao"
+    }[viewAtiva];
+    const filial = seletorFilial
+      ? String(document.querySelector(seletorFilial)?.value || "").trim()
+      : "";
+
+    let consulta = supabase
       .from("produtivos_lancamentos")
       .select("id,dados");
+
+    if (competencia) consulta = consulta.eq("competencia", competencia);
+    if (filial) consulta = consulta.eq("filial", filial);
+
+    const { data, error } = await consulta;
 
     if (error) throw error;
 
@@ -1693,9 +1712,15 @@ async function atualizarLancamentosFirebaseAgora(
   }
 }
 
-function iniciarLancamentosTempoReal() {
-  let temporizador = null;
+function agendarConsultaLancamentosProdutivos() {
+  window.clearTimeout(agendarConsultaLancamentosProdutivos.timer);
+  agendarConsultaLancamentosProdutivos.timer = window.setTimeout(
+    () => atualizarLancamentosFirebaseAgora("filtros no Supabase"),
+    120
+  );
+}
 
+function iniciarLancamentosTempoReal() {
   supabase
     .channel("produtivos-lancamentos-realtime")
     .on(
@@ -1705,12 +1730,26 @@ function iniciarLancamentosTempoReal() {
         schema: "public",
         table: "produtivos_lancamentos"
       },
-      () => {
-        window.clearTimeout(temporizador);
-        temporizador = window.setTimeout(
-          () => atualizarLancamentosFirebaseAgora("tempo real"),
-          350
-        );
+      evento => {
+        const linha = evento.new || evento.old || {};
+        const id = String(linha.id || "");
+        if (!id) return;
+
+        if (evento.eventType === "DELETE") {
+          db.lancamentos = db.lancamentos.filter(item => String(item.id) !== id);
+        } else {
+          const atualizado = normalizarCompetenciaLancamento({
+            ...(linha.dados || {}),
+            id
+          });
+          const indice = db.lancamentos.findIndex(item => String(item.id) === id);
+          if (indice >= 0) db.lancamentos.splice(indice, 1, atualizado);
+          else db.lancamentos.push(atualizado);
+          db.lancamentos = ordenarLancamentosFirebase(db.lancamentos);
+        }
+
+        salvarBackupLocal();
+        agendarRenderTudo();
       }
     )
     .subscribe();
@@ -7904,6 +7943,24 @@ document.addEventListener(
      */
     iniciarFuncionariosTempoReal();
     iniciarLancamentosTempoReal();
+
+    [
+      "#competenciaGlobal",
+      "#filtroFilialDashboardProdutivos",
+      "#filtroFilialLancamento",
+      "#filtroFilialApuracao"
+    ].forEach(seletor =>
+      document.querySelector(seletor)?.addEventListener(
+        "change",
+        agendarConsultaLancamentosProdutivos
+      )
+    );
+
+    window.addEventListener("campanhas:viewready", evento => {
+      if (evento.detail?.modulo === "produtivos") {
+        agendarConsultaLancamentosProdutivos();
+      }
+    });
 
     await atualizarLancamentosFirebaseAgora(
       "carregamento inicial"

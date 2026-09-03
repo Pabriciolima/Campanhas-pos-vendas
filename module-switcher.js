@@ -47,6 +47,62 @@
     politicas: "Políticas da Garantia"
   };
 
+  function instalarTransicaoTelas() {
+    if (document.querySelector("#campanhasTransicaoTelas")) return;
+    const style = document.createElement("style");
+    style.id = "campanhasTransicaoTelas";
+    style.textContent = `
+      .view.active, .pix-subview.active {
+        will-change: opacity, transform;
+      }
+      .campanhas-view-saindo {
+        opacity: .72 !important;
+        transform: translateY(-3px) !important;
+        transition: opacity 90ms ease, transform 90ms ease !important;
+        pointer-events: none;
+      }
+      .campanhas-view-entrando {
+        animation: campanhasEntradaSuave 180ms cubic-bezier(.22,.7,.3,1) both;
+      }
+      @keyframes campanhasEntradaSuave {
+        from { opacity: 0; transform: translateY(7px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .campanhas-view-saindo, .campanhas-view-entrando {
+          transition: none !important;
+          animation: none !important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function trocarTelaSuavemente(aplicar) {
+    instalarTransicaoTelas();
+    const atuais = selecionarTodos(".view.active, .pix-subview.active");
+    if (!atuais.length) {
+      aplicar();
+      return;
+    }
+
+    const token = String(Date.now());
+    document.body.dataset.campanhasTroca = token;
+    atuais.forEach(view => view.classList.add("campanhas-view-saindo"));
+
+    window.setTimeout(() => {
+      if (document.body.dataset.campanhasTroca !== token) return;
+      aplicar();
+      atuais.forEach(view => view.classList.remove("campanhas-view-saindo"));
+      const novas = selecionarTodos(".view.active, .pix-subview.active");
+      novas.forEach(view => view.classList.add("campanhas-view-entrando"));
+      window.setTimeout(
+        () => novas.forEach(view => view.classList.remove("campanhas-view-entrando")),
+        200
+      );
+    }, 90);
+  }
+
   function selecionar(seletor) {
     return document.querySelector(
       seletor
@@ -191,7 +247,8 @@
   }
 
   function abrirPaginaProdutivos(
-    pagina = "dashboard"
+    pagina = "dashboard",
+    imediato = false
   ) {
     const view =
       selecionar(`#${pagina}`);
@@ -201,6 +258,11 @@
         `Página dos Produtivos não encontrada: #${pagina}`
       );
 
+      return;
+    }
+
+    if (!imediato && !view.classList.contains("active")) {
+      trocarTelaSuavemente(() => abrirPaginaProdutivos(pagina, true));
       return;
     }
 
@@ -242,10 +304,15 @@
       "produtivos",
       true
     );
+
+    window.dispatchEvent(new CustomEvent("campanhas:viewready", {
+      detail: { modulo: "produtivos", pagina }
+    }));
   }
 
   function abrirPaginaPix(
-    pagina = "dashboard"
+    pagina = "dashboard",
+    imediato = false
   ) {
     const moduloPix =
       selecionar(
@@ -262,6 +329,11 @@
         "A seção #pixPresidente não foi encontrada no index.html."
       );
 
+      return;
+    }
+
+    if (!imediato && !subview?.classList.contains("active")) {
+      trocarTelaSuavemente(() => abrirPaginaPix(pagina, true));
       return;
     }
 
@@ -307,6 +379,10 @@
       "pix",
       true
     );
+
+    window.dispatchEvent(new CustomEvent("campanhas:viewready", {
+      detail: { modulo: "pix", pagina }
+    }));
   }
 
   function marcarOpcaoEmEstruturacao(

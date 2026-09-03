@@ -873,11 +873,15 @@ function renderizarPixEvidencias() {
 async function carregarPixEvidencias() {
   garantirHtmlEvidenciasPix();
 
-  const contextoAtual = contextoPixAtual();
   const modalPixAberto = Boolean(
     pixEv("#modalPixPresidente")?.open ||
     pixEv("#formPixPresidente")?.closest("dialog")?.open
   );
+  if (!modalPixAberto) {
+    return;
+  }
+
+  const contextoAtual = contextoPixAtual();
   const contexto = contextoAtual ||
     (modalPixAberto
       ? estadoPixEvidencias.ultimoContextoValido
