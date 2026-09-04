@@ -151,7 +151,7 @@ INDEX.HTML
 
 <script
   type="module"
-  src="./importacao-relatorio-sistema.js?v=20260723-17"
+  src="./importacao-relatorio-sistema.js?v=20260904-02-competencia-unica"
 ></script>
 
 Carregue este arquivo depois de:
@@ -442,9 +442,12 @@ function competenciaMesAnteriorImportacao() {
 function competenciaPadraoImportacao(
   tipo
 ) {
-  return tipo === "pix"
-    ? competenciaMesAtualImportacao()
-    : competenciaMesAnteriorImportacao();
+  const superior =
+    document.querySelector("#competenciaGlobal")?.value;
+
+  return /^\d{4}-\d{2}$/.test(superior || "")
+    ? superior
+    : competenciaMesAtualImportacao();
 }
 
 function competenciaNormalizada(valor) {
@@ -1462,6 +1465,10 @@ function processar() {
 }
 
 async function lerArquivo(arquivo) {
+  if (!exigirImportacaoLiberada()) {
+    throw new Error("Os lançamentos estão bloqueados. O arquivo não será processado.");
+  }
+
   if (!window.XLSX) {
     throw new Error(
       "A biblioteca XLSX não foi carregada."
@@ -3190,6 +3197,10 @@ async function salvarParticipantesNovosPix(
     indice < lotes.length;
     indice += 1
   ) {
+    if (!exigirImportacaoLiberada()) {
+      throw new Error("Importação interrompida porque os lançamentos foram bloqueados.");
+    }
+
     state.progresso =
       `Criando participantes ${indice + 1}/${lotes.length}...`;
 
@@ -3329,6 +3340,10 @@ async function atualizarNomesBase(
     let atualizadosPix = 0;
 
     for (const item of unicas) {
+      if (!exigirImportacaoLiberada()) {
+        throw new Error("Importação interrompida porque os lançamentos foram bloqueados.");
+      }
+
       const atual = state.funcionariosCache.find(
         funcionario => String(funcionario.id) === String(item.funcionarioId)
       ) || {};
@@ -3372,6 +3387,10 @@ async function atualizarNomesBase(
     indice < lotes.length;
     indice += 1
   ) {
+    if (!exigirImportacaoLiberada()) {
+      throw new Error("Importação interrompida porque os lançamentos foram bloqueados.");
+    }
+
     state.progresso =
       `Atualizando nomes ${indice + 1}/${lotes.length}...`;
     renderizar();
@@ -3515,6 +3534,10 @@ function lancamentoPixEhIgual(
 }
 
 async function salvarPixEmLotes() {
+  if (!exigirImportacaoLiberada()) {
+    throw new Error("Importação cancelada: os lançamentos estão bloqueados.");
+  }
+
   state.progresso =
     "Carregando lançamentos existentes...";
   renderizar();
@@ -3591,6 +3614,10 @@ async function salvarPixEmLotes() {
     indice < lotes.length;
     indice += 1
   ) {
+    if (!exigirImportacaoLiberada()) {
+      throw new Error("Importação interrompida porque os lançamentos foram bloqueados.");
+    }
+
     state.progresso =
       `Salvando lançamentos ${indice + 1}/${lotes.length}...`;
     renderizar();
@@ -3683,6 +3710,10 @@ async function aguardarApiOficialProdutivos(
 }
 
 async function salvarProdutivosFirebase() {
+  if (!exigirImportacaoLiberada()) {
+    throw new Error("Importação cancelada: os lançamentos estão bloqueados.");
+  }
+
   state.progresso =
     "Preparando o mesmo fluxo do lançamento manual...";
   renderizar();
@@ -4003,6 +4034,11 @@ async function salvarProdutivosFirebase() {
 }
 
 async function confirmarImportacao() {
+  if (!exigirImportacaoLiberada()) {
+    await alerta("Os lançamentos estão bloqueados pelo diretor. Libere o módulo antes de importar.");
+    return;
+  }
+
   if (
     state.processando ||
     state.analisando
@@ -4075,6 +4111,10 @@ async function confirmarImportacao() {
   let mensagemSucesso = "";
 
   try {
+    if (!exigirImportacaoLiberada()) {
+      throw new Error("Importação cancelada: o bloqueio foi ativado antes da gravação.");
+    }
+
     let participantesCriadosFinal = 0;
 
     if (
@@ -5343,7 +5383,8 @@ function renderizar() {
 
   const bloqueado =
     state.processando ||
-    state.analisando;
+    state.analisando ||
+    importacaoEstaBloqueada();
 
   /*
   O botão fica disponível sempre que houver pelo menos um
@@ -5374,8 +5415,26 @@ function renderizar() {
     bloqueado;
 }
 
+function importacaoEstaBloqueada() {
+  return Boolean(
+    window.bloqueioLancamentos?.bloqueado ||
+    document.body.classList.contains("lancamentos-bloqueados")
+  );
+}
+
+function exigirImportacaoLiberada() {
+  if (!importacaoEstaBloqueada()) return true;
+  window.bloqueioLancamentos?.exigirLiberado?.();
+  return false;
+}
+
 function abrir(tipo) {
   try {
+    if (!exigirImportacaoLiberada()) {
+      alerta("Os lançamentos estão bloqueados pelo diretor. A importação não pode ser aberta.");
+      return false;
+    }
+
     const modal =
       garantirModal();
 
@@ -5845,6 +5904,14 @@ function iniciar() {
         pix: inserir("pix"),
         produtivos: inserir("produtivos")
       };
+    },
+
+    sincronizarBloqueio() {
+      renderizar();
+      if (importacaoEstaBloqueada() && $("#irsModal")?.open) {
+        fecharModal(true);
+        alerta("A importação foi fechada porque os lançamentos foram bloqueados pelo diretor.");
+      }
     },
 
     testarModalPix() {

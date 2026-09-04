@@ -789,12 +789,14 @@ import {
 
     return (
       texto.includes("NOVO LANCAMENTO") ||
+      texto.includes("IMPORTAR RELATORIO") ||
+      texto.includes("CONFIRMAR IMPORTACAO") ||
       texto === "EDITAR" ||
       texto === "EXCLUIR" ||
       texto.includes("SALVAR LANCAMENTO") ||
       texto.includes("ATUALIZAR LANCAMENTO") ||
       botao.matches(
-        "#btnNovoLancamento, #btnNovoLancamentoPix, [data-action='editar-lancamento'], [data-action='excluir-lancamento'], [data-edit-lancamento], [data-delete-lancamento]"
+        "#btnNovoLancamento, #btnNovoLancamentoPix, #btnImportarRelatorioProdutivos, #btnImportarRelatorioPix, .irs-import, #irsConfirm, [data-action='editar-lancamento'], [data-action='excluir-lancamento'], [data-edit-lancamento], [data-delete-lancamento]"
       )
     );
   }
@@ -802,14 +804,14 @@ import {
   function dentroDeLancamentos(elemento) {
     return Boolean(
       elemento.closest(
-        "#lancamentos, #pix-lancamentos, #modalLancamento, #modalPixPresidente, #modalLancamentoPix, .launch-modal, .pix-dialog"
+        "#lancamentos, #pix-lancamentos, #modalLancamento, #modalPixPresidente, #modalLancamentoPix, #irsModal, .launch-modal, .pix-dialog"
       )
     );
   }
 
   function aplicarBloqueioBotoes() {
     $$(
-      "#lancamentos button, #pix-lancamentos button, #modalLancamento button, #modalPixPresidente button, #modalLancamentoPix button"
+      "#lancamentos button, #pix-lancamentos button, #modalLancamento button, #modalPixPresidente button, #modalLancamentoPix button, #irsModal button"
     ).forEach(botao => {
       if (botao.closest(".launch-lock-control, .lock-password-dialog")) return;
       if (!botaoEhAcaoLancamento(botao)) return;
@@ -817,6 +819,10 @@ import {
       botao.classList.toggle("launch-action-locked", estado.bloqueado);
       botao.setAttribute("aria-disabled", String(estado.bloqueado));
       botao.title = estado.bloqueado ? "Bloqueado pelo diretor" : "";
+
+      if (botao.matches("#btnImportarRelatorioProdutivos, #btnImportarRelatorioPix, .irs-import")) {
+        botao.disabled = estado.bloqueado;
+      }
     });
   }
 
@@ -878,6 +884,7 @@ import {
     });
 
     aplicarBloqueioBotoes();
+    window.importacaoRelatorioSistema?.sincronizarBloqueio?.();
   }
 
   function bloquearClique(evento) {
@@ -1056,7 +1063,20 @@ import {
         sincronizarEstadoEfetivo,
 
       abrirProgramacao:
-        abrirModalProgramacao
+        abrirModalProgramacao,
+
+      podeAlterar() {
+        return !estado.bloqueado;
+      },
+
+      exigirLiberado() {
+        if (!estado.bloqueado) return true;
+        mostrarToast(
+          "A importação está indisponível enquanto os lançamentos estiverem bloqueados.",
+          "warning"
+        );
+        return false;
+      }
     };
   }
 

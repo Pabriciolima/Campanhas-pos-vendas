@@ -663,7 +663,7 @@
                       </div>
                     </div>
                     <div class="filters">
-                      <select id="filtroCompetenciaLancamento">
+                      <select id="filtroCompetenciaLancamento" hidden aria-hidden="true" tabindex="-1">
                         <option value="">Todas as competências</option>
                       </select><select id="filtroFilialLancamento">
                         <option value="">Todas as filiais</option>
@@ -702,7 +702,7 @@
                       <button id="btnExportarCsv" class="secondary">Exportar CSV</button>
                     </div>
                     <div class="filters">
-                      <select id="filtroCompetenciaApuracao">
+                      <select id="filtroCompetenciaApuracao" hidden aria-hidden="true" tabindex="-1">
                         <option value="">Todas as competências</option>
                       </select><select id="filtroFilialApuracao">
                         <option value="">Todas as filiais</option>
@@ -900,7 +900,7 @@
                         <p class="eyebrow">Resumo mensal</p>
                         <h2>Visão geral da apuração</h2>
                       </div>
-                      <label class="pix-competencia-box">Competência<input type="month" id="pixDashboardCompetencia"
+                      <label class="pix-competencia-box" hidden aria-hidden="true">Competência<input type="month" id="pixDashboardCompetencia" tabindex="-1"
                           min="2026-06" /></label>
                     </div>
                     <div id="pixDashboardCards" class="pix-dashboard-cards"></div>
@@ -991,7 +991,7 @@
                         </div>
                       </div>
                       <div class="pix-filters pix-filters-4">
-                        <select id="pixFiltroCompetenciaLancamento">
+                        <select id="pixFiltroCompetenciaLancamento" hidden aria-hidden="true" tabindex="-1">
                           <option value="">Todas as competências</option>
                         </select><select id="pixFiltroFilialLancamento">
                           <option value="">Todas as filiais</option>
@@ -1040,7 +1040,7 @@
                         </div>
                       </div>
                       <div class="pix-filters">
-                        <select id="pixFiltroCompetenciaApuracao">
+                        <select id="pixFiltroCompetenciaApuracao" hidden aria-hidden="true" tabindex="-1">
                           <option value="">Todas as competências</option>
                         </select><select id="pixFiltroFilialApuracao">
                           <option value="">Todas as filiais</option>
@@ -1312,8 +1312,8 @@
               <div id="toast" class="toast"></div>
 <script src="./performance-vendors.js?v=20260903-01"></script>
               <script src="./alerts-premium.js?v=20260716-01"></script>
-              <script type="module" src="./script.js?v=20260903-02-filtros-pontuais"></script>
-              <script type="module" src="./pix-presidente.js?v=20260903-02-filtros-pontuais"></script>
+              <script type="module" src="./script.js?v=20260904-02-competencia-unica"></script>
+              <script type="module" src="./pix-presidente.js?v=20260904-02-competencia-unica"></script>
               <script type="module" src="./importacao-funcionarios.js?v=20260716-01"></script>
               <script src="./pix-historico-individual.js?v=20260715-01"></script>
               <script type="module" src="./evidencias-produtivos.js?v=20260903-01"></script>
@@ -1322,7 +1322,7 @@
               <script type="module" src="./presenca-colaborativa.js?v=20260902-09-hotfix"></script>
               <script src="./isolamento-competencias.js?v=20260724-02"></script>
               <script src="./politicas-penalidades.js?v=20260804-02"></script>
-              <script type="module" src="./bloqueio-lancamentos.js?v=20260717-01"></script>
+              <script type="module" src="./bloqueio-lancamentos.js?v=20260904-01-importacao"></script>
               <script src="./dashboard-pix-gestor-funcional.js?v=20260721-04"></script>
               <script type="module" src="./compras-module.js?v=20260723-11"></script>
               <script type="module" src="./auditoria-campanhas.js?v=20260903-01-paginada"></script>
@@ -1351,7 +1351,7 @@
                   if (!window.__importadorPromise) {
                     window.__importadorPromise =
                       import(
-                        "./importacao-relatorio-sistema.js?v=20260901-34-pix-supabase"
+                        "./importacao-relatorio-sistema.js?v=20260904-02-competencia-unica"
                       );
                   }
 
@@ -1419,6 +1419,14 @@
                       botao?.textContent ||
                       "Importar relatório";
 
+                    if (
+                      window.bloqueioLancamentos?.bloqueado ||
+                      document.body.classList.contains("lancamentos-bloqueados")
+                    ) {
+                      window.bloqueioLancamentos?.exigirLiberado?.();
+                      return false;
+                    }
+
                     try {
                       if (botao) {
                         botao.disabled = true;
@@ -1432,7 +1440,10 @@
                       return api.abrirPix();
                     } finally {
                       if (botao) {
-                        botao.disabled = false;
+                        botao.disabled = Boolean(
+                          window.bloqueioLancamentos?.bloqueado ||
+                          document.body.classList.contains("lancamentos-bloqueados")
+                        );
                         botao.textContent =
                           textoOriginal;
                       }
@@ -1454,6 +1465,14 @@
                   async function (evento) {
                     evento?.preventDefault();
                     evento?.stopPropagation();
+
+                    if (
+                      window.bloqueioLancamentos?.bloqueado ||
+                      document.body.classList.contains("lancamentos-bloqueados")
+                    ) {
+                      window.bloqueioLancamentos?.exigirLiberado?.();
+                      return false;
+                    }
 
                     const api =
                       await window.__carregarImportador();

@@ -1771,6 +1771,13 @@ function iniciarLancamentosTempoReal() {
 async function salvarLancamentoFirebase(
   item
 ) {
+  if (
+    window.bloqueioLancamentos?.bloqueado ||
+    document.body.classList.contains("lancamentos-bloqueados")
+  ) {
+    throw new Error("Os lançamentos estão bloqueados. A gravação foi impedida.");
+  }
+
   const id =
     String(
       item.id ||
@@ -1848,6 +1855,13 @@ async function salvarMuitosLancamentosFirebase(
     inicio < lista.length;
     inicio += tamanhoGrupo
   ) {
+    if (
+      window.bloqueioLancamentos?.bloqueado ||
+      document.body.classList.contains("lancamentos-bloqueados")
+    ) {
+      throw new Error("Importação interrompida: os lançamentos foram bloqueados.");
+    }
+
     const grupo =
       lista.slice(
         inicio,
@@ -4165,8 +4179,10 @@ function navegarHistorico(
       )
     );
 
-  atualizarNavegacaoHistorico();
-  renderDashboard();
+  /* Usa o mesmo fluxo da escolha manual, incluindo consulta ao Supabase. */
+  campo.dispatchEvent(
+    new Event("change", { bubbles: true })
+  );
 }
 
 function motivoResultado(
@@ -5097,6 +5113,12 @@ function resumoAgrupado(
 }
 
 function atualizarFiltrosCompetencia() {
+  const competenciaSuperior =
+    normalizarCompetencia12Meses(
+      document.querySelector("#competenciaGlobal")?.value,
+      mesAtual()
+    );
+
   [
     "filtroCompetenciaLancamento",
     "filtroCompetenciaApuracao"
@@ -5110,19 +5132,7 @@ function atualizarFiltrosCompetencia() {
       return;
     }
 
-    const valorAtual = normalizarCompetencia12Meses(
-      elemento.value,
-      ""
-    );
-
-    const competenciaReferencia =
-      valorAtual ||
-      normalizarCompetencia12Meses(
-        document.querySelector("#competenciaGlobal")?.value,
-        mesAtual()
-      );
-
-    const anoReferencia = competenciaReferencia.slice(0, 4);
+    const anoReferencia = competenciaSuperior.slice(0, 4);
     const competencias = competenciasDoAno(anoReferencia).reverse();
 
     preencherSelect(
@@ -5135,13 +5145,37 @@ function atualizarFiltrosCompetencia() {
         })
       ),
 
-      "Todas as competências"
+      ""
     );
 
-    elemento.value = competencias.includes(valorAtual)
-      ? valorAtual
-      : "";
+    elemento.value = competenciaSuperior;
+    elemento.hidden = true;
+    elemento.setAttribute("aria-hidden", "true");
+    elemento.tabIndex = -1;
   });
+}
+
+/* O cabeçalho é a única fonte de verdade para a competência. */
+function sincronizarCompetenciaProdutivos() {
+  const competencia = normalizarCompetencia12Meses(
+    document.querySelector("#competenciaGlobal")?.value,
+    mesAtual()
+  );
+
+  ["filtroCompetenciaLancamento", "filtroCompetenciaApuracao"]
+    .forEach(id => {
+      const campo = document.querySelector(`#${id}`);
+      if (!campo) return;
+      if (![...campo.options].some(opcao => opcao.value === competencia)) {
+        campo.add(new Option(competencia, competencia));
+      }
+      campo.value = competencia;
+      campo.hidden = true;
+      campo.setAttribute("aria-hidden", "true");
+      campo.tabIndex = -1;
+    });
+
+  return competencia;
 }
 
 function abrirFuncionario() {
@@ -7412,7 +7446,11 @@ function configurarEventos() {
           );
 
         atualizarNavegacaoHistorico();
+        atualizarFiltrosCompetencia();
+        sincronizarCompetenciaProdutivos();
         renderDashboard();
+        renderLancamentos();
+        renderApuracao();
       }
     );
 
@@ -7932,6 +7970,7 @@ document.addEventListener(
   "DOMContentLoaded",
   async () => {
     iniciarSelects();
+    sincronizarCompetenciaProdutivos();
     garantirControlesHistorico();
     garantirCssLancamentosAutomaticos();
     configurarEventos();

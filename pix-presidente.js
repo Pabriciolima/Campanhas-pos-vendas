@@ -2218,6 +2218,14 @@ function sincronizarCompetenciaPix(
   competencia,
   origem = "global"
 ) {
+  const competenciaSuperior =
+    $("#competenciaGlobal")?.value;
+
+  competencia =
+    competenciaSuperior ||
+    competencia ||
+    pixMesAtual();
+
   if (
     !competencia ||
     sincronizacaoPixEmAndamento
@@ -2255,6 +2263,9 @@ function sincronizarCompetenciaPix(
 
   if (campoPix) {
     campoPix.value = competencia;
+    campoPix.tabIndex = -1;
+    campoPix.setAttribute("aria-hidden", "true");
+    campoPix.closest("label")?.setAttribute("hidden", "");
   }
 
   atualizarRotuloHistoricoPix(
@@ -2268,7 +2279,13 @@ function sincronizarCompetenciaPix(
     const campo = $(seletor);
 
     if (campo) {
+      if (![...campo.options].some(opcao => opcao.value === competencia)) {
+        campo.add(new Option(competencia, competencia));
+      }
       campo.value = competencia;
+      campo.hidden = true;
+      campo.tabIndex = -1;
+      campo.setAttribute("aria-hidden", "true");
     }
   });
 
@@ -4015,6 +4032,14 @@ function editarLancamentoPix(id) {
 
 async function salvarLancamentoPix(evento) {
   evento.preventDefault();
+
+  if (
+    window.bloqueioLancamentos?.bloqueado ||
+    document.body.classList.contains("lancamentos-bloqueados")
+  ) {
+    pixAlert("Os lançamentos estão bloqueados pelo diretor.");
+    return;
+  }
 
   const botao = evento.submitter;
 
