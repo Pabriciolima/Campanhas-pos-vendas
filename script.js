@@ -4770,72 +4770,19 @@ function preencherFiltroDashboardProdutivos(
 function atualizarFiltrosDashboardProdutivos(
   resultadosCompetencia
 ) {
-  const filtroDn =
-    document.querySelector(
-      "#filtroDnDashboardProdutivos"
-    );
-
   const filtroFilial =
     document.querySelector(
       "#filtroFilialDashboardProdutivos"
     );
 
-  if (
-    !filtroDn ||
-    !filtroFilial
-  ) {
+  if (!filtroFilial) {
     return;
   }
-
-  const dns =
-    [
-      ...new Set(
-        resultadosCompetencia
-          .map(
-            item =>
-              String(
-                item.dn || ""
-              ).trim()
-          )
-          .filter(Boolean)
-      )
-    ].sort(
-      (a, b) =>
-        a.localeCompare(
-          b,
-          "pt-BR",
-          {
-            numeric: true
-          }
-        )
-    );
-
-  preencherFiltroDashboardProdutivos(
-    filtroDn,
-    dns.map(
-      dn => ({
-        value: dn,
-        label: dn
-      })
-    ),
-    "Todos"
-  );
-
-  const dnSelecionado =
-    filtroDn.value;
 
   const filiais =
     [
       ...new Map(
         resultadosCompetencia
-          .filter(
-            item =>
-              !dnSelecionado ||
-              String(
-                item.dn || ""
-              ).trim() ===
-                dnSelecionado
-          )
           .map(
             item => [
               String(
@@ -4871,10 +4818,7 @@ function atualizarFiltrosDashboardProdutivos(
     filiais.map(
       item => ({
         value: item.filial,
-        label:
-          item.dn
-            ? `${item.dn} - ${item.filial}`
-            : item.filial
+        label: item.filial
       })
     ),
     "Todas"
@@ -4913,11 +4857,6 @@ function renderDashboard() {
     resultadosCompetencia
   );
 
-  const dnSelecionado =
-    obterValorFiltroDashboardProdutivos(
-      "#filtroDnDashboardProdutivos"
-    );
-
   const filialSelecionada =
     obterValorFiltroDashboardProdutivos(
       "#filtroFilialDashboardProdutivos"
@@ -4926,13 +4865,6 @@ function renderDashboard() {
   const lista =
     resultadosCompetencia.filter(
       resultado => {
-        const atendeDn =
-          !dnSelecionado ||
-          String(
-            resultado.dn || ""
-          ).trim() ===
-            dnSelecionado;
-
         const atendeFilial =
           !filialSelecionada ||
           String(
@@ -4940,10 +4872,7 @@ function renderDashboard() {
           ).trim() ===
             filialSelecionada;
 
-        return (
-          atendeDn &&
-          atendeFilial
-        );
+        return atendeFilial;
       }
     );
 
@@ -4979,13 +4908,6 @@ function renderDashboard() {
             return false;
           }
 
-          const atendeDn =
-            !dnSelecionado ||
-            String(
-              funcionario.dn || ""
-            ).trim() ===
-              dnSelecionado;
-
           const atendeFilial =
             !filialSelecionada ||
             String(
@@ -4993,10 +4915,7 @@ function renderDashboard() {
             ).trim() ===
               filialSelecionada;
 
-          return (
-            atendeDn &&
-            atendeFilial
-          );
+          return atendeFilial;
         }
       ).length
     ],
@@ -7478,29 +7397,9 @@ function configurarEventos() {
       }
     );
 
-  const filtroDnDashboardProdutivos =
-    document.querySelector(
-      "#filtroDnDashboardProdutivos"
-    );
-
   const filtroFilialDashboardProdutivos =
     document.querySelector(
       "#filtroFilialDashboardProdutivos"
-    );
-
-  filtroDnDashboardProdutivos
-    ?.addEventListener(
-      "change",
-      () => {
-        if (
-          filtroFilialDashboardProdutivos
-        ) {
-          filtroFilialDashboardProdutivos.value =
-            "";
-        }
-
-        renderDashboard();
-      }
     );
 
   filtroFilialDashboardProdutivos

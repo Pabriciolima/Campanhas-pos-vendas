@@ -80,7 +80,6 @@ Deixe somente esta versão, depois de pix-presidente.js:
   const estado = {
     semana: "",
     filial: "",
-    dn: "",
     tentativa: 0,
     timerInicial: null,
     renderizando: false
@@ -537,14 +536,6 @@ Deixe somente esta versão, depois de pix-presidente.js:
         return false;
       }
 
-      if (
-        estado.dn &&
-        texto(item.dn) !==
-        texto(estado.dn)
-      ) {
-        return false;
-      }
-
       return true;
     });
   }
@@ -739,7 +730,7 @@ Deixe somente esta versão, depois de pix-presidente.js:
         .pix-gestor-filtros{
           display:grid;
           grid-template-columns:
-            repeat(3,minmax(150px,1fr));
+            repeat(2,minmax(150px,1fr));
           gap:10px;
           margin-top:14px;
           padding:14px;
@@ -1039,18 +1030,6 @@ Deixe somente esta versão, depois de pix-presidente.js:
           </div>
 
           <div class="pix-gestor-campo">
-            <label for="pixGestorDn">
-              DN
-            </label>
-
-            <select id="pixGestorDn">
-              <option value="">
-                Todos
-              </option>
-            </select>
-          </div>
-
-          <div class="pix-gestor-campo">
             <label for="pixGestorFilial">
               Filial
             </label>
@@ -1168,13 +1147,6 @@ Deixe somente esta versão, depois de pix-presidente.js:
       }
 
       const todos = obterDados();
-
-      preencherSelect(
-        "#pixGestorDn",
-        valoresUnicos(todos, "dn"),
-        estado.dn,
-        "Todos"
-      );
 
       preencherSelect(
         "#pixGestorFilial",
@@ -1562,17 +1534,6 @@ Deixe somente esta versão, depois de pix-presidente.js:
         "change",
         evento => {
           estado.semana =
-            evento.target.value;
-
-          renderizar();
-        }
-      );
-
-    $("#pixGestorDn")
-      ?.addEventListener(
-        "change",
-        evento => {
-          estado.dn =
             evento.target.value;
 
           renderizar();

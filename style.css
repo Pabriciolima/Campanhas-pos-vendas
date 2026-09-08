@@ -2975,7 +2975,7 @@ table thead th:not(:last-child)::before {
 
 /* =====================================================
    FILTRO DA VISÃO GERAL — CAMPANHA DOS PRODUTIVOS
-   Visualização independente por DN e filial.
+   Visualização por filial.
 ===================================================== */
 
 .produtivos-dashboard-filter-panel {
@@ -2986,7 +2986,7 @@ table thead th:not(:last-child)::before {
 
 .produtivos-dashboard-filters {
   display: grid;
-  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  grid-template-columns: minmax(220px, 1fr);
   gap: 12px;
 }
 
@@ -3010,9 +3010,6 @@ table thead th:not(:last-child)::before {
   text-transform: none;
 }
 
-.produtivos-dashboard-filter-panel:has(
-  #filtroDnDashboardProdutivos:not([value=""])
-),
 .produtivos-dashboard-filter-panel:has(
   #filtroFilialDashboardProdutivos:not([value=""])
 ) {
