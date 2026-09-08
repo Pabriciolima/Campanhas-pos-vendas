@@ -468,6 +468,13 @@ const state = {
 const $ = seletor => document.querySelector(seletor);
 const $$ = seletor => [...document.querySelectorAll(seletor)];
 
+/*
+ * Preserva o display inline de cada tela externa enquanto Compras
+ * estiver aberto. Assim a navegação consegue restaurar exatamente
+ * o estado anterior ao retornar para qualquer outro módulo.
+ */
+const displaysOriginaisViewsExternas = new Map();
+
 function texto(valor) {
   return String(valor ?? "").trim();
 }
@@ -5430,13 +5437,35 @@ function ocultarViewsExternas() {
     "main > section, .main-content > section, #app-content > section"
   ).forEach(section => {
     if (!nossas.has(section)) {
+      if (!displaysOriginaisViewsExternas.has(section)) {
+        displaysOriginaisViewsExternas.set(
+          section,
+          section.style.display
+        );
+      }
+
       section.style.display =
         "none";
     }
   });
 }
 
+function restaurarViewsExternas() {
+  displaysOriginaisViewsExternas.forEach(
+    (displayOriginal, section) => {
+      if (section?.isConnected) {
+        section.style.display =
+          displayOriginal;
+      }
+    }
+  );
+
+  displaysOriginaisViewsExternas.clear();
+}
+
 function ocultarCompras() {
+  restaurarViewsExternas();
+
   $$("[data-compras-view]")
     .forEach(section => {
       section.classList.remove(
@@ -5508,6 +5537,20 @@ function configurarOcultacaoExterna() {
     }
   );
 }
+
+/*
+ * Também restaura as telas quando a troca de módulo for disparada
+ * por código, teclado ou restauração do estado salvo, sem depender
+ * exclusivamente de um clique dentro da sidebar.
+ */
+window.addEventListener(
+  "campanhas:viewready",
+  evento => {
+    if (evento.detail?.modulo !== "compras") {
+      ocultarCompras();
+    }
+  }
+);
 
 
 /* ==========================================================================
