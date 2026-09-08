@@ -8,14 +8,9 @@ Não altera lançamentos, regras, importação, exportação, auditoria ou Fireb
 ===============================================================================
 */
 
-import { firestore } from "./firebase-config.js";
 import { supabase } from "./supabase-config.js";
-import {
-  collection,
-  onSnapshot
-} from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
-const PODIUM_VERSAO = "2026.09.01-13-SUPABASE-PRODUTIVOS";
+const PODIUM_VERSAO = "2026.09.08-14-SUPABASE-PRODUTIVOS-E-PIX";
 
 const estado = {
   funcionariosProdutivos: [],
@@ -2325,17 +2320,6 @@ function eventos() {
   });
 }
 
-function observar(nomeColecao, chave) {
-  onSnapshot(
-    collection(firestore, nomeColecao),
-    snapshot => {
-      estado[chave] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      renderizar();
-    },
-    erro => console.error(`[PÓDIO] Erro ao ler ${nomeColecao}:`, erro)
-  );
-}
-
 async function carregarProdutivosSupabasePodium() {
   const [funcionariosResposta, lancamentosResposta] = await Promise.all([
     supabase
@@ -2384,6 +2368,57 @@ async function carregarProdutivosSupabasePodium() {
   );
 }
 
+async function carregarPixSupabasePodium() {
+  const [funcionariosResposta, lancamentosResposta] = await Promise.all([
+    supabase
+      .from("pix_funcionarios")
+      .select("id,dados,ativo"),
+    supabase
+      .from("pix_lancamentos")
+      .select("id,competencia,semana,filial,colaborador,dados")
+  ]);
+
+  if (funcionariosResposta.error) {
+    throw funcionariosResposta.error;
+  }
+
+  if (lancamentosResposta.error) {
+    throw lancamentosResposta.error;
+  }
+
+  estado.funcionariosPix = (funcionariosResposta.data || [])
+    .map(linha => ({
+      ...(linha.dados || {}),
+      id: linha.id,
+      ativo: linha.ativo !== false
+    }));
+
+  estado.lancamentosPix = (lancamentosResposta.data || [])
+    .map(linha => ({
+      ...(linha.dados || {}),
+      id: linha.id,
+      competencia:
+        texto(linha.dados?.competencia) ||
+        texto(linha.competencia),
+      semana:
+        linha.dados?.semana ??
+        linha.semana,
+      filial:
+        texto(linha.dados?.filial) ||
+        texto(linha.filial),
+      colaborador:
+        texto(linha.dados?.colaborador) ||
+        texto(linha.dados?.nome) ||
+        texto(linha.colaborador)
+    }));
+
+  renderizar();
+
+  console.info(
+    `[PÓDIO/SUPABASE] Pix sincronizado: ${estado.funcionariosPix.length} participante(s) e ${estado.lancamentosPix.length} lançamento(s).`
+  );
+}
+
 function observarProdutivosSupabasePodium() {
   let temporizador = null;
 
@@ -2423,13 +2458,51 @@ function observarProdutivosSupabasePodium() {
     .subscribe();
 }
 
+function observarPixSupabasePodium() {
+  let temporizador = null;
+
+  const atualizar = () => {
+    window.clearTimeout(temporizador);
+    temporizador = window.setTimeout(() => {
+      carregarPixSupabasePodium().catch(erro => {
+        console.error("[PÓDIO/SUPABASE] Falha ao carregar Pix:", erro);
+      });
+    }, 180);
+  };
+
+  carregarPixSupabasePodium().catch(erro => {
+    console.error("[PÓDIO/SUPABASE] Falha na carga inicial do Pix:", erro);
+  });
+
+  supabase
+    .channel("podium-pix-realtime-v14")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "pix_funcionarios"
+      },
+      atualizar
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "pix_lancamentos"
+      },
+      atualizar
+    )
+    .subscribe();
+}
+
 function iniciar() {
   garantirEstilos();
   eventos();
 
   observarProdutivosSupabasePodium();
-  observar("pix_presidente_funcionarios", "funcionariosPix");
-  observar("pix_presidente_lancamentos", "lancamentosPix");
+  observarPixSupabasePodium();
 
   const observer = new MutationObserver(() => {
     const faltaProd = Boolean(ancoraProdutivos() && !$("#podiumMensalProdutivos"));
