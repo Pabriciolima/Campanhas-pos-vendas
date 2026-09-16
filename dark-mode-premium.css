@@ -97,11 +97,7 @@ html[data-theme="dark"] .topbar {
   -webkit-backdrop-filter: blur(18px);
 }
 html[data-theme="dark"] .topbar h1,
-html[data-theme="dark"] h1,
-html[data-theme="dark"] h2,
-html[data-theme="dark"] h3,
-html[data-theme="dark"] h4,
-html[data-theme="dark"] strong { color:#eaf1f8; }
+html[data-theme="dark"] .topbar .page-title { color:#eaf1f8; }
 html[data-theme="dark"] .eyebrow { color:#2dd4bf !important; }
 
 /* Superfícies */
@@ -660,4 +656,153 @@ html .auditoria-modal .auditoria-exportar.pdf * {
   color:#b4232b !important;
   -webkit-text-fill-color:#b4232b !important;
   opacity:1 !important;
+}
+
+/* ================================================================
+   CONTRASTE CONTEXTUAL V4.2
+   Fundo claro usa tinta escura; fundo escuro usa tinta clara.
+   Não altera dimensões, conteúdo nem regras de negócio.
+   ================================================================ */
+
+/*
+ * Nunca força títulos e valores globais para branco. Componentes claros
+ * aninhados em painéis escuros precisam conservar a própria tinta escura.
+ */
+html[data-theme="dark"] :is(
+  .policy-value-block,
+  .policy-role-payment > div,
+  .policy-total-box,
+  .policy-example,
+  .policy-alert,
+  .pix-stat-card,
+  .pix-preview-grid > *,
+  .podium-card,
+  .podium-pix-switch,
+  .compras-policy-card,
+  .compras-confirm-card,
+  .pix-senha-participante-card,
+  .senha-exclusao-card
+) {
+  color:#17324a !important;
+  color-scheme:light;
+}
+
+/* Políticas dos Produtivos: cartões permanecem claros no modo noturno. */
+html[data-theme="dark"] #politicas :is(
+  .policy-value-block,
+  .policy-role-payment > div
+) {
+  background:#fbfcfd !important;
+  border-color:#dce6ec !important;
+}
+
+html[data-theme="dark"] #politicas .policy-value-block h3 {
+  background:#edf3f6 !important;
+  color:#12324a !important;
+  -webkit-text-fill-color:#12324a !important;
+}
+
+html[data-theme="dark"] #politicas .policy-tier {
+  border-color:#e6edf1 !important;
+  color:#536675 !important;
+  -webkit-text-fill-color:#536675 !important;
+}
+
+html[data-theme="dark"] #politicas .policy-tier strong {
+  color:#0a2b44 !important;
+  -webkit-text-fill-color:#0a2b44 !important;
+}
+
+html[data-theme="dark"] #politicas .policy-tier-highlight {
+  background:#eff9f5 !important;
+  color:#087354 !important;
+  -webkit-text-fill-color:#087354 !important;
+}
+
+html[data-theme="dark"] #politicas .policy-tier-highlight strong {
+  color:#087354 !important;
+  -webkit-text-fill-color:#087354 !important;
+}
+
+html[data-theme="dark"] #politicas .policy-total-box {
+  background:#eff9f5 !important;
+  border-color:#b9dfd1 !important;
+}
+
+html[data-theme="dark"] #politicas .policy-total-box span,
+html[data-theme="dark"] #politicas .policy-total-box small,
+html[data-theme="dark"] #politicas .policy-role-payment :is(span,small),
+html[data-theme="dark"] #politicas :is(.policy-formulas,.policy-intro,.policy-example) {
+  color:#536675 !important;
+  -webkit-text-fill-color:#536675 !important;
+}
+
+html[data-theme="dark"] #politicas .policy-total-box strong {
+  color:#087354 !important;
+  -webkit-text-fill-color:#087354 !important;
+}
+
+html[data-theme="dark"] #politicas .policy-role-payment strong {
+  color:#0a2b44 !important;
+  -webkit-text-fill-color:#0a2b44 !important;
+}
+
+html[data-theme="dark"] #politicas .policy-example {
+  background:#f4f9f7 !important;
+}
+
+html[data-theme="dark"] #politicas .policy-alert-danger {
+  background:#fff1ef !important;
+  border-color:#f2b9b4 !important;
+  color:#8f241d !important;
+  -webkit-text-fill-color:#8f241d !important;
+}
+
+html[data-theme="dark"] #politicas .policy-alert-warning {
+  background:#fff7e5 !important;
+  border-color:#f0cd82 !important;
+  color:#6f4b00 !important;
+  -webkit-text-fill-color:#6f4b00 !important;
+}
+
+html[data-theme="dark"] #politicas .policy-alert :is(strong,li) {
+  color:inherit !important;
+  -webkit-text-fill-color:currentColor !important;
+}
+
+/* Cartões claros do pódio mantêm contraste escuro. */
+html[data-theme="dark"] .podium-card :is(h3,p,small,strong,span) {
+  -webkit-text-fill-color:currentColor;
+}
+
+html[data-theme="dark"] .podium-card h3 { color:#102b3e !important; }
+html[data-theme="dark"] .podium-card p { color:#6f8290 !important; }
+html[data-theme="dark"] .podium-card .podium-superacao small,
+html[data-theme="dark"] .podium-card .podium-superacao span { color:#6b7f8d !important; }
+
+/* Semântica: fundos de sucesso, alerta e erro conservam tinta escura. */
+html[data-theme="dark"] :is(
+  .badge.yes,.badge.no,.badge.warn,
+  .policy-tier-highlight,.policy-total-box,
+  .pix-policy-note,.pix-penalty-policy,
+  .compras-success,.compras-warning,.compras-danger,
+  .compras-alert,.compras-error
+) :is(strong,span,p,small,li) {
+  color:inherit !important;
+  -webkit-text-fill-color:currentColor !important;
+}
+
+/* Controles desabilitados continuam legíveis, sem parecer ativos. */
+html[data-theme="dark"] :is(input,select,textarea,button):disabled {
+  opacity:.72;
+  color:#aebdcb !important;
+  -webkit-text-fill-color:#aebdcb !important;
+}
+
+/* O modo claro mantém explicitamente sua paleta original. */
+html:not([data-theme="dark"]) #politicas :is(
+  .policy-value-block,.policy-role-payment > div,.policy-total-box,
+  .policy-example,.policy-alert
+) {
+  color-scheme:light;
 }
