@@ -2437,9 +2437,34 @@ function calcularLancamento(
 
       base.status = "HABILITADO";
     } else {
+      /*
+       * Motivo detalhado da não habilitação.
+       * Usa exatamente os mesmos critérios que definem atingiuMetricas,
+       * evitando divergência entre STATUS e MOTIVO.
+       */
+      const motivosNaoHabilitacao = [];
+
+      if (base.produtividade < 70) {
+        motivosNaoHabilitacao.push(
+          "Produtividade abaixo de 70%"
+        );
+      }
+
+      if (base.eficiencia < 80) {
+        motivosNaoHabilitacao.push(
+          "Eficiência abaixo de 80%"
+        );
+      }
+
+      if (!minimoHoraVendida) {
+        motivosNaoHabilitacao.push(
+          "Horas vendidas abaixo de 70% das disponíveis"
+        );
+      }
+
       base.motivo =
-        !minimoHoraVendida
-          ? "Horas vendidas abaixo de 70% das disponíveis"
+        motivosNaoHabilitacao.length
+          ? motivosNaoHabilitacao.join(" e ")
           : "Métricas mínimas não atingidas";
     }
 
@@ -3061,16 +3086,29 @@ function renderLancamentos() {
               </td>
 
               <td>
-                <span
-                  class="badge ${
-                    lancamento.status ===
-                    "HABILITADO"
-                      ? "ok"
-                      : "no"
-                  }"
-                >
-                  ${lancamento.status}
-                </span>
+                <div class="status-com-motivo">
+                  <span
+                    class="badge ${
+                      lancamento.status ===
+                      "HABILITADO"
+                        ? "ok"
+                        : "no"
+                    }"
+                  >
+                    ${lancamento.status}
+                  </span>
+
+                  ${
+                    lancamento.status !== "HABILITADO"
+                      ? `
+                        <small class="status-motivo">
+                          <strong>Motivo:</strong>
+                          ${motivoResultado(lancamento)}.
+                        </small>
+                      `
+                      : ""
+                  }
+                </div>
               </td>
 
               <td>
@@ -3819,19 +3857,32 @@ function renderApuracao() {
                 </td>
 
                 <td>
-                  <span
-                    title="${
-                      item.motivo || ""
-                    }"
-                    class="badge ${
-                      item.status ===
-                      "HABILITADO"
-                        ? "ok"
-                        : "no"
-                    }"
-                  >
-                    ${item.status}
-                  </span>
+                  <div class="status-com-motivo">
+                    <span
+                      title="${
+                        item.motivo || ""
+                      }"
+                      class="badge ${
+                        item.status ===
+                        "HABILITADO"
+                          ? "ok"
+                          : "no"
+                      }"
+                    >
+                      ${item.status}
+                    </span>
+
+                    ${
+                      item.status !== "HABILITADO"
+                        ? `
+                          <small class="status-motivo">
+                            <strong>Motivo:</strong>
+                            ${motivoResultado(item)}.
+                          </small>
+                        `
+                        : ""
+                    }
+                  </div>
                 </td>
               </tr>
             `

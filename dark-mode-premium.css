@@ -793,10 +793,149 @@ html[data-theme="dark"] :is(
 }
 
 /* Controles desabilitados continuam legíveis, sem parecer ativos. */
-html[data-theme="dark"] :is(input,select,textarea,button):disabled {
+html[data-theme="dark"] :is(input,select,textarea):disabled {
   opacity:.72;
   color:#aebdcb !important;
   -webkit-text-fill-color:#aebdcb !important;
+}
+
+/* ================================================================
+   CONTRASTE CONTEXTUAL V4.3 — COMPONENTES DINÂMICOS
+   Corrige elementos criados pelos módulos depois do carregamento do CSS.
+   ================================================================ */
+
+/* Ações das tabelas: Editar, Excluir e Evidências. */
+html[data-theme="dark"] .actions .mini-btn,
+html[data-theme="dark"] button.mini-btn {
+  background:#f8fafc !important;
+  border-color:#cbd7e3 !important;
+  color:#29445a !important;
+  -webkit-text-fill-color:#29445a !important;
+  opacity:1 !important;
+}
+
+html[data-theme="dark"] .actions .mini-btn.delete,
+html[data-theme="dark"] button.mini-btn.delete {
+  background:#fff7f7 !important;
+  border-color:#efc6ca !important;
+  color:#b4232b !important;
+  -webkit-text-fill-color:#b4232b !important;
+}
+
+html[data-theme="dark"] .actions .mini-btn:disabled,
+html[data-theme="dark"] button.mini-btn:disabled {
+  background:#eef2f5 !important;
+  border-color:#d5dde4 !important;
+  color:#566b7b !important;
+  -webkit-text-fill-color:#566b7b !important;
+  opacity:.88 !important;
+  cursor:not-allowed;
+}
+
+html[data-theme="dark"] .actions .mini-btn.delete:disabled,
+html[data-theme="dark"] button.mini-btn.delete:disabled {
+  background:#fff2f3 !important;
+  color:#a64048 !important;
+  -webkit-text-fill-color:#a64048 !important;
+}
+
+html[data-theme="dark"] .actions .mini-btn :is(svg,path),
+html[data-theme="dark"] button.mini-btn :is(svg,path) {
+  color:currentColor !important;
+  stroke:currentColor !important;
+}
+
+/* Visão Geral do Pix: os cartões são claros por projeto. */
+html[data-theme="dark"] :is(
+  .pix-gestor-filtros,
+  .pix-gestor-card,
+  .pix-gestor-painel
+) {
+  background:#ffffff !important;
+  border-color:#dce6ec !important;
+  color:#173044 !important;
+  color-scheme:light;
+}
+
+html[data-theme="dark"] .pix-gestor-card span,
+html[data-theme="dark"] .pix-gestor-card small,
+html[data-theme="dark"] .pix-gestor-subtitulo,
+html[data-theme="dark"] .pix-gestor-semana b,
+html[data-theme="dark"] .pix-gestor-rodape {
+  color:#5d7282 !important;
+  -webkit-text-fill-color:#5d7282 !important;
+}
+
+html[data-theme="dark"] .pix-gestor-card strong,
+html[data-theme="dark"] .pix-gestor-painel h3,
+html[data-theme="dark"] .pix-gestor-semana strong,
+html[data-theme="dark"] .pix-gestor-barra :is(b,strong) {
+  color:#0b3154 !important;
+  -webkit-text-fill-color:#0b3154 !important;
+}
+
+html[data-theme="dark"] .pix-gestor-semana {
+  background:#f5f8fa !important;
+  border-color:#dce6ec !important;
+  color:#173044 !important;
+}
+
+html[data-theme="dark"] .pix-gestor-trilho {
+  background:#dfe8ed !important;
+}
+
+/* As tabelas do painel também permanecem claras e legíveis. */
+html[data-theme="dark"] .pix-gestor-painel .pix-gestor-tabela :is(thead,tr,th,td) {
+  background:#ffffff !important;
+  border-color:#dce6ec !important;
+  color:#29445a !important;
+  -webkit-text-fill-color:#29445a !important;
+}
+
+html[data-theme="dark"] .pix-gestor-painel .pix-gestor-tabela th {
+  background:#edf3f6 !important;
+  color:#3f586b !important;
+  -webkit-text-fill-color:#3f586b !important;
+}
+
+/* Políticas do Pix: superfície branca exige títulos e valores escuros. */
+html[data-theme="dark"] .pix-policy-card {
+  background:linear-gradient(180deg,#ffffff,#f8fbfc) !important;
+  border-color:#dce6ec !important;
+  color:#173044 !important;
+  color-scheme:light;
+}
+
+html[data-theme="dark"] .pix-policy-title h3 {
+  color:#173044 !important;
+  -webkit-text-fill-color:#173044 !important;
+}
+
+html[data-theme="dark"] .pix-policy-title > span {
+  background:#e5f6ee !important;
+  color:#087344 !important;
+  -webkit-text-fill-color:#087344 !important;
+}
+
+html[data-theme="dark"] .pix-policy-card :is(p,li) {
+  color:#405565 !important;
+  -webkit-text-fill-color:#405565 !important;
+}
+
+html[data-theme="dark"] .pix-policy-card p strong {
+  color:#173044 !important;
+  -webkit-text-fill-color:#173044 !important;
+}
+
+html[data-theme="dark"] .pix-policy-card .pix-nps-note {
+  background:#fff6dc !important;
+  color:#6f4b00 !important;
+  -webkit-text-fill-color:#6f4b00 !important;
+}
+
+html[data-theme="dark"] .pix-policy-card .pix-nps-note strong {
+  color:#6f4b00 !important;
+  -webkit-text-fill-color:#6f4b00 !important;
 }
 
 /* O modo claro mantém explicitamente sua paleta original. */
@@ -805,4 +944,170 @@ html:not([data-theme="dark"]) #politicas :is(
   .policy-example,.policy-alert
 ) {
   color-scheme:light;
+}
+
+
+/* ================================================================
+   HOTFIX V4.4 — CONTRASTE + MOTIVO DE NÃO HABILITAÇÃO
+   2026-09-18
+   Apenas apresentação. Não altera cálculos, banco ou auditoria.
+   ================================================================ */
+
+.status-com-motivo {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  min-width: 118px;
+}
+
+.status-motivo {
+  display: block;
+  max-width: 220px;
+  color: #536675;
+  font-size: 10px;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.status-motivo strong {
+  color: #8f241d;
+}
+
+html[data-theme="dark"] .status-motivo {
+  color: #aebdcb !important;
+  -webkit-text-fill-color: #aebdcb !important;
+}
+
+html[data-theme="dark"] .status-motivo strong {
+  color: #fda4af !important;
+  -webkit-text-fill-color: #fda4af !important;
+}
+
+/* Cards claros da visão geral do Pix: texto sempre escuro. */
+html[data-theme="dark"] .pix-stat-card {
+  background: #ffffff !important;
+  border-color: #dce6ec !important;
+  color: #173044 !important;
+  color-scheme: light;
+}
+
+html[data-theme="dark"] .pix-stat-card span {
+  color: #5d7282 !important;
+  -webkit-text-fill-color: #5d7282 !important;
+}
+
+html[data-theme="dark"] .pix-stat-card strong {
+  color: #0b3154 !important;
+  -webkit-text-fill-color: #0b3154 !important;
+}
+
+/* Pódio é uma superfície clara mesmo quando o restante da aplicação está escuro. */
+html[data-theme="dark"] :is(.podium-card, .podium-pix-switch) {
+  color-scheme: light;
+}
+
+html[data-theme="dark"] .podium-card :is(h1,h2,h3,h4,strong) {
+  color: #102b3e !important;
+  -webkit-text-fill-color: #102b3e !important;
+}
+
+html[data-theme="dark"] .podium-card :is(p,small,span) {
+  color: #6b7f8d !important;
+  -webkit-text-fill-color: #6b7f8d !important;
+}
+
+/* Títulos/legendas que ficam na área clara externa dos cards do pódio. */
+html[data-theme="dark"] :is(
+  .podium-section,
+  .podium-container,
+  .podium-wrapper,
+  .podium-header,
+  .podium-heading,
+  .podium-title,
+  .podium-subtitle,
+  .podium-eyebrow
+) {
+  color-scheme: light;
+}
+
+html[data-theme="dark"] :is(
+  .podium-section,
+  .podium-container,
+  .podium-wrapper,
+  .podium-header,
+  .podium-heading
+) :is(h1,h2,h3,h4,strong) {
+  color: #102b3e !important;
+  -webkit-text-fill-color: #102b3e !important;
+}
+
+html[data-theme="dark"] :is(
+  .podium-section,
+  .podium-container,
+  .podium-wrapper,
+  .podium-header,
+  .podium-heading
+) :is(p,small,span) {
+  color: #6b7f8d !important;
+  -webkit-text-fill-color: #6b7f8d !important;
+}
+
+/* ================================================================
+   HOTFIX SIMPLES — CONTRASTE DOS TÍTULOS DO PÓDIO
+   Adicione este bloco NO FINAL de dark-mode-premium.css
+   ================================================================ */
+
+/*
+ * O pódio mantém uma superfície clara mesmo no modo noturno.
+ * Portanto, os textos do cabeçalho dessa área também precisam
+ * permanecer escuros.
+ */
+html[data-theme="dark"] :is(
+  #dashboard,
+  #pix-dashboard
+) :is(
+  .podium-section,
+  .podium-container,
+  .podium-wrapper,
+  .podium-shell,
+  .podium-stage,
+  .podium-header,
+  .podium-heading,
+  [class*="podium"]
+) :is(h1, h2) {
+  color: #102b3e !important;
+  -webkit-text-fill-color: #102b3e !important;
+  opacity: 1 !important;
+}
+
+/*
+ * Proteção específica para títulos do pódio que sejam inseridos
+ * diretamente na área clara, sem um wrapper de cabeçalho próprio.
+ */
+html[data-theme="dark"] #dashboard [class*="podium"] > h2,
+html[data-theme="dark"] #pix-dashboard [class*="podium"] > h2 {
+  color: #102b3e !important;
+  -webkit-text-fill-color: #102b3e !important;
+  opacity: 1 !important;
+}
+
+/*
+ * Textos auxiliares da área clara.
+ * Mantém verde/dourado de elementos que já possuem cor própria.
+ */
+html[data-theme="dark"] :is(#dashboard, #pix-dashboard)
+:is(.podium-header, .podium-heading, [class*="podium"])
+:is(p, small) {
+  color: #6b7f8d !important;
+  -webkit-text-fill-color: #6b7f8d !important;
+  opacity: 1 !important;
+}
+
+/*
+ * O título dos cartões individuais já possui tratamento próprio
+ * no dark-mode-premium.css e não deve ser alterado por este hotfix.
+ */
+html[data-theme="dark"] .podium-card h3 {
+  color: #102b3e !important;
+  -webkit-text-fill-color: #102b3e !important;
 }
