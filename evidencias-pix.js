@@ -3447,13 +3447,17 @@ function abrirPagamentoExcepcionalPix() {
 
 function instalarBotaoPagamentoExcepcionalPix() {
   if (
-    !moduloPixAtivo() ||
     document.querySelector(
       "#btnPixPagamentoExcepcional"
     )
   ) {
     return;
   }
+
+  const areaAcoes =
+    document.querySelector(
+      "#pixLancamentosAcoes"
+    );
 
   const botaoNovo =
     document.querySelector(
@@ -3466,7 +3470,7 @@ function instalarBotaoPagamentoExcepcionalPix() {
       "#pixBtnNovoLancamento"
     );
 
-  if (!botaoNovo) {
+  if (!areaAcoes && !botaoNovo) {
     return;
   }
 
@@ -3497,10 +3501,14 @@ function instalarBotaoPagamentoExcepcionalPix() {
     }
   );
 
-  botaoNovo.insertAdjacentElement(
-    "beforebegin",
-    botao
-  );
+  if (botaoNovo) {
+    botaoNovo.insertAdjacentElement(
+      "beforebegin",
+      botao
+    );
+  } else {
+    areaAcoes.appendChild(botao);
+  }
 }
 
 
@@ -4622,6 +4630,7 @@ function configurarContextoPixEvidencias() {
 function iniciarPixEvidencias() {
   garantirLoadingPremiumPixEvidencias();
   garantirEstiloPagamentoExcepcionalPix();
+  instalarBotaoPagamentoExcepcionalPix();
   setTimeout(
     instalarBotaoPagamentoExcepcionalPix,
     250
@@ -4729,6 +4738,31 @@ new MutationObserver(
       "class"
     ],
     subtree: false
+  }
+);
+
+/* Reforço para interfaces que são montadas dinamicamente após o carregamento. */
+const observadorPagamentoExcepcionalPix =
+  new MutationObserver(
+    () => {
+      if (
+        document.querySelector(
+          "#pixLancamentosAcoes"
+        ) &&
+        !document.querySelector(
+          "#btnPixPagamentoExcepcional"
+        )
+      ) {
+        instalarBotaoPagamentoExcepcionalPix();
+      }
+    }
+  );
+
+observadorPagamentoExcepcionalPix.observe(
+  document.body,
+  {
+    childList: true,
+    subtree: true
   }
 );
 
