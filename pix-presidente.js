@@ -1582,6 +1582,21 @@ function calcularPix(lancamento) {
   };
 }
 
+window.calcularPagamentoPixHistorico = function(lancamento, todosLancamentos = []) {
+  /*
+   * Recalcula o lançamento histórico usando a regra oficial do Pix.
+   * O participante é resolvido pela base atual; os dados financeiros vêm
+   * do próprio lançamento histórico.
+   */
+  try {
+    const resultado = calcularResultadoPix(lancamento);
+    return Math.max(0, pixNumero(resultado?.bonusFinal));
+  } catch (erro) {
+    console.warn("[PAGAMENTOS/PIX] Falha ao recalcular histórico:", erro);
+    return 0;
+  }
+};
+
 function preencherSelectPix(
   elemento,
   itens,
