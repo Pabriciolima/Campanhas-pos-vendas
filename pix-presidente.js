@@ -1584,12 +1584,12 @@ function calcularPix(lancamento) {
 
 window.calcularPagamentoPixHistorico = function(lancamento, todosLancamentos = []) {
   /*
-   * Recalcula o lançamento histórico usando a regra oficial do Pix.
-   * O participante é resolvido pela base atual; os dados financeiros vêm
-   * do próprio lançamento histórico.
+   * Usa exatamente o mesmo motor de cálculo exibido em Lançamentos/Apuração.
+   * O relatório entrega ao calcularPix() o lançamento histórico completo;
+   * a função oficial resolve cargo/política e devolve bonusFinal.
    */
   try {
-    const resultado = calcularResultadoPix(lancamento);
+    const resultado = calcularPix(lancamento);
     return Math.max(0, pixNumero(resultado?.bonusFinal));
   } catch (erro) {
     console.warn("[PAGAMENTOS/PIX] Falha ao recalcular histórico:", erro);
