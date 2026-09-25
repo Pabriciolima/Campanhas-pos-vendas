@@ -6,6 +6,7 @@ const $=s=>document.querySelector(s), esc=v=>String(v??"").replaceAll("&","&amp;
 const num=v=>{if(typeof v==="number")return Number.isFinite(v)?v:0;let s=String(v??"").trim();if(!s)return 0;s=s.includes(",")?s.replace(/\./g,"").replace(",",".").replace(/[^0-9.-]/g,""):s.replace(/[^0-9.-]/g,"");const n=Number(s);return Number.isFinite(n)?n:0};
 const money=v=>num(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 let state={prod:[],pix:[],months:[]};
+const paymentCalc={prod:null,pix:null};
 
 function competence(){return String($("#competenciaGlobal")?.value||new Date().toISOString().slice(0,7)).trim()}
 function last6(c){const[y,m]=c.split("-").map(Number),d=new Date(y,m-1,1);return Array.from({length:6},(_,i)=>{const x=new Date(d.getFullYear(),d.getMonth()-5+i,1);return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")})}
@@ -23,7 +24,7 @@ function addCss(){if($("#"+STYLE))return;const e=document.createElement("style")
 .${ROOT} .rp-table{margin-top:16px;overflow:auto} .${ROOT} table{width:100%;border-collapse:collapse;font-size:11px} .${ROOT} th,.${ROOT} td{padding:9px 10px;border-bottom:1px solid var(--line,#dce6ec);text-align:left} .${ROOT} th{font-size:9px;text-transform:uppercase;color:var(--muted,#718390)}
 .${ROOT} .empty{padding:30px;text-align:center;color:var(--muted,#718390)}
 @media(max-width:820px){.${ROOT} .rp-kpis{grid-template-columns:1fr 1fr}.${ROOT} .rp-filter{width:100%;min-width:0}}`;document.head.appendChild(e)}
-function panel(module){const host=module==="prod"?$("#dashboard"):$("#pix-dashboard");if(!host)return null;const id=ROOT+(module==="prod"?"Prod":"Pix");let r=$("#"+id);if(r)return r;r=document.createElement("article");r.id=id;r.className="panel "+ROOT;r.dataset.module=module;r.innerHTML=`<div class="rp-head"><div><p class="eyebrow">FINANCEIRO · ÚLTIMOS 6 MESES</p><h2>Pagamentos por filial</h2><p>Total de bonificações apuradas no período, com visão geral e individual por filial.</p></div><label class="rp-filter"><span>Filial</span><select><option value="">Comparativo geral</option></select></label></div><div class="rp-body empty">Carregando pagamentos…</div>`;host.appendChild(r);r.querySelector("select").addEventListener("change",()=>render(module));return r}
+function panel(module){const host=module==="prod"?$("#dashboard"):$("#pix-dashboard");if(!host)return null;const id=ROOT+(module==="prod"?"Prod":"Pix");let r=$("#"+id);if(r)return r;r=document.createElement("article");r.id=id;r.className="panel "+ROOT;r.dataset.module=module;r.innerHTML=`<div class="rp-head"><div><p class="eyebrow">FINANCEIRO · ÚLTIMOS 6 MESES</p><h2>Pagamentos por filial</h2><p>Total de bonificações apuradas no período, com visão geral e individual por filial.</p></div><div style="display:flex;gap:10px;flex-wrap:wrap"><label class="rp-filter"><span>Filial</span><select class="rp-branch"><option value="">Comparativo geral</option></select></label><label class="rp-filter"><span>Colaborador</span><select class="rp-person"><option value="">Todos os colaboradores</option></select></label></div></div><div class="rp-body empty">Carregando pagamentos…</div>`;host.appendChild(r);r.querySelector(".rp-branch").addEventListener("change",()=>{fillPeople(module);render(module)});r.querySelector(".rp-person").addEventListener("change",()=>render(module));return r}
 function branchOf(d,row){return String(row.filial||d.filial||"").trim()}
 function compOf(d,row){return String(row.competencia||d.competencia||"").trim()}
 function prodValue(d){
@@ -50,34 +51,50 @@ function resultadosCalculadosDoSistema(module){
   return [];
 }
 function data(module){return module==="prod"?state.prod:state.pix}
-function fill(module){const r=panel(module);if(!r)return;const s=r.querySelector("select"),old=s.value,bs=[...new Set(data(module).map(x=>x.filial))].filter(Boolean).sort((a,b)=>a.localeCompare(b,"pt-BR"));s.innerHTML='<option value="">Comparativo geral</option>'+bs.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join("");if(bs.includes(old))s.value=old}
-function totals(module,branch){return state.months.map(c=>({c,v:data(module).filter(x=>x.competencia===c&&(!branch||x.filial===branch)).reduce((s,x)=>s+x.valor,0)}))}
+function collaboratorOf(d,row){return String(row.colaborador||d.colaborador||d.nome||d.funcionarioNome||"").trim()}
+function fillPeople(module){
+ const r=panel(module);if(!r)return;const branch=r.querySelector(".rp-branch")?.value||"",s=r.querySelector(".rp-person"),old=s?.value||"";
+ if(!s)return;const people=[...new Set(data(module).filter(x=>!branch||x.filial===branch).map(x=>x.colaborador))].filter(Boolean).sort((a,b)=>a.localeCompare(b,"pt-BR"));
+ s.innerHTML='<option value="">Todos os colaboradores</option>'+people.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join("");if(people.includes(old))s.value=old
+}
+function fill(module){const r=panel(module);if(!r)return;const s=r.querySelector(".rp-branch"),old=s.value,bs=[...new Set(data(module).map(x=>x.filial))].filter(Boolean).sort((a,b)=>a.localeCompare(b,"pt-BR"));s.innerHTML='<option value="">Comparativo geral</option>'+bs.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join("");if(bs.includes(old))s.value=old}
+function totals(module,branch,person){return state.months.map(c=>({c,v:data(module).filter(x=>x.competencia===c&&(!branch||x.filial===branch)&&(!person||x.colaborador===person)).reduce((s,x)=>s+x.valor,0)}))}
 function graph(s){const W=900,H=250,L=68,R=25,T=30,B=38,max=Math.max(...s.map(x=>x.v),1),top=max*1.15,x=i=>L+i*((W-L-R)/Math.max(s.length-1,1)),y=v=>T+(top-v)/top*(H-T-B),pts=s.map((d,i)=>x(i)+","+y(d.v)).join(" "),area=L+","+(H-B)+" "+pts+" "+x(s.length-1)+","+(H-B);return`<svg viewBox="0 0 ${W} ${H}">${[0,.25,.5,.75,1].map(p=>{const yy=T+p*(H-T-B),v=top*(1-p);return`<line class="rp-grid" x1="${L}" y1="${yy}" x2="${W-R}" y2="${yy}"/><text class="rp-lab" x="2" y="${yy+4}">${esc(money(v).replace(",00",""))}</text>`}).join("")}<polygon class="rp-area" points="${area}"/><polyline class="rp-line" points="${pts}"/>${s.map((d,i)=>`<circle class="rp-dot" cx="${x(i)}" cy="${y(d.v)}" r="5"><title>${label(d.c)}: ${money(d.v)}</title></circle><text class="rp-val" text-anchor="middle" x="${x(i)}" y="${Math.max(14,y(d.v)-11)}">${d.v?esc(money(d.v).replace(",00","")):"—"}</text><text class="rp-lab" text-anchor="middle" x="${x(i)}" y="${H-10}">${esc(label(d.c))}</text>`).join("")}</svg>`}
-function render(module){const r=panel(module);if(!r)return;const branch=r.querySelector("select").value,s=totals(module,branch),current=s.at(-1)?.v||0,previous=s.at(-2)?.v||0,total6=s.reduce((a,b)=>a+b.v,0),avg=total6/6,diff=previous>0?(current-previous)/previous*100:null,last=state.months.at(-1),rank=[...new Set(data(module).map(x=>x.filial))].map(f=>({f,v:data(module).filter(x=>x.competencia===last&&x.filial===f).reduce((a,b)=>a+b.valor,0)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);r.querySelector(".rp-body").className="rp-body";r.querySelector(".rp-body").innerHTML=`<div class="rp-kpis"><div class="rp-kpi"><span>Pago no mês</span><strong>${money(current)}</strong></div><div class="rp-kpi"><span>Total 6 meses</span><strong>${money(total6)}</strong></div><div class="rp-kpi"><span>Média mensal</span><strong>${money(avg)}</strong></div><div class="rp-kpi"><span>Variação</span><strong>${diff===null?"—":(diff>=0?"+":"")+diff.toFixed(1).replace(".",",")+"%"}</strong></div></div><div class="rp-chart">${graph(s)}</div>${branch?"":`<div class="rp-table"><table><thead><tr><th>Filial</th><th>Pagamento · ${esc(label(last))}</th><th>Participação</th></tr></thead><tbody>${rank.map(x=>`<tr><td><strong>${esc(x.f)}</strong></td><td>${money(x.v)}</td><td>${current>0?(x.v/current*100).toFixed(1).replace(".",","):"0,0"}%</td></tr>`).join("")}</tbody></table></div>`}`}
+function render(module){const r=panel(module);if(!r)return;const branch=r.querySelector(".rp-branch").value,person=r.querySelector(".rp-person").value,s=totals(module,branch,person),current=s.at(-1)?.v||0,previous=s.at(-2)?.v||0,total6=s.reduce((a,b)=>a+b.v,0),avg=total6/6,diff=previous>0?(current-previous)/previous*100:null,last=state.months.at(-1),rank=[...new Set(data(module).map(x=>x.filial))].map(f=>({f,v:data(module).filter(x=>x.competencia===last&&x.filial===f&&(!person||x.colaborador===person)).reduce((a,b)=>a+b.valor,0)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);r.querySelector(".rp-body").className="rp-body";r.querySelector(".rp-body").innerHTML=`<div class="rp-kpis"><div class="rp-kpi"><span>Pago no mês</span><strong>${money(current)}</strong></div><div class="rp-kpi"><span>Total 6 meses</span><strong>${money(total6)}</strong></div><div class="rp-kpi"><span>Média mensal</span><strong>${money(avg)}</strong></div><div class="rp-kpi"><span>Variação</span><strong>${diff===null?"—":(diff>=0?"+":"")+diff.toFixed(1).replace(".",",")+"%"}</strong></div></div><div class="rp-chart">${graph(s)}</div>${branch?"":`<div class="rp-table"><table><thead><tr><th>Filial</th><th>Pagamento · ${esc(label(last))}</th><th>Participação</th></tr></thead><tbody>${rank.map(x=>`<tr><td><strong>${esc(x.f)}</strong></td><td>${money(x.v)}</td><td>${current>0?(x.v/current*100).toFixed(1).replace(".",","):"0,0"}%</td></tr>`).join("")}</tbody></table></div>`}`}
 async function load(){
  state.months=last6(competence());const start=state.months[0],end=state.months.at(-1);
  const[p,q]=await Promise.all([
-  supabase.from("produtivos_lancamentos").select("competencia,filial,dados").gte("competencia",start).lte("competencia",end),
-  supabase.from("pix_lancamentos").select("competencia,filial,dados").gte("competencia",start).lte("competencia",end)
+  supabase.from("produtivos_lancamentos").select("id,competencia,filial,colaborador,dados").gte("competencia",start).lte("competencia",end),
+  supabase.from("pix_lancamentos").select("id,competencia,filial,colaborador,dados").gte("competencia",start).lte("competencia",end)
  ]);
  if(p.error)console.error("[PAGAMENTOS/PROD]",p.error);if(q.error)console.error("[PAGAMENTOS/PIX]",q.error);
 
- const prodMem=resultadosCalculadosDoSistema("prod");
- const pixMem=resultadosCalculadosDoSistema("pix");
- const prodIndex=new Map(prodMem.map(x=>[String(x.id||""),x]));
- const pixIndex=new Map(pixMem.map(x=>[String(x.id||""),x]));
+ const prodRaw=(p.data||[]).map(r=>({...r.dados,id:r.id,competencia:r.competencia||r.dados?.competencia,filial:r.filial||r.dados?.filial,colaborador:r.colaborador||r.dados?.colaborador}));
+ const pixRaw=(q.data||[]).map(r=>({...r.dados,id:r.id,competencia:r.competencia||r.dados?.competencia,filial:r.filial||r.dados?.filial,colaborador:r.colaborador||r.dados?.colaborador}));
 
- state.prod=(p.data||[]).map(r=>{
-   const d=r.dados||{},calc=prodIndex.get(String(r.id||d.id||""));
-   return{competencia:compOf(d,r),filial:branchOf(calc||d,r),valor:calc?Math.max(0,num(calc.bonusFinal)):prodValue(d)}
- }).filter(x=>x.competencia&&x.filial&&x.valor>0);
+ /*
+  * O relatório precisa recalcular cada competência histórica.
+  * Os módulos normais carregam somente a competência selecionada, por isso
+  * não servem como fonte para um histórico de seis meses.
+  */
+ if(typeof window.calcularPagamentoProdutivosHistorico==="function")paymentCalc.prod=window.calcularPagamentoProdutivosHistorico;
+ if(typeof window.calcularPagamentoPixHistorico==="function")paymentCalc.pix=window.calcularPagamentoPixHistorico;
 
- state.pix=(q.data||[]).map(r=>{
-   const d=r.dados||{},calc=pixIndex.get(String(r.id||d.id||""));
-   return{competencia:compOf(d,r),filial:branchOf(calc||d,r),valor:calc?Math.max(0,num(calc.bonusFinal)):pixValue(d)}
- }).filter(x=>x.competencia&&x.filial&&x.valor>0);
+ state.prod=prodRaw.map(d=>({
+   competencia:String(d.competencia||""),
+   filial:String(d.filial||"").trim(),
+   colaborador:collaboratorOf(d,d),
+   valor:paymentCalc.prod?Math.max(0,num(paymentCalc.prod(d,prodRaw))):prodValue(d)
+ })).filter(x=>x.competencia&&x.filial);
 
- ["prod","pix"].forEach(m=>{if(panel(m)){fill(m);render(m)}})
+ state.pix=pixRaw.map(d=>({
+   competencia:String(d.competencia||""),
+   filial:String(d.filial||"").trim(),
+   colaborador:collaboratorOf(d,d),
+   valor:paymentCalc.pix?Math.max(0,num(paymentCalc.pix(d,pixRaw))):pixValue(d)
+ })).filter(x=>x.competencia&&x.filial);
+
+ ["prod","pix"].forEach(m=>{if(panel(m)){fill(m);fillPeople(m);render(m)}})
 }
-function start(){addCss();panel("prod");panel("pix");load();$("#competenciaGlobal")?.addEventListener("change",load);new MutationObserver(()=>{let made=false;["prod","pix"].forEach(m=>{const id=ROOT+(m==="prod"?"Prod":"Pix");if(!$("#"+id)&&panel(m))made=true});if(made){["prod","pix"].forEach(m=>{fill(m);render(m)})}}).observe(document.body,{childList:true,subtree:true})}
+function start(){addCss();panel("prod");panel("pix");load();$("#competenciaGlobal")?.addEventListener("change",load);new MutationObserver(()=>{let made=false;["prod","pix"].forEach(m=>{const id=ROOT+(m==="prod"?"Prod":"Pix");if(!$("#"+id)&&panel(m))made=true});if(made){["prod","pix"].forEach(m=>{fill(m);fillPeople(m);render(m)})}}).observe(document.body,{childList:true,subtree:true})}
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();
