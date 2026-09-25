@@ -26,13 +26,58 @@ function addCss(){if($("#"+STYLE))return;const e=document.createElement("style")
 function panel(module){const host=module==="prod"?$("#dashboard"):$("#pix-dashboard");if(!host)return null;const id=ROOT+(module==="prod"?"Prod":"Pix");let r=$("#"+id);if(r)return r;r=document.createElement("article");r.id=id;r.className="panel "+ROOT;r.dataset.module=module;r.innerHTML=`<div class="rp-head"><div><p class="eyebrow">FINANCEIRO · ÚLTIMOS 6 MESES</p><h2>Pagamentos por filial</h2><p>Total de bonificações apuradas no período, com visão geral e individual por filial.</p></div><label class="rp-filter"><span>Filial</span><select><option value="">Comparativo geral</option></select></label></div><div class="rp-body empty">Carregando pagamentos…</div>`;host.appendChild(r);r.querySelector("select").addEventListener("change",()=>render(module));return r}
 function branchOf(d,row){return String(row.filial||d.filial||"").trim()}
 function compOf(d,row){return String(row.competencia||d.competencia||"").trim()}
-function prodValue(d){const bruto=num(d.bonusBruto),pen=num(d.penalidade);if(d.bonusFinal!==undefined&&d.bonusFinal!==null)return Math.max(0,num(d.bonusFinal));return Math.max(0,bruto-pen)}
-function pixValue(d){if(d.bonusFinal!==undefined&&d.bonusFinal!==null)return Math.max(0,num(d.bonusFinal));const subtotal=num(d.subtotal)||num(d.bonusBase)+num(d.bonusFaixa)+num(d.bonusNps);return Math.max(0,subtotal-num(d.penalidade))}
+function prodValue(d){
+  /*
+   * Os lançamentos persistidos guardam os dados de entrada.
+   * bonusFinal é calculado em tempo de execução pelo módulo principal,
+   * portanto não podemos depender de ele existir no JSON histórico.
+   */
+  if(d.bonusFinal!==undefined&&d.bonusFinal!==null)return Math.max(0,num(d.bonusFinal));
+  if(d.bonusBruto!==undefined&&d.bonusBruto!==null)return Math.max(0,num(d.bonusBruto)-num(d.penalidade));
+  return 0;
+}
+function pixValue(d){
+  if(d.bonusFinal!==undefined&&d.bonusFinal!==null)return Math.max(0,num(d.bonusFinal));
+  if(d.subtotal!==undefined&&d.subtotal!==null)return Math.max(0,num(d.subtotal)-num(d.penalidade));
+  if(d.bonusBase!==undefined||d.bonusFaixa!==undefined||d.bonusNps!==undefined)return Math.max(0,num(d.bonusBase)+num(d.bonusFaixa)+num(d.bonusNps)-num(d.penalidade));
+  return 0;
+}
+function resultadosCalculadosDoSistema(module){
+  try{
+    if(module==="prod"&&typeof window.obterResultadosCampanha==="function")return window.obterResultadosCampanha()||[];
+    if(module==="pix"&&typeof window.obterResultadosPix==="function")return window.obterResultadosPix()||[];
+  }catch(e){console.warn("[PAGAMENTOS] cálculo em memória indisponível",e)}
+  return [];
+}
 function data(module){return module==="prod"?state.prod:state.pix}
 function fill(module){const r=panel(module);if(!r)return;const s=r.querySelector("select"),old=s.value,bs=[...new Set(data(module).map(x=>x.filial))].filter(Boolean).sort((a,b)=>a.localeCompare(b,"pt-BR"));s.innerHTML='<option value="">Comparativo geral</option>'+bs.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join("");if(bs.includes(old))s.value=old}
 function totals(module,branch){return state.months.map(c=>({c,v:data(module).filter(x=>x.competencia===c&&(!branch||x.filial===branch)).reduce((s,x)=>s+x.valor,0)}))}
 function graph(s){const W=900,H=250,L=68,R=25,T=30,B=38,max=Math.max(...s.map(x=>x.v),1),top=max*1.15,x=i=>L+i*((W-L-R)/Math.max(s.length-1,1)),y=v=>T+(top-v)/top*(H-T-B),pts=s.map((d,i)=>x(i)+","+y(d.v)).join(" "),area=L+","+(H-B)+" "+pts+" "+x(s.length-1)+","+(H-B);return`<svg viewBox="0 0 ${W} ${H}">${[0,.25,.5,.75,1].map(p=>{const yy=T+p*(H-T-B),v=top*(1-p);return`<line class="rp-grid" x1="${L}" y1="${yy}" x2="${W-R}" y2="${yy}"/><text class="rp-lab" x="2" y="${yy+4}">${esc(money(v).replace(",00",""))}</text>`}).join("")}<polygon class="rp-area" points="${area}"/><polyline class="rp-line" points="${pts}"/>${s.map((d,i)=>`<circle class="rp-dot" cx="${x(i)}" cy="${y(d.v)}" r="5"><title>${label(d.c)}: ${money(d.v)}</title></circle><text class="rp-val" text-anchor="middle" x="${x(i)}" y="${Math.max(14,y(d.v)-11)}">${d.v?esc(money(d.v).replace(",00","")):"—"}</text><text class="rp-lab" text-anchor="middle" x="${x(i)}" y="${H-10}">${esc(label(d.c))}</text>`).join("")}</svg>`}
 function render(module){const r=panel(module);if(!r)return;const branch=r.querySelector("select").value,s=totals(module,branch),current=s.at(-1)?.v||0,previous=s.at(-2)?.v||0,total6=s.reduce((a,b)=>a+b.v,0),avg=total6/6,diff=previous>0?(current-previous)/previous*100:null,last=state.months.at(-1),rank=[...new Set(data(module).map(x=>x.filial))].map(f=>({f,v:data(module).filter(x=>x.competencia===last&&x.filial===f).reduce((a,b)=>a+b.valor,0)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);r.querySelector(".rp-body").className="rp-body";r.querySelector(".rp-body").innerHTML=`<div class="rp-kpis"><div class="rp-kpi"><span>Pago no mês</span><strong>${money(current)}</strong></div><div class="rp-kpi"><span>Total 6 meses</span><strong>${money(total6)}</strong></div><div class="rp-kpi"><span>Média mensal</span><strong>${money(avg)}</strong></div><div class="rp-kpi"><span>Variação</span><strong>${diff===null?"—":(diff>=0?"+":"")+diff.toFixed(1).replace(".",",")+"%"}</strong></div></div><div class="rp-chart">${graph(s)}</div>${branch?"":`<div class="rp-table"><table><thead><tr><th>Filial</th><th>Pagamento · ${esc(label(last))}</th><th>Participação</th></tr></thead><tbody>${rank.map(x=>`<tr><td><strong>${esc(x.f)}</strong></td><td>${money(x.v)}</td><td>${current>0?(x.v/current*100).toFixed(1).replace(".",","):"0,0"}%</td></tr>`).join("")}</tbody></table></div>`}`}
-async function load(){state.months=last6(competence());const start=state.months[0],end=state.months.at(-1);const[p,q]=await Promise.all([supabase.from("produtivos_lancamentos").select("competencia,filial,dados").gte("competencia",start).lte("competencia",end),supabase.from("pix_lancamentos").select("competencia,filial,dados").gte("competencia",start).lte("competencia",end)]);if(p.error)console.error("[PAGAMENTOS/PROD]",p.error);if(q.error)console.error("[PAGAMENTOS/PIX]",q.error);state.prod=(p.data||[]).map(r=>{const d=r.dados||{};return{competencia:compOf(d,r),filial:branchOf(d,r),valor:prodValue(d)}}).filter(x=>x.competencia&&x.filial&&x.valor>0);state.pix=(q.data||[]).map(r=>{const d=r.dados||{};return{competencia:compOf(d,r),filial:branchOf(d,r),valor:pixValue(d)}}).filter(x=>x.competencia&&x.filial&&x.valor>0);["prod","pix"].forEach(m=>{if(panel(m)){fill(m);render(m)}})}
+async function load(){
+ state.months=last6(competence());const start=state.months[0],end=state.months.at(-1);
+ const[p,q]=await Promise.all([
+  supabase.from("produtivos_lancamentos").select("competencia,filial,dados").gte("competencia",start).lte("competencia",end),
+  supabase.from("pix_lancamentos").select("competencia,filial,dados").gte("competencia",start).lte("competencia",end)
+ ]);
+ if(p.error)console.error("[PAGAMENTOS/PROD]",p.error);if(q.error)console.error("[PAGAMENTOS/PIX]",q.error);
+
+ const prodMem=resultadosCalculadosDoSistema("prod");
+ const pixMem=resultadosCalculadosDoSistema("pix");
+ const prodIndex=new Map(prodMem.map(x=>[String(x.id||""),x]));
+ const pixIndex=new Map(pixMem.map(x=>[String(x.id||""),x]));
+
+ state.prod=(p.data||[]).map(r=>{
+   const d=r.dados||{},calc=prodIndex.get(String(r.id||d.id||""));
+   return{competencia:compOf(d,r),filial:branchOf(calc||d,r),valor:calc?Math.max(0,num(calc.bonusFinal)):prodValue(d)}
+ }).filter(x=>x.competencia&&x.filial&&x.valor>0);
+
+ state.pix=(q.data||[]).map(r=>{
+   const d=r.dados||{},calc=pixIndex.get(String(r.id||d.id||""));
+   return{competencia:compOf(d,r),filial:branchOf(calc||d,r),valor:calc?Math.max(0,num(calc.bonusFinal)):pixValue(d)}
+ }).filter(x=>x.competencia&&x.filial&&x.valor>0);
+
+ ["prod","pix"].forEach(m=>{if(panel(m)){fill(m);render(m)}})
+}
 function start(){addCss();panel("prod");panel("pix");load();$("#competenciaGlobal")?.addEventListener("change",load);new MutationObserver(()=>{let made=false;["prod","pix"].forEach(m=>{const id=ROOT+(m==="prod"?"Prod":"Pix");if(!$("#"+id)&&panel(m))made=true});if(made){["prod","pix"].forEach(m=>{fill(m);render(m)})}}).observe(document.body,{childList:true,subtree:true})}
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();
