@@ -2593,6 +2593,24 @@ function calcularLancamento(
   return base;
 }
 
+window.calcularPagamentoProdutivosHistorico = function(lancamento, todosLancamentos = []) {
+  /*
+   * Executa a MESMA regra oficial dos Produtivos em uma fotografia histórica
+   * sem trocar a competência ativa da interface.
+   */
+  const lancamentosAtuais = db.lancamentos;
+  try {
+    db.lancamentos = Array.isArray(todosLancamentos) ? todosLancamentos : [lancamento];
+    const resultado = calcularLancamento(lancamento);
+    return Math.max(0, numero(resultado?.bonusFinal));
+  } catch (erro) {
+    console.warn("[PAGAMENTOS/PROD] Falha ao recalcular histórico:", erro);
+    return 0;
+  } finally {
+    db.lancamentos = lancamentosAtuais;
+  }
+};
+
 function obterResultadosCampanha() {
   const resultadosManuais =
     db.lancamentos
