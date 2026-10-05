@@ -1920,6 +1920,21 @@ window.produtivosLancamentos = {
     "2026.08.05-FILTRO-DASHBOARD-PRODUTIVOS-06"
 };
 
+const OFICINA_NOVA_VIGENCIA = "2026-10";
+const OFICINA_META_FATURAMENTO = 69900;
+const OFICINA_GATILHO_FATURAMENTO = 48930;
+
+function versaoRegraOficina(competencia) {
+  const valor = String(competencia || "").slice(0, 7);
+  return valor >= OFICINA_NOVA_VIGENCIA
+    ? "2026.10"
+    : "LEGADO";
+}
+
+function usaRegraOficina202610(competencia) {
+  return versaoRegraOficina(competencia) === "2026.10";
+}
+
 function bonusMecanicoProdutividade(
   valor
 ) {
@@ -2379,7 +2394,19 @@ function calcularLancamento(
 
     status: "NÃO HABILITADO",
 
-    motivo: ""
+    motivo: "",
+
+    regraCampanha:
+      versaoRegraOficina(
+        lancamento.competencia
+      ),
+
+    nomeCampanha:
+      usaRegraOficina202610(
+        lancamento.competencia
+      )
+        ? "Campanha da Oficina"
+        : "Campanha dos Produtivos"
   };
 
   if (
@@ -2421,10 +2448,42 @@ function calcularLancamento(
       ) *
         0.7;
 
+    const regraOficinaNova =
+      usaRegraOficina202610(
+        base.competencia
+      );
+
+    const atingiuFaturamentoMinimo =
+      !regraOficinaNova ||
+      numero(base.faturamento) >=
+        OFICINA_GATILHO_FATURAMENTO;
+
     const atingiuMetricas =
       base.produtividade >= 70 &&
       base.eficiencia >= 80 &&
-      minimoHoraVendida;
+      minimoHoraVendida &&
+      atingiuFaturamentoMinimo;
+
+    /*
+     * REGRA DE VIGÊNCIA:
+     * - até 2026-09: preserva integralmente a regra histórica;
+     * - a partir de 2026-10: Campanha da Oficina exige também
+     *   faturamento mínimo de R$ 48.930,00.
+     * A meta cheia de R$ 69.900,00 é mantida como referência
+     * gerencial, sem substituir o gatilho de habilitação.
+     */
+    base.metaFaturamento =
+      regraOficinaNova
+        ? OFICINA_META_FATURAMENTO
+        : null;
+
+    base.gatilhoFaturamento =
+      regraOficinaNova
+        ? OFICINA_GATILHO_FATURAMENTO
+        : null;
+
+    base.atingiuFaturamentoMinimo =
+      atingiuFaturamentoMinimo;
 
     if (atingiuMetricas) {
       base.bonusBruto =
@@ -2459,6 +2518,12 @@ function calcularLancamento(
       if (!minimoHoraVendida) {
         motivosNaoHabilitacao.push(
           "Horas vendidas abaixo de 70% das disponíveis"
+        );
+      }
+
+      if (!atingiuFaturamentoMinimo) {
+        motivosNaoHabilitacao.push(
+          "Faturamento abaixo do gatilho de R$ 48.930,00"
         );
       }
 
