@@ -16,7 +16,7 @@
     "modulo_dropdown_aberto";
 
   const TITULOS_PRODUTIVOS = {
-    dashboard: "Campanha dos Produtivos",
+    dashboard: "Campanha da Oficina",
     funcionarios: "Base de funcionários",
     lancamentos: "Lançamentos",
     apuracao: "Apuração",
@@ -255,7 +255,7 @@
 
     if (!view) {
       console.warn(
-        `Página dos Produtivos não encontrada: #${pagina}`
+        `Página da Campanha da Oficina não encontrada: #${pagina}`
       );
 
       return;
@@ -292,7 +292,7 @@
       TITULOS_PRODUTIVOS[
         pagina
       ] ||
-      "Campanha dos Produtivos"
+      "Campanha da Oficina"
     );
 
     localStorage.setItem(
