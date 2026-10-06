@@ -3604,3 +3604,34 @@ button:is(
     overflow:visible !important;
   }
 }
+
+
+/* CAMPANHA DA OFICINA — HERO MOTION UI V7
+   Motion language inspired by Jitter: bold typography, gradient glow,
+   layered surfaces and restrained entrance animations. */
+#dashboard.view.active{--oficina-ink:#082d3d;--oficina-green:#08a67f;--oficina-mint:#63e6c1}
+#dashboard.view.active::before{content:"";position:fixed;z-index:-1;left:18%;top:70px;width:38vw;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(25,199,155,.10),transparent 68%);filter:blur(18px);pointer-events:none}
+body:not(.pix-mode) .topbar{position:relative;overflow:hidden;border:1px solid rgba(8,91,76,.10);border-radius:24px;padding:20px 22px;margin:10px 0 22px;background:linear-gradient(120deg,rgba(255,255,255,.94),rgba(241,250,248,.9));box-shadow:0 18px 45px rgba(14,47,61,.08)}
+body:not(.pix-mode) .topbar::after{content:"OFICINA";position:absolute;right:-8px;bottom:-30px;font-size:84px;font-weight:950;letter-spacing:-.08em;color:rgba(8,166,127,.045);pointer-events:none}
+body:not(.pix-mode) .topbar>div:first-child{position:relative;z-index:1;min-width:310px}
+body:not(.pix-mode) .topbar .eyebrow{display:inline-flex;align-items:center;gap:7px;margin:0 0 7px;padding:5px 9px;border-radius:999px;background:#daf7ee;color:#08765e;font-size:9px;font-weight:900;letter-spacing:.14em}
+body:not(.pix-mode) .topbar .eyebrow::before{content:"";width:6px;height:6px;border-radius:50%;background:#08a67f;box-shadow:0 0 0 5px rgba(8,166,127,.11)}
+body:not(.pix-mode) #pageTitle{margin:0;max-width:500px;font-size:clamp(28px,3vw,48px);line-height:.92;letter-spacing:-.055em;color:#092f40}
+body:not(.pix-mode) #pageTitle::after{content:"Produção • eficiência • resultado real";display:block;margin-top:10px;font-size:10px;line-height:1.2;letter-spacing:.09em;text-transform:uppercase;color:#6d838c;font-weight:800}
+body:not(.pix-mode) .topbar-actions{position:relative;z-index:2}
+body:not(.pix-mode) .topbar label>span,body:not(.pix-mode) .topbar label{font-weight:800}
+body:not(.pix-mode) .topbar input,body:not(.pix-mode) .topbar select{border-radius:14px!important;border-color:#d5e3e6!important;box-shadow:0 8px 22px rgba(18,55,68,.05)}
+body:not(.pix-mode) .export-btn{border-radius:14px!important;transition:transform .22s ease,box-shadow .22s ease}
+body:not(.pix-mode) .export-btn:hover{transform:translateY(-2px);box-shadow:0 12px 25px rgba(12,53,65,.14)}
+body:not(.pix-mode) #dashboard.view.active>.cards{animation:oficinaReveal .55s cubic-bezier(.2,.8,.2,1) both}
+body:not(.pix-mode) #dashboard.view.active>.panel,
+body:not(.pix-mode) #dashboard.view.active>.grid-2,
+body:not(.pix-mode) #dashboard.view.active .monthly-history-panel{animation:oficinaRise .58s cubic-bezier(.2,.8,.2,1) both}
+body:not(.pix-mode) #dashboard.view.active>.grid-2{animation-delay:.05s}
+body:not(.pix-mode) #dashboard.view.active .monthly-history-panel{animation-delay:.09s}
+body:not(.pix-mode) #dashboard.view.active .panel{border:1px solid rgba(14,67,79,.10);border-radius:20px;box-shadow:0 15px 38px rgba(15,48,61,.065)}
+body:not(.pix-mode) #dashboard.view.active .panel-header h2{letter-spacing:-.025em}
+@keyframes oficinaReveal{from{opacity:0;transform:translateY(12px) scale(.992)}to{opacity:1;transform:none}}
+@keyframes oficinaRise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){body:not(.pix-mode) #dashboard.view.active>*{animation:none!important;transition:none!important}}
+@media(max-width:900px){body:not(.pix-mode) .topbar{border-radius:18px;padding:16px}body:not(.pix-mode) .topbar::after{font-size:54px}body:not(.pix-mode) .topbar>div:first-child{min-width:0}body:not(.pix-mode) #pageTitle{font-size:32px}}
