@@ -2107,11 +2107,11 @@ function htmlPainel(tipo) {
           <div
             class="podium-eyebrow"
           >
-            RECONHECIMENTO · CAMPANHA DOS PRODUTIVOS
+            RECONHECIMENTO · CAMPANHA DA OFICINA
           </div>
 
           <h2>
-            Pódio mensal dos Produtivos
+            Pódio mensal da Oficina
           </h2>
 
           <p>
