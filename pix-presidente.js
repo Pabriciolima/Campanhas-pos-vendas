@@ -1105,6 +1105,7 @@ function pixPolitica(cargo) {
 }
 
 const PIX_NOVA_VIGENCIA = "2026-10";
+const PIX_NOVA_VIGENCIA = "2026-10";
 const PIX_DIAS_SEMANA = [
   { chave: "seg", rotulo: "Segunda" },
   { chave: "ter", rotulo: "Terça" },
@@ -1123,62 +1124,95 @@ function pixPoliticaVigente(cargo, competencia) {
   if (!base || !usaRegraPixDiaria(competencia)) return base;
 
   const bonusBaseNovo = {
-    "Gerente": 1100,
-    "Coordenador": 1100,
-    "Supervisor Pós-vendas": 1100,
-    "Supervisor Peças": 900,
-    "Supervisor de Assistência": 900,
-    "Consultor Peças Balcão": 800,
-    "Consultor Técnico": 800
+    "Gerente": 1100, "Coordenador": 1100, "Supervisor Pós-vendas": 1100,
+    "Supervisor Peças": 900, "Supervisor de Assistência": 900,
+    "Consultor Peças Balcão": 800, "Consultor Técnico": 800
   };
 
-  const politica = {
-    ...base,
-    bonusBase: bonusBaseNovo[cargo] ?? base.bonusBase
-  };
+  const politica = { ...base, bonusBase: bonusBaseNovo[cargo] ?? base.bonusBase };
 
   if (cargo === "Consultor Técnico") {
     politica.faixas = [
-      { minimo: 7300, bonus: 600 },
-      { minimo: 7500, bonus: 700 },
-      { minimo: 7800, bonus: 800 },
-      { minimo: 8100, bonus: 900 }
+      { minimo: 7300, bonus: 600 }, { minimo: 7500, bonus: 700 },
+      { minimo: 7800, bonus: 800 }, { minimo: 8100, bonus: 900 }
     ];
   }
 
+  /* NPS novo: R$ 250 por semana atingida, teto mensal de R$ 1.000. */
+  if (pixNumero(base.bonusNps) > 0) politica.bonusNpsSemanal = 250;
   return politica;
 }
 
-function normalizarDiasPix(dias = {}) {
-  return PIX_DIAS_SEMANA.map(dia => ({
-    chave: dia.chave,
-    rotulo: dia.rotulo,
-    naoTrabalhado:
-      dias?.[dia.chave]?.naoTrabalhado === true ||
-      dias?.[dia.chave]?.naoTrabalhado === "true",
-    realizado: pixNumero(dias?.[dia.chave]?.realizado)
-  }));
+function pixChaveData(dataIso) {
+  return String(dataIso || "").replace(/-/g, "");
+}
+
+function pixDataLocal(dataIso) {
+  const [ano, mes, dia] = String(dataIso || "").split("-").map(Number);
+  return new Date(ano, (mes || 1) - 1, dia || 1);
+}
+
+function pixRotuloData(dataIso) {
+  const data = pixDataLocal(dataIso);
+  const semana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][data.getDay()];
+  return { semana, dia: String(data.getDate()).padStart(2, "0") };
+}
+
+function pixDatasCompetencia(competencia) {
+  const [ano, mes] = String(competencia || "").split("-").map(Number);
+  if (!ano || !mes) return [];
+  const ultimo = new Date(ano, mes, 0).getDate();
+  return Array.from({ length: ultimo }, (_, i) => {
+    const dia = i + 1;
+    const iso = `${ano}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+    return { iso, ...pixRotuloData(iso), domingo: pixDataLocal(iso).getDay() === 0 };
+  });
+}
+
+function pixDiasSelecionadosFormulario() {
+  return [...document.querySelectorAll(".pix-calendar-day.is-selected[data-date]")]
+    .map(el => el.dataset.date)
+    .sort();
+}
+
+function normalizarDiasPix(lancamento = {}) {
+  const porData = lancamento.diasCalendario || {};
+  const datas = Array.isArray(lancamento.datasAvaliadas) ? lancamento.datasAvaliadas : [];
+
+  if (datas.length) {
+    return datas.map(data => ({
+      chave: data,
+      data,
+      rotulo: pixRotuloData(data).semana,
+      naoTrabalhado: false,
+      realizado: pixNumero(porData?.[data]?.realizado)
+    }));
+  }
+
+  /* Compatibilidade com lançamentos criados na primeira versão diária. */
+  const antigos = lancamento.diasSemana || {};
+  return PIX_DIAS_SEMANA
+    .filter(dia => !(antigos?.[dia.chave]?.naoTrabalhado === true || antigos?.[dia.chave]?.naoTrabalhado === "true"))
+    .map(dia => ({
+      chave: dia.chave,
+      data: "",
+      rotulo: dia.rotulo,
+      naoTrabalhado: false,
+      realizado: pixNumero(antigos?.[dia.chave]?.realizado)
+    }));
 }
 
 function calcularBaseDiariaPix(lancamento, politica) {
   const metaSemanal = pixNumero(lancamento.metaSemanal);
-  const dias = normalizarDiasPix(lancamento.diasSemana);
-  const trabalhados = dias.filter(dia => !dia.naoTrabalhado);
-  const quantidadeDias = trabalhados.length;
+  const dias = normalizarDiasPix(lancamento);
+  const quantidadeDias = dias.length;
   const metaDiaria = quantidadeDias > 0 ? metaSemanal / quantidadeDias : 0;
   const valorDiario = quantidadeDias > 0 ? pixNumero(politica?.bonusBase) / quantidadeDias : 0;
-  const realizadoSemanal = trabalhados.reduce((soma, dia) => soma + dia.realizado, 0);
-  const diasAtingidos = trabalhados.filter(dia => metaDiaria > 0 && dia.realizado >= metaDiaria).length;
-  const bonusBase = diasAtingidos * valorDiario;
-
+  const realizadoSemanal = dias.reduce((soma, dia) => soma + dia.realizado, 0);
+  const diasAtingidos = dias.filter(dia => metaDiaria > 0 && dia.realizado >= metaDiaria).length;
   return {
-    dias,
-    quantidadeDias,
-    metaDiaria,
-    valorDiario,
-    realizadoSemanal,
-    diasAtingidos,
-    bonusBase: Math.min(pixNumero(politica?.bonusBase), bonusBase)
+    dias, quantidadeDias, metaDiaria, valorDiario, realizadoSemanal, diasAtingidos,
+    bonusBase: Math.min(pixNumero(politica?.bonusBase), diasAtingidos * valorDiario)
   };
 }
 
@@ -1341,6 +1375,16 @@ function pendenciasCriticasPix(
         "Ticket médio não informado"
       );
     }
+  }
+
+  if (
+    usaRegraPixDiaria(lancamento?.competencia) &&
+    cargoUsaNpsPix(cargo) &&
+    (
+      !campoPixRealmenteInformado(lancamento, "realizadoNps", "realizadoNpsInformado")
+    )
+  ) {
+    pendencias.push("NPS semanal não informado");
   }
 
   if (
@@ -1544,12 +1588,17 @@ function calcularPix(lancamento) {
     realizadoNps >= metaNps;
 
   const bonusNps =
-    Number(
-      lancamento.semana
-    ) === 4 &&
+    dadosCriticosCompletos &&
     atingiuNps &&
-    dadosCriticosCompletos
-      ? politica.bonusNps
+    (
+      regraDiaria ||
+      Number(lancamento.semana) === 4
+    )
+      ? (
+          regraDiaria
+            ? pixNumero(politica.bonusNpsSemanal || 250)
+            : politica.bonusNps
+        )
       : 0;
 
   const subtotal =
@@ -3651,34 +3700,25 @@ function renderCamposLancamentoPix(dados = {}) {
           <div class="pix-daily-block">
             <div class="pix-daily-head">
               <div>
-                <strong>Apuração diária da meta</strong>
-                <small>A meta semanal é redistribuída automaticamente entre os dias trabalhados.</small>
+                <strong>Calendário real da apuração</strong>
+                <small>Selecione os dias que pertencem a esta semana/ciclo. Domingos ficam bloqueados.</small>
               </div>
               <span id="pixResumoDias"></span>
             </div>
-            <div class="pix-daily-grid">
-              ${PIX_DIAS_SEMANA.map(dia => {
-                const salvo = dados.diasSemana?.[dia.chave] || {};
-                const naoTrabalhado = salvo.naoTrabalhado === true || salvo.naoTrabalhado === "true";
-                return `
-                  <div class="pix-day-card" data-pix-dia="${dia.chave}">
-                    <div class="pix-day-title">
-                      <b>${dia.rotulo}</b>
-                      <label class="pix-day-off">
-                        <input type="checkbox" class="pix-dia-nao-trabalhado" data-dia="${dia.chave}" ${naoTrabalhado ? "checked" : ""}>
-                        Não trabalhado
-                      </label>
-                    </div>
-                    <small class="pix-meta-dia" data-meta-dia="${dia.chave}">Meta: —</small>
-                    <input type="text" inputmode="decimal" class="pix-realizado-dia" data-dia="${dia.chave}"
-                      placeholder="Realizado R$ 0,00"
-                      value="${salvo.realizado ? pixMoeda(salvo.realizado) : ""}"
-                      ${naoTrabalhado ? "disabled" : ""}>
-                    <span class="pix-dia-status" data-status-dia="${dia.chave}">Aguardando</span>
-                  </div>
-                `;
+            <div class="pix-calendar" id="pixCalendarioDias">
+              ${pixDatasCompetencia(competenciaLancamento).map(item => {
+                const selecionadas = Array.isArray(dados.datasAvaliadas) && dados.datasAvaliadas.length
+                  ? dados.datasAvaliadas
+                  : [];
+                const ativo = selecionadas.includes(item.iso);
+                return `<button type="button" class="pix-calendar-day ${ativo ? "is-selected" : ""} ${item.domingo ? "is-sunday" : ""}"
+                  data-date="${item.iso}" ${item.domingo ? "disabled" : ""}>
+                  <small>${item.semana}</small><b>${item.dia}</b>
+                </button>`;
               }).join("")}
             </div>
+            <div class="pix-selected-label">Dias selecionados para avaliação</div>
+            <div class="pix-daily-grid" id="pixDiasSelecionados"></div>
           </div>
         `
         : `
@@ -3733,7 +3773,7 @@ function renderCamposLancamentoPix(dados = {}) {
     </div>
 
     ${
-      semana === 4 &&
+      (usaRegraPixDiaria(competenciaLancamento) || semana === 4) &&
       politica.bonusNps > 0 &&
       cargoUsaNpsPix(
         funcionario?.cargo ||
@@ -3747,14 +3787,15 @@ function renderCamposLancamentoPix(dados = {}) {
               step="0.01"
               min="0"
               id="pixMetaNps"
-              value="${dados.metaNps ?? ""}"
-              placeholder="Ex.: 90"
+              value="${usaRegraPixDiaria(competenciaLancamento) ? 90 : (dados.metaNps ?? "")}"
+              placeholder="90"
+              ${usaRegraPixDiaria(competenciaLancamento) ? "readonly" : ""}
               required
             />
 
             <small>
-              ${politica.objetivoNps} ·
-              prêmio de ${pixMoeda(politica.bonusNps)}.
+              ${usaRegraPixDiaria(competenciaLancamento) ? "Meta semanal 90%" : politica.objetivoNps} ·
+              prêmio de ${pixMoeda(usaRegraPixDiaria(competenciaLancamento) ? (politica.bonusNpsSemanal || 250) : politica.bonusNps)}.
             </small>
           </label>
 
@@ -3854,6 +3895,7 @@ function renderCamposLancamentoPix(dados = {}) {
     }
   );
 
+  iniciarCalendarioPix();
   atualizarPainelDiarioPix();
   atualizarPreviewPix();
 }
@@ -3913,7 +3955,7 @@ function coletarLancamentoPix() {
     $("#pixOsAberta");
 
   const usaNps =
-    semana === 4 &&
+    (usaRegraPixDiaria($("#pixLancamentoCompetencia")?.value) || semana === 4) &&
     cargoUsaNpsPix(
       funcionario.cargo
     );
@@ -3957,14 +3999,16 @@ function coletarLancamentoPix() {
     realizadoSemanal:
       usaRegraPixDiaria($("#pixLancamentoCompetencia")?.value)
         ? Object.values(coletarDiasPixFormulario()).reduce(
-            (soma, dia) => soma + (dia.naoTrabalhado ? 0 : pixNumero(dia.realizado)),
-            0
+            (soma, dia) => soma + pixNumero(dia.realizado), 0
           )
-        : pixNumero(
-            $("#pixRealizadoSemanal")?.value
-          ),
+        : pixNumero($("#pixRealizadoSemanal")?.value),
 
-    diasSemana:
+    datasAvaliadas:
+      usaRegraPixDiaria($("#pixLancamentoCompetencia")?.value)
+        ? pixDiasSelecionadosFormulario()
+        : [],
+
+    diasCalendario:
       usaRegraPixDiaria($("#pixLancamentoCompetencia")?.value)
         ? coletarDiasPixFormulario()
         : {},
@@ -4049,46 +4093,94 @@ function coletarLancamentoPix() {
   };
 }
 
-function coletarDiasPixFormulario() {
-  const dias = {};
-  PIX_DIAS_SEMANA.forEach(dia => {
-    const off = document.querySelector(`.pix-dia-nao-trabalhado[data-dia="${dia.chave}"]`);
-    const input = document.querySelector(`.pix-realizado-dia[data-dia="${dia.chave}"]`);
-    dias[dia.chave] = {
-      naoTrabalhado: Boolean(off?.checked),
-      realizado: off?.checked ? 0 : pixNumero(input?.value)
-    };
+function renderDiasSelecionadosPix() {
+  const area = $("#pixDiasSelecionados");
+  if (!area) return;
+  const selecionadas = pixDiasSelecionadosFormulario();
+  const dadosAtuais = coletarDiasPixFormulario(true);
+  area.innerHTML = selecionadas.map(data => {
+    const rotulo = pixRotuloData(data);
+    const salvo = dadosAtuais[data] || {};
+    return `
+      <div class="pix-day-card" data-pix-dia="${data}">
+        <div class="pix-day-title"><b>${rotulo.semana} · ${rotulo.dia}</b><small>${data.slice(5).replace("-", "/")}</small></div>
+        <small class="pix-meta-dia" data-meta-dia="${data}">Meta: —</small>
+        <input type="text" inputmode="decimal" class="pix-realizado-dia" data-dia="${data}"
+          placeholder="Realizado R$ 0,00" value="${salvo.realizado ? pixMoeda(salvo.realizado) : ""}">
+        <span class="pix-dia-status" data-status-dia="${data}">Aguardando</span>
+      </div>`;
+  }).join("");
+
+  area.querySelectorAll(".pix-realizado-dia").forEach(input => {
+    input.addEventListener("input", () => {
+      atualizarPainelDiarioPix();
+      atualizarPreviewPix();
+    });
   });
+}
+
+function coletarDiasPixFormulario(preservar = false) {
+  const dias = {};
+  document.querySelectorAll(".pix-realizado-dia[data-dia]").forEach(input => {
+    dias[input.dataset.dia] = { realizado: pixNumero(input.value) };
+  });
+  if (preservar) {
+    const id = $("#pixLancamentoId")?.value;
+    const salvo = estadoPix.lancamentos.find(item => item.id === id)?.diasCalendario || {};
+    return { ...salvo, ...dias };
+  }
   return dias;
 }
 
 function atualizarPainelDiarioPix() {
   const competencia = $("#pixLancamentoCompetencia")?.value || "";
   if (!usaRegraPixDiaria(competencia)) return;
-
   const meta = pixNumero($("#pixMetaSemanal")?.value);
-  const dias = coletarDiasPixFormulario();
-  const ativos = PIX_DIAS_SEMANA.filter(dia => !dias[dia.chave]?.naoTrabalhado);
-  const metaDia = ativos.length ? meta / ativos.length : 0;
+  const selecionadas = pixDiasSelecionadosFormulario();
+  const metaDia = selecionadas.length ? meta / selecionadas.length : 0;
+  const politica = (() => {
+    const func = pixFuncionarioPorId($("#pixLancamentoFuncionario")?.value);
+    return pixPoliticaVigente(func?.cargo, competencia);
+  })();
+  const valorDia = selecionadas.length ? pixNumero(politica?.bonusBase) / selecionadas.length : 0;
 
-  PIX_DIAS_SEMANA.forEach(dia => {
-    const off = Boolean(dias[dia.chave]?.naoTrabalhado);
-    const card = document.querySelector(`[data-pix-dia="${dia.chave}"]`);
-    const input = document.querySelector(`.pix-realizado-dia[data-dia="${dia.chave}"]`);
-    const metaEl = document.querySelector(`[data-meta-dia="${dia.chave}"]`);
-    const status = document.querySelector(`[data-status-dia="${dia.chave}"]`);
-    if (input) input.disabled = off;
-    card?.classList.toggle("is-off", off);
-    if (metaEl) metaEl.textContent = off ? "Fora do divisor" : `Meta: ${pixMoeda(metaDia)}`;
+  selecionadas.forEach(data => {
+    const input = document.querySelector(`.pix-realizado-dia[data-dia="${data}"]`);
+    const metaEl = document.querySelector(`[data-meta-dia="${data}"]`);
+    const status = document.querySelector(`[data-status-dia="${data}"]`);
+    const realizado = pixNumero(input?.value);
+    if (metaEl) metaEl.textContent = `Meta: ${pixMoeda(metaDia)}`;
     if (status) {
-      const realizado = pixNumero(input?.value);
-      status.textContent = off ? "Não trabalhado" : (realizado >= metaDia && metaDia > 0 ? "Meta atingida ✓" : "Meta pendente");
-      status.classList.toggle("ok", !off && realizado >= metaDia && metaDia > 0);
+      const ok = metaDia > 0 && realizado >= metaDia;
+      status.textContent = ok ? `Meta atingida ✓ · +${pixMoeda(valorDia)}` : "Meta pendente";
+      status.classList.toggle("ok", ok);
     }
   });
 
   const resumo = $("#pixResumoDias");
-  if (resumo) resumo.textContent = `${ativos.length} dia(s) · ${pixMoeda(metaDia)}/dia`;
+  if (resumo) resumo.textContent = selecionadas.length
+    ? `${selecionadas.length} dia(s) · ${pixMoeda(metaDia)}/dia`
+    : "Selecione os dias";
+}
+
+function iniciarCalendarioPix() {
+  const calendario = $("#pixCalendarioDias");
+  if (!calendario) return;
+  calendario.querySelectorAll(".pix-calendar-day:not(:disabled)").forEach(botao => {
+    botao.addEventListener("click", () => {
+      const atuais = coletarDiasPixFormulario(true);
+      botao.classList.toggle("is-selected");
+      renderDiasSelecionadosPix();
+      Object.entries(atuais).forEach(([data, valor]) => {
+        const input = document.querySelector(`.pix-realizado-dia[data-dia="${data}"]`);
+        if (input && valor?.realizado) input.value = pixMoeda(valor.realizado);
+      });
+      atualizarPainelDiarioPix();
+      atualizarPreviewPix();
+    });
+  });
+  renderDiasSelecionadosPix();
+  atualizarPainelDiarioPix();
 }
 
 function atualizarPreviewPix() {
