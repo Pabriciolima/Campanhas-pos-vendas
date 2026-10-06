@@ -2993,67 +2993,129 @@ function renderApuracaoPix() {
 }
 
 function renderPoliticasPix() {
-  $("#pixPolicyGrid").innerHTML =
-    CARGOS_PIX.map(
-      cargo => {
-        const politica = pixPolitica(cargo);
+  const competencia =
+    $("#competenciaGlobal")?.value ||
+    $("#pixDashboardCompetencia")?.value ||
+    pixMesAtual();
+  const novaRegra = usaRegraPixDiaria(competencia);
 
+  const grupos = novaRegra
+    ? [
+        {
+          classe: "lideranca",
+          icone: "♛",
+          titulo: "Gerente / Coordenador / Supervisor Pós-vendas",
+          cargos: ["Gerente", "Coordenador", "Supervisor Pós-vendas"],
+          base: 1100,
+          metrica: "ticket",
+          nps: true,
+          nota: "Pagamento diário conforme atingimento."
+        },
+        {
+          classe: "pecas",
+          icone: "⚙",
+          titulo: "Supervisor de Peças",
+          cargos: ["Supervisor Peças"],
+          base: 900,
+          metrica: "margem",
+          nps: false,
+          dynamo: "Meta de contato semanal na Dynamo Peças vinculada aos Consultores de Balcão."
+        },
+        {
+          classe: "assistencia",
+          icone: "🔧",
+          titulo: "Supervisor de Assistência Técnica",
+          cargos: ["Supervisor de Assistência"],
+          base: 900,
+          metrica: "ticket",
+          nps: true
+        },
+        {
+          classe: "balcao",
+          icone: "👥",
+          titulo: "Consultor de Balcão",
+          cargos: ["Consultor Peças Balcão"],
+          base: 800,
+          metrica: "margem",
+          nps: false,
+          dynamo: "Meta de contato semanal na Dynamo Peças."
+        },
+        {
+          classe: "tecnico",
+          icone: "🎧",
+          titulo: "Consultor Técnico",
+          cargos: ["Consultor Técnico"],
+          base: 800,
+          metrica: "ticket",
+          nps: true
+        }
+      ]
+    : CARGOS_PIX.map(cargo => {
+        const p = pixPolitica(cargo);
+        return { classe:"legacy", icone:"•", titulo:cargo, cargos:[cargo], base:p.bonusBase, metrica:p.metrica, nps:p.bonusNps > 0 };
+      });
+
+  $("#pixPolicyGrid").innerHTML = `
+    <div class="pix-policy-hero">
+      <div><span>🏆 CAMPANHA PIX DO PRESIDENTE</span><strong>Foco no faturamento, margem e excelência no atendimento</strong></div>
+      <div class="pix-policy-hero-rule">📊 Pagamento conforme atingimento</div>
+      <div class="pix-policy-hero-rule">🎯 Resultado que premia</div>
+    </div>
+    <div class="pix-policy-role-grid">
+      ${grupos.map(grupo => {
+        const politica = pixPoliticaVigente(grupo.cargos[0], competencia);
+        const faixas = politica?.faixas || [];
+        const valorDiaExemplo = grupo.base / 5;
         return `
-          <article class="pix-policy-card">
-            <div class="pix-policy-title">
-              <h3>${cargo}</h3>
-              <span>
-                Base:
-                ${pixMoeda(politica.bonusBase)}
-              </span>
-            </div>
-
-            <p>
-              Indicador:
-              <strong>
-                ${
-                  politica.metrica === "margem"
-                    ? "Margem"
-                    : "Ticket médio"
-                }
-              </strong>
-            </p>
-
-            <ul>
-              ${politica.faixas.map(
-                faixa => `
-                  <li>
-                    ${
-                      politica.metrica === "margem"
-                        ? pixPct(faixa.minimo)
-                        : pixMoeda(faixa.minimo)
-                    }
-                    → ${pixMoeda(faixa.bonus)}
-                  </li>
-                `
-              ).join("")}
-            </ul>
-
-            ${
-              politica.bonusNps > 0
-                ? `
-                  <div class="pix-nps-note">
-                    NPS mensal:
-                    <strong>
-                      ${pixMoeda(politica.bonusNps)}
-                    </strong>
-                    · ${politica.objetivoNps}.
-                    Pago na Semana 4 somente quando o NPS realizado
-                    atingir ou superar a meta de NPS, independentemente
-                    da meta semanal.
-                  </div>
-                `
-                : ""
-            }
-          </article>
-        `;
-      }
-    ).join("");
+          <article class="pix-policy-pro ${grupo.classe}">
+            <header>
+              <span class="pix-policy-icon">${grupo.icone}</span>
+              <div><h3>${grupo.titulo}</h3><small>${grupo.metrica === "margem" ? "Margem e resultado" : "Atendimento e resultado"}</small></div>
+            </header>
+            <section class="pix-policy-base">
+              <small>BÔNUS-BASE SEMANAL</small>
+              <strong>${pixMoeda(grupo.base)}</strong>
+              <span>Exemplo em 5 dias: <b>${pixMoeda(valorDiaExemplo)}/dia</b></span>
+            </section>
+            <section class="pix-policy-rule">
+              <h4>☑ META DIÁRIA</h4>
+              <p>Só recebe o valor do dia quando atingir a meta diária. O bônus-base é a soma dos dias atingidos.</p>
+            </section>
+            <section class="pix-policy-band">
+              <h4>📊 ${grupo.metrica === "margem" ? "MARGEM" : "TICKET MÉDIO"} <small>(por faixa)</small></h4>
+              <table><thead><tr><th>Meta</th><th>Bônus</th></tr></thead><tbody>
+                ${faixas.map(faixa => `<tr><td>${grupo.metrica === "margem" ? pixPct(faixa.minimo) : pixMoeda(faixa.minimo)}</td><td>${pixMoeda(faixa.bonus)}</td></tr>`).join("")}
+              </tbody></table>
+            </section>
+            ${grupo.nps ? `
+              <section class="pix-policy-nps">
+                <h4>★ NPS <small>(semanal)</small></h4>
+                <p>Meta: <b>90%</b> · Valor: <b>R$ 250,00</b></p>
+                <span>Pago em cada semana em que o NPS atingir ou superar 90%.</span>
+              </section>` : ""}
+            ${grupo.dynamo ? `
+              <section class="pix-policy-dynamo">
+                <h4>✓ DYNAMO PEÇAS</h4><p>${grupo.dynamo}</p>
+              </section>` : ""}
+          </article>`;
+      }).join("")}
+    </div>
+    <section class="pix-policy-general">
+      <h3>📋 REGRAS GERAIS — PIX DO PRESIDENTE</h3>
+      <div>
+        <span>✓ Metas diárias pelos dias reais selecionados.</span>
+        <span>✓ Bônus-base semanal = soma dos dias atingidos.</span>
+        <span>✓ Ticket médio e margem conforme faixas.</span>
+        <span>✓ NPS semanal quando aplicável: meta 90% · R$ 250.</span>
+        <span>✓ Domingos bloqueados no calendário de apuração.</span>
+        <span>✓ Pagamento e total atualizados progressivamente.</span>
+      </div>
+    </section>
+    <section class="pix-policy-flow">
+      <h3>⚙ FLUXO DE APURAÇÃO</h3>
+      <div><b>Coleta de dados</b><i>→</i><b>Validação das metas</b><i>→</i><b>Cálculo da bonificação</b><i>→</i><b>Resultado final</b><i>→</i><b>Pagamento</b></div>
+    </section>
+  `;
 }
 
 function renderTudoPix() {
