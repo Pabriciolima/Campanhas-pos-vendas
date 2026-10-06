@@ -2406,7 +2406,7 @@ function calcularLancamento(
         lancamento.competencia
       )
         ? "Campanha da Oficina"
-        : "Campanha dos Produtivos"
+        : "Campanha da Oficina"
   };
 
   if (
@@ -5316,7 +5316,7 @@ window.excluirFuncionario =
       await window.CampanhaUI.deleteConfirm({
         titulo: "Excluir funcionário?",
         mensagem:
-          "O funcionário será removido definitivamente da base da Campanha dos Produtivos.",
+          "O funcionário será removido definitivamente da base da Campanha da Oficina.",
         textoConfirmar: "Excluir funcionário",
         textoCancelar: "Cancelar"
       });
@@ -5870,7 +5870,7 @@ window.excluirLancamento =
       await window.CampanhaUI.deleteConfirm({
         titulo: "Excluir lançamento?",
         mensagem:
-          "Este lançamento será removido definitivamente da Campanha dos Produtivos.",
+          "Este lançamento será removido definitivamente da Campanha da Oficina.",
         textoConfirmar: "Excluir lançamento",
         textoCancelar: "Cancelar"
       });
