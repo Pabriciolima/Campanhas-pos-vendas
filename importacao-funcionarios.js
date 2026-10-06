@@ -49,7 +49,7 @@ const CARGOS_PIX = [
 
 const MODULOS_IMPORTACAO = {
   produtivos: {
-    titulo: "Campanha dos Produtivos",
+    titulo: "Campanha da Oficina",
     colecao: "funcionarios",
     campanha: "PRODUTIVOS",
     cargos: CARGOS_PRODUTIVOS,
