@@ -3566,3 +3566,41 @@ button:is(
 @media(min-width:1200px){#politicas .infopolicy-grid{min-height:calc(100vh - 215px)}#politicas .ip-card{max-height:calc(100vh - 205px)}}
 @media(max-width:1199px){#politicas .infopolicy-grid{grid-template-columns:1fr 1fr}.ip-green{grid-column:1/-1}}
 @media(max-width:760px){#politicas .infopolicy-titlebar{grid-template-columns:1fr}#politicas .infopolicy-grid{grid-template-columns:1fr}#politicas .ip-green{grid-column:auto}}
+
+
+/* POLITICAS V6.1 — corrige rolagem vertical */
+@media (min-width:1200px){
+  #politicas.view.active,
+  #politicas.active{
+    overflow-y:auto !important;
+    overflow-x:hidden !important;
+    height:auto !important;
+    max-height:none !important;
+    min-height:0 !important;
+    padding-bottom:32px !important;
+  }
+  #politicas .infopolicy{
+    height:auto !important;
+    max-height:none !important;
+    min-height:0 !important;
+    overflow:visible !important;
+  }
+  #politicas .infopolicy-grid{
+    min-height:0 !important;
+    height:auto !important;
+    max-height:none !important;
+    overflow:visible !important;
+    align-items:start !important;
+  }
+  #politicas .ip-card{
+    height:auto !important;
+    max-height:none !important;
+    min-height:0 !important;
+    overflow:hidden !important;
+  }
+  #politicas .ip-content{
+    height:auto !important;
+    max-height:none !important;
+    overflow:visible !important;
+  }
+}
