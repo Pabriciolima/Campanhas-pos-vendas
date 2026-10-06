@@ -4164,8 +4164,15 @@ function atualizarPainelDiarioPix() {
     if (metaEl) metaEl.textContent = `Meta: ${pixMoeda(metaDia)}`;
     if (status) {
       const ok = metaDia > 0 && realizado >= metaDia;
-      status.textContent = ok ? `Meta atingida ✓ · +${pixMoeda(valorDia)}` : "Meta pendente";
+      const percentualDia = metaDia > 0
+        ? Math.max(0, realizado / metaDia * 100)
+        : 0;
+      status.textContent = ok
+        ? `Meta atingida ✓ · +${pixMoeda(valorDia)}`
+        : `Meta não atingida · ${pixPct(percentualDia)}`;
       status.classList.toggle("ok", ok);
+      status.classList.toggle("miss", !ok);
+      status.closest(".pix-day-card")?.classList.toggle("is-miss", !ok);
     }
   });
 
