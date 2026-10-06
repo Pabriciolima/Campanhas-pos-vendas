@@ -7456,10 +7456,20 @@ function configurarEventos() {
               "active"
             );
 
-          document.querySelector(
-            "#pageTitle"
-          ).textContent =
-            botao.textContent;
+          const tituloPagina = document.querySelector("#pageTitle");
+          if (tituloPagina) {
+            const viewAtiva = String(botao.dataset.view || "").trim();
+            const titulosOficina = {
+              dashboard: "Campanha da Oficina",
+              funcionarios: "Base de funcionários",
+              lancamentos: "Lançamentos",
+              apuracao: "Apuração",
+              politicas: "Políticas"
+            };
+            tituloPagina.textContent =
+              titulosOficina[viewAtiva] ||
+              String(botao.textContent || "").trim();
+          }
         }
       );
     });
