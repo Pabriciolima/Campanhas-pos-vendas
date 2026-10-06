@@ -3654,3 +3654,14 @@ body:not(.pix-mode) #dashboard.view.active .panel-header h2{letter-spacing:-.025
 @media(max-width:1050px){.pix-daily-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:650px){.pix-daily-head{align-items:flex-start;flex-direction:column}.pix-daily-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:420px){.pix-daily-grid{grid-template-columns:1fr}}
+
+
+/* PIX DIÁRIO V2026.10.1 — 6 dias + potencial base */
+.pix-daily-grid{grid-template-columns:repeat(6,minmax(0,1fr))}
+.pix-base-potential{align-self:stretch;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:10px 14px;border:1px solid #f0d891;border-radius:13px;background:linear-gradient(135deg,#fff9e8,#fffdf7);box-shadow:0 7px 20px rgba(125,91,0,.06)}
+.pix-base-potential span{font-size:9px;font-weight:900;letter-spacing:.02em;color:#806000;text-transform:uppercase}
+.pix-base-potential strong{font-size:18px;line-height:1.15;color:#173c4c}
+.pix-base-potential small{max-width:340px;font-size:8px;line-height:1.35;color:#7c8588}
+@media(max-width:1250px){.pix-daily-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:650px){.pix-daily-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:420px){.pix-daily-grid{grid-template-columns:1fr}}
