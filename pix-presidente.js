@@ -1530,27 +1530,36 @@ function calcularPix(lancamento) {
   const dadosCriticosCompletos =
     dadosCriticosPendentes.length === 0;
 
+  /*
+   * ACÚMULO PROGRESSIVO (Out/2026+):
+   * cada componente já preenchido e atingido entra no total imediatamente.
+   * Campos ainda pendentes deixam apenas o respectivo componente em R$ 0,
+   * sem apagar valores já conquistados em outros indicadores.
+   * O legado anterior a Out/2026 preserva a trava financeira histórica.
+   */
   const bonusBase =
-    dadosCriticosCompletos
-      ? (
-          regraDiaria
-            ? apuracaoDiaria.bonusBase
-            : (atingiuMeta ? politica.bonusBase : 0)
-        )
-      : 0;
+    regraDiaria
+      ? apuracaoDiaria.bonusBase
+      : (
+          dadosCriticosCompletos && atingiuMeta
+            ? politica.bonusBase
+            : 0
+        );
 
   /*
    * Na regra diária (Out/2026+), o bônus de Ticket/Margem é um KPI
    * independente do fechamento de 100% da meta semanal. A base continua
    * sendo paga somente pelos dias cuja meta diária foi atingida.
    */
+  const indicadorInformado =
+    politica.metrica === "margem"
+      ? campoPixRealmenteInformado(lancamento, "margem", "margemInformada")
+      : campoPixRealmenteInformado(lancamento, "ticketMedio", "ticketMedioInformado");
+
   const bonusFaixa =
-    dadosCriticosCompletos &&
-    (regraDiaria || atingiuMeta)
-      ? pixBonusFaixa(
-          politica,
-          indicador
-        )
+    indicadorInformado &&
+    (regraDiaria || (dadosCriticosCompletos && atingiuMeta))
+      ? pixBonusFaixa(politica, indicador)
       : 0;
 
   /*
@@ -1586,12 +1595,15 @@ function calcularPix(lancamento) {
     metaNps > 0 &&
     realizadoNps >= metaNps;
 
+  const npsInformado =
+    campoPixRealmenteInformado(lancamento, "realizadoNps", "realizadoNpsInformado");
+
   const bonusNps =
-    dadosCriticosCompletos &&
     atingiuNps &&
+    npsInformado &&
     (
       regraDiaria ||
-      Number(lancamento.semana) === 4
+      (dadosCriticosCompletos && Number(lancamento.semana) === 4)
     )
       ? (
           regraDiaria
@@ -1631,12 +1643,13 @@ function calcularPix(lancamento) {
       : 0;
 
   const bonusFinal =
-    dadosCriticosCompletos
-      ? Math.max(
-          0,
-          subtotal - penalidade
-        )
-      : 0;
+    regraDiaria
+      ? Math.max(0, subtotal - penalidade)
+      : (
+          dadosCriticosCompletos
+            ? Math.max(0, subtotal - penalidade)
+            : 0
+        );
 
   let observacao = "";
 
