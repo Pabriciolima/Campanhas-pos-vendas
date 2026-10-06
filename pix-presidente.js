@@ -1105,7 +1105,6 @@ function pixPolitica(cargo) {
 }
 
 const PIX_NOVA_VIGENCIA = "2026-10";
-const PIX_NOVA_VIGENCIA = "2026-10";
 const PIX_DIAS_SEMANA = [
   { chave: "seg", rotulo: "Segunda" },
   { chave: "ter", rotulo: "Terça" },
