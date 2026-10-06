@@ -3724,3 +3724,8 @@ body:not(.pix-mode) #dashboard.view.active .panel-header h2{letter-spacing:-.025
 .pix-policy-general h3,.pix-policy-flow h3{margin:0 0 8px;color:#0d5793;font-size:11px}.pix-policy-general>div{display:grid;grid-template-columns:repeat(3,1fr);gap:5px 14px}.pix-policy-general span{font-size:8px;color:#395866}
 .pix-policy-flow>div{display:flex;align-items:center;justify-content:space-around;gap:8px;color:#194f78;font-size:8px}.pix-policy-flow i{font-style:normal;color:#2d75ae;font-size:14px}
 @media(max-width:1200px){.pix-policy-role-grid{grid-template-columns:repeat(3,1fr)}}@media(max-width:760px){.pix-policy-hero{grid-template-columns:1fr}.pix-policy-hero-rule{border-left:0}.pix-policy-role-grid{grid-template-columns:1fr}.pix-policy-general>div{grid-template-columns:1fr}.pix-policy-flow>div{flex-wrap:wrap}}
+
+
+/* PIX DIÁRIO — GORDURA PARA O PRÓXIMO DIA V2026.10.5 */
+.pix-day-card.has-fat{border-color:#20b994;background:linear-gradient(180deg,#f0fff9,#e8fbf4);box-shadow:inset 0 3px 0 #08a77d,0 7px 18px rgba(8,167,125,.08)}
+.pix-day-card.has-fat .pix-dia-status.ok{line-height:1.35}
