@@ -1110,7 +1110,8 @@ const PIX_DIAS_SEMANA = [
   { chave: "ter", rotulo: "Terça" },
   { chave: "qua", rotulo: "Quarta" },
   { chave: "qui", rotulo: "Quinta" },
-  { chave: "sex", rotulo: "Sexta" }
+  { chave: "sex", rotulo: "Sexta" },
+  { chave: "sab", rotulo: "Sábado", opcional: true }
 ];
 
 function usaRegraPixDiaria(competencia) {
@@ -1495,9 +1496,14 @@ function calcularPix(lancamento) {
         )
       : 0;
 
+  /*
+   * Na regra diária (Out/2026+), o bônus de Ticket/Margem é um KPI
+   * independente do fechamento de 100% da meta semanal. A base continua
+   * sendo paga somente pelos dias cuja meta diária foi atingida.
+   */
   const bonusFaixa =
-    atingiuMeta &&
-    dadosCriticosCompletos
+    dadosCriticosCompletos &&
+    (regraDiaria || atingiuMeta)
       ? pixBonusFaixa(
           politica,
           indicador
@@ -3720,13 +3726,11 @@ function renderCamposLancamentoPix(dados = {}) {
         `
     }
 
-    <label>
-      Bônus semanal da função
-      <input
-        value="${pixMoeda(politica.bonusBase)}"
-        readonly
-      />
-    </label>
+    <div class="pix-base-potential">
+      <span>🏆 Potencial base semanal</span>
+      <strong>${pixMoeda(politica.bonusBase)}</strong>
+      <small>Valor máximo da base. O pagamento real depende dos dias em que a meta diária for atingida.</small>
+    </div>
 
     ${
       semana === 4 &&
