@@ -1104,6 +1104,83 @@ function pixPolitica(cargo) {
   return POLITICAS_PIX[cargo] || null;
 }
 
+const PIX_NOVA_VIGENCIA = "2026-10";
+const PIX_DIAS_SEMANA = [
+  { chave: "seg", rotulo: "Segunda" },
+  { chave: "ter", rotulo: "Terça" },
+  { chave: "qua", rotulo: "Quarta" },
+  { chave: "qui", rotulo: "Quinta" },
+  { chave: "sex", rotulo: "Sexta" }
+];
+
+function usaRegraPixDiaria(competencia) {
+  return String(competencia || "").slice(0, 7) >= PIX_NOVA_VIGENCIA;
+}
+
+function pixPoliticaVigente(cargo, competencia) {
+  const base = pixPolitica(cargo);
+  if (!base || !usaRegraPixDiaria(competencia)) return base;
+
+  const bonusBaseNovo = {
+    "Gerente": 1100,
+    "Coordenador": 1100,
+    "Supervisor Pós-vendas": 1100,
+    "Supervisor Peças": 900,
+    "Supervisor de Assistência": 900,
+    "Consultor Peças Balcão": 800,
+    "Consultor Técnico": 800
+  };
+
+  const politica = {
+    ...base,
+    bonusBase: bonusBaseNovo[cargo] ?? base.bonusBase
+  };
+
+  if (cargo === "Consultor Técnico") {
+    politica.faixas = [
+      { minimo: 7300, bonus: 600 },
+      { minimo: 7500, bonus: 700 },
+      { minimo: 7800, bonus: 800 },
+      { minimo: 8100, bonus: 900 }
+    ];
+  }
+
+  return politica;
+}
+
+function normalizarDiasPix(dias = {}) {
+  return PIX_DIAS_SEMANA.map(dia => ({
+    chave: dia.chave,
+    rotulo: dia.rotulo,
+    naoTrabalhado:
+      dias?.[dia.chave]?.naoTrabalhado === true ||
+      dias?.[dia.chave]?.naoTrabalhado === "true",
+    realizado: pixNumero(dias?.[dia.chave]?.realizado)
+  }));
+}
+
+function calcularBaseDiariaPix(lancamento, politica) {
+  const metaSemanal = pixNumero(lancamento.metaSemanal);
+  const dias = normalizarDiasPix(lancamento.diasSemana);
+  const trabalhados = dias.filter(dia => !dia.naoTrabalhado);
+  const quantidadeDias = trabalhados.length;
+  const metaDiaria = quantidadeDias > 0 ? metaSemanal / quantidadeDias : 0;
+  const valorDiario = quantidadeDias > 0 ? pixNumero(politica?.bonusBase) / quantidadeDias : 0;
+  const realizadoSemanal = trabalhados.reduce((soma, dia) => soma + dia.realizado, 0);
+  const diasAtingidos = trabalhados.filter(dia => metaDiaria > 0 && dia.realizado >= metaDiaria).length;
+  const bonusBase = diasAtingidos * valorDiario;
+
+  return {
+    dias,
+    quantidadeDias,
+    metaDiaria,
+    valorDiario,
+    realizadoSemanal,
+    diasAtingidos,
+    bonusBase: Math.min(pixNumero(politica?.bonusBase), bonusBase)
+  };
+}
+
 function pixBonusFaixa(politica, valor) {
   if (!politica) return 0;
 
@@ -1324,7 +1401,7 @@ function calcularPix(lancamento) {
     funcionario?.cargo ||
     lancamento.cargo;
 
-  const politica = pixPolitica(cargo);
+  const politica = pixPoliticaVigente(cargo, lancamento.competencia);
 
   if (!politica) {
     return {
@@ -1360,10 +1437,16 @@ function calcularPix(lancamento) {
       lancamento.metaSemanal
     );
 
-  const realizado =
-    pixNumero(
-      lancamento.realizadoSemanal
-    );
+  const regraDiaria = usaRegraPixDiaria(lancamento.competencia);
+  const apuracaoDiaria = regraDiaria
+    ? calcularBaseDiariaPix(lancamento, politica)
+    : null;
+
+  const realizado = regraDiaria
+    ? apuracaoDiaria.realizadoSemanal
+    : pixNumero(
+        lancamento.realizadoSemanal
+      );
 
   const percentualMeta =
     meta > 0
@@ -1404,9 +1487,12 @@ function calcularPix(lancamento) {
     dadosCriticosPendentes.length === 0;
 
   const bonusBase =
-    atingiuMeta &&
     dadosCriticosCompletos
-      ? politica.bonusBase
+      ? (
+          regraDiaria
+            ? apuracaoDiaria.bonusBase
+            : (atingiuMeta ? politica.bonusBase : 0)
+        )
       : 0;
 
   const bonusFaixa =
@@ -1553,6 +1639,8 @@ function calcularPix(lancamento) {
       funcionario?.dn ||
       lancamento.dn,
     politica,
+    regraDiaria,
+    apuracaoDiaria,
     percentualMeta,
     semMeta,
     atingiuMeta,
@@ -3507,9 +3595,15 @@ function renderCamposLancamentoPix(dados = {}) {
         )
     );
 
+  const competenciaLancamento =
+    $("#pixLancamentoCompetencia")?.value ||
+    dados.competencia ||
+    pixCompetenciaAtual();
+
   const politica =
-    pixPolitica(
-      cargoPolitica
+    pixPoliticaVigente(
+      cargoPolitica,
+      competenciaLancamento
     );
 
   if (!politica) {
@@ -3545,21 +3639,52 @@ function renderCamposLancamentoPix(dados = {}) {
       />
     </label>
 
-    <label>
-      Realizado semanal
-      <input
-        type="text"
-        inputmode="decimal"
-        id="pixRealizadoSemanal"
-        placeholder="R$ 0,00"
-        value="${
-          dados.realizadoSemanal
-            ? pixMoeda(dados.realizadoSemanal)
-            : ""
-        }"
-        required
-      />
-    </label>
+    ${
+      usaRegraPixDiaria(competenciaLancamento)
+        ? `
+          <div class="pix-daily-block">
+            <div class="pix-daily-head">
+              <div>
+                <strong>Apuração diária da meta</strong>
+                <small>A meta semanal é redistribuída automaticamente entre os dias trabalhados.</small>
+              </div>
+              <span id="pixResumoDias"></span>
+            </div>
+            <div class="pix-daily-grid">
+              ${PIX_DIAS_SEMANA.map(dia => {
+                const salvo = dados.diasSemana?.[dia.chave] || {};
+                const naoTrabalhado = salvo.naoTrabalhado === true || salvo.naoTrabalhado === "true";
+                return `
+                  <div class="pix-day-card" data-pix-dia="${dia.chave}">
+                    <div class="pix-day-title">
+                      <b>${dia.rotulo}</b>
+                      <label class="pix-day-off">
+                        <input type="checkbox" class="pix-dia-nao-trabalhado" data-dia="${dia.chave}" ${naoTrabalhado ? "checked" : ""}>
+                        Não trabalhado
+                      </label>
+                    </div>
+                    <small class="pix-meta-dia" data-meta-dia="${dia.chave}">Meta: —</small>
+                    <input type="text" inputmode="decimal" class="pix-realizado-dia" data-dia="${dia.chave}"
+                      placeholder="Realizado R$ 0,00"
+                      value="${salvo.realizado ? pixMoeda(salvo.realizado) : ""}"
+                      ${naoTrabalhado ? "disabled" : ""}>
+                    <span class="pix-dia-status" data-status-dia="${dia.chave}">Aguardando</span>
+                  </div>
+                `;
+              }).join("")}
+            </div>
+          </div>
+        `
+        : `
+          <label>
+            Realizado semanal
+            <input type="text" inputmode="decimal" id="pixRealizadoSemanal"
+              placeholder="R$ 0,00"
+              value="${dados.realizadoSemanal ? pixMoeda(dados.realizadoSemanal) : ""}"
+              required />
+          </label>
+        `
+    }
 
     ${
       politica.metrica === "margem"
@@ -3717,11 +3842,15 @@ function renderCamposLancamentoPix(dados = {}) {
       );
       campo.addEventListener(
         "change",
-        atualizarPreviewPix
+        () => {
+          atualizarPainelDiarioPix();
+          atualizarPreviewPix();
+        }
       );
     }
   );
 
+  atualizarPainelDiarioPix();
   atualizarPreviewPix();
 }
 
@@ -3754,8 +3883,9 @@ function coletarLancamentoPix() {
     );
 
   const politica =
-    pixPolitica(
-      cargoPolitica
+    pixPoliticaVigente(
+      cargoPolitica,
+      $("#pixLancamentoCompetencia")?.value
     );
 
   const semana =
@@ -3821,9 +3951,19 @@ function coletarLancamentoPix() {
       ),
 
     realizadoSemanal:
-      pixNumero(
-        $("#pixRealizadoSemanal")?.value
-      ),
+      usaRegraPixDiaria($("#pixLancamentoCompetencia")?.value)
+        ? Object.values(coletarDiasPixFormulario()).reduce(
+            (soma, dia) => soma + (dia.naoTrabalhado ? 0 : pixNumero(dia.realizado)),
+            0
+          )
+        : pixNumero(
+            $("#pixRealizadoSemanal")?.value
+          ),
+
+    diasSemana:
+      usaRegraPixDiaria($("#pixLancamentoCompetencia")?.value)
+        ? coletarDiasPixFormulario()
+        : (dados?.diasSemana || {}),
 
     ticketMedio:
       politica.metrica === "ticket"
@@ -3903,6 +4043,48 @@ function coletarLancamentoPix() {
           )
         : true
   };
+}
+
+function coletarDiasPixFormulario() {
+  const dias = {};
+  PIX_DIAS_SEMANA.forEach(dia => {
+    const off = document.querySelector(`.pix-dia-nao-trabalhado[data-dia="${dia.chave}"]`);
+    const input = document.querySelector(`.pix-realizado-dia[data-dia="${dia.chave}"]`);
+    dias[dia.chave] = {
+      naoTrabalhado: Boolean(off?.checked),
+      realizado: off?.checked ? 0 : pixNumero(input?.value)
+    };
+  });
+  return dias;
+}
+
+function atualizarPainelDiarioPix() {
+  const competencia = $("#pixLancamentoCompetencia")?.value || "";
+  if (!usaRegraPixDiaria(competencia)) return;
+
+  const meta = pixNumero($("#pixMetaSemanal")?.value);
+  const dias = coletarDiasPixFormulario();
+  const ativos = PIX_DIAS_SEMANA.filter(dia => !dias[dia.chave]?.naoTrabalhado);
+  const metaDia = ativos.length ? meta / ativos.length : 0;
+
+  PIX_DIAS_SEMANA.forEach(dia => {
+    const off = Boolean(dias[dia.chave]?.naoTrabalhado);
+    const card = document.querySelector(`[data-pix-dia="${dia.chave}"]`);
+    const input = document.querySelector(`.pix-realizado-dia[data-dia="${dia.chave}"]`);
+    const metaEl = document.querySelector(`[data-meta-dia="${dia.chave}"]`);
+    const status = document.querySelector(`[data-status-dia="${dia.chave}"]`);
+    if (input) input.disabled = off;
+    card?.classList.toggle("is-off", off);
+    if (metaEl) metaEl.textContent = off ? "Fora do divisor" : `Meta: ${pixMoeda(metaDia)}`;
+    if (status) {
+      const realizado = pixNumero(input?.value);
+      status.textContent = off ? "Não trabalhado" : (realizado >= metaDia && metaDia > 0 ? "Meta atingida ✓" : "Meta pendente");
+      status.classList.toggle("ok", !off && realizado >= metaDia && metaDia > 0);
+    }
+  });
+
+  const resumo = $("#pixResumoDias");
+  if (resumo) resumo.textContent = `${ativos.length} dia(s) · ${pixMoeda(metaDia)}/dia`;
 }
 
 function atualizarPreviewPix() {
