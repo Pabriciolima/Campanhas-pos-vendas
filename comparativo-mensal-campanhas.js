@@ -488,7 +488,7 @@ function formatarData(valor) {
 function rotuloModulo(valor) {
   return valor === "PIX"
     ? "Pix do Presidente"
-    : "Campanha dos Produtivos";
+    : "Campanha da Oficina";
 }
 
 function valorBonito(valor) {
