@@ -3963,7 +3963,7 @@ function coletarLancamentoPix() {
     diasSemana:
       usaRegraPixDiaria($("#pixLancamentoCompetencia")?.value)
         ? coletarDiasPixFormulario()
-        : (dados?.diasSemana || {}),
+        : {},
 
     ticketMedio:
       politica.metrica === "ticket"
