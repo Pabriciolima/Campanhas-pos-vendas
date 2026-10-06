@@ -3703,3 +3703,24 @@ body:not(.pix-mode) #dashboard.view.active .panel-header h2{letter-spacing:-.025
   color:#b42323!important;
   text-decoration:line-through;
 }
+
+
+/* POLÍTICAS PIX DO PRESIDENTE — INFOGRÁFICO HORIZONTAL V2026.10 */
+#pix-politicas .pix-policy-grid{display:block!important}
+.pix-policy-hero{display:grid;grid-template-columns:1.7fr .7fr .7fr;align-items:center;gap:12px;padding:15px 18px;margin-bottom:10px;border-radius:15px;background:linear-gradient(105deg,#a80d25,#df1434);color:#fff;box-shadow:0 12px 28px rgba(132,13,35,.16)}
+.pix-policy-hero>div:first-child{display:flex;flex-direction:column}.pix-policy-hero span{font-size:10px;font-weight:900;letter-spacing:.06em}.pix-policy-hero strong{font-size:16px}.pix-policy-hero-rule{padding-left:12px;border-left:1px solid rgba(255,255,255,.45);font-size:10px;font-weight:800}
+.pix-policy-role-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.pix-policy-pro{--role:#1358a5;overflow:hidden;border:1px solid #d9e3e8;border-radius:14px;background:#fff;box-shadow:0 8px 24px rgba(24,55,67,.06)}
+.pix-policy-pro.pecas{--role:#6336b8}.pix-policy-pro.assistencia{--role:#09845f}.pix-policy-pro.balcao{--role:#ed5a14}.pix-policy-pro.tecnico{--role:#d91542}
+.pix-policy-pro header{display:flex;align-items:center;gap:8px;min-height:64px;padding:10px;background:linear-gradient(135deg,var(--role),color-mix(in srgb,var(--role) 76%,#fff));color:#fff}
+.pix-policy-icon{display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px;border-radius:10px;background:rgba(255,255,255,.18);font-size:19px}
+.pix-policy-pro header h3{margin:0;font-size:11px;line-height:1.05}.pix-policy-pro header small{font-size:7px;opacity:.9}
+.pix-policy-pro section{margin:0 9px;padding:9px 2px;border-bottom:1px solid #e8edef}.pix-policy-pro section:last-child{border-bottom:0}
+.pix-policy-base{text-align:center}.pix-policy-base small,.pix-policy-base span{display:block;font-size:7px;color:#61757e}.pix-policy-base strong{display:block;margin:2px 0;font-size:18px;color:var(--role)}
+.pix-policy-rule h4,.pix-policy-band h4,.pix-policy-nps h4,.pix-policy-dynamo h4{margin:0 0 5px;color:var(--role);font-size:10px}.pix-policy-rule p,.pix-policy-nps p,.pix-policy-nps span,.pix-policy-dynamo p{margin:0;font-size:7px;line-height:1.4;color:#50656f}
+.pix-policy-band table{width:100%;border-collapse:collapse;font-size:7px}.pix-policy-band th{padding:4px;background:color-mix(in srgb,var(--role) 10%,#fff);color:var(--role)}.pix-policy-band td{padding:4px;border-bottom:1px solid #edf1f2;text-align:center}.pix-policy-band td:last-child{font-weight:900;color:var(--role)}
+.pix-policy-nps{background:#fff9df}.pix-policy-dynamo{background:#f5f0ff}
+.pix-policy-general,.pix-policy-flow{margin-top:10px;padding:12px 15px;border:1px solid #b8d5ea;border-radius:13px;background:linear-gradient(90deg,#f5fbff,#fff)}
+.pix-policy-general h3,.pix-policy-flow h3{margin:0 0 8px;color:#0d5793;font-size:11px}.pix-policy-general>div{display:grid;grid-template-columns:repeat(3,1fr);gap:5px 14px}.pix-policy-general span{font-size:8px;color:#395866}
+.pix-policy-flow>div{display:flex;align-items:center;justify-content:space-around;gap:8px;color:#194f78;font-size:8px}.pix-policy-flow i{font-style:normal;color:#2d75ae;font-size:14px}
+@media(max-width:1200px){.pix-policy-role-grid{grid-template-columns:repeat(3,1fr)}}@media(max-width:760px){.pix-policy-hero{grid-template-columns:1fr}.pix-policy-hero-rule{border-left:0}.pix-policy-role-grid{grid-template-columns:1fr}.pix-policy-general>div{grid-template-columns:1fr}.pix-policy-flow>div{flex-wrap:wrap}}
