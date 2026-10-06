@@ -1207,10 +1207,24 @@ function calcularBaseDiariaPix(lancamento, politica) {
   const quantidadeDias = dias.length;
   const metaDiaria = quantidadeDias > 0 ? metaSemanal / quantidadeDias : 0;
   const valorDiario = quantidadeDias > 0 ? pixNumero(politica?.bonusBase) / quantidadeDias : 0;
-  const realizadoSemanal = dias.reduce((soma, dia) => soma + dia.realizado, 0);
-  const diasAtingidos = dias.filter(dia => metaDiaria > 0 && dia.realizado >= metaDiaria).length;
+  let gordura = 0;
+  let diasAtingidos = 0;
+
+  const diasComGordura = dias.map(dia => {
+    const realizado = pixNumero(dia.realizado);
+    const disponivel = realizado + gordura;
+    const atingiu = metaDiaria > 0 && disponivel >= metaDiaria;
+    const usadoDaGordura = Math.min(gordura, Math.max(0, metaDiaria - realizado));
+    const sobraRealizado = atingiu ? Math.max(0, realizado - (metaDiaria - usadoDaGordura)) : 0;
+    gordura = atingiu ? sobraRealizado : gordura;
+    if (atingiu) diasAtingidos += 1;
+    return { ...dia, realizado, atingiu, gorduraAposDia: gordura, disponivel };
+  });
+
+  const realizadoSemanal = dias.reduce((soma, dia) => soma + pixNumero(dia.realizado), 0);
   return {
-    dias, quantidadeDias, metaDiaria, valorDiario, realizadoSemanal, diasAtingidos,
+    dias: diasComGordura, quantidadeDias, metaDiaria, valorDiario, realizadoSemanal,
+    diasAtingidos, gorduraFinal: gordura,
     bonusBase: Math.min(pixNumero(politica?.bonusBase), diasAtingidos * valorDiario)
   };
 }
@@ -4218,23 +4232,30 @@ function atualizarPainelDiarioPix() {
   })();
   const valorDia = selecionadas.length ? pixNumero(politica?.bonusBase) / selecionadas.length : 0;
 
+  let gordura = 0;
   selecionadas.forEach(data => {
     const input = document.querySelector(`.pix-realizado-dia[data-dia="${data}"]`);
     const metaEl = document.querySelector(`[data-meta-dia="${data}"]`);
     const status = document.querySelector(`[data-status-dia="${data}"]`);
     const realizado = pixNumero(input?.value);
-    if (metaEl) metaEl.textContent = `Meta: ${pixMoeda(metaDia)}`;
+    const disponivel = realizado + gordura;
+    const ok = metaDia > 0 && disponivel >= metaDia;
+    const usadoDaGordura = Math.min(gordura, Math.max(0, metaDia - realizado));
+    const sobra = ok ? Math.max(0, realizado - (metaDia - usadoDaGordura)) : 0;
+    if (ok) gordura = sobra;
+
+    if (metaEl) {
+      metaEl.textContent = `Meta: ${pixMoeda(metaDia)}${usadoDaGordura > 0 ? ` · gordura usada: ${pixMoeda(usadoDaGordura)}` : ""}`;
+    }
     if (status) {
-      const ok = metaDia > 0 && realizado >= metaDia;
-      const percentualDia = metaDia > 0
-        ? Math.max(0, realizado / metaDia * 100)
-        : 0;
+      const percentualDia = metaDia > 0 ? Math.max(0, disponivel / metaDia * 100) : 0;
       status.textContent = ok
-        ? `Meta atingida ✓ · +${pixMoeda(valorDia)}`
-        : `Meta não atingida · ${pixPct(percentualDia)}`;
+        ? `Meta atingida ✓ · +${pixMoeda(valorDia)}${gordura > 0 ? ` · gordura → ${pixMoeda(gordura)}` : ""}`
+        : `Meta não atingida · ${pixPct(percentualDia)}${gordura > 0 ? ` · gordura disponível ${pixMoeda(gordura)}` : ""}`;
       status.classList.toggle("ok", ok);
       status.classList.toggle("miss", !ok);
       status.closest(".pix-day-card")?.classList.toggle("is-miss", !ok);
+      status.closest(".pix-day-card")?.classList.toggle("has-fat", ok && gordura > 0);
     }
   });
 
