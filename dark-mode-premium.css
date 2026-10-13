@@ -1111,3 +1111,39 @@ html[data-theme="dark"] .podium-card h3 {
   color: #102b3e !important;
   -webkit-text-fill-color: #102b3e !important;
 }
+
+
+/* CONTRASTE ACESSÍVEL — POLÍTICAS OFICINA E PIX · OUT/2026 */
+html[data-theme="dark"] #politicas .policy-pro-card,
+html[data-theme="dark"] #pix-politicas .pix-policy-pro{
+  background:#172b3b!important;border-color:#375267!important;color:#e8f2f8!important;
+}
+html[data-theme="dark"] #politicas .policy-pro-card :is(p,span,small,td,th,li,em),
+html[data-theme="dark"] #pix-politicas .pix-policy-pro :is(p,span,small,td,th,li){
+  color:#d5e4ee!important;
+}
+html[data-theme="dark"] #politicas .policy-pro-card :is(h2,h3,h4,strong,b),
+html[data-theme="dark"] #pix-politicas .pix-policy-pro :is(h3,h4,strong,b){
+  color:#f5fbff!important;
+}
+html[data-theme="dark"] #politicas .policy-pro-head :is(h2,p,span,strong),
+html[data-theme="dark"] #pix-politicas .pix-policy-pro header :is(h3,small,span){
+  color:#fff!important;
+}
+html[data-theme="dark"] #politicas :is(.policy-pro-metrics>div,.policy-pro-section,.policy-pro-intro,.policy-pro-table,.policy-pro-note,.policy-pro-warning,.policy-pro-danger,.policy-pro-total),
+html[data-theme="dark"] #pix-politicas .pix-policy-pro :is(.pix-policy-base,.pix-policy-rule,.pix-policy-band,.pix-policy-nps,.pix-policy-dynamo){
+  background:#20394b!important;border-color:#476174!important;color:#e8f2f8!important;
+}
+html[data-theme="dark"] #politicas .policy-pro-metrics strong,
+html[data-theme="dark"] #pix-politicas .pix-policy-base strong{color:#74f0cb!important}
+html[data-theme="dark"] #pix-politicas .pix-policy-band :is(table,thead,tbody,tr,th,td),
+html[data-theme="dark"] #politicas .policy-pro-card :is(table,thead,tbody,tr,th,td){
+  background:#213b4d!important;color:#eaf5fc!important;border-color:#4a6374!important;
+}
+html[data-theme="dark"] #pix-politicas .pix-policy-band th{background:#30516a!important;color:#fff!important}
+html[data-theme="dark"] #pix-politicas :is(.pix-policy-general,.pix-policy-flow){
+  background:#1b3345!important;border-color:#42637b!important;color:#eaf5fc!important;
+}
+html[data-theme="dark"] #pix-politicas :is(.pix-policy-general,.pix-policy-flow) :is(h3,span,b,i){
+  color:#eaf5fc!important;
+}
