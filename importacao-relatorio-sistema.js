@@ -902,13 +902,53 @@ function mapaProdutivos() {
   };
 }
 
+
+/* Importação diária Pix: datas explícitas no cabeçalho, sem inferir valores. */
+function irsColunasDiariasPix() {
+  const [ano, mes] = String(state.competencia || "").split("-").map(Number);
+  if (!ano || !mes) return [];
+  const encontrados = new Map();
+  state.headers.forEach((cabecalho, indice) => {
+    const bruto = String(cabecalho || "").trim();
+    // Ex.: Realizado 01/10, Faturamento 01/10/2026, Dia 01, 2026-10-01.
+    const padraoIso = bruto.match(/(?:^|\s)(\d{4})-(\d{2})-(\d{2})(?:$|\s)/);
+    const padraoBr = bruto.match(/(?:^|\s)(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?(?:$|\s)/);
+    const padraoDia = bruto.match(/^(?:realizado|faturamento|dia)\s+(\d{1,2})$/i);
+    let dia = null, mesCol = mes, anoCol = ano;
+    if (padraoIso) { anoCol=+padraoIso[1]; mesCol=+padraoIso[2]; dia=+padraoIso[3]; }
+    else if (padraoBr) { dia=+padraoBr[1]; mesCol=+padraoBr[2]; anoCol=+(padraoBr[3] || ano); }
+    else if (padraoDia) dia=+padraoDia[1];
+    if (dia === null || anoCol !== ano || mesCol !== mes) return;
+    const data = new Date(ano,mes-1,dia);
+    if (data.getFullYear() !== ano || data.getMonth() !== mes-1 || data.getDate() !== dia || data.getDay() === 0) return;
+    const iso = state.competencia + "-" + String(dia).padStart(2,"0");
+    if (encontrados.has(iso)) throw new Error("Colunas duplicadas para " + iso + ". Ajuste o Excel antes de importar.");
+    encontrados.set(iso,{data:iso,indice});
+  });
+  return [...encontrados.values()].sort((a,b)=>a.data.localeCompare(b.data));
+}
+function irsDiasLinhaPix(linha, colunas) {
+  const diasCalendario = {};
+  const datasAvaliadas = colunas.map(coluna=>coluna.data);
+  colunas.forEach(({data,indice})=>{
+    const bruto=valorLinha(linha,indice);
+    const valor=numero(bruto);
+    if (texto(bruto)!=="" && (!Number.isFinite(valor) || valor<0))
+      throw new Error("Valor diário inválido na coluna "+data+".");
+    diasCalendario[data]={realizado:valor};
+  });
+  return {datasAvaliadas,diasCalendario,
+    total:datasAvaliadas.reduce((soma,data)=>soma+diasCalendario[data].realizado,0)};
+}
+
 function processarPix() {
   const mapa = mapaPix();
   const erros = [];
 
+  const colunasDiarias = irsColunasDiariasPix();
   const modeloDireto =
     mapa.metaSemanal >= 0 &&
-    mapa.realizadoSemanal >= 0;
+    (mapa.realizadoSemanal >= 0 || colunasDiarias.length > 0);
 
   /*
    * NOVO MODELO DIRETO:
@@ -1020,13 +1060,13 @@ function processarPix() {
                 mapa.metaSemanal
               )
             ),
-          realizadoSemanal:
-            numero(
-              valorLinha(
-                linha,
-                mapa.realizadoSemanal
-              )
-            ),
+          realizadoSemanal: colunasDiarias.length
+            ? irsDiasLinhaPix(linha,colunasDiarias).total
+            : numero(valorLinha(linha,mapa.realizadoSemanal)),
+          datasAvaliadas: colunasDiarias.length
+            ? irsDiasLinhaPix(linha,colunasDiarias).datasAvaliadas : [],
+          diasCalendario: colunasDiarias.length
+            ? irsDiasLinhaPix(linha,colunasDiarias).diasCalendario : {},
           ticketMedio:
             numero(
               valorLinha(
@@ -2326,6 +2366,8 @@ function gerarLancamentosPixDireto(
         meta,
       realizadoSemanal:
         realizado,
+      datasAvaliadas: item.datasAvaliadas || [],
+      diasCalendario: item.diasCalendario || {},
       percentualAtingimentoImportado:
         meta > 0
           ? realizado / meta * 100
