@@ -4459,7 +4459,7 @@ function baixarModelo(tipo) {
     // A primeira linha continua sendo o cabeçalho oficial para compatibilidade com o importador.
     const fixas = ["Vendedor","Cargo","Filial","DN","Meta semanal",
       "Ticket médio","Margem realizada (%)","Meta de NPS","NPS realizado","O.S. em aberto (%)"];
-    const cabecalhos = [...fixas,...datas.map(data=>"Realizado "+data.slice(8,10)+"/"+data.slice(5,7))];
+    const cabecalhos = [...fixas,...datas.map(data=>data.slice(8,10)+"/"+data.slice(5,7)+" realizado")];
     const planilha = XLSX.utils.aoa_to_sheet([cabecalhos]);
     planilha["!cols"] = cabecalhos.map((nome,i)=>({
       wch: i===0?34 : i===1?28 : i===2?22 : i===3?12 :
