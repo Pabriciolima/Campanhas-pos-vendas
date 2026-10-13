@@ -1147,3 +1147,69 @@ html[data-theme="dark"] #pix-politicas :is(.pix-policy-general,.pix-policy-flow)
 html[data-theme="dark"] #pix-politicas :is(.pix-policy-general,.pix-policy-flow) :is(h3,span,b,i){
   color:#eaf5fc!important;
 }
+
+
+/* OFICINA V8 — SUPERFÍCIES CLARAS CONTROLADAS NO TEMA ESCURO
+   A Oficina usa .infopolicy/.ip-card (não .policy-pro-card).
+   Mantém os cards claros com texto escuro legível, sem afetar o Pix. */
+html[data-theme="dark"] #politicas .infopolicy{
+  color:#18384a!important;color-scheme:light;
+}
+html[data-theme="dark"] #politicas .ip-card{
+  background:#ffffff!important;color:#193c4c!important;border-color:#c9dce5!important;color-scheme:light;
+}
+html[data-theme="dark"] #politicas .ip-card .ip-content{
+  background:#fff!important;color:#193c4c!important;
+}
+html[data-theme="dark"] #politicas .ip-card .ip-content :is(h4,p,span,small,b,strong,em){
+  color:#254657!important;-webkit-text-fill-color:#254657!important;opacity:1!important;
+}
+html[data-theme="dark"] #politicas .ip-card .ip-content h4{
+  background:#e9f1f5!important;color:#173e54!important;-webkit-text-fill-color:#173e54!important;
+}
+html[data-theme="dark"] #politicas .ip-card :is(.ip-kpis>div,.ip-leaders>div,.ip-wide,.ip-tables>div){
+  background:#f7fafc!important;border-color:#cbdce4!important;
+}
+html[data-theme="dark"] #politicas .ip-card .ip-kpis b,
+html[data-theme="dark"] #politicas .ip-card .ip-pay b,
+html[data-theme="dark"] #politicas .ip-card .ip-tables p strong{
+  color:#08745e!important;-webkit-text-fill-color:#08745e!important;
+}
+html[data-theme="dark"] #politicas .ip-card .ip-tables>div>b{
+  background:#08775f!important;color:#fff!important;-webkit-text-fill-color:#fff!important;
+}
+html[data-theme="dark"] #politicas .ip-card.ip-golden .ip-tables>div:first-child>b{background:#a66a04!important}
+html[data-theme="dark"] #politicas .ip-card.ip-golden .ip-tables>div:last-child>b{background:#087fbd!important}
+html[data-theme="dark"] #politicas .ip-card .ip-tables p,
+html[data-theme="dark"] #politicas .ip-card .ip-wide p{
+  background:#fff!important;color:#294d60!important;-webkit-text-fill-color:#294d60!important;
+}
+html[data-theme="dark"] #politicas .ip-card :is(.ip-tables p.max,.ip-wide p.max){
+  background:#e2f5ec!important;
+}
+html[data-theme="dark"] #politicas .ip-card .ip-danger{
+  background:#fff0f1!important;border-color:#ecb5bc!important;
+}
+html[data-theme="dark"] #politicas .ip-card .ip-danger :is(h4,b){
+  color:#a61e32!important;-webkit-text-fill-color:#a61e32!important;
+}
+html[data-theme="dark"] #politicas .ip-card .ip-warning,
+html[data-theme="dark"] #politicas .ip-card .ip-gold{
+  background:#fff6df!important;border-color:#e7c879!important;
+}
+html[data-theme="dark"] #politicas .ip-card .ip-warning h4{
+  color:#855600!important;-webkit-text-fill-color:#855600!important;
+}
+html[data-theme="dark"] #politicas .ip-card :is(.ip-blue,.ip-vision,.ip-pay){
+  background:#edf6fa!important;border-color:#bdd6e3!important;
+}
+html[data-theme="dark"] #politicas .ip-card>header :is(h3,p,span,b,small),
+html[data-theme="dark"] #politicas .infopolicy-titlebar :is(h2,p,span,b,strong,small){
+  color:#fff!important;-webkit-text-fill-color:#fff!important;opacity:1!important;
+}
+html[data-theme="dark"] #politicas .ip-card .ip-checks i{
+  background:#d7e6e9!important;
+}
+html[data-theme="dark"] #politicas .ip-card .ip-checks i u{
+  background:#0a9b79!important;
+}
