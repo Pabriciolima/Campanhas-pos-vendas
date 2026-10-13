@@ -841,24 +841,24 @@ function instalarInterface() {
       pcCanal = null;
     }
 
-    if (status) {
-      if (
-        !status.textContent ||
-        status.textContent.includes(
-          "Reconectando"
-        )
-      ) {
-        status.textContent =
-          "Não foi possível entrar agora. Clique em Entrar no sistema para tentar novamente.";
-      }
+    /*
+     * Presença colaborativa é opcional: indisponibilidade do Realtime
+     * não pode impedir o acesso aos módulos nem aos lançamentos.
+     * O perfil já foi salvo; permite entrada sem presença online.
+     */
+    console.warn(
+      "[PRESENÇA] Realtime indisponível; acesso ao sistema liberado sem presença online."
+    );
+    document.querySelector("#pcCadastro")?.classList.remove("aberto");
 
-      status.classList.add("erro");
+    if (status) {
+      status.textContent = "";
+      status.classList.remove("erro");
     }
 
     if (botaoEntrar) {
       botaoEntrar.disabled = false;
-      botaoEntrar.textContent =
-        "Tentar novamente";
+      botaoEntrar.textContent = "Entrar no sistema";
     }
   });
 
