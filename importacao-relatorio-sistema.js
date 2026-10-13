@@ -4771,6 +4771,19 @@ function garantirCss() {
         line-height:1.45
       }
 
+      .irs-daily-guide{color:#15394a;font-size:13px}
+      .irs-guide-head{display:flex;justify-content:space-between;align-items:center;gap:12px;color:#086f61;font-size:11px;font-weight:900;letter-spacing:.07em}
+      .irs-guide-head strong{background:#d7f7e9;border-radius:99px;padding:5px 10px;color:#05654c}
+      .irs-guide-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:12px 0}
+      .irs-guide-steps>div{padding:12px;border:1px solid #d2e7e3;border-radius:11px;background:#fff}
+      .irs-guide-steps b,.irs-guide-steps small{display:block}
+      .irs-guide-steps b{color:#073d46;font-size:12px}
+      .irs-guide-steps small{margin-top:5px;color:#476273;line-height:1.5}
+      .irs-daily-guide p{color:#176653;font-size:12px;margin:10px 0}
+      .irs-daily-guide details{font-size:12px;color:#3a586a}
+      .irs-daily-guide summary{cursor:pointer;font-weight:700}
+      @media(max-width:800px){.irs-guide-steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      @media(max-width:480px){.irs-guide-steps{grid-template-columns:1fr}}
       .irs-reconciliacao{
         margin-top:12px;
         padding:12px;
@@ -5400,27 +5413,19 @@ function renderizar() {
   $("#irsRule").innerHTML =
     state.tipo === "pix"
       ? `
-        <strong>Regras:</strong>
-        Consultor: meta individual = Vlr. Acumulado,
-        realizado = Vlr. Total e indicador = Ticket Médio.
-        Se Vlr. Acumulado estiver zerado, o colaborador fica
-        não habilitado por ausência de meta.
-        Supervisor e Orçamentista:
-        meta = Objetivo M.O. + Objetivo Peças;
-        realizado = Vlr. M.O. + Vlr. Peças;
-        ticket = Vlr. Total ÷ Qtd. Total.
-        A política atual define os valores diferentes de premiação.
-        O nome do vendedor é localizado na base do Pix e o lançamento
-        recebe automaticamente a filial, o DN e o cargo cadastrados.
-        Ao importar novamente a mesma competência e semana, o lançamento
-        existente é atualizado. Arquivos XLS antigos com valores reduzidos
-        são corrigidos automaticamente para os valores monetários completos.
+        <div class="irs-daily-guide">
+          <div class="irs-guide-head"><span>📅 IMPORTAÇÃO DIÁRIA</span><strong>PIX DO PRESIDENTE</strong></div>
+          <div class="irs-guide-steps">
+            <div><b>01 · Competência e semana</b><small>Escolha o mês e o ciclo de apuração.</small></div>
+            <div><b>02 · Arquivo Excel</b><small>Use o modelo com Meta semanal e colunas de realizado por data.</small></div>
+            <div><b>03 · Dias avaliados</b><small>Preencha somente os dias do ciclo. Célula vazia não entra na divisão; zero entra.</small></div>
+            <div><b>04 · Conferência</b><small>Revise os lançamentos antes de confirmar a importação.</small></div>
+          </div>
+          <p>✓ Meta diária redistribuída automaticamente entre os dias avaliados. ✓ Excedente acumulado conforme a regra de gordura. ✓ Ticket, NPS e margem permanecem por colaborador.</p>
+          <details><summary>Importando um relatório antigo?</summary>O formato legado com Vlr. Acumulado, Vlr. Total e Objetivos M.O./Peças continua disponível para compatibilidade, mas não informa o realizado de cada dia.</details>
+        </div>
       `
-      : `
-        <strong>Produtivos:</strong>
-        importe faturamento e horas.
-        Produtividade e eficiência serão calculadas automaticamente.
-      `;
+      : `<strong>Campanha da Oficina:</strong> importe faturamento e horas. Produtividade e eficiência serão calculadas automaticamente.`;
 
   const caixaReconciliacao =
     $("#irsReconciliacao");
@@ -5599,7 +5604,7 @@ function abrir(tipo) {
 
     $("#irsDescription").textContent =
       tipo === "pix"
-        ? "O relatório deve conter Vlr. Acumulado, Vlr. Total, Ticket Médio, Objetivo M.O., Vlr. M.O., Objetivo Peças e Vlr. Peças."
+        ? "Novo modelo diário: informe Meta semanal e os valores nas colunas 01/10 realizado, 02/10 realizado etc. Célula vazia = dia fora do ciclo; zero = dia avaliado."
         : "Arquivo com faturamento e horas dos produtivos.";
 
     renderizar();
