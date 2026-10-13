@@ -4456,30 +4456,59 @@ function baixarModelo(tipo) {
     const datas = Array.from({length:ultimo},(_,i)=>i+1)
       .filter(dia=>new Date(ano,mes-1,dia).getDay()!==0)
       .map(dia=>competencia+"-"+String(dia).padStart(2,"0"));
-    const fixas = ["Vendedor","Cargo","Filial","DN","Meta semanal","Realizado semanal",
+    // A primeira linha continua sendo o cabeçalho oficial para compatibilidade com o importador.
+    const fixas = ["Vendedor","Cargo","Filial","DN","Meta semanal",
       "Ticket médio","Margem realizada (%)","Meta de NPS","NPS realizado","O.S. em aberto (%)"];
     const cabecalhos = [...fixas,...datas.map(data=>"Realizado "+data)];
-    const exemplo = ["EXEMPLO - REMOVER","Consultor Técnico","ANANINDEUA","4700",
-      75000,"",8100,"",90,95,"",...datas.map(()=>null)];
-    const planilha = XLSX.utils.aoa_to_sheet([cabecalhos,exemplo]);
-    planilha["!cols"] = cabecalhos.map((nome,i)=>({wch:i===0?32:i>=fixas.length?20:23}));
-    planilha["!freeze"]={xSplit:4,ySplit:1};
-    const instrucoes = XLSX.utils.aoa_to_sheet([
-      ["MODELO PIX — APURAÇÃO DIÁRIA"],
-      ["Competência",competencia],
-      ["Preencha Meta semanal uma vez por colaborador."],
-      ["Informe o faturamento realizado em cada coluna de data correspondente."],
-      ["Deixe vazias as datas que não pertencem ao ciclo; use 0 para dia avaliado sem faturamento."],
-      ["O sistema divide a meta semanal automaticamente entre os dias preenchidos."],
-      ["O excedente de um dia segue como gordura para o dia seguinte."],
-      ["Não distribua o realizado semanal manualmente; a soma é calculada das colunas diárias."],
-      ["Domingos não são disponibilizados."],
-      ["Remova a linha EXEMPLO antes de importar dados reais."]
+    const planilha = XLSX.utils.aoa_to_sheet([cabecalhos]);
+    planilha["!cols"] = cabecalhos.map((nome,i)=>({
+      wch: i===0?34 : i===1?28 : i===2?22 : i===3?12 :
+        i===4?20 : i>=fixas.length?17 : 19
+    }));
+    planilha["!rows"] = [{hpt:36}];
+    planilha["!autofilter"]={ref:"A1:"+XLSX.utils.encode_col(cabecalhos.length-1)+"1"};
+    // Formatos numéricos: facilitam o preenchimento sem alterar os dados lidos.
+    for(let linha=2;linha<=301;linha++){
+      [4,5].forEach(col=>{
+        const endereco=XLSX.utils.encode_cell({r:linha-1,c:col});
+        planilha[endereco]={t:"n",z:'"R$" #,##0.00'};
+        delete planilha[endereco].v;
+      });
+      for(let col=fixas.length;col<cabecalhos.length;col++){
+        const endereco=XLSX.utils.encode_cell({r:linha-1,c:col});
+        planilha[endereco]={t:"n",z:'"R$" #,##0.00'};
+      }
+    }
+    planilha["!ref"]="A1:"+XLSX.utils.encode_col(cabecalhos.length-1)+"301";
+    const instrucoes=XLSX.utils.aoa_to_sheet([
+      ["PIX DO PRESIDENTE | GUIA RÁPIDO"],
+      ["COMPETÊNCIA",competencia],
+      [],
+      ["1","QUEM?","Informe nome, cargo, filial e DN nas primeiras colunas."],
+      ["2","META","Preencha a Meta semanal (R$) uma vez por colaborador."],
+      ["3","DIAS","Role para a direita: cada coluna 'Realizado AAAA-MM-DD' é um dia do mês."],
+      ["4","VALORES","Digite o faturamento de cada dia na coluna da data correspondente."],
+      ["5","DIAS FORA DO CICLO","Deixe a célula VAZIA. Digite 0 somente para dia avaliado sem vendas."],
+      ["6","RESULTADO","A meta diária, a gordura e a bonificação são calculadas no sistema."],
+      [],
+      ["EXEMPLO PRÁTICO"],
+      ["Meta semanal",75000],
+      ["Dia 01",10000],
+      ["Dia 02",8000],
+      ["Dia 03",12000],
+      ["Observação","Os valores acima são exemplos: não estão na aba de importação."],
+      [],
+      ["IMPORTANTE","Não renomeie os cabeçalhos da aba LANÇAMENTOS."],
+      ["IMPORTANTE","Domingos não aparecem nas colunas."],
+      ["IMPORTANTE","Não é necessário preencher todos os dias do mês."],
+      ["IMPORTANTE","Use uma linha por colaborador e ciclo; não misture ciclos na mesma linha."]
     ]);
+    instrucoes["!cols"]=[{wch:22},{wch:30},{wch:78}];
+    instrucoes["!rows"]=[{hpt:34}];
     const livro=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(livro,planilha,"PIX");
-    XLSX.utils.book_append_sheet(livro,instrucoes,"INSTRUCOES");
-    XLSX.writeFile(livro,"MODELO-PIX-DIARIO-"+competencia+".xlsx");
+    XLSX.utils.book_append_sheet(livro,planilha,"LANÇAMENTOS");
+    XLSX.utils.book_append_sheet(livro,instrucoes,"COMO PREENCHER");
+    XLSX.writeFile(livro,"PIX-PREENCHIMENTO-FACIL-"+competencia+".xlsx");
     return;
   }
 
