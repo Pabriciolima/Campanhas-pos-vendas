@@ -929,12 +929,15 @@ function irsColunasDiariasPix() {
 }
 function irsDiasLinhaPix(linha, colunas) {
   const diasCalendario = {};
-  const datasAvaliadas = colunas.map(coluna=>coluna.data);
+  const datasAvaliadas = [];
   colunas.forEach(({data,indice})=>{
     const bruto=valorLinha(linha,indice);
+    // Célula vazia = dia não selecionado. Zero explícito = dia avaliado.
+    if (texto(bruto)==="") return;
     const valor=numero(bruto);
-    if (texto(bruto)!=="" && (!Number.isFinite(valor) || valor<0))
+    if (!Number.isFinite(valor) || valor<0)
       throw new Error("Valor diário inválido na coluna "+data+".");
+    datasAvaliadas.push(data);
     diasCalendario[data]={realizado:valor};
   });
   return {datasAvaliadas,diasCalendario,
@@ -4442,43 +4445,42 @@ function baixarModelo(tipo) {
    * neste JavaScript. Portanto, não depende de existir um arquivo
    * separado na pasta do projeto e não gera erro 404.
    */
-  if (
-    tipo ===
-    "pix"
-  ) {
-    try {
-      const arquivo =
-        base64ParaBlob(
-          MODELO_PIX_DROPDOWNS_BASE64,
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        );
-
-      baixarBlob(
-        arquivo,
-        "MODELO-IMPORTACAO-PIX-COMPATIVEL.xlsx"
-      );
-
-      return;
-    } catch (erro) {
-      console.error(
-        "Erro ao gerar o modelo do Pix:",
-        erro
-      );
-
-      void alerta(
-        "Não foi possível gerar o modelo de importação do Pix.",
-        {
-          tipo:
-            "error",
-          titulo:
-            "Falha ao baixar modelo",
-          rotulo:
-            "Erro"
-        }
-      );
-
+  if (tipo === "pix") {
+    if (!window.XLSX) {
+      void alerta("A biblioteca XLSX não foi carregada.");
       return;
     }
+    const competencia = state.competencia || new Date().toISOString().slice(0,7);
+    const [ano,mes] = competencia.split("-").map(Number);
+    const ultimo = new Date(ano,mes,0).getDate();
+    const datas = Array.from({length:ultimo},(_,i)=>i+1)
+      .filter(dia=>new Date(ano,mes-1,dia).getDay()!==0)
+      .map(dia=>competencia+"-"+String(dia).padStart(2,"0"));
+    const fixas = ["Vendedor","Cargo","Filial","DN","Meta semanal","Realizado semanal",
+      "Ticket médio","Margem realizada (%)","Meta de NPS","NPS realizado","O.S. em aberto (%)"];
+    const cabecalhos = [...fixas,...datas.map(data=>"Realizado "+data)];
+    const exemplo = ["EXEMPLO - REMOVER","Consultor Técnico","ANANINDEUA","4700",
+      75000,"",8100,"",90,95,"",...datas.map(()=>null)];
+    const planilha = XLSX.utils.aoa_to_sheet([cabecalhos,exemplo]);
+    planilha["!cols"] = cabecalhos.map((nome,i)=>({wch:i===0?32:i>=fixas.length?20:23}));
+    planilha["!freeze"]={xSplit:4,ySplit:1};
+    const instrucoes = XLSX.utils.aoa_to_sheet([
+      ["MODELO PIX — APURAÇÃO DIÁRIA"],
+      ["Competência",competencia],
+      ["Preencha Meta semanal uma vez por colaborador."],
+      ["Informe o faturamento realizado em cada coluna de data correspondente."],
+      ["Deixe vazias as datas que não pertencem ao ciclo; use 0 para dia avaliado sem faturamento."],
+      ["O sistema divide a meta semanal automaticamente entre os dias preenchidos."],
+      ["O excedente de um dia segue como gordura para o dia seguinte."],
+      ["Não distribua o realizado semanal manualmente; a soma é calculada das colunas diárias."],
+      ["Domingos não são disponibilizados."],
+      ["Remova a linha EXEMPLO antes de importar dados reais."]
+    ]);
+    const livro=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(livro,planilha,"PIX");
+    XLSX.utils.book_append_sheet(livro,instrucoes,"INSTRUCOES");
+    XLSX.writeFile(livro,"MODELO-PIX-DIARIO-"+competencia+".xlsx");
+    return;
   }
 
   /*
