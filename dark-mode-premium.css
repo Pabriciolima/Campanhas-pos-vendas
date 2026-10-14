@@ -1237,3 +1237,26 @@ html[data-theme="dark"] .pix-day-card .pix-realizado-dia:focus {
   outline: 2px solid rgba(7,155,131,.24) !important;
   outline-offset: 1px;
 }
+
+/* PIX v2026.10.14: input em cartão claro no tema escuro.
+ * Especificidade superior aos estilos genéricos de modal e inputs. */
+html[data-theme="dark"] body #modalPixPresidente .pix-day-card.is-miss input.pix-realizado-dia,
+html[data-theme="dark"] body #modalPixPresidente .pix-day-card input.pix-realizado-dia,
+html[data-theme="dark"] body .pix-day-card.is-miss input.pix-realizado-dia,
+html[data-theme="dark"] body .pix-day-card input.pix-realizado-dia {
+  background-color: #ffffff !important;
+  background-image: none !important;
+  color: #172b3c !important;
+  -webkit-text-fill-color: #172b3c !important;
+  caret-color: #172b3c !important;
+  color-scheme: light !important;
+  opacity: 1 !important;
+  border-color: #b6c7d1 !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+html[data-theme="dark"] body .pix-day-card input.pix-realizado-dia::placeholder {
+  color: #536a7b !important;
+  -webkit-text-fill-color: #536a7b !important;
+  opacity: 1 !important;
+}
