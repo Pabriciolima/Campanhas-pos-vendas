@@ -1213,3 +1213,27 @@ html[data-theme="dark"] #politicas .ip-card .ip-checks i{
 html[data-theme="dark"] #politicas .ip-card .ip-checks i u{
   background:#0a9b79!important;
 }
+
+/* PIX — contraste dos valores lançados em cartões diários (modo escuro).
+   Cartões usam fundo claro mesmo quando a aplicação está em tema escuro. */
+html[data-theme="dark"] .pix-day-card .pix-realizado-dia,
+html[data-theme="dark"] .pix-day-card.is-miss .pix-realizado-dia,
+html[data-theme="dark"] .pix-day-card.has-fat .pix-realizado-dia {
+  background: #ffffff !important;
+  color: #102638 !important;
+  -webkit-text-fill-color: #102638 !important;
+  caret-color: #102638 !important;
+  border: 1px solid #b8cbd3 !important;
+  opacity: 1 !important;
+  font-weight: 700 !important;
+}
+html[data-theme="dark"] .pix-day-card .pix-realizado-dia::placeholder {
+  color: #667b89 !important;
+  -webkit-text-fill-color: #667b89 !important;
+  opacity: 1 !important;
+}
+html[data-theme="dark"] .pix-day-card .pix-realizado-dia:focus {
+  border-color: #079b83 !important;
+  outline: 2px solid rgba(7,155,131,.24) !important;
+  outline-offset: 1px;
+}
