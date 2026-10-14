@@ -1252,8 +1252,11 @@ html[data-theme="dark"] body .pix-day-card input.pix-realizado-dia {
   color-scheme: light !important;
   opacity: 1 !important;
   border-color: #b6c7d1 !important;
-  font-size: 12px !important;
-  font-weight: 800 !important;
+  font-size: clamp(8px, 0.67vw, 10px) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+  padding-inline: 5px !important;
+  text-overflow: clip;
 }
 html[data-theme="dark"] body .pix-day-card input.pix-realizado-dia::placeholder {
   color: #536a7b !important;
