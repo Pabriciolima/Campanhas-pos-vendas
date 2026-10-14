@@ -1672,9 +1672,45 @@ function calcularPix(lancamento) {
             : 0
         );
 
+  /*
+   * Justificativa da regra diária (outubro/2026+).
+   * O percentual semanal é informativo: a base depende dos dias
+   * atingidos, e ticket/margem/NPS possuem critérios próprios.
+   * A regra legada permanece inalterada.
+   */
+  const diasAvaliadosPix = regraDiaria
+    ? (apuracaoDiaria?.dias || []).filter(dia => dia.informado)
+    : [];
+  const diasPremiadosPix = diasAvaliadosPix.filter(dia => dia.atingiu).length;
+  const diasPendentesPix = regraDiaria
+    ? Math.max(0, (apuracaoDiaria?.quantidadeDias || 0) - diasAvaliadosPix.length)
+    : 0;
+  const justificativaDiariaPix = () => {
+    if (semMeta) return lancamento.motivoNaoHabilitado || "Meta semanal não cadastrada; não é possível calcular as metas diárias.";
+    if (!apuracaoDiaria?.quantidadeDias) return "Nenhum dia selecionado para avaliação. Selecione os dias e informe o realizado.";
+    if (!diasAvaliadosPix.length) return "Aguardando lançamento do realizado nos dias selecionados.";
+    const partes = [];
+    if (diasPremiadosPix === 0) {
+      partes.push("Nenhum dia avaliado atingiu a meta diária ajustada; bonificação-base não conquistada");
+    } else {
+      partes.push(`${diasPremiadosPix} de ${diasAvaliadosPix.length} dia(s) avaliado(s) atingiram a meta ajustada; bonificação-base proporcional`);
+    }
+    if (diasPendentesPix > 0) partes.push(`${diasPendentesPix} dia(s) ainda sem lançamento`);
+    if (apuracaoDiaria.deficitFinal > 0) partes.push(`déficit acumulado: ${pixMoeda(apuracaoDiaria.deficitFinal)}`);
+    if (bonusFaixa > 0) partes.push(`bônus de ${politica.metrica === "margem" ? "margem" : "ticket médio"} conquistado`);
+    if (bonusNps > 0) partes.push("bônus de NPS conquistado");
+    if (bonusFinal <= 0 && diasPremiadosPix > 0 && aplicaPenalidade) partes.push("bonificação impactada pela penalidade de O.S.");
+    if (bonusFinal > 0) partes.push("colaborador habilitado com bonificação calculada pelos indicadores alcançados");
+    else if (diasPremiadosPix === 0 && bonusFaixa === 0 && bonusNps === 0) partes.push("nenhum componente de bonificação conquistado até o momento");
+    return partes.join(". ") + ".";
+  };
+
   let observacao = "";
 
-  if (!dadosCriticosCompletos) {
+  if (regraDiaria) {
+    observacao = justificativaDiariaPix();
+    if (!dadosCriticosCompletos) observacao += ` Dados pendentes: ${dadosCriticosPendentes.join(" • ")}.`;
+  } else if (!dadosCriticosCompletos) {
     observacao =
       `INFORMAÇÃO PENDENTE: ${dadosCriticosPendentes.join(
         " • "
