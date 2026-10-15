@@ -77,3 +77,13 @@
 .pix-piggy-mini-week.is-ok{background:#0a695a;border-color:#2ed4ac;color:white}
 .pix-piggy-mini-week.is-fail{background:#632d3a;border-color:#b54b60;color:#fff}
 @media(max-width:460px){.pix-piggy-mini{padding:12px;gap:9px;flex-wrap:wrap}.pix-piggy-mini-main{flex:1 1 190px}.pix-piggy-mini-weeks{margin-left:54px}.pix-piggy-mini-info strong{font-size:18px}}
+
+/* Resumo de saldo transportado entre semanas */
+.pix-carry-summary{display:flex;flex-direction:column;justify-content:center;gap:4px;min-width:0;padding:11px 14px;border:1px solid #34536e;border-radius:11px;background:#122337;color:#eaf5ff}
+.pix-carry-summary[hidden]{display:none!important}
+.pix-carry-summary>span{font-size:11px;color:#a7c7de;font-weight:600}
+.pix-carry-summary>strong{font-size:15px;color:#d3e5f2;overflow-wrap:anywhere}
+.pix-carry-summary>strong.is-credit{color:#4be2b5}
+.pix-carry-summary>strong.is-deficit{color:#ff9c9c}
+.pix-carry-summary>small{font-size:11px;color:#c1d7e7}
+.pix-calendar-day.is-occupied{opacity:.45!important;cursor:not-allowed!important;background:#d9e0e6!important;border-color:#b5c2cd!important;color:#586879!important;text-decoration:line-through}
