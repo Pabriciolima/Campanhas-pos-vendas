@@ -3218,7 +3218,7 @@ function renderPoliticasPix() {
           base: 1100,
           metrica: "ticket",
           nps: true,
-          nota: "Pagamento diário conforme atingimento."
+          nota: "Pagamento semanal condicionado ao resultado acumulado."
         },
         {
           classe: "pecas",
@@ -3284,14 +3284,21 @@ function renderPoliticasPix() {
             <section class="pix-policy-base">
               <small>BÔNUS-BASE SEMANAL</small>
               <strong>${pixMoeda(grupo.base)}</strong>
-              <span>Exemplo em 5 dias: <b>${pixMoeda(valorDiaExemplo)}/dia</b></span>
+              <span>Referência de meta em 5 dias: <b>meta semanal ÷ 5</b></span>
+              ${novaRegra ? `<div class="pix-policy-payout">
+                <div><b class="pix-rule-ok">100%</b><span>Meta semanal + todos os dias atingidos</span><strong>${pixMoeda(grupo.base)}</strong></div>
+                <div><b class="pix-rule-half">50%</b><span>Meta semanal atingida, mas algum dia não</span><strong>${pixMoeda(grupo.base / 2)}</strong></div>
+                <div><b class="pix-rule-zero">0%</b><span>Meta semanal não atingida, mesmo com dias cumpridos</span><strong>R$ 0,00</strong></div>
+              </div>` : ""}
             </section>
             <section class="pix-policy-rule">
               <h4>☑ META DIÁRIA</h4>
-              <p>Só recebe o valor do dia quando atingir a meta diária. O bônus-base é a soma dos dias atingidos.</p>
+              <p>${novaRegra ? "A meta semanal é obrigatória. Cumprir todos os dias garante 100% da base; cumprir a semana no acumulado, mas falhar em algum dia, garante 50%. Abaixo da meta semanal, a base é R$ 0,00." : "Apuração conforme as regras históricas da competência selecionada."}</p>
+              ${novaRegra ? `<p class="pix-policy-explain"><b>Exemplo:</b> meta de R$ 50.000 em 5 dias = R$ 10.000/dia. Se o total for R$ 52.000, mas um dia não atingir sua meta ajustada, recebe 50% da base. Se fechar R$ 49.000, recebe R$ 0,00 de base.</p>` : ""}
             </section>
             <section class="pix-policy-band">
               <h4>📊 ${grupo.metrica === "margem" ? "MARGEM" : "TICKET MÉDIO"} <small>(por faixa)</small></h4>
+              ${novaRegra ? '<p class="pix-policy-explain"><b>Gatilho obrigatório:</b> o bônus desta faixa só é pago se a meta semanal acumulada for atingida.</p>' : ""}
               <table><thead><tr><th>Meta</th><th>Bônus</th></tr></thead><tbody>
                 ${faixas.map(faixa => `<tr><td>${grupo.metrica === "margem" ? pixPct(faixa.minimo) : pixMoeda(faixa.minimo)}</td><td>${pixMoeda(faixa.bonus)}</td></tr>`).join("")}
               </tbody></table>
@@ -3313,11 +3320,14 @@ function renderPoliticasPix() {
       <h3>📋 REGRAS GERAIS — PIX DO PRESIDENTE</h3>
       <div>
         <span>✓ Metas diárias pelos dias reais selecionados.</span>
-        <span>✓ Bônus-base semanal = soma dos dias atingidos.</span>
-        <span>✓ Ticket médio e margem conforme faixas.</span>
+        <span>✓ Meta semanal obrigatória para bônus-base e ticket/margem: abaixo de 100% do acumulado, ambos são R$ 0,00.</span>
+        <span>✓ Base: 100% com todos os dias atingidos; 50% com meta semanal atingida e algum dia não cumprido.</span>
+        <span>✓ Gordura reduz a exigência dos dias seguintes; déficit aumenta. O saldo também segue para a semana seguinte.</span>
+        <span>✓ Datas já utilizadas nas semanas anteriores ficam indisponíveis nas seguintes, por colaborador e competência.</span>
+        <span>✓ Ticket médio e margem seguem suas faixas, desde que a meta semanal acumulada seja atingida.</span>
         <span>✓ Cofrinho NPS: R$ 250 por semana atingida, pago somente na semana 4 se a meta da semana 4 for alcançada.</span>
         <span>✓ Domingos bloqueados no calendário de apuração.</span>
-        <span>✓ Pagamento e total atualizados progressivamente.</span>
+        <span>✓ NPS é independente da meta de faturamento: fica reservado no cofrinho e só é liberado se a semana 4 atingir o NPS.</span>
       </div>
     </section>
     <section class="pix-policy-flow">
