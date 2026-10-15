@@ -14,7 +14,13 @@
         el.removeAttribute("height");
       }
     });
-    if (copia.id === "politicas" || origem.id === "politicas") {\n      copia.querySelectorAll(".infopolicy-grid > article").forEach((artigo, indice) => {\n        artigo.classList.add("print-policy-page");\n        artigo.dataset.printRole = ["Mecânico Produtivo", "Chefe e Líder", "Controlador de Produtividade"][indice] || "Política";\n      });\n    }\n    return copia.innerHTML;
+    if (origem.id === "politicas") {
+      copia.querySelectorAll(".infopolicy-grid > article").forEach((artigo, indice) => {
+        artigo.classList.add("print-policy-page");
+        artigo.dataset.printRole = ["Mecânico Produtivo", "Chefe e Líder", "Controlador de Produtividade"][indice] || "Política";
+      });
+    }
+    return copia.innerHTML;
   }
 
   function imprimirPolitica(tipo) {
@@ -48,11 +54,27 @@
       ul,ol { padding-left: 22px; margin: 8px 0 13px; }
       li { margin: 4px 0; }
       main article { border: 1px solid #d9e6e5; border-radius: 7px; padding: 13px 15px; margin: 0 0 15px; break-inside: auto; page-break-inside: auto; }
-      main article article { border: 0; padding: 0; break-inside: auto; page-break-inside: auto; }\n      main .print-policy-page { display:block; width:100%; border:0; padding:0; margin:0; break-inside:auto; page-break-inside:auto; break-before:page; page-break-before:always; }\n      main .print-policy-page:first-of-type { break-before:auto; page-break-before:auto; }\n      main .print-policy-page > header { border:0; border-bottom:2px solid #087e69; padding:0 0 8px; margin:0 0 12px; break-after:avoid; }\n      main .print-policy-page > header h3 { font-size:17pt; margin:4px 0; }\n      main .print-policy-page > div > section { padding:0; margin:0 0 12px; break-inside:avoid; page-break-inside:avoid; }\n      main .print-policy-page p { margin:4px 0 7px; }\n      main .print-policy-page h4 { margin:9px 0 5px; }\n      main .print-policy-page .ip-kpis, main .print-policy-page .ip-tables, main .print-policy-page .ip-leaders { display:flex; gap:10px; flex-wrap:wrap; }\n      main .print-policy-page .ip-kpis > div, main .print-policy-page .ip-tables > div, main .print-policy-page .ip-leaders > div { flex:1 1 160px; border:1px solid #d9e6e5; border-radius:5px; padding:8px; }\n      main .print-policy-page .ip-kpis span, main .print-policy-page .ip-kpis b, main .print-policy-page .ip-kpis small { display:block; }\n      main .print-policy-page .ip-tables p, main .print-policy-page .ip-wide p { display:flex; justify-content:space-between; gap:10px; border-bottom:1px solid #e6eeee; padding:4px 0; }\n      main .print-policy-page .ip-wide p > *, main .print-policy-page .ip-tables p > * { flex:1; }\n      main .print-policy-page .ip-tables p > *:last-child { text-align:right; }
+      main article article { border: 0; padding: 0; break-inside: auto; page-break-inside: auto; }
+      main .print-policy-page { display:block; width:100%; border:0; padding:0; margin:0; break-inside:auto; page-break-inside:auto; break-before:page; page-break-before:always; }
+      main .print-policy-page:first-of-type { break-before:auto; page-break-before:auto; }
+      main .print-policy-page > header { border:0; border-bottom:2px solid #087e69; padding:0 0 8px; margin:0 0 12px; break-after:avoid; }
+      main .print-policy-page > header h3 { font-size:17pt; margin:4px 0; }
+      main .print-policy-page > div > section { padding:0; margin:0 0 12px; break-inside:avoid; page-break-inside:avoid; }
+      main .print-policy-page p { margin:4px 0 7px; }
+      main .print-policy-page h4 { margin:9px 0 5px; }
+      main .print-policy-page .ip-kpis, main .print-policy-page .ip-tables, main .print-policy-page .ip-leaders { display:flex; gap:10px; flex-wrap:wrap; }
+      main .print-policy-page .ip-kpis > div, main .print-policy-page .ip-tables > div, main .print-policy-page .ip-leaders > div { flex:1 1 160px; border:1px solid #d9e6e5; border-radius:5px; padding:8px; }
+      main .print-policy-page .ip-kpis span, main .print-policy-page .ip-kpis b, main .print-policy-page .ip-kpis small { display:block; }
+      main .print-policy-page .ip-tables p, main .print-policy-page .ip-wide p { display:flex; justify-content:space-between; gap:10px; border-bottom:1px solid #e6eeee; padding:4px 0; }
+      main .print-policy-page .ip-wide p > *, main .print-policy-page .ip-tables p > * { flex:1; }
+      main .print-policy-page .ip-tables p > *:last-child { text-align:right; }
       table { width: 100%; border-collapse: collapse; margin: 10px 0 15px; font-size: 9pt; }
       th,td { border: 1px solid #d5e1e4; padding: 7px; text-align: left; vertical-align: top; }
       th { background: #edf6f4; }
-      tr { break-inside: avoid; page-break-inside: avoid; }\n      main > div, main > section, main > article, main div, main section { break-inside: auto; page-break-inside: auto; }\n      main h2, main h3, main h4 { break-after: avoid; page-break-after: avoid; }\n      main p, main li { orphans: 3; widows: 3; }
+      tr { break-inside: avoid; page-break-inside: avoid; }
+      main > div, main > section, main > article, main div, main section { break-inside: auto; page-break-inside: auto; }
+      main h2, main h3, main h4 { break-after: avoid; page-break-after: avoid; }
+      main p, main li { orphans: 3; widows: 3; }
       img { max-width: 100%; height: auto; }
       .screen-toolbar { padding: 10px 0 20px; }
       .screen-toolbar button { background: #087e69; color: white; border: 0; border-radius: 8px; padding: 11px 18px; font-weight: bold; cursor: pointer; }
