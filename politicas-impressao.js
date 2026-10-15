@@ -35,11 +35,11 @@
       *, *::before, *::after { box-sizing: border-box; }
       html { background: white; color: #203445; }
       body { font: 11pt/1.55 Arial, Helvetica, sans-serif; margin: 0; color: #203445; background: #fff; }
-      header { border-bottom: 2px solid #087e69; padding-bottom: 12px; margin-bottom: 20px; }
+      header { border-bottom: 2px solid #087e69; padding-bottom: 12px; margin-bottom: 12px; break-after: avoid; page-break-after: avoid; }
       header .brand { color: #087e69; font-size: 9pt; font-weight: 800; letter-spacing: .08em; }
       header h1 { margin: 5px 0 7px; font-size: 21pt; line-height: 1.2; color: #133d4b; }
       header p { font-size: 9pt; color: #536774; margin: 0; }
-      main, main > div, main > section, main > article { display: block; width: 100%; max-width: 100%; }
+      main, main > div, main > section, main > article { display: block; width: 100%; max-width: 100%; break-before: auto; page-break-before: auto; break-after: auto; page-break-after: auto; }
       main div, main section, main article { min-width: 0; max-width: 100%; overflow: visible; }
       h1,h2,h3,h4 { color: #08705d; line-height: 1.3; margin: 16px 0 8px; break-after: avoid; }
       h2 { font-size: 15pt; } h3 { font-size: 12pt; } h4 { font-size: 11pt; }
@@ -47,12 +47,12 @@
       p { margin: 7px 0 11px; }
       ul,ol { padding-left: 22px; margin: 8px 0 13px; }
       li { margin: 4px 0; }
-      main article { border: 1px solid #d9e6e5; border-radius: 7px; padding: 13px 15px; margin: 0 0 15px; break-inside: avoid-page; }
-      main article article { border: 0; padding: 0; }
+      main article { border: 1px solid #d9e6e5; border-radius: 7px; padding: 13px 15px; margin: 0 0 15px; break-inside: auto; page-break-inside: auto; }
+      main article article { border: 0; padding: 0; break-inside: auto; page-break-inside: auto; }
       table { width: 100%; border-collapse: collapse; margin: 10px 0 15px; font-size: 9pt; }
       th,td { border: 1px solid #d5e1e4; padding: 7px; text-align: left; vertical-align: top; }
       th { background: #edf6f4; }
-      tr { break-inside: avoid; }
+      tr { break-inside: avoid; page-break-inside: avoid; }\n      main > div, main > section, main > article, main div, main section { break-inside: auto; page-break-inside: auto; }\n      main h2, main h3, main h4 { break-after: avoid; page-break-after: avoid; }\n      main p, main li { orphans: 3; widows: 3; }
       img { max-width: 100%; height: auto; }
       .screen-toolbar { padding: 10px 0 20px; }
       .screen-toolbar button { background: #087e69; color: white; border: 0; border-radius: 8px; padding: 11px 18px; font-weight: bold; cursor: pointer; }
