@@ -60,3 +60,20 @@
 .pix-piggy-modal .pix-piggy-footer strong{font-size:16px}
 .pix-piggy-modal .pix-piggy-footer .pix-piggy-reward strong{font-size:20px}
 @media(max-width:650px){.pix-piggy-modal .pix-piggy-layout{grid-template-columns:1fr}.pix-piggy-modal .pix-piggy-art svg{max-height:120px}.pix-piggy-modal .pix-piggy-milestones{grid-template-columns:repeat(2,minmax(0,1fr))}.pix-piggy-modal .pix-piggy-footer{grid-template-columns:1fr 1fr}.pix-piggy-modal .pix-piggy-footer .pix-piggy-reward{grid-column:1/-1}}
+
+/* Cofrinho minimalista — ocupa uma única linha do formulário, sem interferir nos inputs. */
+#pixCofrinhoNps.pix-piggy-modal{grid-column:1/-1!important;display:block;width:100%;max-width:100%;margin:0 0 12px!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important;min-width:0;overflow:visible}
+#pixCofrinhoNps[hidden]{display:none!important}
+.pix-piggy-mini{display:flex;align-items:center;justify-content:space-between;gap:16px;min-width:0;padding:13px 16px;border:1px solid #294765;border-radius:12px;background:#0e2036;color:#f1f7ff}
+.pix-piggy-mini-main{display:flex;align-items:center;gap:12px;min-width:0}
+.pix-piggy-mini-icon{display:grid;place-items:center;flex:none;width:42px;height:42px;font-size:25px;background:#223752;border-radius:11px}
+.pix-piggy-mini-info{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pix-piggy-mini-label{font-size:12px;font-weight:700;color:#e7f4ff;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pix-piggy-mini-state{font-size:10px;font-weight:600;color:#77c8d9}
+.pix-piggy-mini-info strong{font-size:20px;line-height:1.25;color:#fff}
+.pix-piggy-mini-info small{font-size:10px;color:#a8c1d5;line-height:1.4}
+.pix-piggy-mini-weeks{display:flex;gap:6px;flex:none}
+.pix-piggy-mini-week{display:grid;place-items:center;width:29px;height:29px;border-radius:50%;border:1px solid #45617d;color:#b2c6d8;font-size:11px;font-weight:800;background:#142c45}
+.pix-piggy-mini-week.is-ok{background:#0a695a;border-color:#2ed4ac;color:white}
+.pix-piggy-mini-week.is-fail{background:#632d3a;border-color:#b54b60;color:#fff}
+@media(max-width:460px){.pix-piggy-mini{padding:12px;gap:9px;flex-wrap:wrap}.pix-piggy-mini-main{flex:1 1 190px}.pix-piggy-mini-weeks{margin-left:54px}.pix-piggy-mini-info strong{font-size:18px}}
