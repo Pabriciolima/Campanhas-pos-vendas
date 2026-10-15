@@ -1283,11 +1283,22 @@ function calcularBaseDiariaPix(lancamento, politica) {
   const diasAtingidos = avaliados.filter(dia => dia.atingiu).length;
   const ultimo = avaliados[avaliados.length - 1];
   const realizadoSemanal = dias.reduce((soma, dia) => soma + pixNumero(dia.realizado), 0);
+  const todosDiasInformados = quantidadeDias > 0 && avaliados.every(dia => dia.informado);
+  const todosDiasAtingidos = todosDiasInformados && diasAtingidos === quantidadeDias;
+  // A gordura/déficit transportada participa do resultado acumulado da semana.
+  const atingiuAcumulado = todosDiasInformados && metaSemanal > 0 &&
+    realizadoSemanal + saldoInicial >= metaSemanal - 0.000001;
+  const baseIntegral = pixNumero(politica?.bonusBase);
+  const bonusProporcional = Math.min(baseIntegral, diasAtingidos * valorDiario);
+  const bonusBase = todosDiasAtingidos ? baseIntegral
+    : atingiuAcumulado ? baseIntegral * 0.5
+    : bonusProporcional;
   return {
     dias: avaliados, quantidadeDias, metaDiaria, valorDiario, realizadoSemanal, saldoInicial,
-    diasAtingidos, gorduraFinal: ultimo?.gorduraAposDia || 0,
+    diasAtingidos, todosDiasInformados, todosDiasAtingidos, atingiuAcumulado,
+    gorduraFinal: ultimo?.gorduraAposDia || 0,
     deficitFinal: ultimo?.deficitAposDia || 0,
-    bonusBase: Math.min(pixNumero(politica?.bonusBase), diasAtingidos * valorDiario)
+    bonusBase: Math.round(bonusBase * 100) / 100
   };
 }
 
@@ -1625,7 +1636,8 @@ function calcularPix(lancamento) {
   /*
    * Na regra diária (Out/2026+), o bônus de Ticket/Margem é um KPI
    * independente do fechamento de 100% da meta semanal. A base continua
-   * sendo paga somente pelos dias cuja meta diária foi atingida.
+   * proporcional aos dias, exceto no fechamento semanal acumulado com dias falhos:
+   * nesse caso a base é limitada a 50%; 100% exige todos os dias atingidos.
    */
   const indicadorInformado =
     politica.metrica === "margem"
