@@ -3047,62 +3047,48 @@ function renderCofrinhoNpsPix() {
   const area = document.querySelector("#pixCofrinhoNps");
   if (!area) return;
   const competencia = normalizarCompetenciaPix(document.querySelector("#pixLancamentoCompetencia")?.value || pixMesAtual());
-  if (!usaRegraPixDiaria(competencia)) { area.hidden = true; return; }
-  const idSelecionado = document.querySelector("#pixLancamentoFuncionario")?.value;
-  const funcionarioAtual = pixFuncionarioPorId(idSelecionado);
-  if (!funcionarioAtual || !cargoUsaNpsPix(funcionarioAtual.cargo)) { area.hidden = true; return; }
-  const elegiveis = estadoPix.lancamentos.filter(item => normalizarCompetenciaPix(item.competencia) === competencia && String(item.funcionarioId) === String(idSelecionado)).map(calcularPix).filter(item => item.usaNps && item.funcionarioId);
-  const grupos = new Map();
-  grupos.set(String(idSelecionado), []);
-  elegiveis.forEach(item => {
-    const id = String(item.funcionarioId);
-    if (!grupos.has(id)) grupos.set(id, []);
-    grupos.get(id).push(item);
-  });
-  if (!grupos.size) { area.hidden = true; return; }
-  area.hidden = false;
-  const ids = [...grupos.keys()];
-  const selecionado = String(idSelecionado);
-  area.dataset.funcionario = selecionado;
-  const itens = grupos.get(selecionado);
-  const porSemana = new Map(itens.map(item => [Number(normalizarSemanaPix(item.semana)), item]));
-  // Preview do lançamento atual, ainda não persistido: substitui apenas a semana em edição.
+  const funcionarioId = document.querySelector("#pixLancamentoFuncionario")?.value;
+  const funcionario = pixFuncionarioPorId(funcionarioId);
+  if (!usaRegraPixDiaria(competencia) || !funcionario || !cargoUsaNpsPix(funcionario.cargo)) {
+    area.hidden = true;
+    return;
+  }
+  const porSemana = new Map();
+  estadoPix.lancamentos
+    .filter(item => normalizarCompetenciaPix(item.competencia) === competencia && String(item.funcionarioId) === String(funcionarioId))
+    .forEach(item => porSemana.set(Number(normalizarSemanaPix(item.semana)), calcularPix(item)));
+  // Exibe uma prévia do lançamento em edição sem alterar dados persistidos.
   try {
     const rascunho = coletarLancamentoPix();
-    if (String(rascunho.funcionarioId) === selecionado) {
+    if (String(rascunho.funcionarioId) === String(funcionarioId)) {
       porSemana.set(Number(rascunho.semana), calcularPix(rascunho));
     }
-  } catch (_) { /* Mantém o histórico salvo enquanto o formulário estiver incompleto. */ }
-  const semanas = [1,2,3,4].map(numero => {
+  } catch (_) { /* Os registros salvos continuam visíveis. */ }
+  const semanas = [1, 2, 3, 4].map(numero => {
     const item = porSemana.get(numero);
-    const informado = item && campoPixRealmenteInformado(item,"realizadoNps","realizadoNpsInformado");
-    return { numero, informado: !!informado, atingiu: !!(informado && item.atingiuNps) };
+    const informado = !!(item && campoPixRealmenteInformado(item, "realizadoNps", "realizadoNpsInformado"));
+    return { numero, informado, atingiu: informado && !!item.atingiuNps };
   });
-  const acumulado = semanas.filter(item => item.atingiu).length * 250;
   const quarta = semanas[3];
+  const acumulado = semanas.filter(item => item.atingiu).length * 250;
+  const guardado = quarta.informado ? 0 : semanas.slice(0, 3).filter(item => item.atingiu).length * 250;
   const liberado = quarta.atingiu ? acumulado : 0;
-  const guardado = quarta.informado ? 0 : semanas.slice(0,3).filter(item => item.atingiu).length * 250;
-  const progresso = Math.round(semanas.filter(item => item.atingiu).length / 4 * 100);
-  const status = quarta.atingiu ? "LIBERADO" : quarta.informado ? "NÃO LIBERADO" : "ACUMULANDO";
-  const cores = ["#ffc63d","#ffc63d","#ffc63d","#49d9ff"];
-  const svgPorco = `<svg viewBox="0 0 300 240" role="img" aria-label="Porquinho cofrinho com moedas" xmlns="http://www.w3.org/2000/svg">
-    <defs><linearGradient id="pixPigBody" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#ffd0e5"/><stop offset=".5" stop-color="#ff81b5"/><stop offset="1" stop-color="#d84991"/></linearGradient><linearGradient id="pixCoin" x1="0" x2="1"><stop stop-color="#ffe99b"/><stop offset=".55" stop-color="#ffbd21"/><stop offset="1" stop-color="#d57a00"/></linearGradient></defs>
-    <ellipse cx="150" cy="214" rx="105" ry="13" fill="#06d6ff" opacity=".23"/>
-    <path d="M72 95 L62 44 Q60 29 81 39 L113 65 M192 62 L220 33 Q237 23 235 49 L231 96" fill="url(#pixPigBody)" stroke="#ffb2d2" stroke-width="6"/>
-    <ellipse cx="148" cy="128" rx="104" ry="83" fill="url(#pixPigBody)" stroke="#ffd4e8" stroke-width="5"/>
-    <path d="M73 123 Q91 170 157 179" fill="none" stroke="#fff" stroke-width="13" opacity=".2"/>
-    <ellipse cx="205" cy="140" rx="35" ry="27" fill="#ffa9c8" stroke="#ffd4e8" stroke-width="4"/>
-    <ellipse cx="195" cy="140" rx="5" ry="8" fill="#c95485"/><ellipse cx="215" cy="140" rx="5" ry="8" fill="#c95485"/>
-    <circle cx="178" cy="111" r="7" fill="#30233d"/><circle cx="180" cy="108" r="2.5" fill="#fff"/>
-    <circle cx="105" cy="107" r="7" fill="#30233d"/><circle cx="107" cy="104" r="2.5" fill="#fff"/>
-    <ellipse cx="113" cy="181" rx="16" ry="24" fill="#e868a2"/><ellipse cx="193" cy="181" rx="16" ry="24" fill="#e868a2"/>
-    <rect x="123" y="47" width="50" height="7" rx="3" fill="#823c6c"/>
-    ${[0,1,2,3].slice(0,semanas.filter(x=>x.atingiu).length).map((_,i)=>`<g transform="translate(${117+i*17},${29-i*7})"><circle r="16" fill="url(#pixCoin)" stroke="#ffe7a0" stroke-width="3"/><text text-anchor="middle" y="6" font-size="18" font-weight="bold" fill="#925200">$</text></g>`).join("")}
-  </svg>`;
-  area.innerHTML = `<div class="pix-piggy-head"><div><span class="pix-piggy-eyebrow">🏆 SEU PROGRESSO NO NPS</span><h3>🐷 Cofrinho do NPS</h3><p>R$ 250 por semana atingida. Desbloqueio somente se a semana 4 atingir a meta.</p></div></div>
-  <div class="pix-piggy-layout"><div class="pix-piggy-art"><div class="pix-piggy-glow">${svgPorco}</div><div class="pix-piggy-progress"><div style="width:${progresso}%"></div></div><small>${semanas.filter(x=>x.atingiu).length} de 4 semanas com NPS atingido</small></div>
-  <div class="pix-piggy-milestones">${semanas.map((w,i)=>`<div class="pix-piggy-week ${w.atingiu?"is-ok":w.informado?"is-fail":"is-pending"}"><span>SEMANA 0${w.numero}</span><strong style="--coin:${cores[i]}">${w.atingiu?"★":w.informado?"×":"○"}</strong><b>${w.atingiu?"+ R$ 250,00":w.informado?"R$ 0,00":"Aguardando"}</b><small>${w.atingiu?"✓ NPS atingido":w.informado?"NPS não atingido":"Sem resultado"}</small></div>`).join("")}</div></div>
-  <div class="pix-piggy-footer"><div><small>SALDO GUARDADO</small><strong>${pixMoeda(guardado)}</strong></div><div><small>STATUS DO COFRINHO</small><strong>${status}</strong></div><div class="pix-piggy-reward"><small>LIBERADO NA SEMANA 4</small><strong>${pixMoeda(liberado)}</strong></div></div>`;
+  const status = quarta.atingiu ? "Liberado" : quarta.informado ? "Não liberado" : "Acumulando";
+  const quantidade = semanas.filter(item => item.atingiu).length;
+  area.hidden = false;
+  area.innerHTML = `<div class="pix-piggy-mini">
+    <div class="pix-piggy-mini-main">
+      <span class="pix-piggy-mini-icon" aria-hidden="true">🐷</span>
+      <div class="pix-piggy-mini-info">
+        <span class="pix-piggy-mini-label">Cofrinho NPS <span class="pix-piggy-mini-state">${status}</span></span>
+        <strong>${pixMoeda(quarta.atingiu ? liberado : guardado)}</strong>
+        <small>${quarta.atingiu ? "Liberado para bonificação" : quarta.informado ? "Semana 4 não atingida" : "Saldo reservado · liberação na semana 4"}</small>
+      </div>
+    </div>
+    <div class="pix-piggy-mini-weeks" aria-label="${quantidade} de 4 semanas com NPS atingido">
+      ${semanas.map(item => `<span class="pix-piggy-mini-week ${item.atingiu ? "is-ok" : item.informado ? "is-fail" : "is-pending"}" title="Semana ${item.numero}: ${item.atingiu ? "NPS atingido" : item.informado ? "NPS não atingido" : "Aguardando"}" aria-label="Semana ${item.numero}: ${item.atingiu ? "atingida" : item.informado ? "não atingida" : "pendente"}">${item.atingiu ? "✓" : item.numero}</span>`).join("")}
+    </div>
+  </div>`;
 }
 
 function renderApuracaoPix() {
