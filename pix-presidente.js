@@ -3927,6 +3927,7 @@ function renderCamposLancamentoPix(dados = {}) {
         required
       />
     </label>
+    <div id="pixSaldoAnterior" class="pix-carry-summary" hidden></div>
 
     ${
       usaRegraPixDiaria(competenciaLancamento)
@@ -4369,6 +4370,7 @@ function coletarDiasPixFormulario(preservar = false) {
 function atualizarPainelDiarioPix() {
   const competencia = $("#pixLancamentoCompetencia")?.value || "";
   if (!usaRegraPixDiaria(competencia)) return;
+  atualizarContextoSemanalPix();
   const meta = pixNumero($("#pixMetaSemanal")?.value);
   const selecionadas = pixDiasSelecionadosFormulario();
   const metaDia = selecionadas.length ? meta / selecionadas.length : 0;
@@ -4407,6 +4409,34 @@ function atualizarPainelDiarioPix() {
     : "Selecione os dias";
 }
 
+function atualizarContextoSemanalPix() {
+  const calendario = $("#pixCalendarioDias");
+  if (!calendario) return;
+  const competencia = $("#pixLancamentoCompetencia")?.value;
+  const funcionarioId = $("#pixLancamentoFuncionario")?.value;
+  const semana = Number($("#pixLancamentoSemana")?.value);
+  const id = $("#pixLancamentoId")?.value;
+  const contexto = pixContextoSemanasAnteriores({ competencia, funcionarioId, semana, id });
+  calendario.querySelectorAll(".pix-calendar-day[data-date]").forEach(botao => {
+    const ocupado = contexto.datasOcupadas.has(botao.dataset.date);
+    if (ocupado) botao.classList.remove("is-selected");
+    botao.disabled = botao.classList.contains("is-sunday") || ocupado;
+    botao.classList.toggle("is-occupied", ocupado);
+    if (ocupado) botao.title = "Dia já utilizado em uma semana anterior";
+    else botao.removeAttribute("title");
+  });
+  const resumo = $("#pixSaldoAnterior");
+  if (resumo) {
+    resumo.hidden = semana <= 1 || !funcionarioId;
+    const saldo = contexto.saldo;
+    const meta = pixNumero($("#pixMetaSemanal")?.value);
+    const ajuste = Math.max(0, meta - saldo);
+    resumo.innerHTML = '<span>Saldo anterior</span><strong class="' + (saldo < 0 ? 'is-deficit' : saldo > 0 ? 'is-credit' : '') + '">' +
+      (saldo < 0 ? 'Déficit +' : saldo > 0 ? 'Gordura +' : 'Sem saldo') + (saldo ? pixMoeda(Math.abs(saldo)) : '') +
+      '</strong><small>Meta ajustada: <b>' + pixMoeda(ajuste) + '</b></small>';
+  }
+}
+
 function iniciarCalendarioPix() {
   const calendario = $("#pixCalendarioDias");
   if (!calendario) return;
@@ -4423,6 +4453,7 @@ function iniciarCalendarioPix() {
       atualizarPreviewPix();
     });
   });
+  atualizarContextoSemanalPix();
   renderDiasSelecionadosPix();
   atualizarPainelDiarioPix();
 }
@@ -4596,6 +4627,16 @@ async function salvarLancamentoPix(evento) {
             Number(item.semana) &&
           lancamento.id !== item.id
       );
+
+    if (usaRegraPixDiaria(item.competencia)) {
+      const ocupadas = pixContextoSemanasAnteriores(item).datasOcupadas;
+      const repetidas = (item.datasAvaliadas || []).filter(data => ocupadas.has(data));
+      if (repetidas.length) {
+        pixAlert("Os dias " + repetidas.map(data => data.slice(8,10) + "/" + data.slice(5,7)).join(", ") +
+          " já pertencem a uma semana anterior deste colaborador. Selecione outras datas.");
+        return;
+      }
+    }
 
     if (duplicado) {
       pixAlert(
