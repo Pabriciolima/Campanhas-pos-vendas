@@ -1203,8 +1203,8 @@ function normalizarDiasPix(lancamento = {}) {
     }));
 }
 
-function pixAvaliarSaldoDias(dias, metaDia) {
-  let saldo = 0;
+function pixAvaliarSaldoDias(dias, metaDia, saldoInicial = 0) {
+  let saldo = saldoInicial;
   return dias.map(dia => {
     const realizado = pixNumero(dia.realizado);
     const informado = dia.informado !== false;
@@ -1218,18 +1218,40 @@ function pixAvaliarSaldoDias(dias, metaDia) {
   });
 }
 
+function pixContextoSemanasAnteriores(lancamento) {
+  const semana = Number(normalizarSemanaPix(lancamento.semana));
+  if (!usaRegraPixDiaria(lancamento.competencia) || semana < 1) return { saldo: 0, datasOcupadas: new Set() };
+  const registros = estadoPix.lancamentos
+    .filter(item => String(item.funcionarioId) === String(lancamento.funcionarioId)
+      && normalizarCompetenciaPix(item.competencia) === normalizarCompetenciaPix(lancamento.competencia)
+      && item.id !== lancamento.id && Number(normalizarSemanaPix(item.semana)) < semana)
+    .sort((a,b) => Number(normalizarSemanaPix(a.semana)) - Number(normalizarSemanaPix(b.semana)));
+  const datasOcupadas = new Set();
+  let saldo = 0;
+  registros.forEach(item => {
+    const dias = normalizarDiasPix(item).sort((a,b) => String(a.data).localeCompare(String(b.data)));
+    const metaDia = dias.length ? pixNumero(item.metaSemanal) / dias.length : 0;
+    dias.forEach(dia => {
+      if (dia.data) datasOcupadas.add(dia.data);
+      if (dia.informado) saldo = Math.round((saldo + pixNumero(dia.realizado) - metaDia) * 100) / 100;
+    });
+  });
+  return { saldo, datasOcupadas };
+}
+
 function calcularBaseDiariaPix(lancamento, politica) {
   const metaSemanal = pixNumero(lancamento.metaSemanal);
   const dias = normalizarDiasPix(lancamento);
   const quantidadeDias = dias.length;
   const metaDiaria = quantidadeDias > 0 ? metaSemanal / quantidadeDias : 0;
   const valorDiario = quantidadeDias > 0 ? pixNumero(politica?.bonusBase) / quantidadeDias : 0;
-  const avaliados = pixAvaliarSaldoDias(dias, metaDiaria);
+  const saldoInicial = pixContextoSemanasAnteriores(lancamento).saldo;
+  const avaliados = pixAvaliarSaldoDias(dias, metaDiaria, saldoInicial);
   const diasAtingidos = avaliados.filter(dia => dia.atingiu).length;
   const ultimo = avaliados[avaliados.length - 1];
   const realizadoSemanal = dias.reduce((soma, dia) => soma + pixNumero(dia.realizado), 0);
   return {
-    dias: avaliados, quantidadeDias, metaDiaria, valorDiario, realizadoSemanal,
+    dias: avaliados, quantidadeDias, metaDiaria, valorDiario, realizadoSemanal, saldoInicial,
     diasAtingidos, gorduraFinal: ultimo?.gorduraAposDia || 0,
     deficitFinal: ultimo?.deficitAposDia || 0,
     bonusBase: Math.min(pixNumero(politica?.bonusBase), diasAtingidos * valorDiario)
@@ -4356,10 +4378,11 @@ function atualizarPainelDiarioPix() {
   })();
   const valorDia = selecionadas.length ? pixNumero(politica?.bonusBase) / selecionadas.length : 0;
 
+  const saldoInicial = pixContextoSemanasAnteriores({ competencia, funcionarioId: $("#pixLancamentoFuncionario")?.value, semana: $("#pixLancamentoSemana")?.value, id: $("#pixLancamentoId")?.value }).saldo;
   const dias = pixAvaliarSaldoDias(selecionadas.map(data => {
     const input = document.querySelector(`.pix-realizado-dia[data-dia="${data}"]`);
     return { data, realizado: pixNumero(input?.value), informado: Boolean(input?.value?.trim()) };
-  }), metaDia);
+  }), metaDia, saldoInicial);
 
   dias.forEach(dia => {
     const metaEl = document.querySelector(`[data-meta-dia="${dia.data}"]`);
