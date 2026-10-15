@@ -29,3 +29,19 @@
 .pix-piggy-footer .pix-piggy-reward strong{color:#4ff5be;font-size:26px}
 @media(max-width:850px){.pix-piggy-layout{grid-template-columns:1fr}.pix-piggy-art svg{max-height:160px}.pix-piggy-milestones{grid-template-columns:repeat(2,minmax(0,1fr))}.pix-piggy-footer{grid-template-columns:1fr 1fr}.pix-piggy-footer .pix-piggy-reward{grid-column:1/-1}}
 @media(max-width:480px){.pix-piggy{padding:14px}.pix-piggy-head label,.pix-piggy-head select{width:100%;max-width:100%}.pix-piggy-head h3{font-size:21px}.pix-piggy-footer strong{font-size:15px}}
+
+/* Galeria de cofrinhos individuais */
+.pix-piggy-roster{margin-top:20px;border-top:1px solid #315478;padding-top:18px}
+.pix-piggy-roster h4{color:#fff;margin:0 0 4px;font-size:16px}
+.pix-piggy-roster>p{color:#b9d2e9;font-size:12px;margin:0 0 14px}
+.pix-piggy-roster-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;max-height:340px;overflow:auto}
+.pix-piggy-person{appearance:none;display:flex;align-items:center;text-align:left;gap:10px;background:#112f50;color:#fff;border:1px solid #376187;border-radius:12px;padding:11px;cursor:pointer;min-width:0;transition:border-color .2s,background .2s}
+.pix-piggy-person:hover,.pix-piggy-person.is-active{border-color:#4be9c3;background:#16445a}
+.pix-piggy-person:focus-visible{outline:3px solid #54d9ff;outline-offset:2px}
+.pix-piggy-person-icon{font-size:25px;flex:none}
+.pix-piggy-person-info{display:flex;flex-direction:column;min-width:0;flex:1;gap:3px}
+.pix-piggy-person-info b{font-size:12px;color:#fff;overflow-wrap:anywhere}
+.pix-piggy-person-info small{font-size:10px;color:#b4d2e7}
+.pix-piggy-person>strong{font-size:13px;color:#65f1c9;white-space:nowrap}
+.pix-piggy-note{color:#bbd4e8;font-size:12px;margin:10px 0 0}
+@media(max-width:480px){.pix-piggy-roster-grid{grid-template-columns:1fr}.pix-piggy-person{padding:12px}}
