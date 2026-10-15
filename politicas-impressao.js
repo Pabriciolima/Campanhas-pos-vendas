@@ -3,6 +3,18 @@
   function limparConteudo(origem) {
     const copia = origem.cloneNode(true);
     copia.querySelectorAll(".policy-print-toolbar,button,input,select,textarea,script,style,svg,canvas,iframe").forEach(el => el.remove());
+    if (origem.id === "pix-politicas") {
+      const papeis = copia.querySelectorAll(".pix-policy-role-grid > article.pix-policy-pro");
+      papeis.forEach((artigo, indice) => {
+        artigo.dataset.printPage = "true";
+        artigo.dataset.printRole = ["Gerente / Coordenador / Supervisor Pós-Vendas", "Supervisor de Peças", "Supervisor de Assistência Técnica", "Consultor de Balcão", "Consultor Técnico"][indice] || "Política Pix";
+      });
+      const ultimo = papeis[papeis.length - 1];
+      const regras = copia.querySelector(".pix-policy-general");
+      const fluxo = copia.querySelector(".pix-policy-flow");
+      if (ultimo && regras) ultimo.appendChild(regras);
+      if (ultimo && fluxo) ultimo.appendChild(fluxo);
+    }
     if (origem.id === "politicas") {
       copia.querySelectorAll(".infopolicy-grid > article").forEach((artigo, indice) => {
         artigo.dataset.printRole = ["Mecânico Produtivo", "Chefe e Líder", "Controlador de Produtividade"][indice] || "Política";
@@ -58,6 +70,16 @@
       main article article { border: 0; padding: 0; break-inside: auto; page-break-inside: auto; }
       main .print-policy-page { display:block; width:100%; border:0; padding:0; margin:0; break-inside:auto; page-break-inside:auto; break-before:page; page-break-before:always; }
       main .print-policy-page:first-of-type { break-before:auto; page-break-before:auto; }
+      main .pix-policy-role-grid > .print-policy-page { break-before:page; page-break-before:always; margin:0 0 8mm; }
+      main .pix-policy-role-grid > .print-policy-page:first-child { break-before:auto; page-break-before:auto; }
+      main .pix-policy-hero { border-left:3px solid #087e69; padding:8px 12px; margin:0 0 10px; background:#f4f9f8; }
+      main .pix-policy-role-grid { display:block; }
+      main .pix-policy-role-grid > article > section { margin:8px 0 12px; break-inside:avoid; page-break-inside:avoid; }
+      main .pix-policy-role-grid > article > header { border-bottom:1px solid #cbdeda; margin:0 0 10px; padding:0 0 8px; }
+      main .pix-policy-role-grid > article > header h3 { font-size:16pt; margin:0 0 3px; }
+      main .pix-policy-role-grid > article table { font-size:10pt; }
+      main .pix-policy-role-grid > article table th, main .pix-policy-role-grid > article table td { padding:5px 9px; }
+      main .pix-policy-general, main .pix-policy-flow { border-top:1px solid #d5e3e0; padding-top:9px; margin-top:14px; }
       main .print-policy-page > header { border:0; border-bottom:2px solid #087e69; padding:0 0 8px; margin:0 0 12px; break-after:avoid; }
       main .print-policy-page > header h3 { font-size:17pt; margin:4px 0; }
       main .print-policy-page > div > section { padding:0; margin:0 0 12px; break-inside:avoid; page-break-inside:avoid; }
