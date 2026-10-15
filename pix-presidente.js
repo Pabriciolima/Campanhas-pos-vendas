@@ -1784,7 +1784,11 @@ function calcularPix(lancamento) {
     if (!apuracaoDiaria?.quantidadeDias) return "Nenhum dia selecionado para avaliação. Selecione os dias e informe o realizado.";
     if (!diasAvaliadosPix.length) return "Aguardando lançamento do realizado nos dias selecionados.";
     const partes = [];
-    if (diasPremiadosPix === 0) {
+    if (apuracaoDiaria.todosDiasAtingidos) {
+      partes.push("Todos os dias selecionados atingidos: 100% do bônus-base semanal");
+    } else if (apuracaoDiaria.atingiuAcumulado) {
+      partes.push("Meta semanal acumulada atingida, mas nem todos os dias cumpridos: bônus-base limitado a 50%");
+    } else if (diasPremiadosPix === 0) {
       partes.push("Nenhum dia avaliado atingiu a meta diária ajustada; bonificação-base não conquistada");
     } else {
       partes.push(`${diasPremiadosPix} de ${diasAvaliadosPix.length} dia(s) avaliado(s) atingiram a meta ajustada; bonificação-base proporcional`);
