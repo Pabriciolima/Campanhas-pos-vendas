@@ -1619,19 +1619,46 @@ function calcularPix(lancamento) {
   const npsInformado =
     campoPixRealmenteInformado(lancamento, "realizadoNps", "realizadoNpsInformado");
 
-  const bonusNps =
-    atingiuNps &&
-    npsInformado &&
-    (
-      regraDiaria ||
-      (dadosCriticosCompletos && Number(lancamento.semana) === 4)
-    )
-      ? (
-          regraDiaria
-            ? pixNumero(politica.bonusNpsSemanal || 250)
-            : politica.bonusNps
-        )
-      : 0;
+  /*
+   * COFRINHO NPS — vigência outubro/2026+:
+   * Semanas 1-3 acumulam apenas saldo potencial. Na semana 4,
+   * o NPS da própria semana é o gatilho para liberar todo o saldo.
+   * Não duplica valores nas semanas anteriores nem altera o legado.
+   */
+  const semanaNps = Number(lancamento.semana);
+  const npsSemanalElegivel = atingiuNps && npsInformado;
+  const valorNpsSemanal = pixNumero(politica.bonusNpsSemanal || 250);
+  const semanasNpsAtingidas = regraDiaria && usaNps
+    ? estadoPix.lancamentos.filter(item =>
+        String(item.funcionarioId) === String(lancamento.funcionarioId) &&
+        String(item.competencia) === String(lancamento.competencia) &&
+        Number(item.semana) >= 1 && Number(item.semana) <= 3 &&
+        campoPixRealmenteInformado(item, "realizadoNps", "realizadoNpsInformado") &&
+        pixNumero(item.metaNps) > 0 &&
+        pixNumero(item.realizadoNps) >= pixNumero(item.metaNps)
+      ).reduce((mapa, item) => {
+        mapa.add(Number(item.semana));
+        return mapa;
+      }, new Set())
+    : new Set();
+  const saldoCofrinhoNps = regraDiaria && usaNps
+    ? semanasNpsAtingidas.size * valorNpsSemanal
+    : 0;
+  const bonusNps = regraDiaria
+    ? (usaNps && semanaNps === 4 && npsSemanalElegivel
+        ? saldoCofrinhoNps + valorNpsSemanal
+        : 0)
+    : (npsSemanalElegivel && dadosCriticosCompletos && semanaNps === 4
+        ? politica.bonusNps
+        : 0);
+  const npsCofrinhoStatus = !regraDiaria || !usaNps
+    ? ""
+    : semanaNps === 4
+      ? (npsSemanalElegivel ? "LIBERADO" : npsInformado ? "NÃO LIBERADO" : "AGUARDANDO SEMANA 4")
+      : "ACUMULANDO";
+  const npsCofrinhoPotencial = regraDiaria && usaNps
+    ? saldoCofrinhoNps + (semanaNps < 4 && npsSemanalElegivel && !semanasNpsAtingidas.has(semanaNps) ? valorNpsSemanal : 0)
+    : 0;
 
   const subtotal =
     bonusBase +
@@ -1698,7 +1725,9 @@ function calcularPix(lancamento) {
     if (diasPendentesPix > 0) partes.push(`${diasPendentesPix} dia(s) ainda sem lançamento`);
     if (apuracaoDiaria.deficitFinal > 0) partes.push(`déficit acumulado: ${pixMoeda(apuracaoDiaria.deficitFinal)}`);
     if (bonusFaixa > 0) partes.push(`bônus de ${politica.metrica === "margem" ? "margem" : "ticket médio"} conquistado`);
-    if (bonusNps > 0) partes.push("bônus de NPS conquistado");
+    if (regraDiaria && usaNps && semanaNps < 4 && npsSemanalElegivel) partes.push("NPS atingido: R$ 250,00 reservado no cofrinho, pagamento condicionado à semana 4");
+    if (regraDiaria && usaNps && semanaNps === 4 && !npsSemanalElegivel) partes.push("NPS do mês não liberado: semana 4 não atingiu a meta ou está pendente");
+    if (bonusNps > 0) partes.push(`cofrinho NPS liberado na semana 4: ${pixMoeda(bonusNps)}`);
     if (bonusFinal <= 0 && diasPremiadosPix > 0 && aplicaPenalidade) partes.push("bonificação impactada pela penalidade de O.S.");
     if (bonusFinal > 0) partes.push("colaborador habilitado com bonificação calculada pelos indicadores alcançados");
     else if (diasPremiadosPix === 0 && bonusFaixa === 0 && bonusNps === 0) partes.push("nenhum componente de bonificação conquistado até o momento");
@@ -1778,6 +1807,9 @@ function calcularPix(lancamento) {
     percentualNps,
     atingiuNps,
     bonusNps,
+    saldoCofrinhoNps,
+    npsCofrinhoPotencial,
+    npsCofrinhoStatus,
     osAbertaPercentual:
       osAberta,
     usaNps,
@@ -3148,7 +3180,7 @@ function renderPoliticasPix() {
               <section class="pix-policy-nps">
                 <h4>★ NPS <small>(semanal)</small></h4>
                 <p>Meta: <b>90%</b> · Valor: <b>R$ 250,00</b></p>
-                <span>Pago em cada semana em que o NPS atingir ou superar 90%.</span>
+                <span>Cada semana atingida reserva R$ 250,00. O total só é liberado na semana 4 se o NPS da semana 4 também atingir 90%.</span>
               </section>` : ""}
             ${grupo.dynamo ? `
               <section class="pix-policy-dynamo">
@@ -3163,7 +3195,7 @@ function renderPoliticasPix() {
         <span>✓ Metas diárias pelos dias reais selecionados.</span>
         <span>✓ Bônus-base semanal = soma dos dias atingidos.</span>
         <span>✓ Ticket médio e margem conforme faixas.</span>
-        <span>✓ NPS semanal quando aplicável: meta 90% · R$ 250.</span>
+        <span>✓ Cofrinho NPS: R$ 250 por semana atingida, pago somente na semana 4 se a meta da semana 4 for alcançada.</span>
         <span>✓ Domingos bloqueados no calendário de apuração.</span>
         <span>✓ Pagamento e total atualizados progressivamente.</span>
       </div>
@@ -3943,8 +3975,7 @@ function renderCamposLancamentoPix(dados = {}) {
             />
 
             <small>
-              O prêmio de NPS é pago quando o realizado for
-              maior ou igual à meta de NPS, mesmo sem bater a meta semanal.
+              Cada semana com NPS atingido reserva R$ 250,00 no cofrinho.\n              O saldo só é pago na semana 4 se o NPS da própria semana 4 atingir a meta.
             </small>
           </label>
         `
