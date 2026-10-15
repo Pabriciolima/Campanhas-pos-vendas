@@ -4649,6 +4649,10 @@ async function salvarLancamentoPix(evento) {
   const botao = evento.submitter;
 
   try {
+    if (!pixHistoricoModalConferido) {
+      pixAlert("Aguarde a conferência das datas das semanas anteriores antes de salvar.");
+      return;
+    }
     const item = coletarLancamentoPix();
 
     const duplicado =
