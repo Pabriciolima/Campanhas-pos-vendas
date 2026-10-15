@@ -1,0 +1,31 @@
+/* Cofrinho NPS — Pix do Presidente */
+.pix-piggy{margin:20px 0;padding:22px;border:1px solid #164e81;border-radius:20px;background:radial-gradient(ellipse at 30% 20%,#153d75 0%,#08182f 55%,#061226 100%);color:#f5faff;box-shadow:0 14px 40px #00172e26;overflow:hidden}
+.pix-piggy[hidden]{display:none!important}
+.pix-piggy-head{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.pix-piggy-eyebrow{font-size:10px;letter-spacing:1.6px;color:#55d9fa;font-weight:800}
+.pix-piggy-head h3{font-size:25px;line-height:1.2;color:#fff;margin:5px 0}
+.pix-piggy-head p{font-size:13px;color:#b8d4ef;margin:4px 0}
+.pix-piggy-head label{font-size:11px;color:#bbd6ec;display:flex;flex-direction:column;gap:6px;min-width:220px}
+.pix-piggy-head select{background:#102d50;color:#fff;border:1px solid #3983ad;border-radius:9px;padding:10px;max-width:310px}
+.pix-piggy-layout{display:grid;grid-template-columns:minmax(180px,260px) 1fr;gap:20px;align-items:center;margin:14px 0}
+.pix-piggy-art{text-align:center}
+.pix-piggy-glow{filter:drop-shadow(0 10px 25px #e85fa355)}
+.pix-piggy-art svg{width:100%;max-height:200px}
+.pix-piggy-progress{height:8px;border-radius:12px;background:#27435c;overflow:hidden;margin:6px 10px}
+.pix-piggy-progress>div{height:100%;background:linear-gradient(90deg,#fdb838,#00e4c6);border-radius:12px;transition:width .3s}
+.pix-piggy-art small{color:#bbd5e9;font-size:11px}
+.pix-piggy-milestones{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.pix-piggy-week{border:1px solid #245486;border-radius:13px;padding:12px 6px;text-align:center;background:#102a4d;min-width:0}
+.pix-piggy-week>span{display:block;font-size:10px;color:#a4caec;font-weight:800}
+.pix-piggy-week>strong{display:block;color:var(--coin);font-size:38px;line-height:1.3;text-shadow:0 0 14px #ffb82a55}
+.pix-piggy-week>b{display:block;color:#fff;font-size:12px;overflow-wrap:anywhere}
+.pix-piggy-week>small{display:block;color:#a9c9e4;font-size:10px;margin-top:5px}
+.pix-piggy-week.is-ok{border-color:#19a893;background:#103e47}
+.pix-piggy-week.is-fail{border-color:#b34e66;background:#412337}
+.pix-piggy-footer{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:12px;border-top:1px solid #285278;padding-top:16px}
+.pix-piggy-footer>div{display:flex;flex-direction:column;gap:5px}
+.pix-piggy-footer small{color:#a7cce4;font-size:10px;letter-spacing:.5px}
+.pix-piggy-footer strong{font-size:20px;color:#fff}
+.pix-piggy-footer .pix-piggy-reward strong{color:#4ff5be;font-size:26px}
+@media(max-width:850px){.pix-piggy-layout{grid-template-columns:1fr}.pix-piggy-art svg{max-height:160px}.pix-piggy-milestones{grid-template-columns:repeat(2,minmax(0,1fr))}.pix-piggy-footer{grid-template-columns:1fr 1fr}.pix-piggy-footer .pix-piggy-reward{grid-column:1/-1}}
+@media(max-width:480px){.pix-piggy{padding:14px}.pix-piggy-head label,.pix-piggy-head select{width:100%;max-width:100%}.pix-piggy-head h3{font-size:21px}.pix-piggy-footer strong{font-size:15px}}
