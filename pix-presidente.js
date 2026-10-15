@@ -1635,19 +1635,20 @@ function calcularPix(lancamento) {
         );
 
   /*
-   * Na regra diária (Out/2026+), o bônus de Ticket/Margem é um KPI
-   * independente do fechamento de 100% da meta semanal. A base continua
-   * proporcional aos dias, exceto no fechamento semanal acumulado com dias falhos:
-   * nesse caso a base é limitada a 50%; 100% exige todos os dias atingidos.
+   * Out/2026+: bônus-base E bônus de ticket/margem exigem a meta semanal
+   * acumulada (incluindo saldo transportado) atingida. O NPS mantém
+   * sua regra independente de cofrinho e liberação na quarta semana.
    */
   const indicadorInformado =
     politica.metrica === "margem"
       ? campoPixRealmenteInformado(lancamento, "margem", "margemInformada")
       : campoPixRealmenteInformado(lancamento, "ticketMedio", "ticketMedioInformado");
 
+  const metaSemanalElegivel = regraDiaria
+    ? !!apuracaoDiaria?.atingiuAcumulado
+    : dadosCriticosCompletos && atingiuMeta;
   const bonusFaixa =
-    indicadorInformado &&
-    (regraDiaria || (dadosCriticosCompletos && atingiuMeta))
+    indicadorInformado && metaSemanalElegivel
       ? pixBonusFaixa(politica, indicador)
       : 0;
 
@@ -1790,7 +1791,7 @@ function calcularPix(lancamento) {
     } else if (apuracaoDiaria.atingiuAcumulado) {
       partes.push("Meta semanal acumulada atingida, mas nem todos os dias cumpridos: bônus-base limitado a 50%");
     } else {
-      partes.push("Meta semanal acumulada não atingida: bônus-base R$ 0,00, mesmo com dias individuais cumpridos");
+      partes.push("Meta semanal acumulada não atingida: bônus-base e bônus de ticket/margem R$ 0,00, mesmo com dias individuais cumpridos");
     }
     if (diasPendentesPix > 0) partes.push(`${diasPendentesPix} dia(s) ainda sem lançamento`);
     if (apuracaoDiaria.deficitFinal > 0) partes.push(`déficit acumulado: ${pixMoeda(apuracaoDiaria.deficitFinal)}`);
