@@ -45,3 +45,18 @@
 .pix-piggy-person>strong{font-size:13px;color:#65f1c9;white-space:nowrap}
 .pix-piggy-note{color:#bbd4e8;font-size:12px;margin:10px 0 0}
 @media(max-width:480px){.pix-piggy-roster-grid{grid-template-columns:1fr}.pix-piggy-person{padding:12px}}
+
+/* Cofrinho no formulário semanal: compacto, legível e sem galeria. */
+.pix-piggy-modal{margin:14px 0 18px;padding:16px;border-radius:16px;width:100%;box-sizing:border-box}
+.pix-piggy-modal .pix-piggy-head h3{font-size:19px}
+.pix-piggy-modal .pix-piggy-head p{font-size:11px}
+.pix-piggy-modal .pix-piggy-layout{grid-template-columns:minmax(95px,150px) minmax(0,1fr);gap:12px;margin:12px 0}
+.pix-piggy-modal .pix-piggy-art svg{max-height:140px}
+.pix-piggy-modal .pix-piggy-milestones{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.pix-piggy-modal .pix-piggy-week{padding:9px 3px}
+.pix-piggy-modal .pix-piggy-week>strong{font-size:26px}
+.pix-piggy-modal .pix-piggy-week>b{font-size:10px}
+.pix-piggy-modal .pix-piggy-footer{gap:8px;padding-top:10px}
+.pix-piggy-modal .pix-piggy-footer strong{font-size:16px}
+.pix-piggy-modal .pix-piggy-footer .pix-piggy-reward strong{font-size:20px}
+@media(max-width:650px){.pix-piggy-modal .pix-piggy-layout{grid-template-columns:1fr}.pix-piggy-modal .pix-piggy-art svg{max-height:120px}.pix-piggy-modal .pix-piggy-milestones{grid-template-columns:repeat(2,minmax(0,1fr))}.pix-piggy-modal .pix-piggy-footer{grid-template-columns:1fr 1fr}.pix-piggy-modal .pix-piggy-footer .pix-piggy-reward{grid-column:1/-1}}
