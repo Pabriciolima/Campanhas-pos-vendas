@@ -3043,23 +3043,17 @@ function renderLancamentosPix() {
 }
 
 /* Cofrinho visual do NPS — acompanhamento individual por competência. */
-function renderCofrinhoNpsPix(resultados) {
-  const cards = document.querySelector("#pixApuracaoCards");
-  if (!cards) return;
-  let area = document.querySelector("#pixCofrinhoNps");
-  if (!area) {
-    area = document.createElement("section");
-    area.id = "pixCofrinhoNps";
-    area.className = "pix-piggy";
-    cards.insertAdjacentElement("afterend", area);
-  }
-  const competencia = normalizarCompetenciaPix(document.querySelector("#pixFiltroCompetenciaApuracao")?.value || competenciaHistoricoPix());
+function renderCofrinhoNpsPix() {
+  const area = document.querySelector("#pixCofrinhoNps");
+  if (!area) return;
+  const competencia = normalizarCompetenciaPix(document.querySelector("#pixLancamentoCompetencia")?.value || pixMesAtual());
   if (!usaRegraPixDiaria(competencia)) { area.hidden = true; return; }
-  const elegiveis = estadoPix.lancamentos.filter(item => normalizarCompetenciaPix(item.competencia) === competencia).map(calcularPix).filter(item => item.usaNps && item.funcionarioId);
+  const idSelecionado = document.querySelector("#pixLancamentoFuncionario")?.value;
+  const funcionarioAtual = pixFuncionarioPorId(idSelecionado);
+  if (!funcionarioAtual || !cargoUsaNpsPix(funcionarioAtual.cargo)) { area.hidden = true; return; }
+  const elegiveis = estadoPix.lancamentos.filter(item => normalizarCompetenciaPix(item.competencia) === competencia && String(item.funcionarioId) === String(idSelecionado)).map(calcularPix).filter(item => item.usaNps && item.funcionarioId);
   const grupos = new Map();
-  participantesPix().forEach(funcionario => {
-    if (funcionarioPixAtivo(funcionario) && cargoUsaNpsPix(funcionario.cargo)) grupos.set(String(funcionario.id), []);
-  });
+  grupos.set(String(idSelecionado), []);
   elegiveis.forEach(item => {
     const id = String(item.funcionarioId);
     if (!grupos.has(id)) grupos.set(id, []);
@@ -3068,10 +3062,17 @@ function renderCofrinhoNpsPix(resultados) {
   if (!grupos.size) { area.hidden = true; return; }
   area.hidden = false;
   const ids = [...grupos.keys()];
-  const selecionado = ids.includes(area.dataset.funcionario) ? area.dataset.funcionario : ids[0];
+  const selecionado = String(idSelecionado);
   area.dataset.funcionario = selecionado;
   const itens = grupos.get(selecionado);
   const porSemana = new Map(itens.map(item => [Number(normalizarSemanaPix(item.semana)), item]));
+  // Preview do lançamento atual, ainda não persistido: substitui apenas a semana em edição.
+  try {
+    const rascunho = coletarLancamentoPix();
+    if (String(rascunho.funcionarioId) === selecionado) {
+      porSemana.set(Number(rascunho.semana), calcularPix(rascunho));
+    }
+  } catch (_) { /* Mantém o histórico salvo enquanto o formulário estiver incompleto. */ }
   const semanas = [1,2,3,4].map(numero => {
     const item = porSemana.get(numero);
     const informado = item && campoPixRealmenteInformado(item,"realizadoNps","realizadoNpsInformado");
@@ -3098,37 +3099,10 @@ function renderCofrinhoNpsPix(resultados) {
     <rect x="123" y="47" width="50" height="7" rx="3" fill="#823c6c"/>
     ${[0,1,2,3].slice(0,semanas.filter(x=>x.atingiu).length).map((_,i)=>`<g transform="translate(${117+i*17},${29-i*7})"><circle r="16" fill="url(#pixCoin)" stroke="#ffe7a0" stroke-width="3"/><text text-anchor="middle" y="6" font-size="18" font-weight="bold" fill="#925200">$</text></g>`).join("")}
   </svg>`;
-  area.innerHTML = `<div class="pix-piggy-head"><div><span class="pix-piggy-eyebrow">🏆 GAMIFICAÇÃO · PIX DO PRESIDENTE</span><h3>🐷 Cofrinho do NPS</h3><p>Cada semana atingida guarda R$ 250. O saldo só é liberado se a semana 4 atingir o NPS.</p></div><label>Colaborador<select id="pixPiggyFuncionario">${ids.map(id => `<option value="${id}" ${id===selecionado?"selected":""}>${(pixFuncionarioPorId(id)?.nome || grupos.get(id)[0]?.nome || "Colaborador").replace(/&/g,"&amp;").replace(/</g,"&lt;")}</option>`).join("")}</select></label></div>
+  area.innerHTML = `<div class="pix-piggy-head"><div><span class="pix-piggy-eyebrow">🏆 SEU PROGRESSO NO NPS</span><h3>🐷 Cofrinho do NPS</h3><p>R$ 250 por semana atingida. Desbloqueio somente se a semana 4 atingir a meta.</p></div></div>
   <div class="pix-piggy-layout"><div class="pix-piggy-art"><div class="pix-piggy-glow">${svgPorco}</div><div class="pix-piggy-progress"><div style="width:${progresso}%"></div></div><small>${semanas.filter(x=>x.atingiu).length} de 4 semanas com NPS atingido</small></div>
   <div class="pix-piggy-milestones">${semanas.map((w,i)=>`<div class="pix-piggy-week ${w.atingiu?"is-ok":w.informado?"is-fail":"is-pending"}"><span>SEMANA 0${w.numero}</span><strong style="--coin:${cores[i]}">${w.atingiu?"★":w.informado?"×":"○"}</strong><b>${w.atingiu?"+ R$ 250,00":w.informado?"R$ 0,00":"Aguardando"}</b><small>${w.atingiu?"✓ NPS atingido":w.informado?"NPS não atingido":"Sem resultado"}</small></div>`).join("")}</div></div>
   <div class="pix-piggy-footer"><div><small>SALDO GUARDADO</small><strong>${pixMoeda(guardado)}</strong></div><div><small>STATUS DO COFRINHO</small><strong>${status}</strong></div><div class="pix-piggy-reward"><small>LIBERADO NA SEMANA 4</small><strong>${pixMoeda(liberado)}</strong></div></div>`;
-  const listaCofrinhos = [...grupos.entries()].map(([id, registros]) => {
-    const porSemana = new Map(registros.map(item => [Number(normalizarSemanaPix(item.semana)), item]));
-    const atingidas = [1,2,3,4].filter(numero => {
-      const item = porSemana.get(numero);
-      return item && campoPixRealmenteInformado(item, "realizadoNps", "realizadoNpsInformado") &&
-        pixNumero(item.metaNps) > 0 && pixNumero(item.realizadoNps) >= pixNumero(item.metaNps);
-    });
-    const quatro = porSemana.get(4);
-    const finalizado = quatro && campoPixRealmenteInformado(quatro, "realizadoNps", "realizadoNpsInformado");
-    const pago = atingidas.includes(4) ? atingidas.length * 250 : 0;
-    const saldo = finalizado ? 0 : atingidas.filter(numero => numero < 4).length * 250;
-    const nome = (pixFuncionarioPorId(id)?.nome || registros[0]?.nome || "Colaborador")
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
-    return `<button type="button" class="pix-piggy-person ${id === selecionado ? "is-active" : ""}" data-piggy-person="${id.replace(/&/g,"&amp;").replace(/"/g,"&quot;")}">
-      <span class="pix-piggy-person-icon">🐷</span><span class="pix-piggy-person-info"><b>${nome}</b><small>${atingidas.length}/4 semanas · ${finalizado ? (pago ? "Liberado" : "Não liberado") : "Acumulando"}</small></span>
-      <strong>${pixMoeda(pago || saldo)}</strong>
-    </button>`;
-  }).join("");
-  area.insertAdjacentHTML("beforeend", '<div class="pix-piggy-roster"><h4>Cofrinhos dos colaboradores</h4><p>Selecione um colaborador para acompanhar seu NPS semanal.</p><div class="pix-piggy-roster-grid">' + listaCofrinhos + '</div></div>');
-  area.querySelectorAll("[data-piggy-person]").forEach(botao => botao.addEventListener("click", () => {
-    area.dataset.funcionario = botao.dataset.piggyPerson;
-    renderCofrinhoNpsPix();
-  }));
-  area.querySelector("#pixPiggyFuncionario")?.addEventListener("change", evento => {
-    area.dataset.funcionario = evento.target.value;
-    renderCofrinhoNpsPix(resultados);
-  });
 }
 
 function renderApuracaoPix() {
@@ -3162,8 +3136,6 @@ function renderApuracaoPix() {
       ["Penalidades", pixMoeda(penalidades), "pix-card-alert"],
       ["Total apurado", pixMoeda(total), "pix-card-total"]
     ]);
-
-  renderCofrinhoNpsPix(resultados);
 
   montarTabelaResultadosPix(
     resultados,
@@ -4020,6 +3992,8 @@ function renderCamposLancamentoPix(dados = {}) {
         `
     }
 
+    <div id="pixCofrinhoNps" class="pix-piggy pix-piggy-modal" hidden></div>
+
     <div class="pix-base-potential">
       <span>🏆 Potencial base semanal</span>
       <strong>${pixMoeda(politica.bonusBase)}</strong>
@@ -4452,6 +4426,8 @@ function atualizarPreviewPix() {
   try {
     const resultado =
       calcularPix(coletarLancamentoPix());
+
+    renderCofrinhoNpsPix();
 
     preview.innerHTML = `
       <div class="pix-preview-grid">
