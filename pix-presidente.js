@@ -1218,6 +1218,36 @@ function pixAvaliarSaldoDias(dias, metaDia, saldoInicial = 0) {
   });
 }
 
+// Carrega o histórico completo da competência antes de bloquear datas no formulário.
+// Os filtros da tabela podem deixar outras semanas fora do estado em memória.
+let pixHistoricoModalToken = 0;
+async function atualizarHistoricoModalPix() {
+  const token = ++pixHistoricoModalToken;
+  const competencia = normalizarCompetenciaPix($("#pixLancamentoCompetencia")?.value);
+  const funcionarioId = $("#pixLancamentoFuncionario")?.value;
+  if (!competencia || !funcionarioId) return;
+  const calendario = $("#pixCalendarioDias");
+  if (calendario) calendario.querySelectorAll(".pix-calendar-day:not(.is-sunday)").forEach(el => el.disabled = true);
+  const resumo = $("#pixSaldoAnterior");
+  if (resumo) { resumo.hidden = false; resumo.textContent = "Conferindo lançamentos anteriores…"; }
+  try {
+    const { data, error } = await supabase.from("pix_lancamentos").select("id,dados").eq("competencia", competencia);
+    if (error) throw error;
+    if (token !== pixHistoricoModalToken || !$("#modalPixPresidente")?.open) return;
+    const encontrados = (data || []).map(linha => ({ ...(linha.dados || {}), id: linha.id }));
+    const ids = new Set(encontrados.map(item => String(item.id)));
+    estadoPix.lancamentos = [...estadoPix.lancamentos.filter(item => !ids.has(String(item.id))), ...encontrados];
+    atualizarContextoSemanalPix();
+    renderDiasSelecionadosPix();
+    atualizarPainelDiarioPix();
+    atualizarPreviewPix();
+  } catch (erro) {
+    console.error("[PIX] Não foi possível conferir os dias já utilizados:", erro);
+    if (resumo) { resumo.hidden = false; resumo.textContent = "Não foi possível conferir as datas. Tente novamente."; }
+    // Falha de rede não deve liberar datas que podem pertencer a outra semana.
+  }
+}
+
 function pixContextoSemanasAnteriores(lancamento) {
   const semana = Number(normalizarSemanaPix(lancamento.semana));
   if (!usaRegraPixDiaria(lancamento.competencia) || semana < 1) return { saldo: 0, datasOcupadas: new Set() };
@@ -4565,6 +4595,7 @@ function abrirLancamentoPix() {
   renderCamposLancamentoPix();
 
   $("#modalPixPresidente").showModal();
+  atualizarHistoricoModalPix();
 }
 
 function editarLancamentoPix(id) {
@@ -4886,8 +4917,10 @@ function configurarEventosPix() {
   $("#pixLancamentoSemana")
     ?.addEventListener(
       "change",
-      () =>
-        renderCamposLancamentoPix()
+      () => {
+        renderCamposLancamentoPix();
+        atualizarHistoricoModalPix();
+      }
     );
 
   $("#formPixPresidente")
