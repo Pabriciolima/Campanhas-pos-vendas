@@ -1289,10 +1289,11 @@ function calcularBaseDiariaPix(lancamento, politica) {
   const atingiuAcumulado = todosDiasInformados && metaSemanal > 0 &&
     realizadoSemanal + saldoInicial >= metaSemanal - 0.000001;
   const baseIntegral = pixNumero(politica?.bonusBase);
-  const bonusProporcional = Math.min(baseIntegral, diasAtingidos * valorDiario);
-  const bonusBase = todosDiasAtingidos ? baseIntegral
-    : atingiuAcumulado ? baseIntegral * 0.5
-    : bonusProporcional;
+  // Sem atingir o acumulado semanal, nenhum dia gera bônus-base.
+  // 100% exige todos os dias; 50% vale para acumulado atingido com falhas diárias.
+  const bonusBase = !atingiuAcumulado ? 0
+    : todosDiasAtingidos ? baseIntegral
+    : baseIntegral * 0.5;
   return {
     dias: avaliados, quantidadeDias, metaDiaria, valorDiario, realizadoSemanal, saldoInicial,
     diasAtingidos, todosDiasInformados, todosDiasAtingidos, atingiuAcumulado,
@@ -1788,10 +1789,8 @@ function calcularPix(lancamento) {
       partes.push("Todos os dias selecionados atingidos: 100% do bônus-base semanal");
     } else if (apuracaoDiaria.atingiuAcumulado) {
       partes.push("Meta semanal acumulada atingida, mas nem todos os dias cumpridos: bônus-base limitado a 50%");
-    } else if (diasPremiadosPix === 0) {
-      partes.push("Nenhum dia avaliado atingiu a meta diária ajustada; bonificação-base não conquistada");
     } else {
-      partes.push(`${diasPremiadosPix} de ${diasAvaliadosPix.length} dia(s) avaliado(s) atingiram a meta ajustada; bonificação-base proporcional`);
+      partes.push("Meta semanal acumulada não atingida: bônus-base R$ 0,00, mesmo com dias individuais cumpridos");
     }
     if (diasPendentesPix > 0) partes.push(`${diasPendentesPix} dia(s) ainda sem lançamento`);
     if (apuracaoDiaria.deficitFinal > 0) partes.push(`déficit acumulado: ${pixMoeda(apuracaoDiaria.deficitFinal)}`);
