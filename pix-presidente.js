@@ -1221,8 +1221,10 @@ function pixAvaliarSaldoDias(dias, metaDia, saldoInicial = 0) {
 // Carrega o histórico completo da competência antes de bloquear datas no formulário.
 // Os filtros da tabela podem deixar outras semanas fora do estado em memória.
 let pixHistoricoModalToken = 0;
+let pixHistoricoModalConferido = false;
 async function atualizarHistoricoModalPix() {
   const token = ++pixHistoricoModalToken;
+  pixHistoricoModalConferido = false;
   const competencia = normalizarCompetenciaPix($("#pixLancamentoCompetencia")?.value);
   const funcionarioId = $("#pixLancamentoFuncionario")?.value;
   if (!competencia || !funcionarioId) return;
@@ -1237,6 +1239,7 @@ async function atualizarHistoricoModalPix() {
     const encontrados = (data || []).map(linha => ({ ...(linha.dados || {}), id: linha.id }));
     const ids = new Set(encontrados.map(item => String(item.id)));
     estadoPix.lancamentos = [...estadoPix.lancamentos.filter(item => !ids.has(String(item.id))), ...encontrados];
+    pixHistoricoModalConferido = true;
     atualizarContextoSemanalPix();
     renderDiasSelecionadosPix();
     atualizarPainelDiarioPix();
@@ -4450,7 +4453,7 @@ function atualizarContextoSemanalPix() {
   calendario.querySelectorAll(".pix-calendar-day[data-date]").forEach(botao => {
     const ocupado = contexto.datasOcupadas.has(botao.dataset.date);
     if (ocupado) botao.classList.remove("is-selected");
-    botao.disabled = botao.classList.contains("is-sunday") || ocupado;
+    botao.disabled = !pixHistoricoModalConferido || botao.classList.contains("is-sunday") || ocupado;
     botao.classList.toggle("is-occupied", ocupado);
     if (ocupado) botao.title = "Dia já utilizado em uma semana anterior";
     else botao.removeAttribute("title");
@@ -4461,6 +4464,7 @@ function atualizarContextoSemanalPix() {
     const saldo = contexto.saldo;
     const meta = pixNumero($("#pixMetaSemanal")?.value);
     const ajuste = Math.max(0, meta - saldo);
+    if (!pixHistoricoModalConferido) { resumo.textContent = "Conferindo lançamentos anteriores…"; return; }
     resumo.innerHTML = '<span>Saldo anterior</span><strong class="' + (saldo < 0 ? 'is-deficit' : saldo > 0 ? 'is-credit' : '') + '">' +
       (saldo < 0 ? 'Déficit +' : saldo > 0 ? 'Gordura +' : 'Sem saldo') + (saldo ? pixMoeda(Math.abs(saldo)) : '') +
       '</strong><small>Meta ajustada: <b>' + pixMoeda(ajuste) + '</b></small>';
