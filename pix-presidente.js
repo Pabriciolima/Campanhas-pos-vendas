@@ -3058,7 +3058,7 @@ function renderCofrinhoNpsPix(resultados) {
   const elegiveis = estadoPix.lancamentos.filter(item => normalizarCompetenciaPix(item.competencia) === competencia).map(calcularPix).filter(item => item.usaNps && item.funcionarioId);
   const grupos = new Map();
   participantesPix().forEach(funcionario => {
-    if (funcionarioPixAtivo(funcionario) && pixPoliticaVigente(funcionario.cargo, competencia)?.usaNps) grupos.set(String(funcionario.id), []);
+    if (funcionarioPixAtivo(funcionario) && cargoUsaNpsPix(funcionario.cargo)) grupos.set(String(funcionario.id), []);
   });
   elegiveis.forEach(item => {
     const id = String(item.funcionarioId);
