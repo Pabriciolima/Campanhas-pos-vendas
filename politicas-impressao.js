@@ -3,6 +3,12 @@
   function limparConteudo(origem) {
     const copia = origem.cloneNode(true);
     copia.querySelectorAll(".policy-print-toolbar,button,input,select,textarea,script,style,svg,canvas,iframe").forEach(el => el.remove());
+    if (origem.id === "politicas") {
+      copia.querySelectorAll(".infopolicy-grid > article").forEach((artigo, indice) => {
+        artigo.dataset.printRole = ["Mecânico Produtivo", "Chefe e Líder", "Controlador de Produtividade"][indice] || "Política";
+        artigo.setAttribute("data-print-page", "true");
+      });
+    }
     copia.querySelectorAll("*").forEach(el => {
       el.removeAttribute("style");
       el.removeAttribute("class");
@@ -14,12 +20,7 @@
         el.removeAttribute("height");
       }
     });
-    if (origem.id === "politicas") {
-      copia.querySelectorAll(".infopolicy-grid > article").forEach((artigo, indice) => {
-        artigo.classList.add("print-policy-page");
-        artigo.dataset.printRole = ["Mecânico Produtivo", "Chefe e Líder", "Controlador de Produtividade"][indice] || "Política";
-      });
-    }
+    copia.querySelectorAll('[data-print-page="true"]').forEach(el => el.classList.add("print-policy-page"));
     return copia.innerHTML;
   }
 
