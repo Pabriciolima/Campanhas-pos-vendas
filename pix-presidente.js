@@ -3319,15 +3319,20 @@ function renderPoliticasPix() {
     <section class="pix-policy-general">
       <h3>📋 REGRAS GERAIS — PIX DO PRESIDENTE</h3>
       <div>
-        <span>✓ Metas diárias pelos dias reais selecionados.</span>
-        <span>✓ Meta semanal obrigatória para bônus-base e ticket/margem: abaixo de 100% do acumulado, ambos são R$ 0,00.</span>
-        <span>✓ Base: 100% com todos os dias atingidos; 50% com meta semanal atingida e algum dia não cumprido.</span>
-        <span>✓ Gordura reduz a exigência dos dias seguintes; déficit aumenta. O saldo também segue para a semana seguinte.</span>
-        <span>✓ Datas já utilizadas nas semanas anteriores ficam indisponíveis nas seguintes, por colaborador e competência.</span>
-        <span>✓ Ticket médio e margem seguem suas faixas, desde que a meta semanal acumulada seja atingida.</span>
-        <span>✓ Cofrinho NPS: R$ 250 por semana atingida, pago somente na semana 4 se a meta da semana 4 for alcançada.</span>
-        <span>✓ Domingos bloqueados no calendário de apuração.</span>
-        <span>✓ NPS é independente da meta de faturamento: fica reservado no cofrinho e só é liberado se a semana 4 atingir o NPS.</span>
+        ${novaRegra ? `
+        <span>✓ Meta semanal acumulada obrigatória para bônus-base e ticket/margem: abaixo de 100%, ambos são R$ 0,00.</span>
+        <span>✓ Bônus-base: 100% com todos os dias atingidos; 50% com meta semanal atingida e algum dia não cumprido.</span>
+        <span>✓ O saldo de gordura ou déficit de dias avaliados segue para os próximos dias e semanas da competência.</span>
+        <span>✓ Datas usadas em semanas anteriores ficam indisponíveis nas seguintes para o mesmo colaborador.</span>
+        <span>✓ Ticket médio e margem seguem as faixas específicas de cada cargo após o gatilho semanal.</span>
+        <span>✓ Cofrinho NPS: R$ 250 por semana atingida; pagamento somente na semana 4, condicionado ao NPS da própria semana 4.</span>
+        <span>✓ NPS é independente da meta de faturamento e pode ser liberado na semana 4 mesmo sem atingir a meta semanal.</span>
+        <span>✓ Domingos ficam indisponíveis para seleção no calendário.</span>
+        ` : `
+        <span>✓ Regulamento histórico da competência selecionada, anterior a outubro de 2026.</span>
+        <span>✓ Base e faixas calculadas conforme o atingimento semanal previsto na regra anterior.</span>
+        <span>✓ NPS e penalidades seguem os critérios históricos da campanha.</span>
+        `}
       </div>
     </section>
     <section class="pix-policy-flow">
