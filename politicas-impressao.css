@@ -9,3 +9,17 @@ html[data-theme="dark"] .policy-print-toolbar span{color:#c6d8dc}
 html[data-theme="dark"] .policy-print-btn{background:#087d63;color:#fff;-webkit-text-fill-color:#fff}
 @media(max-width:600px){.policy-print-toolbar{flex-direction:column;align-items:stretch}.policy-print-btn{width:100%}}
 @media print{.policy-print-toolbar{display:none!important}}
+
+/* Quadro didático de premiação por cargo: vigente a partir de outubro/2026 */
+.pix-policy-payout{display:grid;gap:7px;margin:12px 0 4px}
+.pix-policy-payout>div{display:grid;grid-template-columns:46px minmax(0,1fr) auto;align-items:center;gap:8px;padding:9px 10px;border:1px solid #dce7ee;border-radius:10px;background:#f8fbfd;color:#213447}
+.pix-policy-payout b{font-size:13px;font-weight:900}
+.pix-policy-payout span{font-size:11px;line-height:1.4}
+.pix-policy-payout strong{font-size:12px;white-space:nowrap;color:#102b43}
+.pix-rule-ok{color:#087b58}.pix-rule-half{color:#9a6508}.pix-rule-zero{color:#c13c44}
+.pix-policy-explain{font-size:12px;line-height:1.55;margin-top:8px;padding:9px 11px;background:#eff6fb;border-left:3px solid #2c86a5;border-radius:6px;color:#263e50}
+html[data-theme="dark"] .pix-policy-payout>div{background:#122638;border-color:#33516b;color:#e4f0f9}
+html[data-theme="dark"] .pix-policy-payout strong{color:#fff}
+html[data-theme="dark"] .pix-policy-explain{background:#142e42;color:#e3f1fa}
+@media(max-width:550px){.pix-policy-payout>div{grid-template-columns:40px minmax(0,1fr)}.pix-policy-payout strong{grid-column:2}.pix-policy-payout span{font-size:11px}}
+@media print{.pix-policy-payout>div{break-inside:avoid!important;page-break-inside:avoid!important;background:#fff!important;border-color:#b9c8d0!important;color:#111!important}.pix-policy-payout strong{color:#111!important}.pix-policy-explain{break-inside:avoid!important;page-break-inside:avoid!important;background:#f5f8fa!important;color:#111!important;font-size:10pt!important}.pix-policy-payout span{font-size:9pt!important}}
