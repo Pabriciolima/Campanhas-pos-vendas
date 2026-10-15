@@ -1229,7 +1229,7 @@ async function atualizarHistoricoModalPix() {
   const funcionarioId = $("#pixLancamentoFuncionario")?.value;
   if (!competencia || !funcionarioId) return;
   const calendario = $("#pixCalendarioDias");
-  if (calendario) calendario.querySelectorAll(".pix-calendar-day:not(.is-sunday)").forEach(el => el.disabled = true);
+  if (calendario && Number($("#pixLancamentoSemana")?.value) > 1) calendario.querySelectorAll(".pix-calendar-day:not(.is-sunday)").forEach(el => el.disabled = true);
   const resumo = $("#pixSaldoAnterior");
   if (resumo) { resumo.hidden = false; resumo.textContent = "Conferindo lançamentos anteriores…"; }
   try {
@@ -4453,7 +4453,7 @@ function atualizarContextoSemanalPix() {
   calendario.querySelectorAll(".pix-calendar-day[data-date]").forEach(botao => {
     const ocupado = contexto.datasOcupadas.has(botao.dataset.date);
     if (ocupado) botao.classList.remove("is-selected");
-    botao.disabled = !pixHistoricoModalConferido || botao.classList.contains("is-sunday") || ocupado;
+    botao.disabled = (semana > 1 && !pixHistoricoModalConferido) || botao.classList.contains("is-sunday") || ocupado;
     botao.classList.toggle("is-occupied", ocupado);
     if (ocupado) botao.title = "Dia já utilizado em uma semana anterior";
     else botao.removeAttribute("title");
@@ -4474,8 +4474,9 @@ function atualizarContextoSemanalPix() {
 function iniciarCalendarioPix() {
   const calendario = $("#pixCalendarioDias");
   if (!calendario) return;
-  calendario.querySelectorAll(".pix-calendar-day:not(:disabled)").forEach(botao => {
+  calendario.querySelectorAll(".pix-calendar-day").forEach(botao => {
     botao.addEventListener("click", () => {
+      if (botao.disabled || botao.classList.contains("is-occupied") || botao.classList.contains("is-sunday")) return;
       const atuais = coletarDiasPixFormulario(true);
       botao.classList.toggle("is-selected");
       renderDiasSelecionadosPix();
@@ -4633,6 +4634,7 @@ function editarLancamentoPix(id) {
   );
 
   $("#modalPixPresidente").showModal();
+  atualizarHistoricoModalPix();
 }
 
 async function salvarLancamentoPix(evento) {
@@ -4649,7 +4651,7 @@ async function salvarLancamentoPix(evento) {
   const botao = evento.submitter;
 
   try {
-    if (!pixHistoricoModalConferido) {
+    if (Number($("#pixLancamentoSemana")?.value) > 1 && !pixHistoricoModalConferido) {
       pixAlert("Aguarde a conferência das datas das semanas anteriores antes de salvar.");
       return;
     }
@@ -4918,8 +4920,10 @@ function configurarEventosPix() {
   $("#pixLancamentoFuncionario")
     ?.addEventListener(
       "change",
-      () =>
-        renderCamposLancamentoPix()
+      () => {
+        renderCamposLancamentoPix();
+        atualizarHistoricoModalPix();
+      }
     );
 
   $("#pixLancamentoSemana")
