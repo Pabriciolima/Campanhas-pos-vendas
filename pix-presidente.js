@@ -3992,13 +3992,12 @@ function renderCamposLancamentoPix(dados = {}) {
         `
     }
 
-    <div id="pixCofrinhoNps" class="pix-piggy pix-piggy-modal" hidden></div>
-
     <div class="pix-base-potential">
       <span>🏆 Potencial base semanal</span>
       <strong>${pixMoeda(politica.bonusBase)}</strong>
       <small>Valor máximo da base. O pagamento real depende dos dias em que a meta diária for atingida.</small>
     </div>
+    <div id="pixCofrinhoNps" class="pix-piggy pix-piggy-modal" hidden></div>
 
     ${
       (usaRegraPixDiaria(competenciaLancamento) || semana === 4) &&
