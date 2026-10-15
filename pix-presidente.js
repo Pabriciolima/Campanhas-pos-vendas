@@ -3102,6 +3102,29 @@ function renderCofrinhoNpsPix(resultados) {
   <div class="pix-piggy-layout"><div class="pix-piggy-art"><div class="pix-piggy-glow">${svgPorco}</div><div class="pix-piggy-progress"><div style="width:${progresso}%"></div></div><small>${semanas.filter(x=>x.atingiu).length} de 4 semanas com NPS atingido</small></div>
   <div class="pix-piggy-milestones">${semanas.map((w,i)=>`<div class="pix-piggy-week ${w.atingiu?"is-ok":w.informado?"is-fail":"is-pending"}"><span>SEMANA 0${w.numero}</span><strong style="--coin:${cores[i]}">${w.atingiu?"★":w.informado?"×":"○"}</strong><b>${w.atingiu?"+ R$ 250,00":w.informado?"R$ 0,00":"Aguardando"}</b><small>${w.atingiu?"✓ NPS atingido":w.informado?"NPS não atingido":"Sem resultado"}</small></div>`).join("")}</div></div>
   <div class="pix-piggy-footer"><div><small>SALDO GUARDADO</small><strong>${pixMoeda(guardado)}</strong></div><div><small>STATUS DO COFRINHO</small><strong>${status}</strong></div><div class="pix-piggy-reward"><small>LIBERADO NA SEMANA 4</small><strong>${pixMoeda(liberado)}</strong></div></div>`;
+  const listaCofrinhos = [...grupos.entries()].map(([id, registros]) => {
+    const porSemana = new Map(registros.map(item => [Number(normalizarSemanaPix(item.semana)), item]));
+    const atingidas = [1,2,3,4].filter(numero => {
+      const item = porSemana.get(numero);
+      return item && campoPixRealmenteInformado(item, "realizadoNps", "realizadoNpsInformado") &&
+        pixNumero(item.metaNps) > 0 && pixNumero(item.realizadoNps) >= pixNumero(item.metaNps);
+    });
+    const quatro = porSemana.get(4);
+    const finalizado = quatro && campoPixRealmenteInformado(quatro, "realizadoNps", "realizadoNpsInformado");
+    const pago = atingidas.includes(4) ? atingidas.length * 250 : 0;
+    const saldo = finalizado ? 0 : atingidas.filter(numero => numero < 4).length * 250;
+    const nome = (pixFuncionarioPorId(id)?.nome || registros[0]?.nome || "Colaborador")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+    return `<button type="button" class="pix-piggy-person ${id === selecionado ? "is-active" : ""}" data-piggy-person="${id.replace(/&/g,"&amp;").replace(/"/g,"&quot;")}">
+      <span class="pix-piggy-person-icon">🐷</span><span class="pix-piggy-person-info"><b>${nome}</b><small>${atingidas.length}/4 semanas · ${finalizado ? (pago ? "Liberado" : "Não liberado") : "Acumulando"}</small></span>
+      <strong>${pixMoeda(pago || saldo)}</strong>
+    </button>`;
+  }).join("");
+  area.insertAdjacentHTML("beforeend", '<div class="pix-piggy-roster"><h4>Cofrinhos dos colaboradores</h4><p>Selecione um colaborador para acompanhar seu NPS semanal.</p><div class="pix-piggy-roster-grid">' + listaCofrinhos + '</div></div>');
+  area.querySelectorAll("[data-piggy-person]").forEach(botao => botao.addEventListener("click", () => {
+    area.dataset.funcionario = botao.dataset.piggyPerson;
+    renderCofrinhoNpsPix();
+  }));
   area.querySelector("#pixPiggyFuncionario")?.addEventListener("change", evento => {
     area.dataset.funcionario = evento.target.value;
     renderCofrinhoNpsPix(resultados);
