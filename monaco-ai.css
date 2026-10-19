@@ -5,3 +5,10 @@
 .sidebar #monaco-assistant.monaco-ai-docked .monaco-ai-launcher{width:100%;padding:14px 12px}
 .sidebar #monaco-assistant.monaco-ai-docked .monaco-ai-panel{position:fixed;left:268px;right:auto;bottom:22px;z-index:10023}
 @media(max-width:900px){.sidebar #monaco-assistant.monaco-ai-docked .monaco-ai-panel{left:8px;bottom:12px;width:min(390px,calc(100vw - 16px));height:min(550px,calc(100dvh - 24px))}}
+
+#monaco-assistant .monaco-ai-controls{padding:10px 14px;display:grid;gap:6px;background:#163747;flex-shrink:0}
+#monaco-assistant .monaco-ai-controls button{padding:9px;border:1px solid #5dcab7;border-radius:8px;background:#087b70;color:#fff;cursor:pointer}
+#monaco-assistant .monaco-ai-controls small{font-size:11px;line-height:1.4;color:#d0e6ec}
+#monaco-assistant button:disabled{opacity:.6;cursor:wait}
+#monaco-assistant .monaco-ai-panel{min-height:280px}
+#monaco-assistant .monaco-ai-messages{min-height:70px;overscroll-behavior:contain}
