@@ -1,5 +1,7 @@
 (()=>{"use strict";
 const root=document.getElementById("monaco-assistant");if(!root)return;
+const sidebar=document.querySelector(".sidebar"),footer=sidebar?.querySelector(".sidebar-footer");
+if(footer){sidebar.insertBefore(root,footer);root.classList.add("monaco-ai-docked");}
 const panel=root.querySelector(".monaco-ai-panel"),button=root.querySelector(".monaco-ai-launcher"),messages=root.querySelector(".monaco-ai-messages"),form=root.querySelector(".monaco-ai-form"),input=form.querySelector("input");
 const topics=[
 [["nps","cofrinho"],"O NPS dos cargos elegíveis reserva R$ 250 por semana com 90% ou mais. As semanas 1 a 3 acumulam; na semana 4, o NPS da própria semana precisa atingir 90% para liberar o saldo (até R$ 1.000). O NPS é independente da meta semanal de faturamento."],
