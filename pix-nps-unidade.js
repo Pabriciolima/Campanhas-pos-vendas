@@ -2,6 +2,8 @@ import { chaveNpsUnidade, percentualNpsUnidade, avaliarNpsUnidade, mensagemNpsUn
 
 export function criarNpsUnidadePix({ supabase, aoAtualizar, filiais, competencia, filialAtual, bloqueado, alertar }) {
   const registros = new Map();
+  let edicaoAutorizada = null;
+  const resumoCurto = r => ({ ATINGIDO: 'Meta da filial atingida.', NAO_ATINGIDO: 'Meta não atingida: cofrinhos bloqueados.', PENDENTE: 'Aguardando NPS da filial.', ERRO: 'Falha ao consultar NPS.', CARREGANDO: 'Consultando NPS…' }[r.status]);
   const botoesVinculados = new WeakSet();
   let carregado = false, erro = false, consulta = null, dialogo = null, salvando = false;
   const escape = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -26,10 +28,12 @@ export function criarNpsUnidadePix({ supabase, aoAtualizar, filiais, competencia
     document.querySelectorAll('[data-pix-nps-unidade-resumo]').forEach(el => {
       const f = el.dataset.npsFilial || filialAtual(), mes = el.dataset.npsCompetencia || competencia();
       el.hidden = String(mes).slice(0, 7) < '2026-10';
-      el.textContent = f ? mensagemNpsUnidade(avaliar(f, mes)) : 'Semana 4: o cofrinho exige o NPS individual e a meta geral da filial. Cadastre o resultado por unidade e competência.';
+      el.textContent = f ? (el.closest('[data-pix-nps-compartilhado]') ? resumoCurto(avaliar(f, mes)) : mensagemNpsUnidade(avaliar(f, mes))) : 'Semana 4: o cofrinho exige o NPS individual e a meta geral da filial. Cadastre o resultado por unidade e competência.';
     });
     document.querySelectorAll('[data-pix-nps-compartilhado]').forEach(el => {
       const r = avaliar(el.dataset.npsFilial, el.dataset.npsCompetencia);
+      const botao = el.querySelector('[data-abrir-nps-unidade]');
+      if (botao) botao.textContent = registros.has(chaveNpsUnidade(el.dataset.npsFilial, el.dataset.npsCompetencia)) ? 'Alterar' : 'Lançar';
       const meta = el.querySelector('[data-nps-geral-meta]');
       const realizado = el.querySelector('[data-nps-geral-realizado]');
       if (meta) meta.textContent = r.meta === null ? 'Aguardando cadastro' : r.meta.toLocaleString('pt-BR') + '%';
@@ -48,11 +52,10 @@ export function criarNpsUnidadePix({ supabase, aoAtualizar, filiais, competencia
     const r = avaliar(filial, mes);
     const fmt = n => n === null ? 'Aguardando' : n.toLocaleString('pt-BR') + '%';
     return `<section class="pix-nps-unidade-compartilhado" data-pix-nps-compartilhado data-nps-filial="${f}" data-nps-competencia="${m}" aria-label="NPS geral compartilhado da filial">
-      <header><div><small>LANÇAMENTO ÚNICO · SEMANA 4</small><h3>NPS geral da filial</h3></div><button type="button" class="secondary" data-abrir-nps-unidade data-nps-filial="${f}" data-nps-competencia="${m}">Lançar / editar NPS da filial</button></header>
-      <p><b>${f}</b> · ${m}. Informe uma única vez: o resultado é aplicado automaticamente a todos os colaboradores cadastrados nesta filial e competência.</p>
-      <div class="pix-nps-unidade-valores"><div><span>Meta geral da filial</span><strong data-nps-geral-meta>${fmt(r.meta)}</strong></div><div><span>NPS geral realizado</span><strong data-nps-geral-realizado>${fmt(r.realizado)}</strong></div></div>
-      <p data-pix-nps-unidade-resumo data-nps-filial="${f}" data-nps-competencia="${m}" role="status">${mensagemNpsUnidade(r)}</p>
-      <small>Este resultado é compartilhado. O NPS individual de cada colaborador continua sendo informado nos campos acima.</small>
+      <header><h3>NPS da filial <small>· ${f}</small></h3><button type="button" class="secondary" data-abrir-nps-unidade data-nps-filial="${f}" data-nps-competencia="${m}">${registros.has(chaveNpsUnidade(filial, mes)) ? 'Alterar' : 'Lançar'}</button></header>
+      <div class="pix-nps-unidade-valores"><span>Meta <strong data-nps-geral-meta>${fmt(r.meta)}</strong></span><span>Realizado <strong data-nps-geral-realizado>${fmt(r.realizado)}</strong></span></div>
+      <p data-pix-nps-unidade-resumo data-nps-filial="${f}" data-nps-competencia="${m}" role="status">${resumoCurto(r)}</p>
+      <small>Único lançamento para todos da filial nesta competência.</small>
     </section>`;
   }
   function garantirDialogo() {
@@ -61,6 +64,7 @@ export function criarNpsUnidadePix({ supabase, aoAtualizar, filiais, competencia
     dialogo.innerHTML = `<form id="pixNpsUnidadeForm"><header><div><small>PIX DO PRESIDENTE · SEMANA 4</small><h2>NPS geral da filial</h2></div><button type="button" data-nps-fechar aria-label="Fechar">×</button></header>
       <p>Este resultado vale para <b>todos os cofrinhos da filial</b> nesta competência. O NPS individual, as reservas semanais e as penalidades existentes continuam valendo.</p>
       <div class="pix-nps-unidade-campos"><label>Competência<input name="competencia" type="month" min="2026-10" required></label><label>Filial<select name="filial" required><option value="">Selecione a filial</option>${filiais().map(f => `<option value="${escape(f)}">${escape(f)}</option>`).join('')}</select></label><label>Meta geral de NPS (%)<input name="meta" type="number" min="-100" max="100" step="0.01" required></label><label>NPS geral realizado (%)<input name="realizado" type="number" min="-100" max="100" step="0.01" placeholder="Aguardando resultado"></label></div>
+      <div data-nps-protecao hidden><label>Resultado já salvo. Informe a senha para alterar.<input name="senhaEdicao" type="password" autocomplete="off" placeholder="Senha administrativa"></label><button type="button" data-nps-desbloquear class="secondary">Liberar edição</button><span data-nps-senha-aviso role="alert"></span></div>
       <p class="pix-nps-unidade-situacao" role="status"></p><p class="pix-nps-unidade-dica">Informe o NPS oficial consolidado da unidade; não é a média dos percentuais individuais. Campo realizado vazio mantém os cofrinhos aguardando. Valor inicial sugerido da meta: 90%, editável.</p>
       <footer><button type="button" data-nps-fechar class="secondary">Cancelar</button><button type="submit" class="primary">Salvar NPS da filial</button></footer></form>`;
     document.body.appendChild(dialogo);
@@ -68,16 +72,35 @@ export function criarNpsUnidadePix({ supabase, aoAtualizar, filiais, competencia
     const form = dialogo.querySelector('form');
     form.addEventListener('change', e => { if (e.target.name === 'filial' || e.target.name === 'competencia') preencher(); });
     form.addEventListener('input', e => { if (e.target.name === 'meta' || e.target.name === 'realizado') previa(); });
+    dialogo.querySelector('[data-nps-desbloquear]').addEventListener('click', () => {
+      const c = campos();
+      if (c.senhaEdicao.value !== '123321') {
+        dialogo.querySelector('[data-nps-senha-aviso]').textContent = 'Senha incorreta.';
+        c.senhaEdicao.value = ''; return;
+      }
+      edicaoAutorizada = chaveNpsUnidade(c.filial.value, c.competencia.value);
+      c.senhaEdicao.value = ''; atualizarProtecao();
+    });
+    dialogo.addEventListener('close', () => { edicaoAutorizada = null; campos().senhaEdicao.value = ''; });
     form.addEventListener('submit', salvar);
     dialogo.addEventListener('cancel', e => { if (salvando) e.preventDefault(); });
   }
   function campos() { return dialogo.querySelector('form').elements; }
+  function atualizarProtecao() {
+    const c = campos();
+    const travado = dialogo.dataset.existia === 'true' && edicaoAutorizada !== chaveNpsUnidade(c.filial.value, c.competencia.value);
+    c.meta.readOnly = travado; c.realizado.readOnly = travado;
+    dialogo.querySelector('[data-nps-protecao]').hidden = !travado;
+    dialogo.querySelector('[type="submit"]').disabled = travado;
+  }
   function preencher() {
     const c = campos(), r = registros.get(chaveNpsUnidade(c.filial.value, c.competencia.value));
     c.meta.value = r?.dados?.meta ?? 90; c.realizado.value = r?.dados?.realizado ?? '';
     dialogo.dataset.versao = r?.updated_at || '';
     dialogo.dataset.existia = r ? 'true' : 'false';
-    previa();
+    edicaoAutorizada = null; c.senhaEdicao.value = '';
+    dialogo.querySelector('[data-nps-senha-aviso]').textContent = '';
+    atualizarProtecao(); previa();
   }
   function previa() {
     const c = campos();
@@ -99,6 +122,9 @@ export function criarNpsUnidadePix({ supabase, aoAtualizar, filiais, competencia
     const c = campos(), mes = c.competencia.value, filial = c.filial.value;
     const meta = percentualNpsUnidade(c.meta.value), realizado = percentualNpsUnidade(c.realizado.value);
     const id = chaveNpsUnidade(filial, mes);
+    if ((dialogo.dataset.existia === 'true' || registros.has(id)) && edicaoAutorizada !== id) {
+      await alertar('Informe a senha administrativa para alterar o NPS já salvo.'); return;
+    }
     if (!id || mes < '2026-10' || !filiais().includes(filial) || meta === null || (c.realizado.value.trim() !== '' && realizado === null)) {
       await alertar('Informe filial, competência e percentuais válidos entre -100 e 100.'); return;
     }
@@ -119,12 +145,13 @@ export function criarNpsUnidadePix({ supabase, aoAtualizar, filiais, competencia
       if (error) throw error;
       if (!data?.length) throw new Error('Este NPS foi alterado por outro usuário. Reabra o formulário para conferir os valores atuais.');
       registros.set(id, data[0]); carregado = true; erro = false;
+      edicaoAutorizada = null; c.senhaEdicao.value = '';
       dialogo.close(); avisarAtualizacao();
       // Somente sinal de atualização, sem valores da filial no broadcast.
       void canal?.send({ type: 'broadcast', event: 'atualizar', payload: {} }).catch(e => console.warn('[PIX/NPS] Atualização será sincronizada na próxima consulta.', e));
       await alertar('NPS geral salvo. Os cofrinhos desta filial foram recalculados nesta competência.');
     } catch(e) { await alertar(e.message || 'Não foi possível salvar o NPS geral. Tente novamente.'); }
-    finally { salvando = false; botoes.forEach(b => b.disabled = false); }
+    finally { salvando = false; botoes.forEach(b => b.disabled = false); atualizarProtecao(); }
   }
   let canal = null;
   function iniciar() {

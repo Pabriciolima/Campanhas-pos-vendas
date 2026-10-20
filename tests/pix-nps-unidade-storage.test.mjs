@@ -37,9 +37,15 @@ test('gravação compartilhada, concorrência, rede e campos pendentes', { skip:
  holder.querySelectorAll('[data-abrir-nps-unidade]')[2].dispatchEvent(new window.Event('click'));
  await tick();await tick();assert.equal(fields.filial.value,'MARABA');
 
- await api.abrir();fields.realizado.value='90';await submit();assert.equal(rows.size,1);assert.equal(api.avaliar('BELEM','2026-10').atingiu,true);api.atualizarResumo();assert.equal(holder.querySelectorAll('[data-nps-geral-realizado]')[1].textContent,'90%');
- await api.abrir();const saved=[...rows.values()][0];rows.set(saved.id,{...saved,updated_at:'outro-usuario',dados:{...saved.dados,realizado:80}});fields.realizado.value='95';await submit();assert(alerts.some(t=>t.includes('outro usuário')));assert.equal(rows.get(saved.id).dados.realizado,80);
+ await api.abrir();
+ assert.equal(fields.meta.readOnly,true);fields.realizado.value='99';await submit();assert.equal([...rows.values()][0].dados.realizado,89);
+ const unlock=()=>{fields.senhaEdicao.value='123321';dlg.querySelector('[data-nps-desbloquear]').dispatchEvent(new window.Event('click'));};
+ fields.senhaEdicao.value='errada';dlg.querySelector('[data-nps-desbloquear]').dispatchEvent(new window.Event('click'));assert.equal(fields.meta.readOnly,true);assert.equal(fields.senhaEdicao.value,'');
+ unlock();assert.equal(fields.meta.readOnly,false);
+ fields.filial.value='MARABA';fields.filial.dispatchEvent(new window.Event('change',{bubbles:true}));assert.equal(fields.meta.readOnly,false);
+ fields.filial.value='BELEM';fields.filial.dispatchEvent(new window.Event('change',{bubbles:true}));assert.equal(fields.meta.readOnly,true);unlock();fields.realizado.value='90';await submit();assert.equal(rows.size,1);assert.equal(api.avaliar('BELEM','2026-10').atingiu,true);api.atualizarResumo();assert.equal(holder.querySelectorAll('[data-nps-geral-realizado]')[1].textContent,'90%');
+ await api.abrir();assert.equal(fields.meta.readOnly,true);unlock();const saved=[...rows.values()][0];rows.set(saved.id,{...saved,updated_at:'outro-usuario',dados:{...saved.dados,realizado:80}});fields.realizado.value='95';await submit();assert(alerts.some(t=>t.includes('outro usuário')));assert.equal(rows.get(saved.id).dados.realizado,80);
  await api.abrir();locked=true;fields.realizado.value='99';await submit();assert(alerts.some(t=>t.includes('bloqueados')));assert.equal(rows.get(saved.id).dados.realizado,80);locked=false;
  offline=true;await assert.rejects(api.carregar());assert.equal(api.avaliar('BELEM','2026-10').status,'ERRO');offline=false;
- await api.abrir();fields.realizado.value='';await submit();assert.equal(api.avaliar('BELEM','2026-10').status,'PENDENTE');assert.equal(rows.get(saved.id).dados.realizado,null);assert(changes>=5);
+ await api.abrir();unlock();fields.realizado.value='';await submit();assert.equal(api.avaliar('BELEM','2026-10').status,'PENDENTE');assert.equal(rows.get(saved.id).dados.realizado,null);assert(changes>=5);
 });
