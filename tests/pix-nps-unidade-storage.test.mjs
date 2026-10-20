@@ -25,8 +25,10 @@ test('gravação compartilhada, concorrência, rede e campos pendentes', { skip:
  // Linkedom does not implement form controls completely. Model their value and elements semantics.
  const fields={};for(const e of form.querySelectorAll('[name]')){fields[e.getAttribute('name')]=e; if(e.tagName==='SELECT')Object.defineProperty(e,'value',{value:'BELEM',writable:true,configurable:true});}
  Object.defineProperty(form,'elements',{value:fields,configurable:true});
+ assert.equal(fields.meta.value,'');
  fields.filial.value='BELEM';fields.competencia.value='2026-10';fields.meta.value='90';fields.realizado.value='89';
  const tick=()=>new Promise(r=>setTimeout(r,0));const submit=async()=>{form.dispatchEvent(new window.Event('submit',{cancelable:true}));await tick();await tick();};
+ const configuredMeta=fields.meta.value;fields.meta.value='';await submit();assert.equal(rows.size,0);fields.meta.value=configuredMeta;
  await submit();assert.equal(rows.size,1);assert.equal(api.avaliar('BELEM','2026-10').status,'NAO_ATINGIDO');assert.equal(api.avaliar('MARABA','2026-10').status,'PENDENTE');
  // Dois colaboradores da mesma filial exibem a mesma configuração, sem duplicar o registro.
  const holder=document.createElement('div');holder.innerHTML=api.blocoLancamento('BELEM','2026-10')+api.blocoLancamento('BELEM','2026-10')+api.blocoLancamento('MARABA','2026-10');document.body.appendChild(holder);
@@ -35,7 +37,7 @@ test('gravação compartilhada, concorrência, rede e campos pendentes', { skip:
  assert.equal(holder.querySelectorAll('[data-nps-geral-realizado]')[1].textContent,'89%');
  // O botão usa a filial do colaborador aberto, e não o filtro geral da tabela.
  holder.querySelectorAll('[data-abrir-nps-unidade]')[2].dispatchEvent(new window.Event('click'));
- await tick();await tick();assert.equal(fields.filial.value,'MARABA');
+ await tick();await tick();assert.equal(fields.filial.value,'MARABA');assert.equal(fields.meta.value,'');
 
  await api.abrir();
  assert.equal(fields.meta.readOnly,true);fields.realizado.value='99';await submit();assert.equal([...rows.values()][0].dados.realizado,89);

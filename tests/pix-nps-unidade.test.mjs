@@ -59,3 +59,16 @@ test('relatório histórico usa as quatro semanas fornecidas e restaura o estado
  const total=m.window.calcularPagamentoPixHistorico(semana4,all);assert.equal(total,2700);assert.equal(m.estadoPix.lancamentos.length,0);
  m.estados.set(chaveNpsUnidade('BELEM','2026-10'),{meta:90,realizado:80});assert.equal(m.window.calcularPagamentoPixHistorico(semana4,all),1700);
 });
+
+ test('metas variáveis por filial e mês, sem alvo implícito de 90%',()=>{
+ const m=motor();seed(m);
+ m.estados.set(chaveNpsUnidade('BELEM','2026-10'),{meta:85,realizado:86});
+ m.estadoPix.lancamentos=m.estadoPix.lancamentos.map(l=>({...l,metaNps:80,realizadoNps:81}));
+ assert.equal(m.calcularPix(lancamento('A',4,'BELEM',{metaNps:80,realizadoNps:81})).bonusNps,1000);
+ m.estados.set(chaveNpsUnidade('MARABA','2026-10'),{meta:95,realizado:94});
+ assert.equal(m.calcularPix(lancamento('C',4,'MARABA',{metaNps:80,realizadoNps:81})).bonusNps,0);
+ m.estados.set(chaveNpsUnidade('BELEM','2026-11'),{meta:98,realizado:97});
+ assert.equal(m.calcularPix(lancamento('A',4,'BELEM',{competencia:'2026-11',metaNps:80,realizadoNps:81})).bonusNps,0);
+ assert.equal(avaliarNpsUnidade({realizado:95}).status,'PENDENTE');
+ assert.equal(m.calcularPix(lancamento('A',4,'BELEM',{metaNps:85,realizadoNps:84})).bonusNps,0);
+ });

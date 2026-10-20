@@ -63,9 +63,9 @@ export function criarNpsUnidadePix({ supabase, aoAtualizar, filiais, competencia
     dialogo = document.createElement('dialog'); dialogo.id = 'pixNpsUnidadeModal'; dialogo.className = 'pix-nps-unidade-modal';
     dialogo.innerHTML = `<form id="pixNpsUnidadeForm"><header><div><small>PIX DO PRESIDENTE · SEMANA 4</small><h2>NPS geral da filial</h2></div><button type="button" data-nps-fechar aria-label="Fechar">×</button></header>
       <p>Este resultado vale para <b>todos os cofrinhos da filial</b> nesta competência. O NPS individual, as reservas semanais e as penalidades existentes continuam valendo.</p>
-      <div class="pix-nps-unidade-campos"><label>Competência<input name="competencia" type="month" min="2026-10" required></label><label>Filial<select name="filial" required><option value="">Selecione a filial</option>${filiais().map(f => `<option value="${escape(f)}">${escape(f)}</option>`).join('')}</select></label><label>Meta geral de NPS (%)<input name="meta" type="number" min="-100" max="100" step="0.01" required></label><label>NPS geral realizado (%)<input name="realizado" type="number" min="-100" max="100" step="0.01" placeholder="Aguardando resultado"></label></div>
+      <div class="pix-nps-unidade-campos"><label>Competência<input name="competencia" type="month" min="2026-10" required></label><label>Filial<select name="filial" required><option value="">Selecione a filial</option>${filiais().map(f => `<option value="${escape(f)}">${escape(f)}</option>`).join('')}</select></label><label>Meta geral de NPS (%)<input name="meta" placeholder="Informe a meta da filial neste mês" type="number" min="-100" max="100" step="0.01" required></label><label>NPS geral realizado (%)<input name="realizado" type="number" min="-100" max="100" step="0.01" placeholder="Aguardando resultado"></label></div>
       <div data-nps-protecao hidden><label>Resultado já salvo. Informe a senha para alterar.<input name="senhaEdicao" type="password" autocomplete="off" placeholder="Senha administrativa"></label><button type="button" data-nps-desbloquear class="secondary">Liberar edição</button><span data-nps-senha-aviso role="alert"></span></div>
-      <p class="pix-nps-unidade-situacao" role="status"></p><p class="pix-nps-unidade-dica">Informe o NPS oficial consolidado da unidade; não é a média dos percentuais individuais. Campo realizado vazio mantém os cofrinhos aguardando. Valor inicial sugerido da meta: 90%, editável.</p>
+      <p class="pix-nps-unidade-situacao" role="status"></p><p class="pix-nps-unidade-dica">Informe o NPS oficial consolidado da unidade; não é a média dos percentuais individuais. Campo realizado vazio mantém os cofrinhos aguardando. A meta é obrigatória e definida pela filial para cada competência, sem valor padrão.</p>
       <footer><button type="button" data-nps-fechar class="secondary">Cancelar</button><button type="submit" class="primary">Salvar NPS da filial</button></footer></form>`;
     document.body.appendChild(dialogo);
     dialogo.querySelectorAll('[data-nps-fechar]').forEach(b => b.addEventListener('click', () => { if (!salvando) dialogo.close(); }));
@@ -95,7 +95,7 @@ export function criarNpsUnidadePix({ supabase, aoAtualizar, filiais, competencia
   }
   function preencher() {
     const c = campos(), r = registros.get(chaveNpsUnidade(c.filial.value, c.competencia.value));
-    c.meta.value = r?.dados?.meta ?? 90; c.realizado.value = r?.dados?.realizado ?? '';
+    c.meta.value = r?.dados?.meta ?? ''; c.realizado.value = r?.dados?.realizado ?? '';
     dialogo.dataset.versao = r?.updated_at || '';
     dialogo.dataset.existia = r ? 'true' : 'false';
     edicaoAutorizada = null; c.senhaEdicao.value = '';

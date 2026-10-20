@@ -3371,12 +3371,12 @@ function renderPoliticasPix() {
     <section class="pix-policy-general pix-policy-nps-geral">
       <h3>🏦 COFRINHO NPS — INDIVIDUAL + FILIAL</h3>
       <div>
-        <span><b>Reserva individual:</b> cada semana com NPS na meta de referência de 90% reserva R$ 250; máximo de R$ 1.000. Somente cargos com NPS participam.</span>
+        <span><b>Reserva individual:</b> cada semana com NPS individual atingindo a meta informada para a filial e competência reserva R$ 250; máximo de R$ 1.000. Somente cargos com NPS participam.</span>
         <span><b>Liberação na semana 4:</b> exige a meta individual da própria semana 4 e a meta geral cadastrada para a filial na competência. O NPS é independente da meta de faturamento.</span>
         <span><b>Filial abaixo da meta:</b> zera o cofrinho NPS de todos os elegíveis daquela unidade. Resultado geral não informado: fica aguardando, sem liberação. Base e ticket/margem mantêm suas próprias regras.</span>
         <span><b>Lançamento único:</b> na semana 4, abaixo do NPS individual, cadastre o resultado oficial consolidado da filial uma vez por competência. Ele vale para todos da unidade; não é a média dos NPS individuais.</span>
-        <span><b>Alterações:</b> após salvar, a edição pela interface exige a senha administrativa. A meta geral inicial sugerida é 90%, ajustável no cadastro da filial.</span>
-        <span><b>Exemplo antes de O.S.:</b> R$ 1.000 reservados e NPS individual da semana 4 em 95%. Com meta geral de 90%, filial em 92% libera o saldo; em 85%, o cofrinho é R$ 0 para todos os elegíveis.</span>
+        <span><b>Alterações:</b> após salvar, a edição pela interface exige a senha administrativa. A meta geral é obrigatória e variável por filial e mês, sem valor padrão.</span>
+        <span><b>Exemplo antes de O.S.:</b> com o NPS individual da semana 4 atingido, uma filial que cumpra a meta geral cadastrada no mês pode liberar até R$ 1.000. Abaixo dessa meta, o cofrinho é R$ 0 para todos os elegíveis.</span>
       </div>
     </section>` : ""}
     <section class="pix-policy-flow">
@@ -4133,14 +4133,13 @@ function renderCamposLancamentoPix(dados = {}) {
               step="0.01"
               min="0"
               id="pixMetaNps"
-              value="${usaRegraPixDiaria(competenciaLancamento) ? 90 : (dados.metaNps ?? "")}"
-              placeholder="90"
-              ${usaRegraPixDiaria(competenciaLancamento) ? "readonly" : ""}
+              value="${dados.metaNps ?? ""}"
+              placeholder="Informe a meta deste mês"
               required
             />
 
             <small>
-              ${usaRegraPixDiaria(competenciaLancamento) ? "Meta semanal 90%" : politica.objetivoNps} ·
+              ${usaRegraPixDiaria(competenciaLancamento) ? "Meta informada para a filial e competência" : politica.objetivoNps} ·
               prêmio de ${pixMoeda(usaRegraPixDiaria(competenciaLancamento) ? (politica.bonusNpsSemanal || 250) : politica.bonusNps)}.
             </small>
           </label>
