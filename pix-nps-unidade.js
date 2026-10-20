@@ -52,7 +52,7 @@ export function criarNpsUnidadePix({ supabase, aoAtualizar, filiais, competencia
     const r = avaliar(filial, mes);
     const fmt = n => n === null ? 'Aguardando' : n.toLocaleString('pt-BR') + '%';
     return `<section class="pix-nps-unidade-compartilhado" data-pix-nps-compartilhado data-nps-filial="${f}" data-nps-competencia="${m}" aria-label="NPS geral compartilhado da filial">
-      <header><h3>NPS da filial <small>· ${f}</small></h3><button type="button" class="secondary" data-abrir-nps-unidade data-nps-filial="${f}" data-nps-competencia="${m}">${registros.has(chaveNpsUnidade(filial, mes)) ? 'Alterar' : 'Lançar'}</button></header>
+      <header><h3><svg class="pix-nps-filial-icone" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h1m4 0h1M9 11h1m4 0h1M9 15h1m4 0h1M10 21v-3h4v3M3 21h18"/></svg>NPS da filial <small>· ${f}</small></h3><button type="button" class="secondary" data-abrir-nps-unidade data-nps-filial="${f}" data-nps-competencia="${m}">${registros.has(chaveNpsUnidade(filial, mes)) ? 'Alterar' : 'Lançar'}</button></header>
       <div class="pix-nps-unidade-valores"><span>Meta <strong data-nps-geral-meta>${fmt(r.meta)}</strong></span><span>Realizado <strong data-nps-geral-realizado>${fmt(r.realizado)}</strong></span></div>
       <p data-pix-nps-unidade-resumo data-nps-filial="${f}" data-nps-competencia="${m}" role="status">${resumoCurto(r)}</p>
       <small>Único lançamento para todos da filial nesta competência.</small>
