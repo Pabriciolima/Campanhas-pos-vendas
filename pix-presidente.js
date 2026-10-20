@@ -4148,12 +4148,16 @@ function renderCamposLancamentoPix(dados = {}) {
             />
 
             <small>
-              Cada semana com NPS atingido reserva R$ 250,00 no cofrinho.\n              O saldo só é pago na semana 4 se o NPS individual da própria semana 4 E o NPS geral da filial atingirem suas metas. O resultado da unidade é cadastrado em “NPS geral da filial”, nos Lançamentos.
+              Cada semana com NPS atingido reserva R$ 250,00 no cofrinho.\n              O saldo só é pago na semana 4 se o NPS individual da própria semana 4 E o NPS geral da filial atingirem suas metas. O resultado geral é cadastrado uma única vez no bloco “NPS geral da filial”, logo abaixo, e vale para todos os colaboradores da unidade.
             </small>
           </label>
         `
         : ""
     }
+
+    ${usaRegraPixDiaria(competenciaLancamento) && semana === 4
+      ? npsUnidadePix.blocoLancamento(funcionario.filial || dados.filial, competenciaLancamento)
+      : ""}
 
     ${
       semana === 4 &&
@@ -4230,6 +4234,8 @@ function renderCamposLancamentoPix(dados = {}) {
     }
   );
 
+  npsUnidadePix.vincularBotoes(area);
+  npsUnidadePix.atualizarResumo();
   iniciarCalendarioPix();
   atualizarPainelDiarioPix();
   atualizarPreviewPix();

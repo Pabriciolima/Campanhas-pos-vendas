@@ -2,6 +2,7 @@ import { chaveNpsUnidade, percentualNpsUnidade, avaliarNpsUnidade, mensagemNpsUn
 
 export function criarNpsUnidadePix({ supabase, aoAtualizar, filiais, competencia, filialAtual, bloqueado, alertar }) {
   const registros = new Map();
+  const botoesVinculados = new WeakSet();
   let carregado = false, erro = false, consulta = null, dialogo = null, salvando = false;
   const escape = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const avaliar = (filial, mes) => avaliarNpsUnidade(registros.get(chaveNpsUnidade(filial, mes))?.dados, { carregado, erro });
@@ -21,13 +22,38 @@ export function criarNpsUnidadePix({ supabase, aoAtualizar, filiais, competencia
     return consulta;
   }
   function atualizarResumo() {
-    const vigente = String(competencia()).slice(0, 7) >= '2026-10';
-    document.querySelectorAll('[data-abrir-nps-unidade]').forEach(el => { el.hidden = !vigente; });
+    document.querySelectorAll('[data-abrir-nps-unidade]').forEach(el => { el.hidden = String(el.dataset.npsCompetencia || competencia()).slice(0, 7) < '2026-10'; });
     document.querySelectorAll('[data-pix-nps-unidade-resumo]').forEach(el => {
-      const f = filialAtual(), mes = competencia();
-      el.hidden = !vigente;
+      const f = el.dataset.npsFilial || filialAtual(), mes = el.dataset.npsCompetencia || competencia();
+      el.hidden = String(mes).slice(0, 7) < '2026-10';
       el.textContent = f ? mensagemNpsUnidade(avaliar(f, mes)) : 'Semana 4: o cofrinho exige o NPS individual e a meta geral da filial. Cadastre o resultado por unidade e competência.';
     });
+    document.querySelectorAll('[data-pix-nps-compartilhado]').forEach(el => {
+      const r = avaliar(el.dataset.npsFilial, el.dataset.npsCompetencia);
+      const meta = el.querySelector('[data-nps-geral-meta]');
+      const realizado = el.querySelector('[data-nps-geral-realizado]');
+      if (meta) meta.textContent = r.meta === null ? 'Aguardando cadastro' : r.meta.toLocaleString('pt-BR') + '%';
+      if (realizado) realizado.textContent = r.realizado === null ? 'Aguardando resultado' : r.realizado.toLocaleString('pt-BR') + '%';
+    });
+  }
+  function vincularBotoes(raiz = document) {
+    raiz.querySelectorAll('[data-abrir-nps-unidade]').forEach(b => {
+      if (botoesVinculados.has(b)) return;
+      botoesVinculados.add(b);
+      b.addEventListener('click', () => { void abrir(b.dataset.npsFilial, b.dataset.npsCompetencia); });
+    });
+  }
+  function blocoLancamento(filial, mes) {
+    const f = escape(filial), m = escape(String(mes).slice(0, 7));
+    const r = avaliar(filial, mes);
+    const fmt = n => n === null ? 'Aguardando' : n.toLocaleString('pt-BR') + '%';
+    return `<section class="pix-nps-unidade-compartilhado" data-pix-nps-compartilhado data-nps-filial="${f}" data-nps-competencia="${m}" aria-label="NPS geral compartilhado da filial">
+      <header><div><small>LANÇAMENTO ÚNICO · SEMANA 4</small><h3>NPS geral da filial</h3></div><button type="button" class="secondary" data-abrir-nps-unidade data-nps-filial="${f}" data-nps-competencia="${m}">Lançar / editar NPS da filial</button></header>
+      <p><b>${f}</b> · ${m}. Informe uma única vez: o resultado é aplicado automaticamente a todos os colaboradores cadastrados nesta filial e competência.</p>
+      <div class="pix-nps-unidade-valores"><div><span>Meta geral da filial</span><strong data-nps-geral-meta>${fmt(r.meta)}</strong></div><div><span>NPS geral realizado</span><strong data-nps-geral-realizado>${fmt(r.realizado)}</strong></div></div>
+      <p data-pix-nps-unidade-resumo data-nps-filial="${f}" data-nps-competencia="${m}" role="status">${mensagemNpsUnidade(r)}</p>
+      <small>Este resultado é compartilhado. O NPS individual de cada colaborador continua sendo informado nos campos acima.</small>
+    </section>`;
   }
   function garantirDialogo() {
     if (dialogo) return;
@@ -102,11 +128,11 @@ export function criarNpsUnidadePix({ supabase, aoAtualizar, filiais, competencia
   }
   let canal = null;
   function iniciar() {
-    document.querySelectorAll('[data-abrir-nps-unidade]').forEach(b => b.addEventListener('click', () => { void abrir(); }));
+    vincularBotoes();
     canal = supabase.channel('pix-nps-unidade-invalidacao').on('broadcast', { event: 'atualizar' }, () => { void carregar().catch(console.error); }).subscribe();
     window.addEventListener('focus', () => { void carregar().catch(console.error); });
     window.setInterval(() => { if (!document.hidden && document.querySelector('#pixPresidente.active')) void carregar().catch(console.error); }, 30000);
     return carregar();
   }
-  return { avaliar, carregar, abrir, iniciar, atualizarResumo };
+  return { avaliar, carregar, abrir, iniciar, atualizarResumo, vincularBotoes, blocoLancamento };
 }

@@ -28,7 +28,16 @@ test('gravação compartilhada, concorrência, rede e campos pendentes', { skip:
  fields.filial.value='BELEM';fields.competencia.value='2026-10';fields.meta.value='90';fields.realizado.value='89';
  const tick=()=>new Promise(r=>setTimeout(r,0));const submit=async()=>{form.dispatchEvent(new window.Event('submit',{cancelable:true}));await tick();await tick();};
  await submit();assert.equal(rows.size,1);assert.equal(api.avaliar('BELEM','2026-10').status,'NAO_ATINGIDO');assert.equal(api.avaliar('MARABA','2026-10').status,'PENDENTE');
- await api.abrir();fields.realizado.value='90';await submit();assert.equal(rows.size,1);assert.equal(api.avaliar('BELEM','2026-10').atingiu,true);
+ // Dois colaboradores da mesma filial exibem a mesma configuração, sem duplicar o registro.
+ const holder=document.createElement('div');holder.innerHTML=api.blocoLancamento('BELEM','2026-10')+api.blocoLancamento('BELEM','2026-10')+api.blocoLancamento('MARABA','2026-10');document.body.appendChild(holder);
+ api.vincularBotoes(holder);api.vincularBotoes(holder);api.atualizarResumo();
+ assert.equal(holder.querySelectorAll('[data-nps-geral-realizado]')[0].textContent,'89%');
+ assert.equal(holder.querySelectorAll('[data-nps-geral-realizado]')[1].textContent,'89%');
+ // O botão usa a filial do colaborador aberto, e não o filtro geral da tabela.
+ holder.querySelectorAll('[data-abrir-nps-unidade]')[2].dispatchEvent(new window.Event('click'));
+ await tick();await tick();assert.equal(fields.filial.value,'MARABA');
+
+ await api.abrir();fields.realizado.value='90';await submit();assert.equal(rows.size,1);assert.equal(api.avaliar('BELEM','2026-10').atingiu,true);api.atualizarResumo();assert.equal(holder.querySelectorAll('[data-nps-geral-realizado]')[1].textContent,'90%');
  await api.abrir();const saved=[...rows.values()][0];rows.set(saved.id,{...saved,updated_at:'outro-usuario',dados:{...saved.dados,realizado:80}});fields.realizado.value='95';await submit();assert(alerts.some(t=>t.includes('outro usuário')));assert.equal(rows.get(saved.id).dados.realizado,80);
  await api.abrir();locked=true;fields.realizado.value='99';await submit();assert(alerts.some(t=>t.includes('bloqueados')));assert.equal(rows.get(saved.id).dados.realizado,80);locked=false;
  offline=true;await assert.rejects(api.carregar());assert.equal(api.avaliar('BELEM','2026-10').status,'ERRO');offline=false;
