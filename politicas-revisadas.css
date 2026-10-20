@@ -1,0 +1,19 @@
+/* Políticas: valores legíveis e regras comuns sem blocos duplicados. */
+#pix-politicas .pix-policy-band p{font-size:11px;line-height:1.5;margin:6px 0}
+#pix-politicas .pix-policy-band table{display:table!important;table-layout:fixed;width:100%!important;font-size:12px}
+#pix-politicas .pix-policy-band tr{display:table-row!important}
+#pix-politicas .pix-policy-band th,#pix-politicas .pix-policy-band td{display:table-cell!important;visibility:visible!important;width:50%!important;padding:8px 6px;white-space:normal}
+#pix-politicas .pix-policy-nps p,#pix-politicas .pix-policy-dynamo p{font-size:11px;line-height:1.5}
+#pix-politicas .pix-policy-general>div{gap:14px 20px}
+#pix-politicas .pix-policy-general span{font-size:12px;line-height:1.6}
+#pix-politicas .pix-policy-general h3{font-size:14px}
+#pix-politicas .pix-policy-nps-geral{border-left:3px solid #10b981}
+#politicas .ip-card{max-height:none!important}
+#politicas .ip-content{overflow:visible!important}
+@media(max-width:760px){#pix-politicas .pix-policy-general>div{grid-template-columns:1fr}}
+#pix-politicas .pix-policy-role-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+#pix-politicas .pix-policy-pro header h3{font-size:13px}
+#pix-politicas .pix-policy-base small,#pix-politicas .pix-policy-base>span{font-size:10px}
+#pix-politicas .pix-policy-pro h4{font-size:12px}
+@media(max-width:1199px){#pix-politicas .pix-policy-role-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){#pix-politicas .pix-policy-role-grid{grid-template-columns:1fr}}

@@ -7,12 +7,12 @@
       const papeis = copia.querySelectorAll(".pix-policy-role-grid > article.pix-policy-pro");
       papeis.forEach((artigo, indice) => {
         artigo.dataset.printPage = "true";
-        artigo.dataset.printRole = ["Gerente / Coordenador / Supervisor Pós-Vendas", "Supervisor de Peças", "Supervisor de Assistência Técnica", "Consultor de Balcão", "Consultor Técnico"][indice] || "Política Pix";
+        artigo.dataset.printRole = artigo.querySelector("header h3")?.textContent?.trim() || "Política Pix";
       });
       const ultimo = papeis[papeis.length - 1];
-      const regras = copia.querySelector(".pix-policy-general");
+      const regras = copia.querySelectorAll(".pix-policy-general");
       const fluxo = copia.querySelector(".pix-policy-flow");
-      if (ultimo && regras) ultimo.appendChild(regras);
+      if (ultimo) regras.forEach(regra => ultimo.appendChild(regra));
       if (ultimo && fluxo) ultimo.appendChild(fluxo);
     }
     if (origem.id === "politicas") {

@@ -1,13 +1,13 @@
 /* =========================================================
    PENALIDADES NAS POLÍTICAS
-   Campanha dos Produtivos + Pix do Presidente
+   Compatibilidade de cartões antigos da Oficina
 
    Salve como:
    politicas-penalidades.js
 
    Este arquivo acrescenta penalidades apenas quando
    o cartão ainda não possui um bloco próprio de condições.
-   Evita duplicidade na aba de Políticas dos Produtivos.
+   Cartões atuais da Oficina e do PIX têm conteúdo próprio e não recebem anexos.
 
    Não altera cálculos, Firebase, lançamentos, apurações
    ou exportações.
@@ -73,88 +73,6 @@
     }
   };
 
-  const POLITICAS_PIX = {
-    "CONSULTOR TECNICO": {
-      titulo: "Penalidades e condições",
-      tipo: "warning",
-      itens: [
-        "O bônus-base e o bônus de ticket somente são pagos quando a meta semanal atingir 100%.",
-        "O NPS é independente da meta semanal. A partir de outubro/2026, o cofrinho exige o NPS individual da semana 4 e a meta geral de NPS da filial; resultado geral pendente impede a liberação.",
-        "Na Semana 4, O.S. em aberto acima de 28% gera penalidade de 50% sobre o total apurado da semana."
-      ]
-    },
-
-    "SUPERVISOR DE ASSISTENCIA": {
-      titulo: "Penalidades e condições",
-      tipo: "warning",
-      itens: [
-        "O bônus-base e o bônus de ticket somente são pagos quando a meta semanal atingir 100%.",
-        "O NPS é independente da meta semanal. A partir de outubro/2026, o cofrinho exige o NPS individual da semana 4 e a meta geral de NPS da filial; resultado geral pendente impede a liberação.",
-        "Na Semana 4, O.S. em aberto acima de 28% gera penalidade de 50% sobre o total apurado da semana."
-      ]
-    },
-
-    "CONSULTOR PECAS BALCAO": {
-      titulo: "Penalidades e condições",
-      tipo: "warning",
-      itens: [
-        "O bônus-base e o bônus de margem somente são pagos quando a meta semanal atingir 100%.",
-        "Este cargo não possui pagamento de NPS.",
-        "Margem abaixo da faixa mínima não gera bônus adicional."
-      ]
-    },
-
-    "SUPERVISOR PECAS": {
-      titulo: "Penalidades e condições",
-      tipo: "warning",
-      itens: [
-        "O bônus-base e o bônus de margem somente são pagos quando a meta semanal atingir 100%.",
-        "Este cargo não possui pagamento de NPS.",
-        "Margem abaixo da faixa mínima não gera bônus adicional."
-      ]
-    },
-
-    "SUPERVISOR POS-VENDAS": {
-      titulo: "Penalidades e condições",
-      tipo: "warning",
-      itens: [
-        "O bônus-base e o bônus de ticket somente são pagos quando a meta semanal atingir 100%.",
-        "O NPS é independente da meta semanal. A partir de outubro/2026, o cofrinho exige o NPS individual da semana 4 e a meta geral de NPS da filial; resultado geral pendente impede a liberação.",
-        "Na Semana 4, O.S. em aberto acima de 28% gera penalidade de 50% sobre o total apurado da semana."
-      ]
-    },
-
-    "COORDENADOR": {
-      titulo: "Penalidades e condições",
-      tipo: "warning",
-      itens: [
-        "O bônus-base e o bônus de ticket somente são pagos quando a meta semanal atingir 100%.",
-        "O NPS é independente da meta semanal. A partir de outubro/2026, o cofrinho exige o NPS individual da semana 4 e a meta geral de NPS da filial; resultado geral pendente impede a liberação.",
-        "Na Semana 4, O.S. em aberto acima de 28% gera penalidade de 50% sobre o total apurado da semana."
-      ]
-    },
-
-    "GERENTE": {
-      titulo: "Penalidades e condições",
-      tipo: "warning",
-      itens: [
-        "O bônus-base e o bônus de ticket somente são pagos quando a meta semanal atingir 100%.",
-        "O NPS é independente da meta semanal. A partir de outubro/2026, o cofrinho exige o NPS individual da semana 4 e a meta geral de NPS da filial; resultado geral pendente impede a liberação.",
-        "Na Semana 4, O.S. em aberto acima de 28% gera penalidade de 50% sobre o total apurado da semana."
-      ]
-    },
-
-    "ORCAMENTISTA / FACILITADOR DE NEGOCIOS": {
-      titulo: "Penalidades e condições",
-      tipo: "warning",
-      itens: [
-        "O bônus-base e o bônus de ticket somente são pagos quando a meta semanal atingir 100%.",
-        "Este cargo não possui pagamento de NPS.",
-        "Ticket abaixo da faixa mínima não gera bônus adicional."
-      ]
-    }
-  };
-
   function normalizar(valor) {
     return String(valor ?? "")
       .normalize("NFD")
@@ -211,6 +129,11 @@
     }
 
     [...view.querySelectorAll(cardSelector)].forEach(card => {
+      // Os cartões atuais já apresentam condições completas na fonte.
+      if (card.matches('.ip-card') || card.closest('[data-policy-managed="true"]')) {
+        card.querySelectorAll('.policy-penalty-box').forEach(bloco => bloco.remove());
+        return;
+      }
       /*
        * A aba de Políticas dos Produtivos agora já possui
        * os blocos completos de valores, condições e penalidades
@@ -242,69 +165,6 @@
     });
   }
 
-  function adicionarResumoPix() {
-    const view =
-      document.querySelector("#pix-politicas");
-
-    if (
-      !view ||
-      view.querySelector(
-        ".pix-general-penalty-summary"
-      )
-    ) {
-      return;
-    }
-
-    const referencia =
-      view.querySelector(
-        ".pix-policy-grid, .policy-grid"
-      );
-
-    if (!referencia) {
-      return;
-    }
-
-    const resumo =
-      document.createElement("section");
-
-    resumo.className =
-      "pix-general-penalty-summary";
-
-    resumo.innerHTML = `
-      <div>
-        <span class="policy-summary-eyebrow">
-          Regra geral
-        </span>
-
-        <h3>
-          Penalidades do Pix do Presidente
-        </h3>
-      </div>
-
-      <div class="policy-summary-items">
-        <p>
-          <strong>Meta semanal:</strong>
-          bônus-base e bônus de faixa dependem de 100% de atingimento.
-        </p>
-
-        <p>
-          <strong>NPS:</strong>
-          é independente da meta semanal. A partir de outubro/2026, o cofrinho só é liberado com o NPS individual da semana 4 e o NPS geral da filial atingidos.
-        </p>
-
-        <p>
-          <strong>Semana 4:</strong>
-          O.S. em aberto acima de 28% aplica penalidade de 50% sobre o total apurado da semana.
-        </p>
-      </div>
-    `;
-
-    referencia.insertAdjacentElement(
-      "afterend",
-      resumo
-    );
-  }
-
   function atualizar() {
     aplicarPoliticas(
       "#politicas",
@@ -312,13 +172,12 @@
       POLITICAS_PRODUTIVOS
     );
 
-    aplicarPoliticas(
-      "#pix-politicas",
-      ".pix-policy-card, .policy-card, article",
-      POLITICAS_PIX
-    );
-
-    adicionarResumoPix();
+    // O PIX possui suas regras no renderizador oficial, inclusive por competência.
+    // Remova apenas resumos antigos que tenham sobrevivido a uma atualização da tela.
+    const pix = document.querySelector('#pix-politicas');
+    if (pix?.querySelector('[data-policy-managed="true"]')) {
+      pix.querySelectorAll('.policy-penalty-box, .pix-general-penalty-summary').forEach(bloco => bloco.remove());
+    }
   }
 
   function iniciar() {

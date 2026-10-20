@@ -3291,6 +3291,12 @@ function renderPoliticasPix() {
           base: 800,
           metrica: "ticket",
           nps: true
+        },
+        {
+          classe: "lideranca", icone: "🧾", titulo: "Orçamentista / Facilitador de Negócios",
+          cargos: ["Orçamentista / Facilitador de Negócios"],
+          base: pixPoliticaVigente("Orçamentista / Facilitador de Negócios", competencia)?.bonusBase || 300,
+          metrica: "ticket", nps: false
         }
       ]
     : CARGOS_PIX.map(cargo => {
@@ -3298,17 +3304,18 @@ function renderPoliticasPix() {
         return { classe:"legacy", icone:"•", titulo:cargo, cargos:[cargo], base:p.bonusBase, metrica:p.metrica, nps:p.bonusNps > 0 };
       });
 
+  $("#pixPolicyGrid").dataset.policyManaged = "true";
   $("#pixPolicyGrid").innerHTML = `
     <div class="pix-policy-hero">
-      <div><span>🏆 CAMPANHA PIX DO PRESIDENTE</span><strong>Foco no faturamento, margem e excelência no atendimento</strong></div>
+      <div><span>🏆 CAMPANHA PIX DO PRESIDENTE</span><strong>Faturamento, margem e excelência no atendimento</strong></div>
       <div class="pix-policy-hero-rule">📊 Pagamento conforme atingimento</div>
-      <div class="pix-policy-hero-rule">🎯 Resultado que premia</div>
+      <div class="pix-policy-hero-rule">📅 ${novaRegra ? "Vigência: outubro/2026 em diante" : "Regulamento histórico: " + competencia}</div>
     </div>
     <div class="pix-policy-role-grid">
       ${grupos.map(grupo => {
         const politica = pixPoliticaVigente(grupo.cargos[0], competencia);
         const faixas = politica?.faixas || [];
-        const valorDiaExemplo = grupo.base / 5;
+        
         return `
           <article class="pix-policy-pro ${grupo.classe}">
             <header>
@@ -3318,31 +3325,26 @@ function renderPoliticasPix() {
             <section class="pix-policy-base">
               <small>BÔNUS-BASE SEMANAL</small>
               <strong>${pixMoeda(grupo.base)}</strong>
-              <span>Referência de meta em 5 dias: <b>meta semanal ÷ 5</b></span>
+              ${novaRegra ? "<span>Base conforme os dias e o resultado semanal</span>" : "<span>Regulamento histórico da competência</span>"}
               ${novaRegra ? `<div class="pix-policy-payout">
                 <div><b class="pix-rule-ok">100%</b><span>Meta semanal + todos os dias atingidos</span><strong>${pixMoeda(grupo.base)}</strong></div>
                 <div><b class="pix-rule-half">50%</b><span>Meta semanal atingida, mas algum dia não</span><strong>${pixMoeda(grupo.base / 2)}</strong></div>
                 <div><b class="pix-rule-zero">0%</b><span>Meta semanal não atingida, mesmo com dias cumpridos</span><strong>R$ 0,00</strong></div>
               </div>` : ""}
             </section>
-            <section class="pix-policy-rule">
-              <h4>☑ META DIÁRIA</h4>
-              <p>${novaRegra ? "A meta semanal é obrigatória. Cumprir todos os dias garante 100% da base; cumprir a semana no acumulado, mas falhar em algum dia, garante 50%. Abaixo da meta semanal, a base é R$ 0,00." : "Apuração conforme as regras históricas da competência selecionada."}</p>
-              ${novaRegra ? `<p class="pix-policy-explain"><b>Exemplo:</b> meta de R$ 50.000 em 5 dias = R$ 10.000/dia. Se o total for R$ 52.000, mas um dia não atingir sua meta ajustada, recebe 50% da base. Se fechar R$ 49.000, recebe R$ 0,00 de base.</p>` : ""}
-            </section>
             <section class="pix-policy-band">
               <h4>📊 ${grupo.metrica === "margem" ? "MARGEM" : "TICKET MÉDIO"} <small>(por faixa)</small></h4>
-              ${novaRegra ? '<p class="pix-policy-explain"><b>Gatilho obrigatório:</b> o bônus desta faixa só é pago se a meta semanal acumulada for atingida.</p>' : ""}
+              ${novaRegra ? '<p>Aplica-se a maior faixa atingida, após cumprir a meta semanal.</p>' : ""}
               <table><thead><tr><th>Meta</th><th>Bônus</th></tr></thead><tbody>
                 ${faixas.map(faixa => `<tr><td>${grupo.metrica === "margem" ? pixPct(faixa.minimo) : pixMoeda(faixa.minimo)}</td><td>${pixMoeda(faixa.bonus)}</td></tr>`).join("")}
               </tbody></table>
             </section>
             ${grupo.nps ? `
               <section class="pix-policy-nps">
-                <h4>★ NPS <small>(semanal)</small></h4>
-                <p>Meta: <b>90%</b> · Valor: <b>R$ 250,00</b></p>
-                <span>Cada semana atingida reserva R$ 250,00. O total só é liberado na semana 4 se o NPS individual da semana 4 atingir 90% e a filial atingir sua meta geral de NPS. Se a filial não atingir, o cofrinho de todos da unidade é zerado; sem resultado geral informado, aguarda conferência.</span>
+                <h4>★ ${novaRegra ? "COFRINHO NPS" : "NPS HISTÓRICO"}</h4>
+                <p>${novaRegra ? "R$ 250 por semana atingida · até R$ 1.000 na competência. Consulte as condições conjuntas abaixo." : `Meta: ${politica.objetivoNps} · Bônus: ${pixMoeda(politica.bonusNps)}. Apuração semanal conforme a competência.`}</p>
               </section>` : ""}
+            ${!grupo.nps ? '<section class="pix-policy-nps"><h4>NPS</h4><p>Este cargo não possui bônus de NPS.</p></section>' : ""}
             ${grupo.dynamo ? `
               <section class="pix-policy-dynamo">
                 <h4>✓ DYNAMO PEÇAS</h4><p>${grupo.dynamo}</p>
@@ -3354,14 +3356,10 @@ function renderPoliticasPix() {
       <h3>📋 REGRAS GERAIS — PIX DO PRESIDENTE</h3>
       <div>
         ${novaRegra ? `
-        <span>✓ Meta semanal acumulada obrigatória para bônus-base e ticket/margem: abaixo de 100%, ambos são R$ 0,00.</span>
-        <span>✓ Bônus-base: 100% com todos os dias atingidos; 50% com meta semanal atingida e algum dia não cumprido.</span>
-        <span>✓ O saldo de gordura ou déficit de dias avaliados segue para os próximos dias e semanas da competência.</span>
-        <span>✓ Datas usadas em semanas anteriores ficam indisponíveis nas seguintes para o mesmo colaborador.</span>
-        <span>✓ Ticket médio e margem seguem as faixas específicas de cada cargo após o gatilho semanal.</span>
-        <span>✓ Cofrinho NPS: R$ 250 por semana atingida; pagamento somente na semana 4, condicionado ao NPS individual da própria semana 4 E ao atingimento da meta geral de NPS da filial na competência.</span>
-        <span>✓ NPS é independente da meta de faturamento e pode ser liberado na semana 4 mesmo sem atingir a meta semanal.</span>
-        <span>✓ Domingos ficam indisponíveis para seleção no calendário.</span>
+        <span><b>Meta semanal e faixas:</b> abaixo de 100% da meta acumulada, base e ticket/margem são R$ 0. Ao atingir a semana, aplica-se a maior faixa do cargo, sem somar faixas anteriores.</span>
+        <span><b>Base diária:</b> meta semanal dividida pelos dias selecionados. Semana e todos os dias atingidos: base integral; semana atingida e algum dia não cumprido: metade da base.</span>
+        <span><b>Calendário:</b> gordura ou déficit segue para os próximos dias e semanas da mesma competência. Datas não se repetem para o colaborador; domingos não podem ser selecionados.</span>
+        <span><b>O.S. na semana 4:</b> todos os cargos informam o percentual. Acima de 28%, desconto de 50% sobre o subtotal da semana, incluindo o NPS liberado.</span>
         ` : `
         <span>✓ Regulamento histórico da competência selecionada, anterior a outubro de 2026.</span>
         <span>✓ Base e faixas calculadas conforme o atingimento semanal previsto na regra anterior.</span>
@@ -3369,6 +3367,18 @@ function renderPoliticasPix() {
         `}
       </div>
     </section>
+    ${novaRegra ? `
+    <section class="pix-policy-general pix-policy-nps-geral">
+      <h3>🏦 COFRINHO NPS — INDIVIDUAL + FILIAL</h3>
+      <div>
+        <span><b>Reserva individual:</b> cada semana com NPS na meta de referência de 90% reserva R$ 250; máximo de R$ 1.000. Somente cargos com NPS participam.</span>
+        <span><b>Liberação na semana 4:</b> exige a meta individual da própria semana 4 e a meta geral cadastrada para a filial na competência. O NPS é independente da meta de faturamento.</span>
+        <span><b>Filial abaixo da meta:</b> zera o cofrinho NPS de todos os elegíveis daquela unidade. Resultado geral não informado: fica aguardando, sem liberação. Base e ticket/margem mantêm suas próprias regras.</span>
+        <span><b>Lançamento único:</b> na semana 4, abaixo do NPS individual, cadastre o resultado oficial consolidado da filial uma vez por competência. Ele vale para todos da unidade; não é a média dos NPS individuais.</span>
+        <span><b>Alterações:</b> após salvar, a edição pela interface exige a senha administrativa. A meta geral inicial sugerida é 90%, ajustável no cadastro da filial.</span>
+        <span><b>Exemplo antes de O.S.:</b> R$ 1.000 reservados e NPS individual da semana 4 em 95%. Com meta geral de 90%, filial em 92% libera o saldo; em 85%, o cofrinho é R$ 0 para todos os elegíveis.</span>
+      </div>
+    </section>` : ""}
     <section class="pix-policy-flow">
       <h3>⚙ FLUXO DE APURAÇÃO</h3>
       <div><b>Coleta de dados</b><i>→</i><b>Validação das metas</b><i>→</i><b>Cálculo da bonificação</b><i>→</i><b>Resultado final</b><i>→</i><b>Pagamento</b></div>
