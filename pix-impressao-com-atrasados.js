@@ -136,6 +136,7 @@
   }
 
   async function registrosCompetencia(competencia, filtroStatus) {
+    if (window.recarregarNpsFilialPix) await window.recarregarNpsFilialPix();
     const original = filtrosAtuais();
 
     try {

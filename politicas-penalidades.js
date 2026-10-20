@@ -79,7 +79,7 @@
       tipo: "warning",
       itens: [
         "O bônus-base e o bônus de ticket somente são pagos quando a meta semanal atingir 100%.",
-        "O NPS é independente da meta semanal, porém só é pago quando o realizado atingir ou superar a meta de NPS.",
+        "O NPS é independente da meta semanal. A partir de outubro/2026, o cofrinho exige o NPS individual da semana 4 e a meta geral de NPS da filial; resultado geral pendente impede a liberação.",
         "Na Semana 4, O.S. em aberto acima de 28% gera penalidade de 50% sobre o total apurado da semana."
       ]
     },
@@ -89,7 +89,7 @@
       tipo: "warning",
       itens: [
         "O bônus-base e o bônus de ticket somente são pagos quando a meta semanal atingir 100%.",
-        "O NPS é independente da meta semanal, porém só é pago quando o realizado atingir ou superar a meta de NPS.",
+        "O NPS é independente da meta semanal. A partir de outubro/2026, o cofrinho exige o NPS individual da semana 4 e a meta geral de NPS da filial; resultado geral pendente impede a liberação.",
         "Na Semana 4, O.S. em aberto acima de 28% gera penalidade de 50% sobre o total apurado da semana."
       ]
     },
@@ -119,7 +119,7 @@
       tipo: "warning",
       itens: [
         "O bônus-base e o bônus de ticket somente são pagos quando a meta semanal atingir 100%.",
-        "O NPS é independente da meta semanal, porém só é pago quando o realizado atingir ou superar a meta de NPS.",
+        "O NPS é independente da meta semanal. A partir de outubro/2026, o cofrinho exige o NPS individual da semana 4 e a meta geral de NPS da filial; resultado geral pendente impede a liberação.",
         "Na Semana 4, O.S. em aberto acima de 28% gera penalidade de 50% sobre o total apurado da semana."
       ]
     },
@@ -129,7 +129,7 @@
       tipo: "warning",
       itens: [
         "O bônus-base e o bônus de ticket somente são pagos quando a meta semanal atingir 100%.",
-        "O NPS é independente da meta semanal, porém só é pago quando o realizado atingir ou superar a meta de NPS.",
+        "O NPS é independente da meta semanal. A partir de outubro/2026, o cofrinho exige o NPS individual da semana 4 e a meta geral de NPS da filial; resultado geral pendente impede a liberação.",
         "Na Semana 4, O.S. em aberto acima de 28% gera penalidade de 50% sobre o total apurado da semana."
       ]
     },
@@ -139,7 +139,7 @@
       tipo: "warning",
       itens: [
         "O bônus-base e o bônus de ticket somente são pagos quando a meta semanal atingir 100%.",
-        "O NPS é independente da meta semanal, porém só é pago quando o realizado atingir ou superar a meta de NPS.",
+        "O NPS é independente da meta semanal. A partir de outubro/2026, o cofrinho exige o NPS individual da semana 4 e a meta geral de NPS da filial; resultado geral pendente impede a liberação.",
         "Na Semana 4, O.S. em aberto acima de 28% gera penalidade de 50% sobre o total apurado da semana."
       ]
     },
@@ -289,7 +289,7 @@
 
         <p>
           <strong>NPS:</strong>
-          é independente da meta semanal, mas só é pago quando o realizado atingir ou superar a meta de NPS.
+          é independente da meta semanal. A partir de outubro/2026, o cofrinho só é liberado com o NPS individual da semana 4 e o NPS geral da filial atingidos.
         </p>
 
         <p>

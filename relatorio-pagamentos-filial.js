@@ -62,6 +62,7 @@ function totals(module,branch,person){return state.months.map(c=>({c,v:data(modu
 function graph(s){const W=900,H=250,L=68,R=25,T=30,B=38,max=Math.max(...s.map(x=>x.v),1),top=max*1.15,x=i=>L+i*((W-L-R)/Math.max(s.length-1,1)),y=v=>T+(top-v)/top*(H-T-B),pts=s.map((d,i)=>x(i)+","+y(d.v)).join(" "),area=L+","+(H-B)+" "+pts+" "+x(s.length-1)+","+(H-B);return`<svg viewBox="0 0 ${W} ${H}">${[0,.25,.5,.75,1].map(p=>{const yy=T+p*(H-T-B),v=top*(1-p);return`<line class="rp-grid" x1="${L}" y1="${yy}" x2="${W-R}" y2="${yy}"/><text class="rp-lab" x="2" y="${yy+4}">${esc(money(v).replace(",00",""))}</text>`}).join("")}<polygon class="rp-area" points="${area}"/><polyline class="rp-line" points="${pts}"/>${s.map((d,i)=>`<circle class="rp-dot" cx="${x(i)}" cy="${y(d.v)}" r="5"><title>${label(d.c)}: ${money(d.v)}</title></circle><text class="rp-val" text-anchor="middle" x="${x(i)}" y="${Math.max(14,y(d.v)-11)}">${d.v?esc(money(d.v).replace(",00","")):"—"}</text><text class="rp-lab" text-anchor="middle" x="${x(i)}" y="${H-10}">${esc(label(d.c))}</text>`).join("")}</svg>`}
 function render(module){const r=panel(module);if(!r)return;const branch=r.querySelector(".rp-branch").value,person=r.querySelector(".rp-person").value,s=totals(module,branch,person),current=s.at(-1)?.v||0,previous=s.at(-2)?.v||0,total6=s.reduce((a,b)=>a+b.v,0),avg=total6/6,diff=previous>0?(current-previous)/previous*100:null,last=state.months.at(-1),rank=[...new Set(data(module).map(x=>x.filial))].map(f=>({f,v:data(module).filter(x=>x.competencia===last&&x.filial===f&&(!person||x.colaborador===person)).reduce((a,b)=>a+b.valor,0)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);r.querySelector(".rp-body").className="rp-body";r.querySelector(".rp-body").innerHTML=`<div class="rp-kpis"><div class="rp-kpi"><span>Pago no mês</span><strong>${money(current)}</strong></div><div class="rp-kpi"><span>Total 6 meses</span><strong>${money(total6)}</strong></div><div class="rp-kpi"><span>Média mensal</span><strong>${money(avg)}</strong></div><div class="rp-kpi"><span>Variação</span><strong>${diff===null?"—":(diff>=0?"+":"")+diff.toFixed(1).replace(".",",")+"%"}</strong></div></div><div class="rp-chart">${graph(s)}</div>${branch?"":`<div class="rp-table"><table><thead><tr><th>Filial</th><th>Pagamento · ${esc(label(last))}</th><th>Participação</th></tr></thead><tbody>${rank.map(x=>`<tr><td><strong>${esc(x.f)}</strong></td><td>${money(x.v)}</td><td>${current>0?(x.v/current*100).toFixed(1).replace(".",","):"0,0"}%</td></tr>`).join("")}</tbody></table></div>`}`}
 async function load(){
+ if(window.recarregarNpsFilialPix) { try { await window.recarregarNpsFilialPix(); } catch(e) { console.error("[PAGAMENTOS/NPS]",e); } }
  state.months=last6(competence());const start=state.months[0],end=state.months.at(-1);
  const[p,q]=await Promise.all([
   supabase.from("produtivos_lancamentos").select("id,competencia,filial,colaborador,dados").gte("competencia",start).lte("competencia",end),
@@ -87,6 +88,7 @@ async function load(){
    valor:paymentCalc.prod?Math.max(0,num(paymentCalc.prod(d,prodRaw))):prodValue(d)
  })).filter(x=>x.competencia&&x.filial);
 
+ state.pixRaw=pixRaw;
  state.pix=pixRaw.map(d=>({
    competencia:String(d.competencia||""),
    filial:String(d.filial||"").trim(),
@@ -96,5 +98,10 @@ async function load(){
 
  ["prod","pix"].forEach(m=>{if(panel(m)){fill(m);fillPeople(m);render(m)}})
 }
+window.addEventListener("pix:nps-unidade-atualizado",()=>{
+ if(!paymentCalc.pix||!state.pixRaw)return;
+ state.pix=state.pixRaw.map(d=>({competencia:String(d.competencia||""),filial:String(d.filial||"").trim(),colaborador:collaboratorOf(d,d),valor:Math.max(0,num(paymentCalc.pix(d,state.pixRaw)))})).filter(x=>x.competencia&&x.filial);
+ if(panel("pix"))render("pix");
+});
 function start(){addCss();panel("prod");panel("pix");load();$("#competenciaGlobal")?.addEventListener("change",load);new MutationObserver(()=>{let made=false;["prod","pix"].forEach(m=>{const id=ROOT+(m==="prod"?"Prod":"Pix");if(!$("#"+id)&&panel(m))made=true});if(made){["prod","pix"].forEach(m=>{fill(m);fillPeople(m);render(m)})}}).observe(document.body,{childList:true,subtree:true})}
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();

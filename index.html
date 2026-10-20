@@ -308,6 +308,7 @@
             <link rel="stylesheet" href="./mobile-experience.css?v=20261013-01" />
             <link rel="stylesheet" href="./politicas-impressao.css?v=20261015-politicas-visuais-v2" />
 <link rel="stylesheet" href="./cofrinho-nps.css?v=20261015-saldo-entre-semanas-v5" />
+<link rel="stylesheet" href="./pix-nps-unidade.css?v=20261020-01">
 </head>
 
             <body>
@@ -861,6 +862,7 @@
                           <h2>Lançamentos semanais</h2>
                         </div>
                         <div class="panel-header-actions" id="pixLancamentosAcoes">
+                          <button type="button" class="secondary" data-abrir-nps-unidade>NPS geral da filial · S4</button>
                           <button type="button" id="btnBaixarModeloRelatorioPix" class="secondary"
                             onclick="window.baixarModeloPixSeguro(event)">
                             Baixar modelo
@@ -892,6 +894,7 @@
                           <option value="4">Semana 4</option>
                         </select>
                       </div>
+                      <p class="pix-nps-unidade-aviso" data-pix-nps-unidade-resumo></p>
                       <div class="table-wrap">
                         <table class="pix-table">
                           <thead>
@@ -918,6 +921,7 @@
                   </div>
 
                   <div id="pix-apuracao" class="pix-subview">
+                    <div class="pix-nps-unidade-aviso"><p data-pix-nps-unidade-resumo></p><button type="button" class="secondary" data-abrir-nps-unidade>Consultar / editar NPS da filial</button></div>
                     <div id="pixApuracaoCards" class="pix-dashboard-cards"></div>
                     <article class="panel">
                       <div class="panel-header">
@@ -1194,22 +1198,22 @@
 <script src="./performance-vendors.js?v=20260903-01"></script>
               <script src="./alerts-premium.js?v=20260716-01"></script>
               <script type="module" src="./script.js?v=20261006-17-oficina-title"></script>
-              <script type="module" src="./pix-presidente.js?v=20261015-politicas-pix-v12"></script>
+              <script type="module" src="./pix-presidente.js?v=20261020-nps-filial-v1"></script>
               <script type="module" src="./importacao-funcionarios.js?v=20261006-18-oficina-name"></script>
               <script src="./pix-historico-individual.js?v=20260715-01"></script>
               <script type="module" src="./evidencias-produtivos.js?v=20260903-01"></script>
-              <script type="module" src="./evidencias-pix.js?v=20260903-01"></script>
+              <script type="module" src="./evidencias-pix.js?v=20261020-nps-filial-v1"></script>
               <script src="./module-switcher.js?v=20261006-18-oficina-title-source"></script>
               <script type="module" src="./presenca-colaborativa.js?v=20260902-09-hotfix"></script>
               <script src="./isolamento-competencias.js?v=20260724-02"></script>
-              <script src="./politicas-penalidades.js?v=20260804-02"></script>
+              <script src="./politicas-penalidades.js?v=20261020-nps-filial-v1"></script>
               <script type="module" src="./bloqueio-lancamentos.js?v=20260904-01-importacao"></script>
               <script src="./dashboard-pix-gestor-funcional.js?v=20260908-17-filtros-unicos"></script>
               <script type="module" src="./compras-module.js?v=20260908-16-navegacao"></script>
               <script type="module" src="./auditoria-campanhas.js?v=20261006-18-oficina-name"></script>
               <script type="module" src="./comparativo-mensal-campanhas.js?v=20261006-18-oficina-name"></script>
               <script type="module" src="./ticket-medio-comparativo.js?v=20260925-01"></script>
-              <script type="module" src="./relatorio-pagamentos-filial.js?v=20260925-01"></script>
+              <script type="module" src="./relatorio-pagamentos-filial.js?v=20261020-nps-filial-v1"></script>
               <script src="./guia-campos-pendentes-pix-v01.js?v=20260819-01"></script>
               <script src="./podium-homenagem-premium-v01.js?v=20260819-01"></script>
               <!-- Leitura de XLSX, XLS e CSV -->
@@ -1440,6 +1444,6 @@
                           <script src="./performance-runtime.js?v=20260902-03"></script>
             <script defer src="./mobile-experience.js?v=20261013-01"></script>
             <script defer src="./politicas-impressao.js?v=20261015-pix-por-cargo-v6"></script>
-<div id="monaco-assistant"><button class="monaco-ai-launcher" type="button" aria-expanded="false">👤 Mônaco AI ✨</button><section class="monaco-ai-panel" hidden><header class="monaco-ai-header"><strong>Mônaco AI — Dúvidas</strong><button class="monaco-ai-close" type="button" aria-label="Fechar">×</button></header><div class="monaco-ai-messages" aria-live="polite"></div><div class="monaco-ai-suggestions"><button data-monaco-question="Como funciona o bônus de 50%?" type="button">Bônus 50%</button><button data-monaco-question="Como funciona o cofrinho NPS?" type="button">NPS</button><button data-monaco-question="Quais as regras da oficina?" type="button">Oficina</button></div><form class="monaco-ai-form"><input type="text" placeholder="Pergunte sobre as campanhas..." maxlength="600" aria-label="Pergunta" required><button type="submit">Enviar</button></form></section></div><link rel="stylesheet" href="./monaco-ai.css?v=20261019-local-v2"><script defer src="./monaco-ai.js?v=20261019-local-v2"></script></body>
+<div id="monaco-assistant"><button class="monaco-ai-launcher" type="button" aria-expanded="false">👤 Mônaco AI ✨</button><section class="monaco-ai-panel" hidden><header class="monaco-ai-header"><strong>Mônaco AI — Dúvidas</strong><button class="monaco-ai-close" type="button" aria-label="Fechar">×</button></header><div class="monaco-ai-messages" aria-live="polite"></div><div class="monaco-ai-suggestions"><button data-monaco-question="Como funciona o bônus de 50%?" type="button">Bônus 50%</button><button data-monaco-question="Como funciona o cofrinho NPS?" type="button">NPS</button><button data-monaco-question="Quais as regras da oficina?" type="button">Oficina</button></div><form class="monaco-ai-form"><input type="text" placeholder="Pergunte sobre as campanhas..." maxlength="600" aria-label="Pergunta" required><button type="submit">Enviar</button></form></section></div><link rel="stylesheet" href="./monaco-ai.css?v=20261019-local-v2"><script defer src="./monaco-ai.js?v=20261020-nps-filial-v1"></script></body>
 
             </html>

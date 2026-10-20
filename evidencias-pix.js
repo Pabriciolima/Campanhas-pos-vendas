@@ -2870,6 +2870,7 @@ function imagemRemotaParaDataPix(url) {
 ========================================================= */
 
 async function exportarPdfPixIndependente() {
+  if (window.recarregarNpsFilialPix) await window.recarregarNpsFilialPix();
   const resultados =
     dadosPixParaExportar();
 
@@ -3221,6 +3222,7 @@ async function exportarPdfPixIndependente() {
 ========================================================= */
 
 async function exportarExcelPixIndependente() {
+  if (window.recarregarNpsFilialPix) await window.recarregarNpsFilialPix();
   const resultados =
     dadosPixParaExportar();
 

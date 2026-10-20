@@ -45,6 +45,8 @@
 import { firestore } from "./firebase-config.js";
 
 import { supabase } from "./supabase-config.js";
+import { criarNpsUnidadePix } from "./pix-nps-unidade.js";
+import { mensagemNpsUnidade } from "./pix-nps-unidade-core.js";
 
 import {
   collection,
@@ -271,6 +273,20 @@ const estadoPix = {
   lancamentos: [],
   resultados: []
 };
+
+const npsUnidadePix = criarNpsUnidadePix({
+  supabase,
+  filiais: () => [...new Set(FILIAIS_PIX.map(f => f.unidade))],
+  competencia: () => $("#competenciaGlobal")?.value || $("#pixDashboardCompetencia")?.value || pixMesAtual(),
+  filialAtual: () => $(document.querySelector("#pix-apuracao.active") ? "#pixFiltroFilialApuracao" : "#pixFiltroFilialLancamento")?.value || "",
+  bloqueado: () => !!window.bloqueioLancamentos?.bloqueado || document.body.classList.contains("lancamentos-bloqueados"),
+  alertar: pixAlert,
+  aoAtualizar: () => {
+    renderTudoPix();
+    if (document.querySelector("#modalPixPresidente[open]")) atualizarPreviewPix();
+  }
+});
+window.recarregarNpsFilialPix = () => npsUnidadePix.carregar();
 
 const funcionariosPixRef = collection(
   firestore,
@@ -1713,8 +1729,13 @@ function calcularPix(lancamento) {
   const saldoCofrinhoNps = regraDiaria && usaNps
     ? semanasNpsAtingidas.size * valorNpsSemanal
     : 0;
+  // Condição adicional compartilhada. Nunca usa o NPS individual como NPS da filial.
+  const exigeNpsUnidade = regraDiaria && usaNps && semanaNps === 4;
+  const npsUnidade = regraDiaria && usaNps
+    ? npsUnidadePix.avaliar(lancamento.filial || funcionario?.filial, lancamento.competencia)
+    : { status: "NAO_APLICAVEL", atingiu: true, meta: null, realizado: null };
   const bonusNps = regraDiaria
-    ? (usaNps && semanaNps === 4 && npsSemanalElegivel
+    ? (usaNps && semanaNps === 4 && npsSemanalElegivel && npsUnidade.atingiu
         ? saldoCofrinhoNps + valorNpsSemanal
         : 0)
     : (npsSemanalElegivel && dadosCriticosCompletos && semanaNps === 4
@@ -1723,7 +1744,7 @@ function calcularPix(lancamento) {
   const npsCofrinhoStatus = !regraDiaria || !usaNps
     ? ""
     : semanaNps === 4
-      ? (npsSemanalElegivel ? "LIBERADO" : npsInformado ? "NÃO LIBERADO" : "AGUARDANDO SEMANA 4")
+      ? (!npsUnidade.atingiu ? (npsUnidade.status === "NAO_ATINGIDO" ? "BLOQUEADO PELA FILIAL" : "AGUARDANDO NPS DA FILIAL") : npsSemanalElegivel ? "LIBERADO" : npsInformado ? "NÃO LIBERADO" : "AGUARDANDO SEMANA 4")
       : "ACUMULANDO";
   const npsCofrinhoPotencial = regraDiaria && usaNps
     ? saldoCofrinhoNps + (semanaNps < 4 && npsSemanalElegivel && !semanasNpsAtingidas.has(semanaNps) ? valorNpsSemanal : 0)
@@ -1796,8 +1817,9 @@ function calcularPix(lancamento) {
     if (diasPendentesPix > 0) partes.push(`${diasPendentesPix} dia(s) ainda sem lançamento`);
     if (apuracaoDiaria.deficitFinal > 0) partes.push(`déficit acumulado: ${pixMoeda(apuracaoDiaria.deficitFinal)}`);
     if (bonusFaixa > 0) partes.push(`bônus de ${politica.metrica === "margem" ? "margem" : "ticket médio"} conquistado`);
-    if (regraDiaria && usaNps && semanaNps < 4 && npsSemanalElegivel) partes.push("NPS atingido: R$ 250,00 reservado no cofrinho, pagamento condicionado à semana 4");
+    if (regraDiaria && usaNps && semanaNps < 4 && npsSemanalElegivel) partes.push("NPS atingido: R$ 250,00 reservado no cofrinho, pagamento condicionado ao NPS individual da semana 4 e ao NPS geral da filial");
     if (regraDiaria && usaNps && semanaNps === 4 && !npsSemanalElegivel) partes.push("NPS do mês não liberado: semana 4 não atingiu a meta ou está pendente");
+    if (exigeNpsUnidade) partes.push(mensagemNpsUnidade(npsUnidade));
     if (bonusNps > 0) partes.push(`cofrinho NPS liberado na semana 4: ${pixMoeda(bonusNps)}`);
     if (bonusFinal <= 0 && diasPremiadosPix > 0 && aplicaPenalidade) partes.push("bonificação impactada pela penalidade de O.S.");
     if (bonusFinal > 0) partes.push("colaborador habilitado com bonificação calculada pelos indicadores alcançados");
@@ -1878,6 +1900,8 @@ function calcularPix(lancamento) {
     percentualNps,
     atingiuNps,
     bonusNps,
+    exigeNpsUnidade,
+    npsUnidade,
     saldoCofrinhoNps,
     npsCofrinhoPotencial,
     npsCofrinhoStatus,
@@ -1903,12 +1927,16 @@ window.calcularPagamentoPixHistorico = function(lancamento, todosLancamentos = [
    * O relatório entrega ao calcularPix() o lançamento histórico completo;
    * a função oficial resolve cargo/política e devolve bonusFinal.
    */
+  const anteriores = estadoPix.lancamentos;
   try {
+    if (Array.isArray(todosLancamentos) && todosLancamentos.length) estadoPix.lancamentos = todosLancamentos;
     const resultado = calcularPix(lancamento);
     return Math.max(0, pixNumero(resultado?.bonusFinal));
   } catch (erro) {
     console.warn("[PAGAMENTOS/PIX] Falha ao recalcular histórico:", erro);
     return 0;
+  } finally {
+    estadoPix.lancamentos = anteriores;
   }
 };
 
@@ -2494,6 +2522,7 @@ function indicadorPixTexto(resultado) {
           `
           : ""
       }
+      ${resultado.exigeNpsUnidade ? `<span class="pix-nps-unidade-indicador"><b>NPS geral da filial:</b> ${mensagemNpsUnidade(resultado.npsUnidade)}</span>` : ""}
     </div>
   `;
 }
@@ -3141,10 +3170,15 @@ function renderCofrinhoNpsPix() {
     return { numero, informado, atingiu: informado && !!item.atingiuNps };
   });
   const quarta = semanas[3];
+  const npsUnidade = npsUnidadePix.avaliar(funcionario.filial, competencia);
   const acumulado = semanas.filter(item => item.atingiu).length * 250;
   const guardado = quarta.informado ? 0 : semanas.slice(0, 3).filter(item => item.atingiu).length * 250;
-  const liberado = quarta.atingiu ? acumulado : 0;
-  const status = quarta.atingiu ? "Liberado" : quarta.informado ? "Não liberado" : "Acumulando";
+  const liberado = quarta.atingiu && npsUnidade.atingiu ? acumulado : 0;
+  const status = quarta.informado && !npsUnidade.atingiu
+    ? (npsUnidade.status === "NAO_ATINGIDO" ? "Bloqueado pela filial" : "Aguardando filial")
+    : quarta.atingiu ? "Liberado" : quarta.informado ? "Não liberado" : "Acumulando";
+  const detalhe = quarta.informado && !npsUnidade.atingiu ? mensagemNpsUnidade(npsUnidade)
+    : quarta.atingiu ? "NPS individual e da filial atingidos" : quarta.informado ? "NPS individual da semana 4 não atingido" : "Reservado · exige NPS individual e geral da filial";
   const quantidade = semanas.filter(item => item.atingiu).length;
   area.hidden = false;
   area.innerHTML = `<div class="pix-piggy-mini">
@@ -3153,7 +3187,7 @@ function renderCofrinhoNpsPix() {
       <div class="pix-piggy-mini-info">
         <span class="pix-piggy-mini-label">Cofrinho NPS <span class="pix-piggy-mini-state">${status}</span></span>
         <strong>${pixMoeda(quarta.atingiu ? liberado : guardado)}</strong>
-        <small>${quarta.atingiu ? "Liberado para bonificação" : quarta.informado ? "Semana 4 não atingida" : "Saldo reservado · liberação na semana 4"}</small>
+        <small>${detalhe}</small>
       </div>
     </div>
     <div class="pix-piggy-mini-weeks" aria-label="${quantidade} de 4 semanas com NPS atingido">
@@ -3307,7 +3341,7 @@ function renderPoliticasPix() {
               <section class="pix-policy-nps">
                 <h4>★ NPS <small>(semanal)</small></h4>
                 <p>Meta: <b>90%</b> · Valor: <b>R$ 250,00</b></p>
-                <span>Cada semana atingida reserva R$ 250,00. O total só é liberado na semana 4 se o NPS da semana 4 também atingir 90%.</span>
+                <span>Cada semana atingida reserva R$ 250,00. O total só é liberado na semana 4 se o NPS individual da semana 4 atingir 90% e a filial atingir sua meta geral de NPS. Se a filial não atingir, o cofrinho de todos da unidade é zerado; sem resultado geral informado, aguarda conferência.</span>
               </section>` : ""}
             ${grupo.dynamo ? `
               <section class="pix-policy-dynamo">
@@ -3325,7 +3359,7 @@ function renderPoliticasPix() {
         <span>✓ O saldo de gordura ou déficit de dias avaliados segue para os próximos dias e semanas da competência.</span>
         <span>✓ Datas usadas em semanas anteriores ficam indisponíveis nas seguintes para o mesmo colaborador.</span>
         <span>✓ Ticket médio e margem seguem as faixas específicas de cada cargo após o gatilho semanal.</span>
-        <span>✓ Cofrinho NPS: R$ 250 por semana atingida; pagamento somente na semana 4, condicionado ao NPS da própria semana 4.</span>
+        <span>✓ Cofrinho NPS: R$ 250 por semana atingida; pagamento somente na semana 4, condicionado ao NPS individual da própria semana 4 E ao atingimento da meta geral de NPS da filial na competência.</span>
         <span>✓ NPS é independente da meta de faturamento e pode ser liberado na semana 4 mesmo sem atingir a meta semanal.</span>
         <span>✓ Domingos ficam indisponíveis para seleção no calendário.</span>
         ` : `
@@ -3377,6 +3411,8 @@ function renderTudoPix() {
     ["apuração", renderApuracaoPix],
     ["políticas", renderPoliticasPix]
   ];
+
+  npsUnidadePix.atualizarResumo();
 
   renderizacoes.forEach(
     ([nome, funcao]) => {
@@ -4112,7 +4148,7 @@ function renderCamposLancamentoPix(dados = {}) {
             />
 
             <small>
-              Cada semana com NPS atingido reserva R$ 250,00 no cofrinho.\n              O saldo só é pago na semana 4 se o NPS da própria semana 4 atingir a meta.
+              Cada semana com NPS atingido reserva R$ 250,00 no cofrinho.\n              O saldo só é pago na semana 4 se o NPS individual da própria semana 4 E o NPS geral da filial atingirem suas metas. O resultado da unidade é cadastrado em “NPS geral da filial”, nos Lançamentos.
             </small>
           </label>
         `
@@ -5101,7 +5137,7 @@ async function carregarLancamentosPixUmaVez() {
 function agendarConsultaLancamentosPix() {
   window.clearTimeout(agendarConsultaLancamentosPix.timer);
   agendarConsultaLancamentosPix.timer = window.setTimeout(
-    () => carregarLancamentosPixUmaVez().catch(erro =>
+    () => Promise.all([carregarLancamentosPixUmaVez(), npsUnidadePix.carregar()]).catch(erro =>
       console.error("[PIX/SUPABASE] Falha ao aplicar filtros:", erro)
     ),
     120
@@ -5117,7 +5153,8 @@ async function iniciarFirebasePix() {
   try {
     await Promise.all([
       carregarParticipantesPixUmaVez(),
-      carregarLancamentosPixUmaVez()
+      carregarLancamentosPixUmaVez(),
+      npsUnidadePix.iniciar()
     ]);
   } catch (erro) {
     console.error(
