@@ -5265,3 +5265,9 @@ window.sincronizarCompetenciaPix =
 
 // Fonte completa de resultados calculados, independente dos filtros das tabelas.
 window.obterResultadosPix = () => estadoPix.lancamentos.map(calcularPix);
+
+// Apenas dados já carregados; cópias evitam alterações de cadastro pelo assistente.
+window.obterContextoAssistentePix = () => ({
+ participantes: participantesPix().map(({id,nome,filial,cargo}) => ({id,nome,filial,cargo})),
+ resultados: window.obterResultadosPix()
+});

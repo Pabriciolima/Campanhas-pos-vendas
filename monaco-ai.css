@@ -12,3 +12,27 @@
 #monaco-assistant button:disabled{opacity:.6;cursor:wait}
 #monaco-assistant .monaco-ai-panel{min-height:280px}
 #monaco-assistant .monaco-ai-messages{min-height:70px;overscroll-behavior:contain}
+
+/* Atendimento guiado adaptável, com rolagem para telas menores. */
+#monaco-assistant .monaco-ai-panel{width:min(470px,calc(100vw - 24px));height:min(760px,calc(100dvh - 44px));overflow-y:auto}
+#monaco-assistant .monaco-ai-header,#monaco-assistant .monaco-ai-form{flex-shrink:0}
+#monaco-assistant .monaco-ai-controls{display:block;padding:8px 14px}
+#monaco-assistant .monaco-ai-controls summary{font-size:12px;cursor:pointer}
+#monaco-assistant .monaco-ai-controls[open]>*:not(summary){display:block;margin-top:6px}
+#monaco-assistant .monaco-ai-guide{padding:12px 14px;background:#163747;flex-shrink:0}
+#monaco-assistant .monaco-ai-guide summary{cursor:pointer;font-size:13px;font-weight:700}
+#monaco-assistant .monaco-ai-guide-fields{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+#monaco-assistant .monaco-ai-guide label{display:grid;gap:4px;font-size:11px;color:#d0e6ec;min-width:0}
+#monaco-assistant .monaco-ai-guide label:has(#monaco-person),#monaco-assistant .monaco-ai-guide label:has(#monaco-question){grid-column:1/-1}
+#monaco-assistant .monaco-ai-guide label[hidden]{display:none}
+#monaco-assistant .monaco-ai-guide select,#monaco-assistant .monaco-ai-guide input{width:100%;min-width:0;max-width:100%;background:#091d2e;color:#fff;border:1px solid #547085;border-radius:7px;padding:8px;font-size:12px}
+#monaco-assistant .monaco-ai-consult{width:100%;margin:10px 0 6px;padding:10px;border:0;border-radius:8px;background:#087b70;color:#fff;font-weight:700;cursor:pointer}
+#monaco-assistant .monaco-ai-guide small{font-size:10px;line-height:1.4;color:#d0e6ec;display:block}
+#monaco-assistant .monaco-ai-messages{flex:1 0 150px;max-height:340px}
+#monaco-assistant .monaco-ai-suggestions{flex-shrink:0}
+#monaco-assistant button:focus-visible,#monaco-assistant summary:focus-visible{outline:2px solid #5dcab7;outline-offset:2px}
+@media(max-width:600px){#monaco-assistant .monaco-ai-panel{max-height:calc(100dvh - 24px)}}
+
+#monaco-assistant.monaco-ai-floating .monaco-ai-launcher{visibility:hidden}
+#monaco-assistant.monaco-ai-floating .monaco-ai-panel{position:fixed;left:268px;bottom:22px;z-index:10023}
+@media(max-width:900px){#monaco-assistant.monaco-ai-floating .monaco-ai-panel{left:8px;bottom:12px;width:min(470px,calc(100vw - 16px));height:min(760px,calc(100dvh - 24px))}}

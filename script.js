@@ -8002,3 +8002,9 @@ document.addEventListener(
     );
   }
 );
+
+// Consulta local do assistente usa o mesmo cálculo da apuração, sem novas requisições.
+window.obterContextoAssistenteOficina = () => ({
+ participantes: db.funcionarios.map(({id,nome,filial,cargo}) => ({id,nome,filial,cargo})),
+ resultados: db.lancamentos.map(calcularLancamento)
+});
