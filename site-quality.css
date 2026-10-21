@@ -1,0 +1,18 @@
+/* Ajustes de estrutura e acessibilidade, sem alterar cálculos. */
+.skip-to-content{position:fixed;top:8px;left:8px;z-index:20000;padding:12px 18px;border-radius:8px;background:#fff;color:#0b3444;transform:translateY(-160%)}
+.skip-to-content:focus{transform:translateY(0)}
+.brand-home{color:inherit;text-decoration:none;border-radius:10px}
+.brand-home:focus-visible,a:focus-visible,button:focus-visible{outline:3px solid #14b8a6;outline-offset:3px}
+.main,.main>*{min-width:0}
+#pageTitle{max-width:100%;overflow-wrap:anywhere;line-height:1.2}
+img,video,canvas{max-width:100%}
+@media(max-width:900px){
+ .main :is(.table-wrap,.table-responsive,.table-container,.data-table-wrapper){width:100%;max-width:100%;overflow-x:auto}
+ dialog{box-sizing:border-box;width:min(900px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);overflow:auto}
+ dialog .modal-form{box-sizing:border-box;min-width:0;max-width:100%}
+ dialog :is(input,select,textarea){box-sizing:border-box;min-width:0;max-width:100%;font-size:16px}
+ .main :is(.toolbar,.filters,.filter-row,.actions){min-width:0;max-width:100%;flex-wrap:wrap}
+ .main :is(h1,h2,h3){overflow-wrap:anywhere}
+}
+@media(max-width:600px){dialog :is(.form-grid,.dynamic-fields){grid-template-columns:minmax(0,1fr)}dialog :is(.modal-header,.modal-actions){flex-wrap:wrap;gap:10px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}.campanhas-view-entrando{animation:none!important}.campanhas-view-saindo{transition:none!important}}

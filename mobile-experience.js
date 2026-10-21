@@ -24,6 +24,9 @@
     let lastFocus = null;
     const setOpen = (open, restore = false) => {
       const active = !!open && media.matches;
+      sidebar.inert = media.matches && !active;
+      if (sidebar.inert) sidebar.setAttribute('aria-hidden','true');
+      else sidebar.removeAttribute('aria-hidden');
       document.body.classList.toggle("mobile-nav-open",active);
       trigger.setAttribute("aria-expanded",String(active));
       trigger.setAttribute("aria-label",active?"Fechar menu de navegação":"Abrir menu de navegação");
@@ -44,9 +47,10 @@
       else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
     });
     sidebar.addEventListener("click",e=>{
-      if(e.target.closest("[data-view],[data-pix-view],[data-crm-view],[data-compras-view],[data-garantia-view]"))setOpen(false);
+      if(e.target.closest("[data-view],[data-pix-view],[data-crm-view],[data-compras-view],[data-garantia-view]"))setOpen(false,true);
     });
-    media.addEventListener?.("change",()=>{if(!media.matches)setOpen(false);});
+    media.addEventListener?.("change",()=>setOpen(false));
+    setOpen(false);
   };
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",setup,{once:true});
   else setup();

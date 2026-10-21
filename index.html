@@ -4,7 +4,11 @@
             <head>
               <meta charset="UTF-8" />
               <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Sistema de Campanhas Pós-Vendas</title>
+<title>Sistema de Campanhas Pós-Vendas | Grupo Mônaco</title>
+<meta name="description" content="Gestão das campanhas de pós-vendas do Grupo Mônaco: metas, lançamentos, apurações, indicadores e políticas por filial e competência.">
+<meta name="theme-color" content="#0b3444">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script defer src="./site-quality.js?v=20261021-01"></script>
 
               <!-- PERFORMANCE V3: conexões críticas antecipadas -->
               <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
@@ -29,7 +33,7 @@
               <link rel="stylesheet" href="./contrast-responsive-v2.css?v=20260902-04-estavel" />
 
               <style id="crm-sidebar-icon-contrast-v19">
-                /* Identidade visual exclusiva do CRM — alto contraste na sidebar */
+                /* Identidade visual exclusiva do CRM: alto contraste na sidebar */
                 .sidebar .module-icon-crm {
                   color: #ffffff;
                   background: linear-gradient(135deg, #8b5cf6 0%, #5b42d8 52%, #4338ca 100%);
@@ -310,14 +314,16 @@
 <link rel="stylesheet" href="./cofrinho-nps.css?v=20261015-saldo-entre-semanas-v5" />
 <link rel="stylesheet" href="./pix-nps-unidade.css?v=20261020-05">
 <link rel="stylesheet" href="./politicas-revisadas.css?v=20261020-01">
+<link rel="stylesheet" href="./site-quality.css?v=20261021-01">
 </head>
 
             <body>
+<a class="skip-to-content" href="#conteudoPrincipal">Ir para o conteúdo</a>
               <aside class="sidebar">
-                <div class="brand">
+                <a class="brand brand-home" href="/" aria-label="Campanhas Pós-Vendas: voltar à visão geral" title="Voltar à visão geral">
                   <div class="brand-mark">CM</div>
                   <div><strong>Campanhas</strong><span>Pós-Vendas</span></div>
-                </div>
+                </a>
 
                 <nav class="campaign-modules-nav">
                   <!-- CAMPANHA DA OFICINA -->
@@ -501,7 +507,7 @@
                 </div>
               </aside>
 
-              <main class="main">
+              <main class="main" id="conteudoPrincipal" tabindex="-1">
                 <header class="topbar">
                   <div>
                     <p class="eyebrow">MVP</p>
@@ -991,7 +997,7 @@
                 <form id="formFuncionario" class="modal-form">
                   <div class="modal-header">
                     <h2>Funcionário</h2>
-                    <button type="button" class="icon-btn fechar-modal">×</button>
+                    <button type="button" class="icon-btn fechar-modal" aria-label="Fechar janela">×</button>
                   </div>
                   <input type="hidden" id="funcionarioId" />
                   <div class="form-grid">
@@ -1014,7 +1020,7 @@
                 <form id="formLancamento" class="modal-form wide">
                   <div class="modal-header">
                     <h2>Lançamento</h2>
-                    <button type="button" class="icon-btn fechar-modal">×</button>
+                    <button type="button" class="icon-btn fechar-modal" aria-label="Fechar janela">×</button>
                   </div>
                   <input type="hidden" id="lancamentoId" />
                   <div class="form-grid">
@@ -1077,7 +1083,7 @@
                       <p class="eyebrow">Pix do Presidente</p>
                       <h2>Participante</h2>
                     </div>
-                    <button type="button" id="fecharModalFuncionarioPix" class="icon-btn">
+                    <button type="button" id="fecharModalFuncionarioPix" class="icon-btn" aria-label="Fechar participante">
                       ×
                     </button>
                   </div>
@@ -1193,7 +1199,7 @@
               </dialog>
 
               <div id="toast" class="toast"></div>
-<script src="./performance-vendors.js?v=20260903-01"></script>
+<script src="./performance-vendors.js?v=20261021-retry-v2"></script>
               <script src="./alerts-premium.js?v=20260716-01"></script>
               <script type="module" src="./script.js?v=20261006-17-oficina-title"></script>
               <script type="module" src="./pix-presidente.js?v=20261020-metas-nps-variaveis-v7"></script>
@@ -1440,8 +1446,8 @@
 
               <!-- Importação integrada aos módulos de Lançamentos -->
                           <script src="./performance-runtime.js?v=20260902-03"></script>
-            <script defer src="./mobile-experience.js?v=20261013-01"></script>
+            <script defer src="./mobile-experience.js?v=20261021-focus-v2"></script>
             <script defer src="./politicas-impressao.js?v=20261020-politicas-consolidadas-v7"></script>
-<div id="monaco-assistant"><button class="monaco-ai-launcher" type="button" aria-expanded="false">👤 Mônaco AI ✨</button><section class="monaco-ai-panel" hidden><header class="monaco-ai-header"><strong>Mônaco AI — Dúvidas</strong><button class="monaco-ai-close" type="button" aria-label="Fechar">×</button></header><div class="monaco-ai-messages" aria-live="polite"></div><div class="monaco-ai-suggestions"><button data-monaco-question="Como funciona o bônus de 50%?" type="button">Bônus 50%</button><button data-monaco-question="Como funciona o cofrinho NPS?" type="button">NPS</button><button data-monaco-question="Quais as regras da oficina?" type="button">Oficina</button></div><form class="monaco-ai-form"><input type="text" placeholder="Pergunte sobre as campanhas..." maxlength="600" aria-label="Pergunta" required><button type="submit">Enviar</button></form></section></div><link rel="stylesheet" href="./monaco-ai.css?v=20261019-local-v2"><script defer src="./monaco-ai.js?v=20261020-nps-variavel-v2"></script></body>
+<div id="monaco-assistant"><button class="monaco-ai-launcher" type="button" aria-expanded="false">👤 Mônaco AI ✨</button><section class="monaco-ai-panel" hidden><header class="monaco-ai-header"><strong>Mônaco AI: Dúvidas</strong><button class="monaco-ai-close" type="button" aria-label="Fechar">×</button></header><div class="monaco-ai-messages" aria-live="polite"></div><div class="monaco-ai-suggestions"><button data-monaco-question="Como funciona o bônus de 50%?" type="button">Bônus 50%</button><button data-monaco-question="Como funciona o cofrinho NPS?" type="button">NPS</button><button data-monaco-question="Quais as regras da oficina?" type="button">Oficina</button></div><form class="monaco-ai-form"><input type="text" placeholder="Pergunte sobre as campanhas..." maxlength="600" aria-label="Pergunta" required><button type="submit">Enviar</button></form></section></div><link rel="stylesheet" href="./monaco-ai.css?v=20261019-local-v2"><script defer src="./monaco-ai.js?v=20261020-nps-variavel-v2"></script></body>
 
             </html>

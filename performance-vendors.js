@@ -17,42 +17,23 @@
   function loadScript(key, src, test) {
     if (test()) return Promise.resolve(true);
     if (promises.has(key)) return promises.get(key);
-
     const promise = new Promise((resolve, reject) => {
-      const existing = document.querySelector(`script[data-perf-vendor="${key}"]`);
-
-      if (existing) {
-        existing.addEventListener("load", () => resolve(true), { once: true });
-        existing.addEventListener("error", reject, { once: true });
-        return;
-      }
-
-      const script = document.createElement("script");
-      script.src = src;
-      script.async = true;
-      script.crossOrigin = "anonymous";
-      script.dataset.perfVendor = key;
-
-      script.addEventListener(
-        "load",
-        () => resolve(true),
-        { once: true }
-      );
-
-      script.addEventListener(
-        "error",
-        () => {
-          promises.delete(key);
-          reject(new Error(`Falha ao carregar biblioteca: ${key}`));
-        },
-        { once: true }
-      );
-
+      const script = document.createElement('script');
+      let settled = false;
+      const finish = error => {
+        if (settled) return;
+        settled = true; clearTimeout(timer);
+        if (error) { script.remove(); reject(error); } else resolve(true);
+      };
+      const timer = setTimeout(() => finish(new Error('Tempo esgotado ao carregar: ' + key)), 30000);
+      script.src = src; script.async = true; script.crossOrigin = 'anonymous'; script.dataset.perfVendor = key;
+      script.addEventListener('load', () => finish(test() ? null : new Error('Biblioteca indisponível: ' + key)), {once:true});
+      script.addEventListener('error', () => finish(new Error('Falha ao carregar: ' + key)), {once:true});
       document.head.appendChild(script);
     });
-
-    promises.set(key, promise);
-    return promise;
+    const tracked = promise.catch(error => { promises.delete(key); throw error; });
+    promises.set(key, tracked);
+    return tracked;
   }
 
   async function ensureExcel() {
@@ -109,6 +90,8 @@
   }
 
   function vendorForButton(button) {
+    // Políticas usam window.print e não precisam baixar jsPDF nem AutoTable.
+    if (button.matches('[data-policy-print]')) return '';
     const assinatura = [
       button.id,
       button.className,
@@ -178,7 +161,7 @@
       const ready =
         (!needsExcel || window.ExcelJS) &&
         (!needsXlsx || window.XLSX) &&
-        (!needsPdf || window.jspdf?.jsPDF);
+        (!needsPdf || (window.jspdf?.jsPDF && (window.jspdf.jsPDF.API?.autoTable || window.jspdf.jsPDF.API?.lastAutoTable)));
 
       if (ready) return;
 
