@@ -100,8 +100,8 @@ const scenarios=[
  ['metas','E se eu bater a semana, mas não todos os dias?'],['semmeta','E se eu não bater a meta semanal?'],['nps','Como funciona meu NPS e cofrinho?'],['filial','E se a filial não bater o NPS geral?'],['npspendente','E se o NPS da filial não foi lançado?'],['npsindividual','E se eu bater o NPS, mas não o faturamento?'],['ticket','Como funciona ticket médio ou margem?'],['os','E se houver O.S. em aberto na semana 4?'],['saldo','Como gordura e déficit se acumulam?'],['oficina','Quais indicadores habilitam na Oficina?'],['treinamento','E se houver treinamento pendente ou retrabalho?'],['historico','As regras mudam conforme o mês?'],['lancamento','Como lançar ou corrigir os dados?']
 ];
 function questions(){const common=['resultado','motivo','melhorar','pendencias','historico','lancamento'];options(question,scenarios.filter(([id])=>common.includes(id)||(campaign.value==='pix'?!['oficina','treinamento'].includes(id):['oficina','treinamento'].includes(id))));week.closest('label').hidden=campaign.value!=='pix';}
-function snapshot(){try{return (campaign.value==='pix'?window.obterContextoAssistentePix?.():window.obterContextoAssistenteOficina?.())||{participantes:[],resultados:[]};}catch{return {participantes:[],resultados:[]};}}
-function refresh(reset=false){const data=snapshot();options(branch,[...new Set(data.participantes.map(p=>p.filial).filter(Boolean))].sort().map(x=>[x,x]),'Escolha a filial');if(reset)branch.value='';people();questions();}
+function snapshot(incluirResultados=false){try{return (campaign.value==='pix'?window.obterContextoAssistentePix?.(incluirResultados):window.obterContextoAssistenteOficina?.(incluirResultados))||{participantes:[],resultados:[]};}catch{return {participantes:[],resultados:[],erro:true};}}
+function refresh(reset=false){const data=snapshot();options(branch,[...new Set([...(data.filiais||[]),...data.participantes.map(p=>p.filial)].filter(Boolean))].sort().map(x=>[x,x]),'Escolha a filial');if(reset)branch.value='';people();questions();}
 function people(){const list=snapshot().participantes.filter(p=>p.filial===branch.value);options(person,list.map(p=>[p.id,p.nome+' — '+p.cargo]),branch.value?'Escolha seu nome':'Selecione a filial primeiro');person.disabled=!branch.value;if(!list.some(p=>String(p.id)===person.value))person.value='';}
 month.value=document.querySelector('#competenciaGlobal')?.value||new Date().toLocaleDateString('sv-SE').slice(0,7);
 const consult=document.createElement('button');consult.type='button';consult.className='monaco-ai-consult';consult.textContent='Consultar agora';guide.append(consult);
@@ -113,7 +113,8 @@ const money=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))?Numbe
 const val=v=>v===null||v===undefined||v===''?'não informado':String(v);
 function answerGuided(){
  if(busy)return;
- const data=snapshot(),p=data.participantes.find(p=>String(p.id)===person.value&&p.filial===branch.value);
+ const data=snapshot(true),p=data.participantes.find(p=>String(p.id)===person.value&&p.filial===branch.value);
+ if(data.erro){add('Não foi possível consultar o cálculo agora. Confira se os lançamentos carregaram e tente novamente.');return;}
  if(!p||!/^\d{4}-(0[1-9]|1[0-2])$/.test(month.value)){add('Vamos começar: selecione sua filial, seu nome e uma competência válida. Se a lista estiver vazia, aguarde o carregamento dos participantes e reabra o assistente.');return;}
  const id=question.value,label=scenarios.find(x=>x[0]===id)?.[1]||'';
  add(label,true);
@@ -146,6 +147,13 @@ function answerGuided(){
  add(header+(reference[id]||'Selecione uma pergunta.')+'\n\nEsta é uma explicação da situação, não uma promessa de pagamento. Para conferir seu caso, escolha “Quanto tenho a receber?” ou “Por que não estou habilitado?”.');
 }
 consult.addEventListener('click',answerGuided);refresh();
+// Os cadastros chegam de forma assíncrona, depois do assistente.
+// Atualiza somente quando a base muda, preservando as escolhas do usuário.
+let guideSignature='';
+function synchronizeGuide(){if(panel.hidden)return;const data=snapshot();const signature=campaign.value+JSON.stringify([data.filiais,data.participantes]);if(signature!==guideSignature){guideSignature=signature;refresh();}hint.textContent=data.participantes.length?'Consulta dos dados carregados. Escolher um nome não é autenticação. Não altera lançamentos.':'Aguardando o carregamento dos colaboradores. A lista será atualizada automaticamente.';}
+setInterval(synchronizeGuide,1500);
+window.addEventListener('campanhas:viewready',synchronizeGuide);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)synchronizeGuide();});
 
 function toggle(){panel.hidden=!panel.hidden;/* Fora da sidebar transformada, o painel permanece dentro da tela no celular. */if(!panel.hidden){document.body.appendChild(root);root.classList.remove('monaco-ai-docked');root.classList.add('monaco-ai-floating');}else if(footer){sidebar.insertBefore(root,footer);root.classList.add('monaco-ai-docked');root.classList.remove('monaco-ai-floating');}button.setAttribute('aria-expanded',String(!panel.hidden));if(!panel.hidden){if(!messages.children.length)add('Olá! Selecione a campanha, sua filial e seu nome no atendimento guiado. Depois escolha o mês, a semana e uma pergunta. Vou explicar seu resultado com base no cálculo do sistema. Você também pode escrever uma dúvida abaixo.');input.focus();}}
 button.addEventListener('click',toggle);root.querySelector('.monaco-ai-close').addEventListener('click',toggle);

@@ -5267,7 +5267,8 @@ window.sincronizarCompetenciaPix =
 window.obterResultadosPix = () => estadoPix.lancamentos.map(calcularPix);
 
 // Apenas dados já carregados; cópias evitam alterações de cadastro pelo assistente.
-window.obterContextoAssistentePix = () => ({
+window.obterContextoAssistentePix = (incluirResultados = true) => ({
+ filiais: FILIAIS_PIX.map(filial => filial.unidade),
  participantes: participantesPix().map(({id,nome,filial,cargo}) => ({id,nome,filial,cargo})),
- resultados: window.obterResultadosPix()
+ resultados: incluirResultados ? window.obterResultadosPix() : []
 });
