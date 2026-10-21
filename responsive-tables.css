@@ -1,0 +1,30 @@
+/* Somente apresentação: nenhuma coluna é eliminada. */
+.main,.view,.pix-subview,.panel{min-width:0;max-width:100%}
+#lancamentos .panel-header,#apuracao .panel-header,#pix-lancamentos .panel-header,#pix-apuracao .panel-header{flex-wrap:wrap;gap:12px}
+#lancamentos .panel-header-actions,#pix-lancamentos .panel-header-actions{flex-wrap:wrap;max-width:100%}
+#pix-lancamentos .pix-filters,#pix-apuracao .pix-filters{grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr))}
+.responsive-data-controls{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px;margin:8px 0;color:var(--text,#173746);font-size:12px}
+.responsive-data-controls>span{margin-right:4px}
+.responsive-data-controls button{min-height:36px;padding:6px 12px;border:1px solid var(--line,#c9d5dc);border-radius:8px;background:var(--panel,#fff);color:var(--text,#173746);cursor:pointer}
+.responsive-data-controls button[aria-pressed="true"]{background:#08785f;color:#fff;border-color:#08785f}
+.responsive-data-controls button:focus-visible,.responsive-data-wrap:focus-visible{outline:3px solid #14b8a6;outline-offset:2px}
+main .responsive-data-wrap{box-sizing:border-box;min-width:0;width:100%;max-width:100%;overflow:auto!important;overscroll-behavior-inline:contain;scrollbar-gutter:stable;scrollbar-width:auto}
+main .responsive-data-wrap[data-responsive-mode="table"]{max-height:72dvh}
+main .responsive-data-wrap[data-responsive-mode="table"] table{width:max-content;min-width:100%;max-width:none;table-layout:auto}
+main .responsive-data-wrap[data-responsive-mode="table"] th{position:sticky;top:0;z-index:2;background:var(--panel,#fff);padding:10px 12px;white-space:normal;min-width:80px}
+main .responsive-data-wrap[data-responsive-mode="table"] td{padding:10px 12px;min-width:80px}
+main #pix-lancamentos .responsive-data-wrap[data-responsive-mode="table"] td:last-child,main #pix-lancamentos .responsive-data-wrap[data-responsive-mode="table"] th:last-child{position:sticky;right:0;z-index:3;background:var(--panel,#fff);box-shadow:-3px 0 5px #0002;min-width:160px}
+main .responsive-data-wrap .actions{flex-wrap:wrap;gap:6px}
+main .responsive-data-wrap[data-responsive-mode="cards"]{border:0;border-radius:0;overflow:visible!important;max-height:none}
+main .responsive-data-wrap[data-responsive-mode="cards"] table{display:block;width:100%;min-width:0!important;max-width:100%;border:0;table-layout:auto}
+main .responsive-data-wrap[data-responsive-mode="cards"] thead{position:absolute!important;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+main .responsive-data-wrap[data-responsive-mode="cards"] tbody{display:grid;gap:14px;width:100%}
+main .responsive-data-wrap[data-responsive-mode="cards"] tbody tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 16px;padding:12px 16px;border:1px solid var(--line,#c9d5dc);border-radius:12px;background:var(--panel,#fff)}
+main .responsive-data-wrap[data-responsive-mode="cards"] tbody td{display:block;box-sizing:border-box;width:auto!important;min-width:0!important;max-width:100%!important;padding:10px 0;border:0;border-bottom:1px solid var(--line,#c9d5dc);white-space:normal;overflow-wrap:anywhere;font-size:12px;line-height:1.5}
+main .responsive-data-wrap[data-responsive-mode="cards"] td::before{content:attr(data-label);display:block;margin-bottom:5px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted,#657380)}
+main .responsive-data-wrap[data-responsive-mode="cards"] td.responsive-wide,main .responsive-data-wrap[data-responsive-mode="cards"] tr.responsive-empty td{grid-column:1/-1}
+main .responsive-data-wrap[data-responsive-mode="cards"] td.responsive-wide:last-child{border-bottom:0}
+main .responsive-data-wrap[data-responsive-mode="cards"] td>*,main .responsive-data-wrap[data-responsive-mode="cards"] .pix-indicator-detail{min-width:0!important;max-width:100%!important;white-space:normal!important}
+@media(max-width:600px){main .responsive-data-wrap[data-responsive-mode="cards"] tbody tr{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px;padding:10px 12px}.responsive-data-controls button{min-height:42px}}
+@media(max-width:380px){main .responsive-data-wrap[data-responsive-mode="cards"] tbody tr{grid-template-columns:minmax(0,1fr)}}
+@media print{.responsive-data-controls{display:none!important}main .responsive-data-wrap{max-height:none!important;overflow:visible!important}}
