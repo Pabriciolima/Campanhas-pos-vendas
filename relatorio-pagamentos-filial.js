@@ -24,7 +24,11 @@ function addCss(){if($("#"+STYLE))return;const e=document.createElement("style")
 .${ROOT} .rp-table{margin-top:16px;overflow:auto} .${ROOT} table{width:100%;border-collapse:collapse;font-size:11px} .${ROOT} th,.${ROOT} td{padding:9px 10px;border-bottom:1px solid var(--line,#dce6ec);text-align:left} .${ROOT} th{font-size:9px;text-transform:uppercase;color:var(--muted,#718390)}
 .${ROOT} .empty{padding:30px;text-align:center;color:var(--muted,#718390)}
 @media(max-width:820px){.${ROOT} .rp-kpis{grid-template-columns:1fr 1fr}.${ROOT} .rp-filter{width:100%;min-width:0}}`;document.head.appendChild(e)}
-function panel(module){const host=module==="prod"?$("#dashboard"):$("#pix-dashboard");if(!host)return null;const id=ROOT+(module==="prod"?"Prod":"Pix");let r=$("#"+id);if(r)return r;r=document.createElement("article");r.id=id;r.className="panel "+ROOT;r.dataset.module=module;r.innerHTML=`<div class="rp-head"><div><p class="eyebrow">FINANCEIRO · ÚLTIMOS 6 MESES</p><h2>Pagamentos por filial</h2><p>Total de bonificações apuradas no período, com visão geral e individual por filial.</p></div><div style="display:flex;gap:10px;flex-wrap:wrap"><label class="rp-filter"><span>Filial</span><select class="rp-branch"><option value="">Comparativo geral</option></select></label><label class="rp-filter"><span>Colaborador</span><select class="rp-person"><option value="">Todos os colaboradores</option></select></label></div></div><div class="rp-body empty">Carregando pagamentos…</div>`;host.appendChild(r);r.querySelector(".rp-branch").addEventListener("change",()=>{fillPeople(module);render(module)});r.querySelector(".rp-person").addEventListener("change",()=>render(module));return r}
+function panel(module){const host=module==="prod"?$("#dashboard"):$("#pix-dashboard");if(!host)return null;const id=ROOT+(module==="prod"?"Prod":"Pix");let r=$("#"+id);if(r)return r;r=document.createElement("article");r.id=id;r.className="panel "+ROOT;r.dataset.module=module;r.innerHTML=`<div class="rp-head"><div><p class="eyebrow">FINANCEIRO · ÚLTIMOS 6 MESES</p><h2>Pagamentos por filial</h2><p>Total de bonificações apuradas no período, com visão geral e individual por filial.</p></div><div style="display:flex;gap:10px;flex-wrap:wrap"><label class="rp-filter"><span>Filial</span><select class="rp-branch"><option value="">Comparativo geral</option></select></label><label class="rp-filter"><span>Colaborador</span><select class="rp-person"><option value="">Todos os colaboradores</option></select></label></div></div><div class="rp-body empty">Carregando pagamentos…</div>`;host.appendChild(r);r.querySelector(".rp-branch").addEventListener("change",()=>{const person=r.querySelector(".rp-person");if(person)person.value="";fillPeople(module);render(module);notifyFilter(module)});r.querySelector(".rp-person").addEventListener("change",()=>{render(module);notifyFilter(module)});return r}
+function notifyFilter(module){
+ const r=panel(module);if(!r)return;
+ window.dispatchEvent(new CustomEvent("campanhas:pagamentos-filtro",{detail:{module,filial:r.querySelector('.rp-branch').value||'',colaborador:r.querySelector('.rp-person').value||''}}));
+}
 function branchOf(d,row){return String(row.filial||d.filial||"").trim()}
 function compOf(d,row){return String(row.competencia||d.competencia||"").trim()}
 function prodValue(d){
@@ -96,7 +100,7 @@ async function load(){
    valor:paymentCalc.pix?Math.max(0,num(paymentCalc.pix(d,pixRaw))):pixValue(d)
  })).filter(x=>x.competencia&&x.filial);
 
- ["prod","pix"].forEach(m=>{if(panel(m)){fill(m);fillPeople(m);render(m)}})
+ ["prod","pix"].forEach(m=>{if(panel(m)){fill(m);fillPeople(m);render(m);notifyFilter(m)}})
 }
 window.addEventListener("pix:nps-unidade-atualizado",()=>{
  if(!paymentCalc.pix||!state.pixRaw)return;

@@ -5261,3 +5261,6 @@ window.atualizarDashboardGestorPix?.();
 
 window.sincronizarCompetenciaPix =
   sincronizarCompetenciaPix;
+
+// Fonte completa de resultados calculados, independente dos filtros das tabelas.
+window.obterResultadosPix = () => estadoPix.lancamentos.map(calcularPix);

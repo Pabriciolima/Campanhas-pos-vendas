@@ -39,6 +39,7 @@
   }
 
   function extrairNumero(valor) {
+    if (typeof valor === 'number') return Number.isFinite(valor) ? valor : 0;
     const texto = String(valor ?? "")
       .replace(/\s/g, "")
       .replace(/R\$/gi, "")
@@ -52,6 +53,10 @@
     return Number.isFinite(numero)
       ? numero
       : 0;
+  }
+
+  function escaparHtml(valor) {
+    return String(valor ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
   function formatarMoeda(valor) {
@@ -313,6 +318,18 @@
   }
 
   function extrairDadosLancamentosPix() {
+    // Não use a tabela de lançamentos como fonte quando o motor está disponível:
+    // ela pode estar limitada por filtros de outra tela.
+    if (typeof window.obterResultadosPix === 'function') {
+      const competencia = competenciaAtivaPix();
+      return window.obterResultadosPix()
+        .filter(item => String(item.competencia) === competencia)
+        .map(item => ({competencia:item.competencia, semana:String(item.semana || ''),
+          filial:item.filial || '', colaborador:item.nome || item.colaborador || '', cargo:item.cargo || '',
+          faturamento:extrairNumero(item.bonusBase), ticket:extrairNumero(item.bonusFaixa),
+          nps:extrairNumero(item.bonusNps), penalidade:extrairNumero(item.penalidade),
+          total:extrairNumero(item.bonusFinal), status:item.status || ''}));
+    }
     const tbody = localizarTabelaPix();
 
     if (!tbody) {
@@ -499,8 +516,13 @@
       return;
     }
 
+    const painel = selecionar('#relatorioPagamentosFilialPix');
+    const filial = painel?.querySelector('.rp-branch')?.value || '';
+    const colaborador = painel?.querySelector('.rp-person')?.value || '';
     const consolidados = consolidarPorColaborador(
-      extrairDadosLancamentosPix()
+      extrairDadosLancamentosPix().filter(item =>
+        (!filial || normalizarTexto(item.filial) === normalizarTexto(filial)) &&
+        (!colaborador || normalizarTexto(item.colaborador) === normalizarTexto(colaborador)))
     );
 
     const ordenados = [...consolidados].sort(
@@ -546,16 +568,16 @@
       <tr>
         <td>
           <strong>
-            ${item.colaborador}
+            ${escaparHtml(item.colaborador)}
           </strong>
         </td>
 
         <td>
-          ${item.filial}
+          ${escaparHtml(item.filial)}
         </td>
 
         <td>
-          ${item.cargo}
+          ${escaparHtml(item.cargo)}
         </td>
 
         <td>
@@ -656,6 +678,10 @@
   }
 
   function observarMudancasPix() {
+    window.addEventListener('campanhas:pagamentos-filtro', evento => {
+      if (evento.detail?.module === 'pix') renderizarHistoricoPix();
+    });
+    window.addEventListener('pix:nps-unidade-atualizado', renderizarHistoricoPix);
     const tabela = localizarTabelaPix();
 
     if (tabela) {
