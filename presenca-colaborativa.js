@@ -1,3 +1,4 @@
+import { perfilValido, nomeMinimizado } from "./security/seguranca.js";
 /*
 ===============================================================================
 PRESENÇA COLABORATIVA — HUB DE CAMPANHAS
@@ -110,17 +111,20 @@ function pcIdSessao() {
 
 function lerPerfil() {
   try {
-    const perfil = JSON.parse(localStorage.getItem(PC_STORAGE) || "null");
-    if (perfil?.nome && perfil?.filial) {
-      return { nome: String(perfil.nome).trim(), filial: String(perfil.filial).trim() };
+    // Remova a cópia persistente antiga; presença não precisa reter nome indefinidamente.
+    localStorage.removeItem(PC_STORAGE);
+    const perfil = JSON.parse(sessionStorage.getItem(PC_STORAGE) || "null");
+    if (perfilValido(perfil)) {
+      return { nome: String(perfil.nome).trim(), filial: String(perfil.filial).trim(), expiresAt: perfil.expiresAt };
     }
+    sessionStorage.removeItem(PC_STORAGE);
   } catch (_) {}
   return null;
 }
 
 function salvarPerfil(perfil) {
-  pcPerfil = perfil;
-  localStorage.setItem(PC_STORAGE, JSON.stringify(perfil));
+  pcPerfil = {...perfil, nome:String(perfil.nome||'').trim().slice(0,100), filial:String(perfil.filial||'').trim().slice(0,120), expiresAt:Date.now()+8*60*60*1000};
+  sessionStorage.setItem(PC_STORAGE, JSON.stringify(pcPerfil));
 }
 
 function elementoEstaVisivel(elemento) {
@@ -228,7 +232,7 @@ function estadoAtual() {
   const modulo = moduloAtual();
   return {
     sessao: pcIdSessao(),
-    nome: pcPerfil?.nome || "",
+    nome: nomeMinimizado(pcPerfil?.nome),
     filial: pcPerfil?.filial || "",
     modulo,
     modulo_rotulo: PC_MODULOS[modulo] || modulo,
@@ -240,7 +244,8 @@ function estadoAtual() {
 }
 
 async function publicarPresenca(forcar = false) {
-  if (!pcPerfil || !pcCanalEstaPronto() || document.hidden) return;
+  if (!perfilValido(pcPerfil)) { pcPerfil=null;sessionStorage.removeItem(PC_STORAGE);return; }
+  if (!pcCanalEstaPronto() || document.hidden) return;
   const atual = estadoAtual();
   const assinatura = JSON.stringify({
     nome: atual.nome,

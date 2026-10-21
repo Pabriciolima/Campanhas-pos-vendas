@@ -1,3 +1,4 @@
+import { escaparHtml as protegerHtml } from "./security/seguranca.js";
 /*
  * AUDITORIA ESTRUTURAL — 2026.08.26 — ETAPA 04 SUPABASE
  *
@@ -2466,7 +2467,7 @@ function indicadorPixTexto(resultado) {
             <span class="pix-import-warning">
               Motivo:
               <b>
-                ${resultado.motivoNaoHabilitado || "SEM META"}
+                ${protegerHtml(resultado.motivoNaoHabilitado || "SEM META")}
               </b>
             </span>
           `
@@ -2915,12 +2916,12 @@ function renderFuncionariosPix() {
 
             return `
               <tr>
-                <td>${funcionario.dn || ""}</td>
-                <td>${funcionario.filial || ""}</td>
+                <td>${protegerHtml(funcionario.dn || "")}</td>
+                <td>${protegerHtml(funcionario.filial || "")}</td>
                 <td>
-                  <strong>${funcionario.nome || ""}</strong>
+                  <strong>${protegerHtml(funcionario.nome || "")}</strong>
                 </td>
-                <td>${funcionario.cargo || ""}</td>
+                <td>${protegerHtml(funcionario.cargo || "")}</td>
                 <td>
                   <span class="badge ${ativo ? "ok" : "no"}">
                     ${ativo ? "ATIVO" : "INATIVO"}
@@ -2931,7 +2932,7 @@ function renderFuncionariosPix() {
                     <button
                       type="button"
                       class="mini-btn"
-                      data-pix-func-edit="${funcionario.id}"
+                      data-pix-func-edit="${protegerHtml(funcionario.id)}"
                     >
                       Editar
                     </button>
@@ -2939,7 +2940,7 @@ function renderFuncionariosPix() {
                     <button
                       type="button"
                       class="mini-btn delete"
-                      data-pix-func-delete="${funcionario.id}"
+                      data-pix-func-delete="${protegerHtml(funcionario.id)}"
                       title="Remover da base ativa preservando todo o histórico"
                     >
                       Excluir
@@ -3009,9 +3010,9 @@ function montarTabelaResultadosPix(
             <tr>
               <td>${resultado.competencia}</td>
               <td>S${resultado.semana}</td>
-              <td>${resultado.filial}</td>
-              <td><strong>${resultado.nome}</strong></td>
-              <td>${resultado.cargo}</td>
+              <td>${protegerHtml(resultado.filial)}</td>
+              <td><strong>${protegerHtml(resultado.nome)}</strong></td>
+              <td>${protegerHtml(resultado.cargo)}</td>
               <td>${indicadorPixTexto(resultado)}</td>
               <td>${pixMoeda(resultado.bonusBase)}</td>
               <td>${pixMoeda(resultado.bonusFaixa)}</td>
@@ -3037,9 +3038,9 @@ function montarTabelaResultadosPix(
                         ? "ok"
                         : "no"
                     }"
-                    title="${resultado.observacao}"
+                    title="${protegerHtml(resultado.observacao)}"
                   >
-                    ${resultado.status}
+                    ${protegerHtml(resultado.status)}
                   </span>
 
                   ${
@@ -3047,7 +3048,7 @@ function montarTabelaResultadosPix(
                       ? `
                         <small
                           class="pix-motivo-nao-habilitado"
-                          title="${resultado.observacao}"
+                          title="${protegerHtml(resultado.observacao)}"
                           style="
                             display:block;
                             max-width:190px;
@@ -3059,7 +3060,7 @@ function montarTabelaResultadosPix(
                             overflow-wrap:anywhere;
                           "
                         >
-                          Motivo: ${resultado.observacao}
+                          Motivo: ${protegerHtml(resultado.observacao)}
                         </small>
                       `
                       : ""
@@ -3074,7 +3075,7 @@ function montarTabelaResultadosPix(
                         <button
                           type="button"
                           class="mini-btn"
-                          data-pix-edit="${resultado.id}"
+                          data-pix-edit="${protegerHtml(resultado.id)}"
                         >
                           Editar
                         </button>
@@ -3082,7 +3083,7 @@ function montarTabelaResultadosPix(
                         <button
                           type="button"
                           class="mini-btn delete"
-                          data-pix-delete="${resultado.id}"
+                          data-pix-delete="${protegerHtml(resultado.id)}"
                         >
                           Excluir
                         </button>
@@ -4009,7 +4010,7 @@ function renderCamposLancamentoPix(dados = {}) {
     area.innerHTML = `
       <p class="pix-empty">
         Não foi encontrada uma política para o cargo
-        ${funcionario.cargo}.
+        ${protegerHtml(funcionario.cargo)}.
       </p>
     `;
 
@@ -4632,10 +4633,10 @@ function atualizarPreviewPix() {
             ? "ok"
             : "no"
         }">
-          ${resultado.status}
+          ${protegerHtml(resultado.status)}
         </span>
 
-        <small>${resultado.observacao}</small>
+        <small>${protegerHtml(resultado.observacao)}</small>
       </div>
     `;
   } catch (erro) {

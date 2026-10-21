@@ -1,3 +1,4 @@
+import { escaparHtml as protegerHtml } from "./security/seguranca.js";
 /*
  * VERSÃO: 2026.08.06-32
  * Filtro de exportação dos Produtivos por filial.
@@ -2943,21 +2944,21 @@ function renderFuncionarios() {
           funcionario => `
             <tr>
               <td>
-                ${funcionario.dn}
+                ${protegerHtml(funcionario.dn)}
               </td>
 
               <td>
-                ${funcionario.filial}
+                ${protegerHtml(funcionario.filial)}
               </td>
 
               <td>
                 <strong>
-                  ${funcionario.nome}
+                  ${protegerHtml(funcionario.nome)}
                 </strong>
               </td>
 
               <td>
-                ${funcionario.cargo}
+                ${protegerHtml(funcionario.cargo)}
               </td>
 
               <td>
@@ -2981,7 +2982,7 @@ function renderFuncionarios() {
                   <button
                     class="mini-btn"
                     type="button"
-                    data-funcionario-editar="${funcionario.id}"
+                    data-funcionario-editar="${protegerHtml(funcionario.id)}"
                   >
                     Editar
                   </button>
@@ -2989,7 +2990,7 @@ function renderFuncionarios() {
                   <button
                     class="mini-btn delete"
                     type="button"
-                    data-funcionario-excluir="${funcionario.id}"
+                    data-funcionario-excluir="${protegerHtml(funcionario.id)}"
                   >
                     Excluir
                   </button>
@@ -3112,20 +3113,20 @@ function renderLancamentos() {
                   : ""
               }"
               data-evidencia-competencia="${lancamento.competencia || ""}"
-              data-evidencia-filial="${lancamento.filial || ""}"
-              data-evidencia-dn="${lancamento.dn || ""}"
+              data-evidencia-filial="${protegerHtml(lancamento.filial || "")}"
+              data-evidencia-dn="${protegerHtml(lancamento.dn || "")}"
             >
               <td>
                 ${lancamento.competencia}
               </td>
 
               <td>
-                ${lancamento.filial}
+                ${protegerHtml(lancamento.filial)}
               </td>
 
               <td>
                 <strong>
-                  ${lancamento.nome}
+                  ${protegerHtml(lancamento.nome)}
                 </strong>
 
                 ${
@@ -3143,7 +3144,7 @@ function renderLancamentos() {
               </td>
 
               <td>
-                ${lancamento.cargo}
+                ${protegerHtml(lancamento.cargo)}
               </td>
 
               <td>
@@ -3178,7 +3179,7 @@ function renderLancamentos() {
                         : "no"
                     }"
                   >
-                    ${lancamento.status}
+                    ${protegerHtml(lancamento.status)}
                   </span>
 
                   ${
@@ -3200,8 +3201,8 @@ function renderLancamentos() {
                     type="button"
                     class="mini-btn evidence-view-btn"
                     data-evidencia-competencia="${lancamento.competencia || ""}"
-                    data-evidencia-filial="${lancamento.filial || ""}"
-                    data-evidencia-dn="${lancamento.dn || ""}"
+                    data-evidencia-filial="${protegerHtml(lancamento.filial || "")}"
+                    data-evidencia-dn="${protegerHtml(lancamento.dn || "")}"
                     title="Visualizar evidências da filial"
                   >
                     📷 Evidências
@@ -3750,21 +3751,21 @@ function renderApuracao() {
                 </td>
 
                 <td>
-                  ${item.dn}
+                  ${protegerHtml(item.dn)}
                 </td>
 
                 <td>
-                  ${item.filial}
+                  ${protegerHtml(item.filial)}
                 </td>
 
                 <td>
                   <strong>
-                    ${item.nome}
+                    ${protegerHtml(item.nome)}
                   </strong>
                 </td>
 
                 <td>
-                  ${item.cargo}
+                  ${protegerHtml(item.cargo)}
                 </td>
 
                 <td
@@ -3952,7 +3953,7 @@ function renderApuracao() {
                           : "no"
                       }"
                     >
-                      ${item.status}
+                      ${protegerHtml(item.status)}
                     </span>
 
                     ${
@@ -4745,11 +4746,11 @@ function renderHistoricoMensal(
                 </td>
 
                 <td>
-                  ${resultado.filial}
+                  ${protegerHtml(resultado.filial)}
                 </td>
 
                 <td>
-                  ${resultado.cargo}
+                  ${protegerHtml(resultado.cargo)}
                 </td>
 
                 <td>
@@ -4824,7 +4825,7 @@ function renderHistoricoMensal(
                       ? "ok"
                       : "no"
                   }">
-                    ${resultado.status}
+                    ${protegerHtml(resultado.status)}
                   </span>
                 </td>
 
@@ -5712,7 +5713,7 @@ function atualizarPreview() {
       ${metricasHtml}
 
       <div class="preview-resultado">
-        <strong>${resultado.status}</strong>
+        <strong>${protegerHtml(resultado.status)}</strong>
 
         <span>
           Bônus bruto:
@@ -5730,7 +5731,7 @@ function atualizarPreview() {
         </span>
       </div>
 
-      ${resultado.motivo ? `<small class="preview-motivo">${resultado.motivo}</small>` : ""}
+      ${resultado.motivo ? `<small class="preview-motivo">${protegerHtml(resultado.motivo)}</small>` : ""}
     `;
   } catch (erro) {
     console.error("Erro no cálculo do preview:", erro);
@@ -6163,7 +6164,7 @@ function preencherFiliaisExportacaoProdutivos() {
     '<option value="">Todas as filiais</option>',
     ...filiais.map(
       item => `
-        <option value="${item.filial}">
+        <option value="${protegerHtml(item.filial)}">
           ${
             item.dn
               ? `${item.dn} - ${item.filial}`

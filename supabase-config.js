@@ -1,4 +1,5 @@
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+// Versão fixa: atualizações de dependências exigem revisão, sem alterar o papel público da chave.
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/+esm";
 
 const SUPABASE_URL = "https://ksyygambidrptnwndjhr.supabase.co";
 

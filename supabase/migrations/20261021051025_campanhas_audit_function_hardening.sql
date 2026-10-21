@@ -1,0 +1,1 @@
+revoke execute on function public.auditar_pix_lancamentos() from public, anon, authenticated; revoke execute on function public.auditar_produtivos_lancamentos() from public, anon, authenticated; alter function public.auditoria_data_segura(text,timestamptz) set search_path=''; alter function public.auditoria_pix_data_segura(text,timestamptz) set search_path='';
