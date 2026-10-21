@@ -16,3 +16,28 @@ img,video,canvas{max-width:100%}
 }
 @media(max-width:600px){dialog :is(.form-grid,.dynamic-fields){grid-template-columns:minmax(0,1fr)}dialog :is(.modal-header,.modal-actions){flex-wrap:wrap;gap:10px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}.campanhas-view-entrando{animation:none!important}.campanhas-view-saindo{transition:none!important}}
+
+/* Crédito compacto: mantém o acesso às informações sem ocupar um cartão. */
+.sidebar-footer .developer-credit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  box-shadow: none;
+  color: #a9bbc9;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+}
+.sidebar-footer .developer-credit strong { font-weight: 500; }
+.sidebar-footer .developer-credit svg { flex-shrink: 0; opacity: .7; }
+.sidebar-footer .developer-credit:hover { color: #fff; }
+.sidebar-footer .developer-credit:focus-visible { outline: 2px solid #93c5fd; outline-offset: 3px; }

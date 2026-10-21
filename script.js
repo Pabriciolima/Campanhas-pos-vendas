@@ -7947,67 +7947,8 @@ function configurarEventos() {
       exportarCsv
     );
 
-  document
-    .querySelector(
-      "#btnLimparTudo"
-    )
-    .addEventListener(
-      "click",
-      async () => {
-        const senhaAutorizada =
-          await solicitarSenhaExclusao();
+  // A limpeza global foi removida do menu para evitar exclusões em massa.
 
-        if (!senhaAutorizada) {
-          return;
-        }
-
-        const confirmou =
-          await window.CampanhaUI.deleteConfirm({
-            titulo: "Limpar todos os lançamentos compartilhados?",
-            mensagem:
-              "Todos os lançamentos dos Produtivos salvos no Firebase serão apagados para todos os usuários. Esta ação não poderá ser desfeita.",
-            textoConfirmar: "Limpar lançamentos",
-            textoCancelar: "Cancelar"
-          });
-
-        if (!confirmou) {
-          return;
-        }
-
-        try {
-          const { error } = await supabase
-            .from("produtivos_lancamentos")
-            .delete()
-            .not("id", "is", null);
-
-          if (error) throw error;
-
-          await atualizarLancamentosFirebaseAgora("após limpeza");
-
-          localStorage.removeItem(
-            DB_KEY
-          );
-
-          localStorage.setItem(
-            MIGRACAO_LANCAMENTOS_KEY,
-            "true"
-          );
-
-          toast(
-            "Lançamentos compartilhados apagados"
-          );
-        } catch (erro) {
-          console.error(
-            "Erro ao limpar lançamentos compartilhados:",
-            erro
-          );
-
-          await window.CampanhaUI.alert(
-            "Não foi possível limpar os lançamentos no Firebase."
-          );
-        }
-      }
-    );
 }
 
 document.addEventListener(
