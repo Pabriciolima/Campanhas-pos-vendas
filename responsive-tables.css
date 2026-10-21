@@ -28,3 +28,8 @@ main .responsive-data-wrap[data-responsive-mode="cards"] td>*,main .responsive-d
 @media(max-width:600px){main .responsive-data-wrap[data-responsive-mode="cards"] tbody tr{grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px;padding:10px 12px}.responsive-data-controls button{min-height:42px}}
 @media(max-width:380px){main .responsive-data-wrap[data-responsive-mode="cards"] tbody tr{grid-template-columns:minmax(0,1fr)}}
 @media print{.responsive-data-controls{display:none!important}main .responsive-data-wrap{max-height:none!important;overflow:visible!important}}
+
+/* Mantém status e motivo da não habilitação junto das ações na rolagem horizontal. */
+main #pix-lancamentos .responsive-data-wrap[data-responsive-mode="table"] :is(td,th):nth-last-child(2){position:sticky;right:var(--responsive-actions-width,0px);z-index:3;background:var(--panel,#fff);box-shadow:-3px 0 5px #0002;min-width:190px}
+main #pix-apuracao .responsive-data-wrap[data-responsive-mode="table"] :is(td,th):last-child{position:sticky;right:0;z-index:3;background:var(--panel,#fff);box-shadow:-3px 0 5px #0002;min-width:190px}
+main #pix-lancamentos .responsive-data-wrap[data-responsive-mode="table"] th:nth-last-child(-n+2),main #pix-apuracao .responsive-data-wrap[data-responsive-mode="table"] th:last-child{z-index:4}
