@@ -101,14 +101,16 @@ const scenarios=[
 ];
 function questions(){const common=['resultado','motivo','melhorar','pendencias','historico','lancamento'];options(question,scenarios.filter(([id])=>common.includes(id)||(campaign.value==='pix'?!['oficina','treinamento'].includes(id):['oficina','treinamento'].includes(id))));week.closest('label').hidden=campaign.value!=='pix';}
 function snapshot(incluirResultados=false){try{return (campaign.value==='pix'?window.obterContextoAssistentePix?.(incluirResultados):window.obterContextoAssistenteOficina?.(incluirResultados))||{participantes:[],resultados:[]};}catch{return {participantes:[],resultados:[],erro:true};}}
-function refresh(reset=false){const data=snapshot();options(branch,[...new Set([...(data.filiais||[]),...data.participantes.map(p=>p.filial)].filter(Boolean))].sort().map(x=>[x,x]),'Escolha a filial');if(reset)branch.value='';people();questions();}
+// Catálogo da página não depende dos módulos de apuração ou de requisições de cadastro.
+let branchCatalog={};try{branchCatalog=JSON.parse(document.getElementById('monaco-ai-branch-catalog')?.textContent||'{}');}catch{}
+function refresh(reset=false){const data=snapshot();options(branch,[...new Set([...(branchCatalog[campaign.value]||[]),...(data.filiais||[]),...data.participantes.map(p=>p.filial)].filter(Boolean))].sort().map(x=>[x,x]),'Escolha a filial');if(reset)branch.value='';people();questions();}
 function people(){const list=snapshot().participantes.filter(p=>p.filial===branch.value);options(person,list.map(p=>[p.id,p.nome+' — '+p.cargo]),branch.value?'Escolha seu nome':'Selecione a filial primeiro');person.disabled=!branch.value;if(!list.some(p=>String(p.id)===person.value))person.value='';}
 month.value=document.querySelector('#competenciaGlobal')?.value||new Date().toLocaleDateString('sv-SE').slice(0,7);
 const consult=document.createElement('button');consult.type='button';consult.className='monaco-ai-consult';consult.textContent='Consultar agora';guide.append(consult);
 const hint=document.createElement('small');hint.textContent='Consulta de dados já carregados. Escolher um nome não é autenticação. Não altera lançamentos.';guide.append(hint);
 panel.insertBefore(guide,messages);
 campaign.addEventListener('change',()=>refresh(true));branch.addEventListener('change',()=>{person.value='';people();});
-button.addEventListener('click',()=>{if(!panel.hidden)refresh();});
+
 const money=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v))?Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'não informado';
 const val=v=>v===null||v===undefined||v===''?'não informado':String(v);
 function answerGuided(){
@@ -155,7 +157,7 @@ setInterval(synchronizeGuide,1500);
 window.addEventListener('campanhas:viewready',synchronizeGuide);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)synchronizeGuide();});
 
-function toggle(){panel.hidden=!panel.hidden;/* Fora da sidebar transformada, o painel permanece dentro da tela no celular. */if(!panel.hidden){document.body.appendChild(root);root.classList.remove('monaco-ai-docked');root.classList.add('monaco-ai-floating');}else if(footer){sidebar.insertBefore(root,footer);root.classList.add('monaco-ai-docked');root.classList.remove('monaco-ai-floating');}button.setAttribute('aria-expanded',String(!panel.hidden));if(!panel.hidden){if(!messages.children.length)add('Olá! Selecione a campanha, sua filial e seu nome no atendimento guiado. Depois escolha o mês, a semana e uma pergunta. Vou explicar seu resultado com base no cálculo do sistema. Você também pode escrever uma dúvida abaixo.');input.focus();}}
+function toggle(){panel.hidden=!panel.hidden;if(!panel.hidden){refresh();synchronizeGuide();}/* Fora da sidebar transformada, o painel permanece dentro da tela no celular. */if(!panel.hidden){document.body.appendChild(root);root.classList.remove('monaco-ai-docked');root.classList.add('monaco-ai-floating');}else if(footer){sidebar.insertBefore(root,footer);root.classList.add('monaco-ai-docked');root.classList.remove('monaco-ai-floating');}button.setAttribute('aria-expanded',String(!panel.hidden));if(!panel.hidden){if(!messages.children.length)add('Olá! Selecione a campanha, sua filial e seu nome no atendimento guiado. Depois escolha o mês, a semana e uma pergunta. Vou explicar seu resultado com base no cálculo do sistema. Você também pode escrever uma dúvida abaixo.');input.focus();}}
 button.addEventListener('click',toggle);root.querySelector('.monaco-ai-close').addEventListener('click',toggle);
 form.addEventListener('submit',e=>{e.preventDefault();const q=input.value.trim().slice(0,600);if(!q||busy)return;input.value='';void respond(q);});
 root.querySelectorAll('[data-monaco-question]').forEach(el=>el.addEventListener('click',()=>{void respond(el.dataset.monacoQuestion);}));
