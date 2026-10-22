@@ -100,3 +100,12 @@ body.modulo-garantia-ativo .export-toolbar { display:none; }
 @media(min-width:1001px){#garantia-lancamentos .garantia-metric-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:600px){.garantia-dialog{padding:16px}.garantia-toolbar>*{flex:1 1 100%}.garantia-dialog .garantia-fields{grid-template-columns:1fr}}
 @media print{.garantia-toolbar,.garantia-actions,.garantia-view button,.garantia-view input[type=file]{display:none!important}.garantia-table-wrap table{display:table;min-width:0}.garantia-table-wrap tr{break-inside:avoid}}
+
+/* Acompanhamento financeiro progressivo, com estado também em texto. */
+.garantia-live{margin:24px 0;padding:20px;border:1px solid var(--line,#d4dce4);border-radius:16px;background:var(--panel,#fff)}
+.garantia-live h3{margin:8px 0 12px}.garantia-live h3:not(:first-child){margin-top:28px}
+.garantia-note{display:block;font-size:12px;line-height:1.5;color:var(--muted,#526475);margin-top:6px}
+.garantia-badge{display:inline-block;padding:5px 9px;border-radius:8px;font-size:12px;font-weight:700;white-space:normal}
+.garantia-badge.positive{background:#dcfce7;color:#14532d}.garantia-badge.waiting{background:#fef3c7;color:#713f12}.garantia-badge.neutral{background:#f1f5f9;color:#334155}
+.garantia-live .garantia-table-wrap{max-height:620px}.garantia-live th{position:sticky;top:0;background:var(--panel,#fff);z-index:1}
+@media(max-width:700px){.garantia-live{padding:12px}.garantia-live .garantia-table-wrap{max-height:none}}

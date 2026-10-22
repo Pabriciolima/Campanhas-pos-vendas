@@ -112,3 +112,11 @@ No mapeamento de recebimento CSV/planilha, competência é obrigatória; linhas 
 Verificação: seis testes específicos, 25 testes totais e fluxo no navegador. A simulação do layout das imagens de setembro/2026 conferiu R$2.680.636,00 e preservou faturado, excluindo outubro e o bloco semanal. O arquivo novo de recebimentos não foi anexado; a simulação usa uma fixture construída a partir do layout, sem gravar dados no navegador de produção.
 
 Execute: `node --test tests/garantia-*.test.mjs`.
+
+## Acompanhamento visual progressivo
+
+Visão Geral, Lançamentos e Apuração mostram valores faturados e recebidos por filial/GERAL, percentual e mínimo de 80% para recebimento. O quadro nominal usa o mesmo motor da apuração, com prêmio bruto de recebimento por perfil, total líquido quando completo, subtotal parcial e pendências. Não soma percentuais entre filiais nem altera dados importados.
+
+Recebimento não gera prêmio direto para perfis locais. Sem denominador faturado, índice e prêmio permanecem pendentes; consolidado desatualizado exige revisão. Parcial é bruto antes de descontos/conferência e não libera pagamento. Dados ausentes não são preenchidos com estimativas. Suspensão e pendências continuam impedindo apresentação como pagamento liberado.
+
+Verificado no navegador: importação real, aplicação parcial, recálculo imediato, persistência, isolamento mensal, conferência nominal e 25 combinações de telas/larguras. Cenário somente recebido/base (85%) mostra R$75 para assistente central e R$400 para gestão, mantendo total final em formação. Os 25 testes de regras/importadores também passaram.
