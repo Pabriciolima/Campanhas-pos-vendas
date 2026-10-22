@@ -1,5 +1,5 @@
 /* Fonte: GARANTIA METRICAS.xlsx, Plan1, versão junho/2025.
- * Confirmações de 22/10/2026: AEG adicional (teto fixo R$700);
+ * Confirmações de 22/10/2026: AEG R$200 por status (teto fixo R$900);
  * erros >=5% descontam 30% do bônus total, incluindo adicionais.
  * Métricas de rede devem usar totais consolidados, nunca média de percentuais.
  */
@@ -12,7 +12,8 @@ export const POLITICA_GARANTIA = Object.freeze({
   {id:'recebimento',nome:'Recebimento',formula:'Valor recebido de garantia ÷ valor faturado do respectivo mês × 100; total de todas as unidades.',faixas:[80,90,100],assistente:[75,100,150],lider:[400,500,600],celulas:'A9:D11; A39:D41'},
   {id:'insercao',nome:'Inserção',formula:'Percentual de conformidade na avaliação final; resultado geral das unidades.',faixas:[75,80,100],assistente:[75,100,150],lider:[400,500,600],celulas:'A13:D15; A43:D45'},
   {id:'malote',nome:'Malote',formula:'Percentual de conformidade; total de todas as unidades. Exclusivo da liderança e supervisora.',faixas:[75,80,100],lider:[400,500,600],celulas:'A47:D49'},
-  {id:'aeg',nome:'Central de AEG',formula:'Não conformidade abaixo de 5%, considerando D+2 no preenchimento e nas correções. Central de AEG no Sismônaco.',assistente:[200],celulas:'A21:D21'},
+  {id:'aegPreenchimento',nome:'AEG — Aguardando preenchimento',formula:'Não conformidade abaixo de 5% no status Aguardando preenchimento, considerando D+2. R$200 independentes. Central de AEG no Sismônaco.',assistente:[200],celulas:'A21:D21; esclarecimento de 22/10/2026'},
+  {id:'aegCorrecao',nome:'AEG — Correção',formula:'Não conformidade abaixo de 5% no status Correção, considerando D+2. R$200 independentes. Central de AEG no Sismônaco.',assistente:[200],celulas:'A21:D21; esclarecimento de 22/10/2026'},
   {id:'chamevolks',nome:'Chamevolks',formula:'R$25 por processo faturado, atribuído ao usuário que enviou à frente de caixa no relatório de faturamento. Exclusivo do assistente.',assistente:[25],celulas:'A17:D17'},
   {id:'extra',nome:'Bônus extra',formula:'R$150 a cada bloco completo de 5 pontos percentuais de recebimento acima de 100%. Exclusivo da liderança e supervisora.',lider:[150],celulas:'A51:D51'}
  ]
@@ -34,7 +35,16 @@ export function calcularGarantia(dados={}){
  const erros=obter('erros','Índice de erros no Sivolks',{max:100});
  function faixa(id,percentual){const regra=POLITICA_GARANTIA.indicadores.find(x=>x.id===id),premios=regra[assistente?'assistente':'lider'];let valor=0;if(percentual!==null)regra.faixas.forEach((limite,i)=>{if(percentual>=limite)valor=premios[i];});itens.push({id,nome:regra.nome,percentual,valor:percentual===null?null:valor});}
  faixa('faturamento',faturamento);faixa('recebimento',recebimento);faixa('insercao',insercao);
- if(assistente){const aeg=obter('aeg','Não conformidade da Central de AEG',{max:100}),qtd=obter('chamevolks','Processos Chamevolks faturados e atribuídos ao assistente',{inteiro:true});itens.push({id:'aeg',nome:'Central de AEG',percentual:aeg,valor:aeg===null?null:aeg<5?200:0},{id:'chamevolks',nome:'Chamevolks',quantidade:qtd,valor:qtd===null?null:centavos(qtd*25)});}
+ if(assistente){
+  // Dois status independentes: não reutilizar o antigo índice único para ambos.
+  for(const id of ['aegPreenchimento','aegCorrecao']){
+   const regra=POLITICA_GARANTIA.indicadores.find(item=>item.id===id);
+   const percentual=obter(id,'Não conformidade — '+regra.nome,{max:100});
+   itens.push({id,nome:regra.nome,percentual,valor:percentual===null?null:percentual<5?200:0});
+  }
+  const qtd=obter('chamevolks','Processos Chamevolks faturados e atribuídos ao assistente',{inteiro:true});
+  itens.push({id:'chamevolks',nome:'Chamevolks',quantidade:qtd,valor:qtd===null?null:centavos(qtd*25)});
+ }
  else{faixa('malote',obter('malote','Conformidade de malote'));itens.push({id:'extra',nome:'Bônus extra',percentual:recebimento,valor:recebimento===null?null:Math.max(0,Math.floor((recebimento-100+1e-10)/5))*150});}
  const subtotal=centavos(itens.reduce((n,item)=>n+(item.valor??0),0));
  if(!Number.isFinite(subtotal)||subtotal>Number.MAX_SAFE_INTEGER/100)pendencias.push('Valores acima do limite de precisão monetária; revise os dados.');

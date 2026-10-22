@@ -4,7 +4,7 @@ Fonte: `GARANTIA METRICAS.xlsx`, aba Plan1, versão junho/2025. Plan2 e Plan3 es
 
 ## Definições confirmadas pelo responsável em 22/10/2026
 
-- Os R$200 da Central de AEG são adicionais aos R$500 dos três indicadores dos assistentes. Máximo fixo: R$700, mais Chamevolks individual.
+- O esclarecimento posterior separa a Central de AEG em dois status: Aguardando preenchimento (R$200) e Correção (R$200). Cada um é avaliado independentemente com não conformidade abaixo de 5% e prazo D+2. Máximo fixo: R$900, mais Chamevolks individual. Esta orientação substitui a interpretação inicial de R$700.
 - A penalidade de 30% passa a valer em índice de erros maior ou igual a 5%.
 
 ## Rastreabilidade
@@ -15,14 +15,15 @@ Fonte: `GARANTIA METRICAS.xlsx`, aba Plan1, versão junho/2025. Plan2 e Plan3 es
 | Recebimento | 80/90/100% → R$75/100/150 | 80/90/100% → R$400/500/600 | A9:D11; A39:D41 |
 | Inserção | 75/80/100% → R$75/100/150 | 75/80/100% → R$400/500/600 | A13:D15; A43:D45 |
 | Malote | Não se aplica | 75/80/100% → R$400/500/600 | A47:D49 |
-| Central de AEG | Não conformidade <5% → R$200; D+2 | Não se aplica | A21:D21 |
+| AEG — Aguardando preenchimento | Não conformidade <5% → R$200; D+2 | Não se aplica | A21:D21; esclarecimento de 22/10/2026 |
+| AEG — Correção | Não conformidade <5% → R$200; D+2 | Não se aplica | A21:D21; esclarecimento de 22/10/2026 |
 | Chamevolks | R$25/processo faturado atribuído ao usuário | Não se aplica | A17:D17 |
 | Extra | Não se aplica | R$150/bloco completo de 5 p.p. de recebimento acima de 100% | A51:D51 |
 | Erros | ≥5%: desconto de 30% do subtotal completo | Mesma regra | A25:B25; A55:B55 e confirmação |
 
 Faturamento: quantidade faturada / quantidade fechada no mês. Recebimento: valor recebido / faturado do respectivo mês. Usar totais gerais de todas as unidades. Não tirar média simples de percentuais de filiais. Cada indicador paga apenas a maior faixa alcançada; não há gatilho global novo. Liderança e supervisora recebem a premiação individualmente, sem divisão.
 
-O valor médio de R$425 de Chamevolks em E18 é informativo. Não é mínimo nem parcela fixa. O índice AEG deve vir da avaliação D+2 na Central de AEG do Sismônaco; esta etapa não calcula atrasos de processos.
+O valor médio de R$425 de Chamevolks em E18 é informativo. Não é mínimo nem parcela fixa. Os dois índices AEG devem vir da avaliação D+2 na Central de AEG do Sismônaco; esta etapa não calcula atrasos de processos.
 
 ## Escopo desta etapa
 
@@ -34,4 +35,4 @@ Cadastro nominal, evidências, dados oficiais por competência, persistência co
 
 `node --test tests/garantia-core.test.mjs`
 
-Cobertura: limites de faixas, índice de erros 4,99/5/5,01%, AEG, extras 104,99/105/109,99/110%, independência dos indicadores, perfis, dados inválidos e ausência de mutação de entradas. Navegação e responsividade verificadas em navegador em 1366, 768, 390 e 360 px.
+Cobertura: limites de faixas, índice de erros 4,99/5/5,01%, AEG por status (incluindo somente um habilitado e dados antigos sem os dois índices), extras 104,99/105/109,99/110%, independência dos indicadores, perfis, dados inválidos e ausência de mutação de entradas. Navegação e responsividade verificadas em navegador em 1366, 768, 390 e 360 px.
