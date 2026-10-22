@@ -6278,6 +6278,7 @@ function obterResultadosParaExportacao() {
       );
   }
 
+  resultados = window.CampanhasSelecaoExportacao?.filtrar(resultados, "oficina") || resultados;
   return resultados.sort((a, b) => {
     const filial = String(
       a.filial || ""

@@ -2355,7 +2355,7 @@ function dadosPixParaExportar() {
   const filtro =
     tipoExportacaoPixAtual();
 
-  const resultados = [
+  let resultados = [
     ...tbody.querySelectorAll("tr")
   ]
     .map(
@@ -2513,6 +2513,8 @@ function dadosPixParaExportar() {
       }
     )
     .filter(Boolean);
+
+  resultados = window.CampanhasSelecaoExportacao?.filtrar(resultados, "pix") || resultados;
 
   console.info(
     `[PIX EXPORTAÇÃO] ${resultados.length} resultado(s) preparado(s).`,
