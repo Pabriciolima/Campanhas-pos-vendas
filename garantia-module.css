@@ -53,3 +53,29 @@ body.modulo-garantia-ativo
 .module-toggle-text small {
   color: #fed7aa;
 }
+/* Métricas e simulador: as grades quebram em telas menores. */
+.garantia-view { min-width:0; }
+.garantia-view p { line-height:1.6; }
+.garantia-metric-cards { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin:18px 0; }
+.garantia-metric-cards h3 { margin-top:0; font-size:16px; }
+.garantia-table-wrap { max-width:100%; overflow:auto; }
+.garantia-table-wrap table { min-width:720px; width:100%; }
+.garantia-table-wrap td { white-space:pre-line; vertical-align:top; min-width:150px; }
+.garantia-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin:18px 0; }
+.garantia-fields label { display:grid; gap:6px; font-size:13px; line-height:1.5; min-width:0; }
+.garantia-fields label[hidden] { display:none; }
+.garantia-breakdown { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; }
+.garantia-breakdown dt { overflow-wrap:anywhere; }
+.garantia-breakdown dd { margin:0; font-weight:700; }
+.garantia-result { margin-top:20px; }
+body.modulo-garantia-ativo .export-toolbar { display:none; }
+@media(max-width:1000px) { .garantia-metric-cards { grid-template-columns:1fr; } }
+@media(max-width:600px) { .garantia-fields { grid-template-columns:1fr; } .garantia-view .panel { padding:16px; } }
+
+@media(max-width:700px) {
+ .garantia-table-wrap table,.garantia-table-wrap tbody,.garantia-table-wrap tr,.garantia-table-wrap td { display:block; min-width:0; width:100%; }
+ .garantia-table-wrap thead { display:none; }
+ .garantia-table-wrap tr { border:1px solid var(--line,#d4dce4); border-radius:12px; padding:12px; margin-bottom:12px; }
+ .garantia-table-wrap td { border:0; padding:7px 0; overflow-wrap:anywhere; }
+ .garantia-table-wrap td::before { content:attr(data-label); display:block; font-size:11px; font-weight:700; color:var(--muted,#667788); margin-bottom:4px; }
+}

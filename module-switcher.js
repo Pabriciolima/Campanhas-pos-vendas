@@ -42,8 +42,8 @@
   const TITULOS_GARANTIA = {
     dashboard: "Visão geral da Garantia",
     funcionarios: "Base de participantes da Garantia",
-    lancamentos: "Lançamentos da Garantia",
-    apuracao: "Apuração da Garantia",
+    lancamentos: "Simulador da Garantia",
+    apuracao: "Apuração simulada da Garantia",
     politicas: "Políticas da Garantia"
   };
 
@@ -446,11 +446,11 @@
   function abrirPaginaGarantia(
     pagina = "dashboard"
   ) {
-    marcarOpcaoEmEstruturacao(
-      ".garantia-menu-btn",
-      "garantiaView",
-      pagina
-    );
+    ocultarTodasAsViews();
+    const paginaValida = Object.hasOwn(TITULOS_GARANTIA, pagina) ? pagina : "dashboard";
+    pagina = paginaValida;
+    selecionar(`#garantia-${pagina}`)?.classList.add("active");
+    selecionar(`[data-garantia-view="${pagina}"]`)?.classList.add("active");
 
     document.body.classList.add(
       "modulo-garantia-ativo"
@@ -479,9 +479,9 @@
       true
     );
 
-    alert(
-      "O módulo Campanhas de Garantia está em estruturação. Esta opção será implementada depois que as políticas forem definidas."
-    );
+    window.dispatchEvent(new CustomEvent("campanhas:viewready", {
+      detail: { modulo: "garantia", pagina }
+    }));
   }
 
   function alternarModulo(
@@ -678,14 +678,18 @@
       return;
     }
 
+    if (moduloSalvo === "garantia") {
+      abrirPaginaGarantia("dashboard");
+      return;
+    }
+
     /*
-     * CRM e Garantia ainda não possuem telas.
+     * O CRM é inicializado pelo módulo próprio.
      * Mantemos a página dos Produtivos visível
      * e apenas reabrimos o dropdown salvo.
      */
     if (
-      moduloSalvo === "crm" ||
-      moduloSalvo === "garantia"
+      moduloSalvo === "crm"
     ) {
       abrirPaginaProdutivos(
         "dashboard"
