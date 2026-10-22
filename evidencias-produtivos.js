@@ -2611,7 +2611,7 @@ function encerrarEscutaEvidencia() {
     null;
 }
 
-async function recuperarEvidenciasDiretoDoStorage(contexto) {
+async function recuperarEvidenciasDiretoDoStoragePasta(contexto) {
   if (!contexto) return [];
 
   const pasta = [
@@ -2660,6 +2660,14 @@ async function recuperarEvidenciasDiretoDoStorage(contexto) {
       };
     })
     .filter(item => item.url);
+}
+
+// Mantém acesso às pastas históricas após corrigir o cadastro do DN.
+async function recuperarEvidenciasDiretoDoStorage(contexto) {
+  const atuais = await recuperarEvidenciasDiretoDoStoragePasta(contexto);
+  if (!contexto || slugEvidencia(contexto.filial) !== "agua-boa") return atuais;
+  const antigos = await recuperarEvidenciasDiretoDoStoragePasta({ ...contexto, dn: String(contexto.dn) === "4738" ? "4774" : "4738" });
+  return [...new Map([...atuais, ...antigos].map(imagem => [imagem.caminho, imagem])).values()];
 }
 
 function observarEvidenciasDaFilial() {

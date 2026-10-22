@@ -3012,7 +3012,7 @@ const FILIAIS_CANONICAS_PIX = [
   { dn: "4730", filial: "URUÇUÍ" },
   { dn: "1928", filial: "SINOP" },
   { dn: "4738", filial: "CUIABÁ" },
-  { dn: "4738", filial: "ÁGUA BOA" },
+  { dn: "4774", filial: "ÁGUA BOA" },
   { dn: "4774", filial: "RONDONÓPOLIS" },
   { dn: "4977", filial: "PORTO VELHO" },
   { dn: "4977", filial: "JI-PARANÁ" },

@@ -467,6 +467,14 @@ async function listarEvidenciasContextoPix(contexto) {
   };
 
   let arquivosSemana = await listarArquivos(contexto.pasta);
+  // Reúne envios anteriores e atuais sem renomear arquivos históricos.
+  if (slugPixEv(contexto.filial) === "agua-boa") {
+    const raiz = `${CONFIG_PIX_EVIDENCIAS.pastaRaiz}/${contexto.competencia}/semana-${contexto.numeroSemana}`;
+    for (const dn of ["4738", "4774"]) {
+      const pasta = `${raiz}/${dn}-agua-boa`;
+      if (pasta !== contexto.pasta) arquivosSemana.push(...await listarArquivos(pasta));
+    }
+  }
 
   /*
    * Recuperação das pastas antigas: o DN ou a grafia da filial pode ter sido
@@ -2241,7 +2249,7 @@ const DNs_PIX_POR_FILIAL = {
   "URUCUI": "4730",
   "SINOP": "1928",
   "CUIABA": "4738",
-  "AGUA BOA": "4738",
+  "AGUA BOA": "4774",
   "RONDONOPOLIS": "4774"
 };
 
@@ -2253,6 +2261,8 @@ function resolverDnPixPorFilial(
     String(dnRecebido || "")
       .replace(/\D/g, "");
 
+  // O DN de uma pasta histórica não substitui o cadastro oficial da filial.
+  if (normalizarPixEv(filialRecebida) === "AGUA BOA") return "4774";
   if (dnLimpo) {
     return dnLimpo;
   }

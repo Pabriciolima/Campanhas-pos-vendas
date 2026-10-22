@@ -424,7 +424,7 @@ const FILIAIS = [
   { dn: "4730", unidade: "URUÇUI" },
   { dn: "1928", unidade: "SINOP" },
   { dn: "4738", unidade: "CUIABÁ" },
-  { dn: "4738", unidade: "AGUA BOA" },
+  { dn: "4774", unidade: "AGUA BOA" },
   { dn: "4774", unidade: "RONDONOPOLIS" },
   { dn: "4977", unidade: "PORTO VELHO" },
   { dn: "4977", unidade: "JIPARANÁ" },
