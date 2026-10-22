@@ -120,3 +120,17 @@ Visão Geral, Lançamentos e Apuração mostram valores faturados e recebidos po
 Recebimento não gera prêmio direto para perfis locais. Sem denominador faturado, índice e prêmio permanecem pendentes; consolidado desatualizado exige revisão. Parcial é bruto antes de descontos/conferência e não libera pagamento. Dados ausentes não são preenchidos com estimativas. Suspensão e pendências continuam impedindo apresentação como pagamento liberado.
 
 Verificado no navegador: importação real, aplicação parcial, recálculo imediato, persistência, isolamento mensal, conferência nominal e 25 combinações de telas/larguras. Cenário somente recebido/base (85%) mostra R$75 para assistente central e R$400 para gestão, mantendo total final em formação. Os 25 testes de regras/importadores também passaram.
+
+## Importador de faturamento por contagem de O.S.
+
+O cartão Faturamento / processos reconhece o relatório com abas ABERTAS e FECHADAS. A primeira usa Emissão; a segunda usa Fatura e exige situação Faturada. Conta uma célula Emp. preenchida por registro de Nro. OS, sem somar números de empresa, valores monetários ou fórmulas do resumo. A contagem não depende dos filtros visuais do Excel. Datas ausentes/inválidas, duplicidades na mesma filial/empresa/O.S. e filiais desconhecidas são rejeitadas antes da aplicação. Apenas registros da competência selecionada são incluídos.
+
+O lote atualiza somente osAbertas e osFechadas. O índice é fechadas/abertas, preservando percentuais acima de 100%. GERAL é recalculado quando as 13 filiais estão representadas; analistas recebem a soma das quantidades de suas unidades, nunca média de percentuais. Recebimentos e demais campos permanecem intactos. Consolidados já desatualizados continuam exigindo revisão. Importação tabular de faturamento exige coluna competência.
+
+O quadro visual exibe abertas, fechadas e percentual por filial/GERAL, além do percentual e prêmio bruto de faturamento por pessoa elegível. Perfis locais mantêm a composição com volume, faturamento, malote e penalidades. Total final permanece em formação quando faltam dados.
+
+Arquivo real enviado: 2.224 abertas por Emissão de setembro/2026 e 2.132 fechadas por Fatura de setembro/2026; 95,8633%. Belém: 409/413. O resumo TABELA FATURAMENTO!A23 indica Outubro/2026, divergente das datas: a prévia apresenta aviso e usa as bases de registros, sem atribuir os números a outubro. Selecionando outubro, não há ambas as bases no mês e a aplicação é impedida.
+
+Verificação: 30 testes passaram (cinco específicos de faturamento), incluindo fixture local extraída do arquivo real. Fluxo no navegador com os XLSX reais de campanha e O.S., prévia, aplicação, preservação de recebimento, prêmio central R$170 e gestão R$500 de faturamento, isolamento mensal e 25 combinações de tela/largura. Dados brutos de clientes e veículos não são gravados pelo importador nem publicados em fixtures do repositório.
+
+Teste real opcional: `GARANTIA_FATURAMENTO_JSON=/caminho/fixture-local.json node --test tests/garantia-faturamento.test.mjs`.
