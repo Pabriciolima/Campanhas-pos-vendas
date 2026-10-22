@@ -79,3 +79,24 @@ body.modulo-garantia-ativo .export-toolbar { display:none; }
  .garantia-table-wrap td { border:0; padding:7px 0; overflow-wrap:anywhere; }
  .garantia-table-wrap td::before { content:attr(data-label); display:block; font-size:11px; font-weight:700; color:var(--muted,#667788); margin-bottom:4px; }
 }
+/* Operação: filtros, importação, cadastros e conferência. */
+.garantia-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:16px 0}
+.garantia-toolbar input,.garantia-toolbar select{width:auto;max-width:100%;flex:1 1 160px;min-width:0}
+.garantia-view input[type=file]{width:100%;max-width:100%;margin:8px 0 12px}
+.garantia-view .stat-card{min-width:0;overflow-wrap:anywhere}
+.garantia-view .stat-card button{display:block;width:100%;margin-top:8px;white-space:normal}
+.garantia-actions{display:flex;gap:6px;flex-wrap:wrap}
+.garantia-dialog{width:min(980px,calc(100vw - 24px));max-height:calc(100dvh - 32px);overflow:auto;padding:24px;border:1px solid var(--line,#ccd6df);border-radius:18px;background:var(--panel,#fff);color:var(--text,#122738)}
+.garantia-dialog::backdrop{background:#071827b3;backdrop-filter:blur(3px)}
+.garantia-dialog h2{font-size:20px;overflow-wrap:anywhere}
+.garantia-dialog label{display:grid;gap:6px;line-height:1.4;font-size:13px;margin:10px 0;min-width:0}
+.garantia-dialog input,.garantia-dialog select{max-width:100%;width:100%}
+.garantia-dialog input[type=checkbox]{width:20px;min-height:20px}
+.garantia-dialog .garantia-table-wrap table{font-size:12px}
+#garantia-import-preview{margin:18px 0;max-width:100%;overflow-wrap:anywhere}
+#garantia-import-preview:empty{display:none}
+#garantia-import-preview h3{color:var(--primary,#087b70)}
+.garantia-view td,.garantia-dialog td{overflow-wrap:anywhere}
+@media(min-width:1001px){#garantia-lancamentos .garantia-metric-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.garantia-dialog{padding:16px}.garantia-toolbar>*{flex:1 1 100%}.garantia-dialog .garantia-fields{grid-template-columns:1fr}}
+@media print{.garantia-toolbar,.garantia-actions,.garantia-view button,.garantia-view input[type=file]{display:none!important}.garantia-table-wrap table{display:table;min-width:0}.garantia-table-wrap tr{break-inside:avoid}}

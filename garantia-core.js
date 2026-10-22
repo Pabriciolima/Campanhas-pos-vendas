@@ -8,7 +8,7 @@ export const POLITICA_GARANTIA = Object.freeze({
  fonte:'GARANTIA METRICAS.xlsx · Plan1',
  perfis:{assistente:'Assistente Administrativo de Garantia',lider:'Líder de Garantia',supervisora:'Supervisora de Qualidade e Processos'},
  indicadores:[
-  {id:'faturamento',nome:'Faturamento',formula:'Quantidade de O.S. faturadas ÷ O.S. fechadas no mês × 100; total de todas as unidades.',faixas:[80,90,100],assistente:[150,170,200],lider:[400,500,600],celulas:'A5:D7; A35:D37'},
+  {id:'faturamento',nome:'Faturamento',formula:'Quantidade de O.S. fechadas ÷ O.S. abertas no mês × 100, conforme a aba de validação; total de todas as unidades.',faixas:[80,90,100],assistente:[150,170,200],lider:[400,500,600],celulas:'A5:D7; A35:D37'},
   {id:'recebimento',nome:'Recebimento',formula:'Valor recebido de garantia ÷ valor faturado do respectivo mês × 100; total de todas as unidades.',faixas:[80,90,100],assistente:[75,100,150],lider:[400,500,600],celulas:'A9:D11; A39:D41'},
   {id:'insercao',nome:'Inserção',formula:'Percentual de conformidade na avaliação final; resultado geral das unidades.',faixas:[75,80,100],assistente:[75,100,150],lider:[400,500,600],celulas:'A13:D15; A43:D45'},
   {id:'malote',nome:'Malote',formula:'Percentual de conformidade; total de todas as unidades. Exclusivo da liderança e supervisora.',faixas:[75,80,100],lider:[400,500,600],celulas:'A47:D49'},

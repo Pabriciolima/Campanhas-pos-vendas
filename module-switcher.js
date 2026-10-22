@@ -42,8 +42,8 @@
   const TITULOS_GARANTIA = {
     dashboard: "Visão geral da Garantia",
     funcionarios: "Base de participantes da Garantia",
-    lancamentos: "Simulador da Garantia",
-    apuracao: "Apuração simulada da Garantia",
+    lancamentos: "Lançamentos da Garantia",
+    apuracao: "Apuração da Garantia",
     politicas: "Políticas da Garantia"
   };
 
