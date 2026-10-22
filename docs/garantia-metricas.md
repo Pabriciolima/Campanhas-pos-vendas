@@ -2,7 +2,7 @@
 
 ## Fontes e decisões
 
-Fonte principal: `CAMPANHA DE GARANTIA_ SETEMBRO 2026 - GERAL - Copia.xlsx`, sete abas; cotejada com `GARANTIA METRICAS.xlsx`. Nenhum dado nominal do anexo é distribuído no código público. O responsável importa o arquivo pela interface.
+Fonte principal: `CAMPANHA DE GARANTIA_ SETEMBRO 2026 - GERAL - Copia.xlsx`, sete abas; cotejada com `GARANTIA METRICAS.xlsx`. Por solicitação explícita do responsável, a base inicial inclui nomes, perfis e vínculos de filial da aba BONIFICAÇÃO DA EQUIPE. Remunerações, índices, férias e datas de experiência não compõem esse cadastro de referência. Os indicadores e resultados continuam dependendo da importação pelo responsável.
 
 Definições confirmadas em 22/10/2026:
 
@@ -90,3 +90,13 @@ Esta entrega salva no `localStorage` sob `monaco_garantia_v2`. Há histórico de
 `node --test tests/garantia-core.test.mjs tests/garantia-dados.test.mjs`
 
 O teste opcional do arquivo real aceita `GARANTIA_WORKBOOK_JSON`, com extração local fornecida no ambiente; dados nominais não são fixtures públicas. Foram verificados 15 testes de cálculos/validação e, em navegador, XLSX real, 31 participantes, conferência, atualização parcial CSV, persistência, isolamento mensal, texto seguro e 25 combinações de tela/largura (1366, 1024, 768, 390 e 360 px). Totais dos assistentes da Central reproduzidos: R$920 e R$845; liderança R$2.100 por pessoa, antes de qualquer alteração de dados.
+
+## Cadastro inicial automático — 22/10/2026
+
+O arquivo `garantia-participantes-base.js` preenche 31 participantes (22 locais, dois assistentes da Central, cinco analistas e dois da gestão) ao abrir uma competência a partir de setembro/2026. A versão de referência é aplicada uma vez por competência, preserva cadastros encontrados, conferências, observações e indicadores, e não insere valores financeiros. Competências anteriores não são preenchidas automaticamente.
+
+Nomes e cargos locais vêm de B/C4:25; assistentes centrais de A/B29:30; analistas de A34:38 com unidades em B; gestão de A44:45. Os dois cargos específicos de gestão não estão discriminados por pessoa na aba, por isso a apresentação informa “Gestão da Garantia — cargo específico a confirmar”. Os perfis de cálculo existentes são preservados, pois compartilham as mesmas regras financeiras.
+
+Anotações entre parênteses não são parte do cadastro nominal inicial. A reimportação do arquivo original reconhece o mesmo nome com anotação para não criar duplicidades. Cadastro por referência não afirma vigência empregatícia nem habilita pagamento. Alterações nominais devem continuar sendo feitas na tela de participantes.
+
+Teste: `node --test tests/garantia-participantes.test.mjs`.
