@@ -1,4 +1,4 @@
-import { chaveNpsUnidade, percentualNpsUnidade, avaliarNpsUnidade, mensagemNpsUnidade, NPS_UNIDADE_PREFIXO } from './pix-nps-unidade-core.js';
+import { chaveNpsUnidade, percentualNpsUnidade, avaliarNpsUnidade, mensagemNpsUnidade, NPS_UNIDADE_PREFIXO } from './pix-nps-unidade-core.js?v=20261022-vigencia-novembro';
 
 export function criarNpsUnidadePix({ supabase, aoAtualizar, filiais, competencia, filialAtual, bloqueado, alertar }) {
   const registros = new Map();
@@ -24,10 +24,10 @@ export function criarNpsUnidadePix({ supabase, aoAtualizar, filiais, competencia
     return consulta;
   }
   function atualizarResumo() {
-    document.querySelectorAll('[data-abrir-nps-unidade]').forEach(el => { el.hidden = String(el.dataset.npsCompetencia || competencia()).slice(0, 7) < '2026-10'; });
+    document.querySelectorAll('[data-abrir-nps-unidade]').forEach(el => { el.hidden = String(el.dataset.npsCompetencia || competencia()).slice(0, 7) < '2026-11'; });
     document.querySelectorAll('[data-pix-nps-unidade-resumo]').forEach(el => {
       const f = el.dataset.npsFilial || filialAtual(), mes = el.dataset.npsCompetencia || competencia();
-      el.hidden = String(mes).slice(0, 7) < '2026-10';
+      el.hidden = String(mes).slice(0, 7) < '2026-11';
       el.textContent = f ? (el.closest('[data-pix-nps-compartilhado]') ? resumoCurto(avaliar(f, mes)) : mensagemNpsUnidade(avaliar(f, mes))) : 'Semana 4: o cofrinho exige o NPS individual e a meta geral da filial. Cadastre o resultado por unidade e competência.';
     });
     document.querySelectorAll('[data-pix-nps-compartilhado]').forEach(el => {
@@ -63,7 +63,7 @@ export function criarNpsUnidadePix({ supabase, aoAtualizar, filiais, competencia
     dialogo = document.createElement('dialog'); dialogo.id = 'pixNpsUnidadeModal'; dialogo.className = 'pix-nps-unidade-modal';
     dialogo.innerHTML = `<form id="pixNpsUnidadeForm"><header><div><small>PIX DO PRESIDENTE · SEMANA 4</small><h2>NPS geral da filial</h2></div><button type="button" data-nps-fechar aria-label="Fechar">×</button></header>
       <p>Este resultado vale para <b>todos os cofrinhos da filial</b> nesta competência. O NPS individual, as reservas semanais e as penalidades existentes continuam valendo.</p>
-      <div class="pix-nps-unidade-campos"><label>Competência<input name="competencia" type="month" min="2026-10" required></label><label>Filial<select name="filial" required><option value="">Selecione a filial</option>${filiais().map(f => `<option value="${escape(f)}">${escape(f)}</option>`).join('')}</select></label><label>Meta geral de NPS (%)<input name="meta" placeholder="Informe a meta da filial neste mês" type="number" min="-100" max="100" step="0.01" required></label><label>NPS geral realizado (%)<input name="realizado" type="number" min="-100" max="100" step="0.01" placeholder="Aguardando resultado"></label></div>
+      <div class="pix-nps-unidade-campos"><label>Competência<input name="competencia" type="month" min="2026-11" required></label><label>Filial<select name="filial" required><option value="">Selecione a filial</option>${filiais().map(f => `<option value="${escape(f)}">${escape(f)}</option>`).join('')}</select></label><label>Meta geral de NPS (%)<input name="meta" placeholder="Informe a meta da filial neste mês" type="number" min="-100" max="100" step="0.01" required></label><label>NPS geral realizado (%)<input name="realizado" type="number" min="-100" max="100" step="0.01" placeholder="Aguardando resultado"></label></div>
       <div data-nps-protecao hidden><label>Resultado já salvo. Informe a senha para alterar.<input name="senhaEdicao" type="password" autocomplete="off" placeholder="Senha administrativa"></label><button type="button" data-nps-desbloquear class="secondary">Liberar edição</button><span data-nps-senha-aviso role="alert"></span></div>
       <p class="pix-nps-unidade-situacao" role="status"></p><p class="pix-nps-unidade-dica">Informe o NPS oficial consolidado da unidade; não é a média dos percentuais individuais. Campo realizado vazio mantém os cofrinhos aguardando. A meta é obrigatória e definida pela filial para cada competência, sem valor padrão.</p>
       <footer><button type="button" data-nps-fechar class="secondary">Cancelar</button><button type="submit" class="primary">Salvar NPS da filial</button></footer></form>`;
@@ -125,7 +125,7 @@ export function criarNpsUnidadePix({ supabase, aoAtualizar, filiais, competencia
     if ((dialogo.dataset.existia === 'true' || registros.has(id)) && edicaoAutorizada !== id) {
       await alertar('Informe a senha administrativa para alterar o NPS já salvo.'); return;
     }
-    if (!id || mes < '2026-10' || !filiais().includes(filial) || meta === null || (c.realizado.value.trim() !== '' && realizado === null)) {
+    if (!id || mes < '2026-11' || !filiais().includes(filial) || meta === null || (c.realizado.value.trim() !== '' && realizado === null)) {
       await alertar('Informe filial, competência e percentuais válidos entre -100 e 100.'); return;
     }
     const dados = { tipo: 'pix_nps_filial', competencia: mes, filial, meta, realizado, semana: 4 };

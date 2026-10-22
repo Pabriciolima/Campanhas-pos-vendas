@@ -1,5 +1,5 @@
 /* Regra pura: um único NPS geral por filial e competência. */
-export const NPS_UNIDADE_VIGENCIA = '2026-10';
+export const NPS_UNIDADE_VIGENCIA = '2026-11';
 export const NPS_UNIDADE_PREFIXO = 'pix_nps_filial_v1:';
 export function normalizarFilialNps(valor) {
   return String(valor || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().replace(/\s+/g, ' ').toUpperCase();

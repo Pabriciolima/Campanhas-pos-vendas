@@ -9,7 +9,7 @@ const topics=[
 [["gordura","deficit","déficit","saldo"],"A gordura de um dia ajuda a compensar os seguintes; o déficit precisa ser recuperado. O saldo segue para os próximos dias e semanas da mesma competência, segundo os lançamentos oficiais."],
 [["oficina","mecanico","mecânico","produtividade","eficiencia","eficiência"],"Na Campanha da Oficina, os mecânicos são avaliados por faturamento, horas vendidas, produtividade, eficiência, treinamento e evidências de O.S. Na regra de outubro/2026+, a meta mensal de referência é R$ 69.900, o piso é R$ 48.930, as horas vendidas precisam alcançar 70% das disponíveis, a produtividade 70% e a eficiência 80%. Consulte a política para as faixas."],
 [["os aberta","o.s.","penalidade","28%"],"Na semana 4 do Pix, para cargos sujeitos a esse indicador, O.S. em aberto acima de 28% aplica penalidade de 50% sobre o subtotal da semana, conforme a apuração oficial."],
-[["dia","diaria","diária","50%","metade","bonus","bônus","meta","pix","presidente","habilitado"],"No Pix do Presidente (outubro/2026+), a meta semanal acumulada é obrigatória para o bônus-base e ticket/margem. Meta semanal e todos os dias cumpridos: 100% da base. Meta semanal cumprida, mas algum dia não: 50%. Meta semanal não cumprida: R$ 0,00 de base e ticket/margem, mesmo com dias atingidos. O NPS tem regra independente."]
+[["dia","diaria","diária","50%","metade","bonus","bônus","meta","pix","presidente","habilitado"],"No Pix do Presidente (novembro/2026+), a meta semanal acumulada é obrigatória para o bônus-base e ticket/margem. Meta semanal e todos os dias cumpridos: 100% da base. Meta semanal cumprida, mas algum dia não: 50%. Meta semanal não cumprida: R$ 0,00 de base e ticket/margem, mesmo com dias atingidos. O NPS tem regra independente."]
 ];
 const normalize=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const stop=new Set('a o as os de da do das dos e em no na nos nas um uma que como qual quais quanto por para meu minha eu voce me se com funciona quero saber sobre pode favor isso entao'.split(' '));
@@ -38,7 +38,7 @@ function light(q,hits){
  if(/resum|tela|resultado|ranking|quem|colaborador|filial|quanto.*(receb|ganh)/.test(n)&&!hits.some(h=>h.source.startsWith('Tela')))return 'Para consultar esse resultado, abra a apuração ou o relatório e selecione a filial e a competência. Eu consigo ler os dados exibidos nessa tela. Não vou adivinhar valores que ainda não aparecem aqui.';
  if(hits.length)return 'Encontrei estas informações para te ajudar:\n\n'+hits.slice(0,3).map(h=>h.text+'\nFonte: '+h.source).join('\n\n')+'\n\nSe quiser, diga qual cargo ou qual parte ficou confusa.';
  const tokens=words(q);const scored=topics.map(([keys,response])=>({response,score:keys.reduce((s,k)=>s+(tokens.includes(aliases[normalize(k)]||normalize(k))?1:0),0)})).sort((a,b)=>b.score-a.score);
- if(scored[0]?.score)return 'Pelas regras de referência de outubro/2026+: '+scored[0].response+'\n\nConfira a competência e a política atual antes da apuração.';
+ if(scored[0]?.score)return 'Pelas regras de referência (PIX a partir de novembro/2026; Oficina a partir de outubro/2026): '+scored[0].response+'\n\nConfira a competência e a política atual antes da apuração.';
  return 'Quero entender melhor: sua dúvida é sobre as regras da campanha ou um resultado de alguém? Diga o cargo e a competência, ou abra o relatório para eu consultar o que está na tela.';
 }
 const controls=document.createElement('details');controls.className='monaco-ai-controls';const localSummary=document.createElement('summary');localSummary.textContent='IA local opcional';controls.append(localSummary);
@@ -136,14 +136,14 @@ function answerGuided(){
  add(header+lines.join('\n\n')+'\n\nFonte: motor oficial da campanha, dados carregados neste momento. Valor apurado não confirma pagamento.');return;
  }
  // Situações explicativas não fazem simulações financeiras nem substituem regras históricas.
- if(month.value<'2026-10'&&!['historico','lancamento'].includes(id)){add(header+'Essa competência utiliza regras históricas. Para evitar aplicar as regras atuais a um mês antigo, consulte “Quanto tenho a receber?” ou a política histórica correspondente.');return;}
+ if(month.value<(campaign.value==='pix'?'2026-11':'2026-10')&&!['historico','lancamento'].includes(id)){add(header+'Essa competência utiliza regras históricas. Para evitar aplicar as regras atuais a um mês antigo, consulte “Quanto tenho a receber?” ou a política histórica correspondente.');return;}
  const reference={
  metas:topics[5][1],semmeta:topics[5][1],nps:topics[0][1],filial:topics[0][1],npspendente:'Sem o resultado geral da filial, o cofrinho não pode ser liberado na semana 4. A unidade precisa informar sua meta e seu resultado para aquela competência. Não há meta geral padrão de 90%.',
  npsindividual:'O NPS individual tem regra independente do faturamento. Não atingir a meta semanal zera base e ticket/margem, mas o NPS segue sua própria apuração. A liberação do cofrinho na semana 4 também depende do NPS individual da semana e da meta geral da filial.',
  ticket:'O bônus de ticket ou margem depende da meta semanal e das faixas específicas do cargo. Não aplique as faixas de um Consultor Técnico a outro cargo. Veja abaixo o resultado oficial ou a política do cargo selecionado.',
  os:topics[4][1],saldo:topics[2][1],oficina:topics[3][1],
  treinamento:'Na Oficina, para Mecânico Produtivo, treinamento pendente reduz em 50% o bônus bruto quando habilitado. O.S. interna, retrabalho, imperícia ou prejuízo impedem a habilitação. Outros cargos seguem suas políticas próprias; confirme o motivo no resultado oficial.',
- historico:'Sim. A competência define qual versão da política e do cálculo deve ser aplicada. Não compare meses antigos usando automaticamente as regras de outubro/2026 em diante. A consulta de resultados acima usa o motor oficial com a competência de cada lançamento.',
+ historico:'Sim. A competência define qual versão da política e do cálculo deve ser aplicada. Não compare meses antigos usando automaticamente a política atual (PIX: novembro/2026; Oficina: outubro/2026). A consulta de resultados acima usa o motor oficial com a competência de cada lançamento.',
  lancamento:'Abra Lançamentos da campanha, selecione a competência, a filial e o colaborador. Confira os indicadores e as evidências antes de salvar. O NPS geral da filial é informado uma vez por filial e mês, abaixo do NPS individual; alterações posteriores seguem o bloqueio existente no sistema.'
  };
  add(header+(reference[id]||'Selecione uma pergunta.')+'\n\nEsta é uma explicação da situação, não uma promessa de pagamento. Para conferir seu caso, escolha “Quanto tenho a receber?” ou “Por que não estou habilitado?”.');

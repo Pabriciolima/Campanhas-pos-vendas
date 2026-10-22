@@ -46,8 +46,8 @@ import { escaparHtml as protegerHtml } from "./security/seguranca.js";
 import { firestore } from "./firebase-config.js";
 
 import { supabase } from "./supabase-config.js";
-import { criarNpsUnidadePix } from "./pix-nps-unidade.js";
-import { mensagemNpsUnidade } from "./pix-nps-unidade-core.js";
+import { criarNpsUnidadePix } from "./pix-nps-unidade.js?v=20261022-vigencia-novembro";
+import { mensagemNpsUnidade } from "./pix-nps-unidade-core.js?v=20261022-vigencia-novembro";
 
 import {
   collection,
@@ -1121,7 +1121,7 @@ function pixPolitica(cargo) {
   return POLITICAS_PIX[cargo] || null;
 }
 
-const PIX_NOVA_VIGENCIA = "2026-10";
+const PIX_NOVA_VIGENCIA = "2026-11";
 const PIX_DIAS_SEMANA = [
   { chave: "seg", rotulo: "Segunda" },
   { chave: "ter", rotulo: "Terça" },
@@ -1542,6 +1542,13 @@ function participantePixValido(funcionario) {
   );
 }
 
+function realizadoSemanalLegadoPix(lancamento = {}) {
+  const valor = lancamento.realizadoSemanal;
+  if (valor !== null && valor !== undefined && String(valor).trim() !== "") return pixNumero(valor);
+  return normalizarDiasPix(lancamento).filter(dia => dia.informado)
+    .reduce((soma, dia) => soma + pixNumero(dia.realizado), 0);
+}
+
 function calcularPix(lancamento) {
   const funcionario =
     pixFuncionarioPorId(lancamento.funcionarioId);
@@ -1593,9 +1600,7 @@ function calcularPix(lancamento) {
 
   const realizado = regraDiaria
     ? apuracaoDiaria.realizadoSemanal
-    : pixNumero(
-        lancamento.realizadoSemanal
-      );
+    : realizadoSemanalLegadoPix(lancamento);
 
   const percentualMeta =
     meta > 0
@@ -1636,11 +1641,11 @@ function calcularPix(lancamento) {
     dadosCriticosPendentes.length === 0;
 
   /*
-   * ACÚMULO PROGRESSIVO (Out/2026+):
+   * ACÚMULO PROGRESSIVO (Nov/2026+):
    * cada componente já preenchido e atingido entra no total imediatamente.
    * Campos ainda pendentes deixam apenas o respectivo componente em R$ 0,
    * sem apagar valores já conquistados em outros indicadores.
-   * O legado anterior a Out/2026 preserva a trava financeira histórica.
+   * O legado anterior a Nov/2026 preserva a trava financeira histórica.
    */
   const bonusBase =
     regraDiaria
@@ -1652,7 +1657,7 @@ function calcularPix(lancamento) {
         );
 
   /*
-   * Out/2026+: bônus-base E bônus de ticket/margem exigem a meta semanal
+   * Nov/2026+: bônus-base E bônus de ticket/margem exigem a meta semanal
    * acumulada (incluindo saldo transportado) atingida. O NPS mantém
    * sua regra independente de cofrinho e liberação na quarta semana.
    */
@@ -1706,7 +1711,7 @@ function calcularPix(lancamento) {
     campoPixRealmenteInformado(lancamento, "realizadoNps", "realizadoNpsInformado");
 
   /*
-   * COFRINHO NPS — vigência outubro/2026+:
+   * COFRINHO NPS — vigência novembro/2026+:
    * Semanas 1-3 acumulam apenas saldo potencial. Na semana 4,
    * o NPS da própria semana é o gatilho para liberar todo o saldo.
    * Não duplica valores nas semanas anteriores nem altera o legado.
@@ -1791,7 +1796,7 @@ function calcularPix(lancamento) {
         );
 
   /*
-   * Justificativa da regra diária (outubro/2026+).
+   * Justificativa da regra diária (novembro/2026+).
    * O percentual semanal é informativo: a base depende dos dias
    * atingidos, e ticket/margem/NPS possuem critérios próprios.
    * A regra legada permanece inalterada.
@@ -1887,6 +1892,7 @@ function calcularPix(lancamento) {
       lancamento.dn,
     politica,
     regraDiaria,
+    realizadoSemanal: realizado,
     apuracaoDiaria,
     percentualMeta,
     semMeta,
@@ -3310,7 +3316,7 @@ function renderPoliticasPix() {
     <div class="pix-policy-hero">
       <div><span>🏆 CAMPANHA PIX DO PRESIDENTE</span><strong>Faturamento, margem e excelência no atendimento</strong></div>
       <div class="pix-policy-hero-rule">📊 Pagamento conforme atingimento</div>
-      <div class="pix-policy-hero-rule">📅 ${novaRegra ? "Vigência: outubro/2026 em diante" : "Regulamento histórico: " + competencia}</div>
+      <div class="pix-policy-hero-rule">📅 ${novaRegra ? "Vigência: novembro/2026 em diante" : "Regulamento histórico: " + competencia}</div>
     </div>
     <div class="pix-policy-role-grid">
       ${grupos.map(grupo => {
@@ -3343,7 +3349,7 @@ function renderPoliticasPix() {
             ${grupo.nps ? `
               <section class="pix-policy-nps">
                 <h4>★ ${novaRegra ? "COFRINHO NPS" : "NPS HISTÓRICO"}</h4>
-                <p>${novaRegra ? "R$ 250 por semana atingida · até R$ 1.000 na competência. Consulte as condições conjuntas abaixo." : `Meta: ${politica.objetivoNps} · Bônus: ${pixMoeda(politica.bonusNps)}. Apuração semanal conforme a competência.`}</p>
+                <p>${novaRegra ? "R$ 250 por semana atingida · até R$ 1.000 na competência. Consulte as condições conjuntas abaixo." : `Meta: ${politica.objetivoNps} · Bônus: ${pixMoeda(politica.bonusNps)}. Apuração mensal na semana 4, conforme a competência.`}</p>
               </section>` : ""}
             ${!grupo.nps ? '<section class="pix-policy-nps"><h4>NPS</h4><p>Este cargo não possui bônus de NPS.</p></section>' : ""}
             ${grupo.dynamo ? `
@@ -3362,7 +3368,7 @@ function renderPoliticasPix() {
         <span><b>Calendário:</b> gordura ou déficit segue para os próximos dias e semanas da mesma competência. Datas não se repetem para o colaborador; domingos não podem ser selecionados.</span>
         <span><b>O.S. na semana 4:</b> todos os cargos informam o percentual. Acima de 28%, desconto de 50% sobre o subtotal da semana, incluindo o NPS liberado.</span>
         ` : `
-        <span>✓ Regulamento histórico da competência selecionada, anterior a outubro de 2026.</span>
+        <span>✓ Regulamento histórico da competência selecionada, até outubro de 2026, inclusive.</span>
         <span>✓ Base e faixas calculadas conforme o atingimento semanal previsto na regra anterior.</span>
         <span>✓ NPS e penalidades seguem os critérios históricos da campanha.</span>
         `}
@@ -4072,7 +4078,7 @@ function renderCamposLancamentoPix(dados = {}) {
             Realizado semanal
             <input type="text" inputmode="decimal" id="pixRealizadoSemanal"
               placeholder="R$ 0,00"
-              value="${dados.realizadoSemanal ? pixMoeda(dados.realizadoSemanal) : ""}"
+              value="${(dados.realizadoSemanal !== null && dados.realizadoSemanal !== undefined && String(dados.realizadoSemanal).trim() !== "") || normalizarDiasPix(dados).some(dia => dia.informado) ? pixMoeda(realizadoSemanalLegadoPix(dados)) : ""}"
               required />
           </label>
         `
@@ -4317,6 +4323,7 @@ function coletarLancamentoPix() {
       funcionario.cargo
     );
 
+  const anterior = estadoPix.lancamentos.find(item => String(item.id) === String($("#pixLancamentoId")?.value)) || {};
   return {
     id:
       $("#pixLancamentoId").value ||
@@ -4357,12 +4364,12 @@ function coletarLancamentoPix() {
     datasAvaliadas:
       usaRegraPixDiaria($("#pixLancamentoCompetencia")?.value)
         ? pixDiasSelecionadosFormulario()
-        : [],
+        : (anterior.datasAvaliadas || []),
 
     diasCalendario:
       usaRegraPixDiaria($("#pixLancamentoCompetencia")?.value)
         ? coletarDiasPixFormulario()
-        : {},
+        : (anterior.diasCalendario || {}),
 
     ticketMedio:
       politica.metrica === "ticket"
@@ -4394,12 +4401,14 @@ function coletarLancamentoPix() {
           )
         : true,
 
+    diasSemana: anterior.diasSemana || {},
+
     metaNps:
       usaNps
         ? pixNumero(
             campoMetaNps?.value
           )
-        : 0,
+        : (anterior.metaNps ?? 0),
 
     metaNpsInformada:
       usaNps
@@ -4408,14 +4417,14 @@ function coletarLancamentoPix() {
               campoMetaNps?.value ?? ""
             ).trim()
           )
-        : true,
+        : (anterior.metaNpsInformada ?? true),
 
     realizadoNps:
       usaNps
         ? pixNumero(
             campoRealizadoNps?.value
           )
-        : 0,
+        : (anterior.realizadoNps ?? 0),
 
     realizadoNpsInformado:
       usaNps
@@ -4424,7 +4433,7 @@ function coletarLancamentoPix() {
               campoRealizadoNps?.value ?? ""
             ).trim()
           )
-        : true,
+        : (anterior.realizadoNpsInformado ?? true),
 
     osAbertaPercentual:
       usaOs
@@ -4734,7 +4743,7 @@ async function salvarLancamentoPix(evento) {
   const botao = evento.submitter;
 
   try {
-    if (Number($("#pixLancamentoSemana")?.value) > 1 && !pixHistoricoModalConferido) {
+    if (usaRegraPixDiaria($("#pixLancamentoCompetencia")?.value) && Number($("#pixLancamentoSemana")?.value) > 1 && !pixHistoricoModalConferido) {
       pixAlert("Aguarde a conferência das datas das semanas anteriores antes de salvar.");
       return;
     }

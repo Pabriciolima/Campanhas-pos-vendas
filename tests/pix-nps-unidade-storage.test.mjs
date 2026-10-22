@@ -19,19 +19,19 @@ test('gravação compartilhada, concorrência, rede e campos pendentes', { skip:
  }
  const canal={on(){return this},subscribe(){return this},async send(){return 'ok'}};
  let changes=0;
- const api=criarNpsUnidadePix({supabase:{from:()=>new Q(),channel:()=>canal},filiais:()=>['BELEM','MARABA'],competencia:()=> '2026-10',filialAtual:()=> 'BELEM',bloqueado:()=>locked,alertar:async t=>alerts.push(t),aoAtualizar:()=>{changes++;}});
+ const api=criarNpsUnidadePix({supabase:{from:()=>new Q(),channel:()=>canal},filiais:()=>['BELEM','MARABA'],competencia:()=> '2026-11',filialAtual:()=> 'BELEM',bloqueado:()=>locked,alertar:async t=>alerts.push(t),aoAtualizar:()=>{changes++;}});
  await api.iniciar();await api.abrir();
  const dlg=document.querySelector('dialog'),form=dlg.querySelector('form');
  // Linkedom does not implement form controls completely. Model their value and elements semantics.
  const fields={};for(const e of form.querySelectorAll('[name]')){fields[e.getAttribute('name')]=e; if(e.tagName==='SELECT')Object.defineProperty(e,'value',{value:'BELEM',writable:true,configurable:true});}
  Object.defineProperty(form,'elements',{value:fields,configurable:true});
  assert.equal(fields.meta.value,'');
- fields.filial.value='BELEM';fields.competencia.value='2026-10';fields.meta.value='90';fields.realizado.value='89';
+ fields.filial.value='BELEM';fields.competencia.value='2026-11';fields.meta.value='90';fields.realizado.value='89';
  const tick=()=>new Promise(r=>setTimeout(r,0));const submit=async()=>{form.dispatchEvent(new window.Event('submit',{cancelable:true}));await tick();await tick();};
  const configuredMeta=fields.meta.value;fields.meta.value='';await submit();assert.equal(rows.size,0);fields.meta.value=configuredMeta;
- await submit();assert.equal(rows.size,1);assert.equal(api.avaliar('BELEM','2026-10').status,'NAO_ATINGIDO');assert.equal(api.avaliar('MARABA','2026-10').status,'PENDENTE');
+ await submit();assert.equal(rows.size,1);assert.equal(api.avaliar('BELEM','2026-11').status,'NAO_ATINGIDO');assert.equal(api.avaliar('MARABA','2026-11').status,'PENDENTE');
  // Dois colaboradores da mesma filial exibem a mesma configuração, sem duplicar o registro.
- const holder=document.createElement('div');holder.innerHTML=api.blocoLancamento('BELEM','2026-10')+api.blocoLancamento('BELEM','2026-10')+api.blocoLancamento('MARABA','2026-10');document.body.appendChild(holder);
+ const holder=document.createElement('div');holder.innerHTML=api.blocoLancamento('BELEM','2026-11')+api.blocoLancamento('BELEM','2026-11')+api.blocoLancamento('MARABA','2026-11');document.body.appendChild(holder);
  api.vincularBotoes(holder);api.vincularBotoes(holder);api.atualizarResumo();
  assert.equal(holder.querySelectorAll('[data-nps-geral-realizado]')[0].textContent,'89%');
  assert.equal(holder.querySelectorAll('[data-nps-geral-realizado]')[1].textContent,'89%');
@@ -45,9 +45,9 @@ test('gravação compartilhada, concorrência, rede e campos pendentes', { skip:
  fields.senhaEdicao.value='errada';dlg.querySelector('[data-nps-desbloquear]').dispatchEvent(new window.Event('click'));assert.equal(fields.meta.readOnly,true);assert.equal(fields.senhaEdicao.value,'');
  unlock();assert.equal(fields.meta.readOnly,false);
  fields.filial.value='MARABA';fields.filial.dispatchEvent(new window.Event('change',{bubbles:true}));assert.equal(fields.meta.readOnly,false);
- fields.filial.value='BELEM';fields.filial.dispatchEvent(new window.Event('change',{bubbles:true}));assert.equal(fields.meta.readOnly,true);unlock();fields.realizado.value='90';await submit();assert.equal(rows.size,1);assert.equal(api.avaliar('BELEM','2026-10').atingiu,true);api.atualizarResumo();assert.equal(holder.querySelectorAll('[data-nps-geral-realizado]')[1].textContent,'90%');
+ fields.filial.value='BELEM';fields.filial.dispatchEvent(new window.Event('change',{bubbles:true}));assert.equal(fields.meta.readOnly,true);unlock();fields.realizado.value='90';await submit();assert.equal(rows.size,1);assert.equal(api.avaliar('BELEM','2026-11').atingiu,true);api.atualizarResumo();assert.equal(holder.querySelectorAll('[data-nps-geral-realizado]')[1].textContent,'90%');
  await api.abrir();assert.equal(fields.meta.readOnly,true);unlock();const saved=[...rows.values()][0];rows.set(saved.id,{...saved,updated_at:'outro-usuario',dados:{...saved.dados,realizado:80}});fields.realizado.value='95';await submit();assert(alerts.some(t=>t.includes('outro usuário')));assert.equal(rows.get(saved.id).dados.realizado,80);
  await api.abrir();locked=true;fields.realizado.value='99';await submit();assert(alerts.some(t=>t.includes('bloqueados')));assert.equal(rows.get(saved.id).dados.realizado,80);locked=false;
- offline=true;await assert.rejects(api.carregar());assert.equal(api.avaliar('BELEM','2026-10').status,'ERRO');offline=false;
- await api.abrir();unlock();fields.realizado.value='';await submit();assert.equal(api.avaliar('BELEM','2026-10').status,'PENDENTE');assert.equal(rows.get(saved.id).dados.realizado,null);assert(changes>=5);
+ offline=true;await assert.rejects(api.carregar());assert.equal(api.avaliar('BELEM','2026-11').status,'ERRO');offline=false;
+ await api.abrir();unlock();fields.realizado.value='';await submit();assert.equal(api.avaliar('BELEM','2026-11').status,'PENDENTE');assert.equal(rows.get(saved.id).dados.realizado,null);assert(changes>=5);
 });
