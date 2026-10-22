@@ -1,4 +1,4 @@
-import {filial,normalizar,numero,escopoPessoa} from './garantia-dados.js?v=20261022-recebimento';
+import {filial,normalizar,numero,escopoPessoa} from './garantia-dados.js?v=20261022-fontes';
 export const MESES=['JANEIRO','FEVEREIRO','MARCO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
 export function competenciaValor(value){const s=String(value??'').trim();if(/^\d{4}-(0[1-9]|1[0-2])$/.test(s))return s;const n=normalizar(s),year=s.match(/\b(20\d{2})\b/)?.[1];const i=MESES.findIndex(m=>n.includes(m));if(i>=0&&year)return year+'-'+String(i+1).padStart(2,'0');const m=s.match(/^(0?[1-9]|1[0-2])\/(20\d{2})$/);return m?m[2]+'-'+m[1].padStart(2,'0'):null;}
 function nomeMes(name){const n=normalizar(name);return MESES.findIndex(m=>n===m||new RegExp('^'+m+'20\\d{2}$').test(n));}
@@ -19,13 +19,17 @@ export function importarRecebimento(wb,competencia,participantes=[]){
   const label=String(ws['A'+row]?.v??'').trim();if(!label)continue;
   if(normalizar(label)==='TOTAL'){const c=ws[col+row];if(c?.t==='e')throw Error('Total mensal com erro em '+name+'!'+col+row);totalCell=numero(c?.v);foundTotal=true;break;}
   const match=label.match(/^DN\s*\d+\s*-\s*(?:DIESEL\s*)?(.+)$/i);if(!match)continue;const branch=filial(match[1]);if(!allowed.has(branch))throw Error('Filial não reconhecida em '+name+'!A'+row+': '+label);if(metricas[branch])throw Error('Filial duplicada no resumo mensal: '+branch);
-  const cell=ws[col+row];if(cell?.t==='e')throw Error('Crédito Líquido com erro em '+name+'!'+col+row);const value=numero(cell?.v);if(value===null)throw Error('Crédito Líquido ausente ou inválido em '+name+'!'+col+row+'. Zero deve estar explicitamente informado.');
-  metricas[branch]={valorRecebido:value,origem:'Recebimento '+competencia+' · '+name+'!'+col+row};
+  const cell=ws[col+row];if(cell?.t==='e')throw Error('Crédito Líquido com erro em '+name+'!'+col+row);const rawValue=numero(cell?.v),value=rawValue===null?null:Math.round((rawValue+Number.EPSILON)*100)/100;if(value===null)throw Error('Crédito Líquido ausente ou inválido em '+name+'!'+col+row+'. Zero deve estar explicitamente informado.');
+  // Confere o líquido com bruto menos estornos, sem executar fórmulas arbitrárias.
+  const gross=numero(ws['H'+row]?.v),debit=numero(ws['K'+row]?.v);
+  if(normalizar(ws.H5?.v)==='CREDITOBRUTO'&&normalizar(ws.K5?.v)==='TOTALESTORNADO'&&gross!==null&&debit!==null&&Math.abs(gross-debit-value)>.02)throw Error('Crédito Líquido diverge de Crédito Bruto menos Estornos em '+name+'!'+col+row+'. Recalcule e salve o Excel antes de importar.');
+  const source=name+'!'+col+row;
+  metricas[branch]={valorRecebido:value,origem:'Recebimento '+competencia+' · '+source,fontesCampos:{valorRecebido:source}};
  }
  if(!foundTotal||!Object.keys(metricas).length)throw Error('Resumo mensal sem filiais e linha TOTAL reconhecíveis.');const sum=Math.round(Object.values(metricas).reduce((n,x)=>n+x.valorRecebido,0)*100)/100;if(totalCell===null||Math.abs(sum-totalCell)>.02)throw Error('O total de Crédito Líquido não confere com a soma das filiais. Revise a planilha antes de aplicar.');
  // Um total incompleto não pode substituir o consolidado de toda a rede.
- if(Object.keys(metricas).length===allowed.size)metricas.GERAL={valorRecebido:sum,origem:'Soma de Crédito Líquido · '+name+' · '+competencia};else avisos.push('Resumo parcial: '+Object.keys(metricas).length+' de '+allowed.size+' filiais. O GERAL não será substituído e ficará pendente de revisão.');
- for(const p of participantes.filter(p=>p.perfil==='analista')){const units=[...new Set(p.unidades||[])];if(units.length&&units.every(u=>metricas[u]))metricas[escopoPessoa(p)]={valorRecebido:Math.round(units.reduce((n,u)=>n+metricas[u].valorRecebido,0)*100)/100,origem:'Crédito Líquido das unidades vinculadas · '+name+' · '+competencia};}
+ if(Object.keys(metricas).length===allowed.size)metricas.GERAL={valorRecebido:sum,origem:'Soma de Crédito Líquido · '+name+' · '+competencia,fontesCampos:{valorRecebido:name+'!'+col+(header+1)+':'+col+(header+allowed.size)+' (soma conferida com TOTAL)'}};else avisos.push('Resumo parcial: '+Object.keys(metricas).length+' de '+allowed.size+' filiais. O GERAL não será substituído e ficará pendente de revisão.');
+ for(const p of participantes.filter(p=>p.perfil==='analista')){const units=[...new Set(p.unidades||[])];if(units.length&&units.every(u=>metricas[u]))metricas[escopoPessoa(p)]={valorRecebido:Math.round(units.reduce((n,u)=>n+metricas[u].valorRecebido,0)*100)/100,origem:'Crédito Líquido das unidades vinculadas · '+name+' · '+competencia,fontesCampos:{valorRecebido:units.map(u=>metricas[u].fontesCampos.valorRecebido).join(' + ')}};}
  avisos.push('Total de recebimento das filiais selecionadas: R$ '+sum.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'.');
  return {competencia,metricas,participantes:[],avisos};
 }
