@@ -100,3 +100,15 @@ Nomes e cargos locais vêm de B/C4:25; assistentes centrais de A/B29:30; analist
 Anotações entre parênteses não são parte do cadastro nominal inicial. A reimportação do arquivo original reconhece o mesmo nome com anotação para não criar duplicidades. Cadastro por referência não afirma vigência empregatícia nem habilita pagamento. Alterações nominais devem continuar sendo feitas na tela de participantes.
 
 Teste: `node --test tests/garantia-participantes.test.mjs`.
+
+## Recebimento por competência — 22/10/2026
+
+No cartão Recebimento, arquivos com abas mensais usam exclusivamente a aba do mês selecionado no sistema, independentemente da ordem das abas. O ano deve ser confirmado pelas datas do relatório; ausência, ambiguidade ou divergência impedem aplicar o lote.
+
+O importador identifica o cabeçalho CRÉDITO LÍQUIDO (coluna I no layout enviado), lê o resumo por DN/filial até TOTAL e verifica a soma. Crédito bruto e blocos semanais não são somados. Filiais desconhecidas, repetidas ou valores inválidos interrompem a importação. Atualiza somente valorRecebido, preservando faturado e outros indicadores. GERAL é atualizado apenas com as 13 filiais; analistas recebem a soma somente quando todas as unidades vinculadas constam no lote.
+
+No mapeamento de recebimento CSV/planilha, competência é obrigatória; linhas de outros meses são ignoradas antes de validar seus números. Uma atualização parcial não libera consolidado já desatualizado por outro indicador; atualização completa permite nova conferência.
+
+Verificação: seis testes específicos, 25 testes totais e fluxo no navegador. A simulação do layout das imagens de setembro/2026 conferiu R$2.680.636,00 e preservou faturado, excluindo outubro e o bloco semanal. O arquivo novo de recebimentos não foi anexado; a simulação usa uma fixture construída a partir do layout, sem gravar dados no navegador de produção.
+
+Execute: `node --test tests/garantia-*.test.mjs`.

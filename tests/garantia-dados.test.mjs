@@ -34,7 +34,7 @@ test('arquivo real: todas as abas são analisadas sem publicar dados pessoais na
 test('alterar filial invalida consolidados dependentes, sem reutilizar uma apuração antiga',()=>{
  const a={nome:'Analista',perfil:'analista',filial:'CENTRAL',unidades:['A']};let s=mesclar(vazio(),{competencia:'2026-09',metricas:{A:{valorFaturado:100},GERAL:{valorFaturado:100},[escopoPessoa(a)]:{valorFaturado:100}},participantes:[a]});
  s=mesclar(s,{competencia:'2026-09',metricas:{A:{valorFaturado:200}}});assert.equal(s.competencias['2026-09'].metricas.GERAL.desatualizado,true);assert.equal(s.competencias['2026-09'].metricas[escopoPessoa(a)].desatualizado,true);assert(apurarPessoa(a,s.competencias['2026-09']).pendencias.some(p=>p.includes('desatualizado')));
- const refreshed=mesclar(s,{competencia:'2026-09',metricas:{GERAL:{valorFaturado:200}}});assert.equal(refreshed.competencias['2026-09'].metricas.GERAL.desatualizado,false);
+ const refreshed=mesclar(s,{competencia:'2026-09',completo:true,metricas:{GERAL:{valorFaturado:200}}});assert.equal(refreshed.competencias['2026-09'].metricas.GERAL.desatualizado,false);
 });
 test('percentual novo de inserção não fica oculto por amostra antiga; entradas inválidas são rejeitadas',()=>{
  let s=mesclar(vazio(),{competencia:'2026-09',metricas:{A:{insercao:100,insercaoC:4,insercaoNC:0}}});s=mesclar(s,{competencia:'2026-09',metricas:{A:{insercao:80}}});assert.equal(s.competencias['2026-09'].metricas.A.insercaoC,null);

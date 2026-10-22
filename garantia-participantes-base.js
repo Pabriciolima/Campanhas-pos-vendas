@@ -1,6 +1,6 @@
 // Cadastro solicitado pelo responsável, extraído exclusivamente da aba BONIFICAÇÃO DA EQUIPE.
 // Apenas nomes, perfis e vínculos; não inclui remuneração, índices, férias ou datas de experiência.
-import {filial,normalizar,chavePessoa,vazio,mesEstado} from './garantia-dados.js?v=20261022-cadastro';
+import {filial,normalizar,chavePessoa,vazio,mesEstado} from './garantia-dados.js?v=20261022-recebimento';
 export const VERSAO_BASE='bonificacao-setembro-2026-v1';
 export const PARTICIPANTES_REFERENCIA=[
   {
