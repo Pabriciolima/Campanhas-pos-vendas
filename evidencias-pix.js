@@ -1902,6 +1902,7 @@ function tipoExportacaoPixAtual() {
       .toLowerCase();
 
   const mapa = {
+    "nao-habilitados": { chave: "nao-habilitados", somenteHabilitados: false, semana: "" },
     todos: {
       chave: "todos",
       somenteHabilitados: false,
@@ -1949,6 +1950,7 @@ function rotuloTipoExportacaoPix(
   filtro = tipoExportacaoPixAtual()
 ) {
   const rotulos = {
+    "nao-habilitados": "Somente não habilitados",
     todos:
       "Todas",
 
@@ -2073,6 +2075,7 @@ function garantirOpcoesExportacaoPix() {
     select.value;
 
   const opcoes = [
+    { value: "nao-habilitados", label: "Somente não habilitados" },
     {
       value: "habilitados",
       label: "Somente habilitados"
@@ -2479,6 +2482,8 @@ function dadosPixParaExportar() {
 
         item.semana =
           semanaNormalizada;
+
+        if (filtro.chave === "nao-habilitados" && normalizarPixEv(item.status) !== "NAO HABILITADO") return null;
 
         if (
           filtro.somenteHabilitados &&

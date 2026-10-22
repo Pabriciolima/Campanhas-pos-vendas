@@ -6251,6 +6251,8 @@ function obterResultadosParaExportacao() {
     );
   }
 
+  if (tipo === "nao-habilitados") resultados = resultados.filter(r => normalizarFilialExportacaoProdutivos(r.status) === "NAO HABILITADO");
+
   if (tipo === "habilitados") {
     resultados = resultados.filter(
       resultado =>
@@ -6432,7 +6434,7 @@ function adicionarCabecalhoExcel(planilha, resultados) {
     `Exportação: ${
       obterTipoExportacao() === "habilitados"
         ? "Somente habilitados"
-        : "Todos os resultados"
+        : obterTipoExportacao() === "nao-habilitados" ? "Somente não habilitados" : "Todos os resultados"
     } | Filial: ${
       filialExportacao ||
       "Todas as filiais"
@@ -6919,7 +6921,7 @@ async function exportarPdf() {
         obterTipoExportacao() ===
         "habilitados"
           ? "Somente habilitados"
-          : "Todos os resultados"
+          : obterTipoExportacao() === "nao-habilitados" ? "Somente não habilitados" : "Todos os resultados"
       }`,
       12,
       25
