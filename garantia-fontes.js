@@ -1,3 +1,4 @@
+import {temMalote,importarMalote} from './garantia-malote.js?v=20261023-malote-conformidade';
 import {temInsercao,importarInsercao} from './garantia-insercao.js?v=20261023-insercao';
 import {temFaturadoMonetario,importarFaturadoMonetario} from './garantia-faturado-importacao.js?v=20261023-importacao';
 import {normalizar} from './garantia-dados.js?v=20261022-fontes';
@@ -9,20 +10,22 @@ export function reconhecerFonte(wb){
  if(!wb?.SheetNames)return null;
  if(temFaturadoMonetario(wb))return 'faturado';
  if(temInsercao(wb))return 'insercao';
+ if(temMalote(wb))return 'malote';
  if(wb.SheetNames.some(n=>normalizar(n)==='VALIDACAOINDICADORES')&&wb.SheetNames.some(n=>normalizar(n)==='BONIFICACAODAEQUIPE'))return 'campanha';
  const liquidity=wb.SheetNames.some(n=>Object.entries(wb.Sheets[n]).some(([a,c])=>/^[A-Z]+[1-9]\d?$/.test(a)&&Number(a.match(/\d+/)[0])<=15&&normalizar(c?.v)==='CREDITOLIQUIDO'));
  if(temAbasMensais(wb)&&liquidity)return 'recebimento';
  if(temBaseFaturamento(wb))return 'faturamento';return null;
 }
-export function importarFonte(wb,month,participantes=[],atuais={},vinculos={}){
- const tipo=reconhecerFonte(wb);let lote;
- if(tipo==='insercao')lote=importarInsercao(wb,month,participantes,vinculos);
+export function importarFonte(wb,month,participantes=[],atuais={},vinculos={},preferido=null){
+ const tipo=preferido==='malote'&&temMalote(wb)?'malote':reconhecerFonte(wb);let lote;
+ if(tipo==='malote')lote=importarMalote(wb,month,participantes,vinculos);
+ else if(tipo==='insercao')lote=importarInsercao(wb,month,participantes,vinculos);
  else if(tipo==='faturado')lote=importarFaturadoMonetario(wb,month,participantes);
  else if(tipo==='recebimento')lote=importarRecebimento(wb,month,participantes);
  else if(tipo==='faturamento')lote=importarFaturamento(wb,month,participantes);
  else if(tipo==='campanha')lote=importarOriginal(wb,month);
  else throw Error('Formato ainda não reconhecido automaticamente. Use o cartão do indicador para mapear as colunas. Nenhum dado foi aplicado.');
- lote.identificacao={tipo,destino:tipo==='insercao'?'Inserção %':tipo==='faturado'?'Faturado R$ — base do recebimento':tipo==='recebimento'?'Recebimento em reais':tipo==='faturamento'?'Contador de notas / O.S. abertas e fechadas':'Validação da campanha completa'};
+ lote.identificacao={tipo,destino:tipo==='malote'?'Malote — % conformidades':tipo==='insercao'?'Inserção %':tipo==='faturado'?'Faturado R$ — base do recebimento':tipo==='recebimento'?'Recebimento em reais':tipo==='faturamento'?'Contador de notas / O.S. abertas e fechadas':'Validação da campanha completa'};
  if(tipo==='recebimento'){
   lote.comparacao=Object.entries(lote.metricas).map(([escopo,v])=>{const base=atuais[escopo]?.valorFaturado;return {escopo,valorFaturado:base??null,valorRecebido:v.valorRecebido,percentual:typeof base==='number'&&base>0?v.valorRecebido/base*100:null};});
   const missing=lote.comparacao.filter(x=>x.valorFaturado===null).length;
