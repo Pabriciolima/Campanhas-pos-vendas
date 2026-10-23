@@ -8,6 +8,39 @@
 
 (() => {
   "use strict";
+  // O cabeçalho compartilhado acompanha a tela ativa, inclusive módulos externos.
+  function sincronizarIdentidadeCabecalho() {
+    const header = document.querySelector(".topbar");
+    if (!header) return;
+    const compras = document.querySelector("[data-compras-view].active");
+    const garantia = document.querySelector('.view.active[id^="garantia-"]');
+    const crm = document.querySelector("#crmCampanhas.active");
+    const pix = document.querySelector("#pixPresidente.active");
+    const nome = compras ? "COMPRAS" : garantia ? "GARANTIA" : crm ? "CRM" : pix ? "PIX" : "OFICINA";
+    header.dataset.campanha = nome;
+    const title = document.querySelector("#pageTitle");
+    if (title && garantia) {
+      const pagina = garantia.id.replace("garantia-", "");
+      const texto = TITULOS_GARANTIA[pagina] || "Campanhas de Garantia";
+      if (title.textContent !== texto) title.textContent = texto;
+    } else if (title && compras) {
+      const titulos = {"visao-geral":"Campanha de Compras",responsaveis:"Responsáveis de Compras",importacao:"Importação de Compras",apuracao:"Apuração de Compras",politicas:"Políticas de Compras"};
+      const texto = titulos[compras.dataset.comprasView] || "Campanha de Compras";
+      if (title.textContent !== texto) title.textContent = texto;
+    }
+  }
+  function instalarIdentidadeCabecalho() {
+    sincronizarIdentidadeCabecalho();
+    const main = document.querySelector("main");
+    if (main) new MutationObserver(records => {
+      if (records.some(r => r.type === "attributes" && r.target.matches('.view,[data-compras-view]') ||
+        r.type === "childList" && [...r.addedNodes].some(n => n.nodeType === 1 && (n.matches('.view,[data-compras-view]') || n.querySelector('.view,[data-compras-view]'))))) sincronizarIdentidadeCabecalho();
+    }).observe(main, {subtree:true, childList:true, attributes:true, attributeFilter:["class"]});
+    window.addEventListener("campanhas:viewready", sincronizarIdentidadeCabecalho);
+  }
+  document.addEventListener("DOMContentLoaded", instalarIdentidadeCabecalho, {once:true});
+  if (document.readyState !== "loading") instalarIdentidadeCabecalho();
+
 
   const STORAGE_MODULO =
     "modulo_campanha_ativo";

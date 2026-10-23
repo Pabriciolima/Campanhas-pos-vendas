@@ -3612,7 +3612,7 @@ button:is(
 #dashboard.view.active{--oficina-ink:#082d3d;--oficina-green:#08a67f;--oficina-mint:#63e6c1}
 #dashboard.view.active::before{content:"";position:fixed;z-index:-1;left:18%;top:70px;width:38vw;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(25,199,155,.10),transparent 68%);filter:blur(18px);pointer-events:none}
 body:not(.pix-mode) .topbar{position:relative;overflow:hidden;border:1px solid rgba(8,91,76,.10);border-radius:24px;padding:20px 22px;margin:10px 0 22px;background:linear-gradient(120deg,rgba(255,255,255,.94),rgba(241,250,248,.9));box-shadow:0 18px 45px rgba(14,47,61,.08)}
-body:not(.pix-mode) .topbar::after{content:"OFICINA";position:absolute;right:-8px;bottom:-30px;font-size:84px;font-weight:950;letter-spacing:-.08em;color:rgba(8,166,127,.045);pointer-events:none}
+.topbar::after{content:attr(data-campanha);position:absolute;right:-8px;bottom:-30px;font-size:84px;font-weight:950;letter-spacing:-.08em;color:rgba(8,166,127,.045);pointer-events:none}
 body:not(.pix-mode) .topbar>div:first-child{position:relative;z-index:1;min-width:310px}
 body:not(.pix-mode) .topbar .eyebrow{display:inline-flex;align-items:center;gap:7px;margin:0 0 7px;padding:5px 9px;border-radius:999px;background:#daf7ee;color:#08765e;font-size:9px;font-weight:900;letter-spacing:.14em}
 body:not(.pix-mode) .topbar .eyebrow::before{content:"";width:6px;height:6px;border-radius:50%;background:#08a67f;box-shadow:0 0 0 5px rgba(8,166,127,.11)}
