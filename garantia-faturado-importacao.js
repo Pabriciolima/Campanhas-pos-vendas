@@ -1,0 +1,21 @@
+import {normalizar,filial,numero,escopoPessoa} from './garantia-dados.js?v=20261022-fontes';
+import {MESES} from './garantia-recebimento.js?v=20261022-fontes';
+const FILIAIS=['ANANINDEUA','MACAPÁ','SÃO LUIS','BACABAL','TERESINA','URUÇUI','CUIABÁ','RONDONOPOLIS','AGUA BOA','SINOP','PORTO VELHO','VILHENA','JIPARANÁ'];
+function cabecalhos(wb){const found=[];for(const name of wb?.SheetNames||[]){const ws=wb.Sheets[name],headers=new Map();for(const [address,c] of Object.entries(ws)){const match=address.match(/^([A-Z]+)(\d+)$/);if(!match||Number(match[2])>20)continue;const row=Number(match[2]);if(!headers.has(row))headers.set(row,{});headers.get(row)[normalizar(c?.v)]=match[1];}for(const [row,cols] of headers)if(cols.EMPRESAABREV&&cols.TOTALOSENCERRADA&&cols.DESNEGOCIO&&cols.DESNUCLEO)found.push({name,ws,row,cols});}return found;}
+export function temFaturadoMonetario(wb){return cabecalhos(wb).length>0;}
+export function importarFaturadoMonetario(wb,competencia,participantes=[]){
+ if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(competencia))throw Error('Selecione uma competência válida.');
+ const heads=cabecalhos(wb);if(heads.length!==1)throw Error('É necessário um único relatório OS Faturadas por Empresa.');const {name,ws,row,cols}=heads[0];
+ const filtros=normalizar(Object.entries(ws).filter(([a])=>!a.startsWith('!')&&Number(a.match(/\d+$/)?.[0])<row).map(([,c])=>c.v||'').join(' '));
+ const years=[...filtros.matchAll(/ANOE(20\d{2})/g)].map(m=>m[1]);const months=MESES.map((m,i)=>filtros.includes('NOMEMESE'+m)?i+1:null).filter(Boolean);
+ if(new Set(years).size!==1||new Set(months).size!==1)throw Error('Filtros Ano e NomeMês não identificados de forma única no relatório.');
+ const identified=years[0]+'-'+String(months[0]).padStart(2,'0');if(identified!==competencia)throw Error('O relatório é de '+identified+', mas a competência selecionada é '+competencia+'. Nenhum dado será aplicado.');
+ const metricas={},avisos=['Identificado: faturamento em reais por empresa. Total OS Encerrada representa valor monetário neste relatório; não altera contagens de notas.','Competência conferida nos filtros do relatório: '+identified+'.','Valores monetários normalizados para centavos. Recebimentos e demais indicadores são preservados.'];
+ const rows=Object.keys(ws).filter(a=>/^[A-Z]+\d+$/.test(a)).map(a=>Number(a.match(/\d+$/)[0]));let total=null;
+ for(let r=row+1;r<=rows.reduce((max,r)=>Math.max(max,r),row);r++){const label=String(ws[cols.EMPRESAABREV+r]?.v??'').trim();if(!label){if(ws[cols.TOTALOSENCERRADA+r]?.v!==undefined)throw Error('Valor sem empresa na linha '+r+'.');continue;}const cell=ws[cols.TOTALOSENCERRADA+r];if(cell?.t==='e')throw Error('Valor com erro na linha '+r+'.');const raw=numero(cell?.v);if(raw===null)throw Error('Valor faturado ausente ou inválido na linha '+r+'.');if(['TOTAL','TOTALGERAL'].includes(normalizar(label))){if(total!==null)throw Error('Total duplicado.');total=raw;continue;}const branch=filial(label);if(!FILIAIS.includes(branch))throw Error('Filial não reconhecida: '+label);if(metricas[branch])throw Error('Filial duplicada: '+branch);metricas[branch]={valorFaturado:Math.round((raw+Number.EPSILON)*100)/100,origem:'Faturamento em reais · '+name+'!'+cols.TOTALOSENCERRADA+r,fontesCampos:{valorFaturado:name+'!'+cols.TOTALOSENCERRADA+r}};}
+ const keys=Object.keys(metricas);if(!keys.length)throw Error('Nenhuma filial encontrada.');const sum=units=>Math.round(units.reduce((s,u)=>s+metricas[u].valorFaturado,0)*100)/100;
+ if(total!==null&&Math.abs(sum(keys)-total)>.02)throw Error('Total do relatório diverge da soma das filiais.');
+ if(keys.length===FILIAIS.length)metricas.GERAL={valorFaturado:sum(keys),origem:'Soma do faturamento em reais das 13 filiais · '+name,fontesCampos:{valorFaturado:name+' · soma das filiais'}};else avisos.push('Relatório parcial: '+keys.length+' de 13 filiais. GERAL deve ser revisado.');
+ for(const p of participantes.filter(p=>p.perfil==='analista')){const units=[...new Set(p.unidades||[])];if(units.length&&units.every(u=>metricas[u]))metricas[escopoPessoa(p)]={valorFaturado:sum(units),origem:'Soma do faturamento em reais das unidades vinculadas · '+name,fontesCampos:{valorFaturado:units.map(u=>metricas[u].fontesCampos.valorFaturado).join(' + ')}};}
+ return {competencia,metricas,participantes:[],avisos};
+}
