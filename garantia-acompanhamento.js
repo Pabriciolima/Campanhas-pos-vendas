@@ -1,4 +1,4 @@
-import {apurarPessoa,escopoPessoa,indice,numero} from './garantia-dados.js?v=20261022-recebimento';
+import {apurarPessoa,escopoPessoa,indice,numero} from './garantia-dados.js?v=20261023-lote';
 // Projeção de apresentação: o valor final e as conferências continuam no motor oficial.
 export function acompanharPessoa(p,mes){
  const r=apurarPessoa(p,mes),m=mes.metricas[escopoPessoa(p)]||{},local=['localAssist','localAux','admPv'].includes(p.perfil),stale=!!m.desatualizado;
@@ -9,5 +9,5 @@ export function acompanharPessoa(p,mes){
  if(['lider','supervisora'].includes(p.perfil)){componentes.extra=stale?null:r.itens.find(i=>i.id==='extra')?.valor;}
  const conhecidos=Object.values(componentes).filter(n=>typeof n==='number');const bruto=stale||!conhecidos.length?null:Math.round(conhecidos.reduce((s,v)=>s+v,0)*100)/100;
  const parcial=p.suspenso?0:bruto===null?null:Math.round(Math.max(0,bruto-(r.penalidade||0))*100)/100;
- return{...r,componentes,brutoParcial:bruto,parcial,totalExibido:r.total??parcial,provisorio:r.total===null,desatualizado:stale};
+ return{...r,componentes,brutoParcial:bruto,parcial,totalExibido:p.conferirReferencia&&r.total===null?null:r.total??parcial,provisorio:r.total===null,desatualizado:stale};
 }
