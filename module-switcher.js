@@ -527,42 +527,13 @@
       return;
     }
 
-    const estaAberto =
-      grupo.classList.contains(
-        "open"
-      );
-
-    if (estaAberto) {
-      definirDropdown(
-        modulo,
-        false
-      );
-
-      return;
-    }
-
-    if (modulo === "pix") {
-      abrirPaginaPix(
-        "dashboard"
-      );
-
-      return;
-    }
-
-    if (
-      modulo === "crm" ||
-      modulo === "garantia"
-    ) {
-      definirDropdown(
-        modulo,
-        true
-      );
-
-      localStorage.setItem(
-        STORAGE_DROPDOWN,
-        modulo
-      );
-
+    // O cartão do módulo sempre abre a visão geral, mesmo se o menu já estiver aberto.
+    if (modulo === "pix") { abrirPaginaPix("dashboard"); return; }
+    if (modulo === "garantia") { abrirPaginaGarantia("dashboard"); return; }
+    if (modulo === "crm") {
+      definirDropdown("crm", true);
+      localStorage.setItem(STORAGE_MODULO, "crm");
+      window.CRMModule?.abrir("dashboard");
       return;
     }
 

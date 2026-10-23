@@ -6181,7 +6181,6 @@
                             grupo.classList.contains("open")
                           ) {
                             abrirCRM(
-                              estado.view ||
                               "dashboard"
                             );
                           }

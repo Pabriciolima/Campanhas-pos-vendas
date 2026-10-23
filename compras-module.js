@@ -5366,8 +5366,7 @@ function garantirMenu() {
 
         if (!submenu) return;
 
-        submenu.hidden =
-          !submenu.hidden;
+        submenu.hidden = false;
 
         const seta =
           $("#comprasModuleArrow");
@@ -5381,7 +5380,6 @@ function garantirMenu() {
 
         if (!submenu.hidden) {
           abrirView(
-            state.view ||
             "visao-geral"
           );
         }
