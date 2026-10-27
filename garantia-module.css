@@ -203,3 +203,10 @@ html[data-theme="dark"] .g-people .badge.no{background:#4b3020;color:#ffd0a6}
 @media(max-width:600px){.g-people .panel-header{align-items:flex-start;flex-direction:column}.g-people .filters{grid-template-columns:1fr}.g-people-table td:nth-child(2),.g-people-table td:nth-child(3){min-width:0}.g-people-table th:first-child,.g-people-table td:first-child{width:100%}}
 
 .g-people-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.g-people-actions .delete{color:#b42318;border-color:#f4b4af;background:transparent}html[data-theme="dark"] .g-people-actions .delete{color:#fda29b;border-color:#80413d}
+
+/* Ação de fechar destacada em vermelho em todos os diálogos da Garantia. */
+.garantia-dialog>button.g-dialog-close{background:#b42318!important;border-color:#b42318!important;color:#fff!important}
+.garantia-dialog>button.g-dialog-close:hover{background:#912018!important;border-color:#912018!important}
+.garantia-dialog>button.g-dialog-close:focus-visible{outline:3px solid #fda29b;outline-offset:3px}
+html[data-theme="dark"] .garantia-dialog>button.g-dialog-close{background:#b42318!important;border-color:#f97066!important;color:#fff!important}
+html[data-theme="dark"] .garantia-dialog>button.g-dialog-close:hover{background:#912018!important}
