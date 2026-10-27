@@ -1,4 +1,4 @@
-import {linhasExportacao,exportarExcel,imprimirPdf} from './garantia-exportacao.js?v=20261027';
+import {linhasExportacao,exportarExcel,imprimirPdf} from './garantia-exportacao.js?v=20261027-destaque';
 import {prepararConjunto,conferirCampanha,prepararCampanha} from './garantia-lote.js?v=20261023-lote';
 import {temMalote,analisarMalote} from './garantia-malote.js?v=20261023-malote-conformidade';
 import {sincronizarMaloteEstado} from './garantia-dados.js?v=20261023-lote';
