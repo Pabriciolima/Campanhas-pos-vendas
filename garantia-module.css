@@ -181,3 +181,23 @@ html[data-theme="dark"] .g-overview-score,html[data-theme="dark"] .g-overview .g
 
 /* O resumo próprio substitui o cabeçalho grande somente nesta visão. */
 body.modulo-garantia-ativo:has(#garantia-dashboard.active) .topbar{display:none!important}
+
+/* Base de participantes: cabeçalho, filtros e tabela no padrão do PIX. */
+.g-people .panel-header{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:22px}
+.g-people .panel-header h2{margin:4px 0 8px}
+.g-people .panel-header p{margin:0}
+.g-people .filters{display:grid;grid-template-columns:minmax(180px,1.4fr) repeat(2,minmax(140px,1fr)) 155px;gap:12px;margin-bottom:14px}
+.g-people .filters>*{width:100%;min-width:0}
+.g-people-count,.g-people-links{color:var(--muted,#64748b);font-size:12px}
+.g-people-links{display:block;margin-top:5px;line-height:1.5}
+.g-people-table td{min-width:0;vertical-align:middle}
+.g-people-table td:nth-child(3){min-width:220px}
+.g-people-table td:nth-child(2){min-width:170px}
+.g-people-table th:first-child,.g-people-table td:first-child{width:72px;min-width:60px}
+.g-people .badge{display:inline-flex;border-radius:999px;padding:5px 10px;font-size:10px;font-weight:700;letter-spacing:.04em}
+.g-people .badge.ok{background:#dcfce7;color:#166534}
+.g-people .badge.no{background:#fff1e6;color:#9a3412}
+html[data-theme="dark"] .g-people .badge.ok{background:#143e30;color:#9ce6be}
+html[data-theme="dark"] .g-people .badge.no{background:#4b3020;color:#ffd0a6}
+@media(max-width:1000px){.g-people .filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.g-people .panel-header{align-items:flex-start;flex-direction:column}.g-people .filters{grid-template-columns:1fr}.g-people-table td:nth-child(2),.g-people-table td:nth-child(3){min-width:0}.g-people-table th:first-child,.g-people-table td:first-child{width:100%}}
