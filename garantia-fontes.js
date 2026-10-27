@@ -1,11 +1,11 @@
 import {tipoAuxiliar} from './garantia-arquivos.js?v=20261023-lote';
-import {prepararCampanha,importarArquivoAuditavel,importarInsercaoCampanha,eCampanha} from './garantia-lote.js?v=20261027-diesel';
+import {prepararCampanha,importarArquivoAuditavel,importarInsercaoCampanha,eCampanha} from './garantia-lote.js?v=20261027-resumo-os';
 import {temMalote,importarMalote} from './garantia-malote.js?v=20261023-malote-conformidade';
 import {temInsercao,importarInsercao} from './garantia-insercao.js?v=20261023-insercao';
 import {temFaturadoMonetario,importarFaturadoMonetario} from './garantia-faturado-importacao.js?v=20261023-importacao';
 import {normalizar} from './garantia-dados.js?v=20261022-fontes';
 import {temAbasMensais,importarRecebimento} from './garantia-recebimento.js?v=20261027-diesel';
-import {temBaseFaturamento,importarFaturamento} from './garantia-faturamento.js?v=20261022-faturamento';
+import {temBaseFaturamento,temResumoFaturamento,importarFaturamento} from './garantia-faturamento.js?v=20261027-resumo-os';
 import {importarOriginal} from './garantia-dados.js?v=20261022-fontes';
 // Classifica pela estrutura interna. O nome do arquivo não determina o indicador.
 export function reconhecerFonte(wb){
@@ -17,7 +17,7 @@ export function reconhecerFonte(wb){
  if(wb.SheetNames.some(n=>normalizar(n)==='VALIDACAOINDICADORES')&&wb.SheetNames.some(n=>normalizar(n)==='BONIFICACAODAEQUIPE'))return 'campanha';
  const liquidity=wb.SheetNames.some(n=>Object.entries(wb.Sheets[n]).some(([a,c])=>/^[A-Z]+[1-9]\d?$/.test(a)&&Number(a.match(/\d+/)[0])<=15&&normalizar(c?.v)==='CREDITOLIQUIDO'));
  if(temAbasMensais(wb)&&liquidity)return 'recebimento';
- if(temBaseFaturamento(wb))return 'faturamento';return null;
+ if(temBaseFaturamento(wb)||temResumoFaturamento(wb))return 'faturamento';return null;
 }
 export function importarFonte(wb,month,participantes=[],atuais={},vinculos={},preferido=null){
  if(preferido==='insercao'&&temMalote(wb))throw Error('Este arquivo é o controle de Malote. A matriz C/NC dele não substitui Inserção. Envie a campanha validada ou a fonte de Não inseridas.');
