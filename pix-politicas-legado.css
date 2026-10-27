@@ -6,3 +6,9 @@
 html[data-theme="dark"] #pixPolicyGrid .pix-policy-legacy-rules{background:#351e23;border-color:#8e4847;color:#ffb4ad}
 html[data-theme="dark"] #pixPolicyGrid .pix-policy-legacy-rules h3,html[data-theme="dark"] #pixPolicyGrid .pix-policy-legacy-rules span,html[data-theme="dark"] #pixPolicyGrid .pix-policy-legacy-rules b{color:#ffb4ad}
 @media print{#pixPolicyGrid .pix-policy-legacy-rules{background:#fff!important}#pixPolicyGrid .pix-policy-legacy-rules h3,#pixPolicyGrid .pix-policy-legacy-rules span,#pixPolicyGrid .pix-policy-legacy-rules b{color:#9f2018!important}}
+
+#pixPolicyGrid .pix-policy-cargo-rules{margin:12px;padding:14px;border-radius:10px}
+#pixPolicyGrid .pix-policy-cargo-rules h4{font-size:12px;color:inherit;margin:0 0 10px}
+#pixPolicyGrid .pix-policy-cargo-rules p{font-size:12px;line-height:1.65;color:inherit;margin:0 0 10px}
+#pixPolicyGrid .pix-policy-cargo-rules p:last-child{margin-bottom:0}
+#pixPolicyGrid .pix-policy-legacy-period{font-size:12px;line-height:1.6;color:var(--muted,#617487)}
