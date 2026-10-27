@@ -1,0 +1,8 @@
+/* Regras históricas explícitas, com contraste em tela e na impressão. */
+#pixPolicyGrid .pix-policy-legacy-rules{border:1px solid #f3b0aa;border-left:5px solid #b42318;background:#fff5f4;color:#9f2018}
+#pixPolicyGrid .pix-policy-legacy-rules h3,#pixPolicyGrid .pix-policy-legacy-rules span,#pixPolicyGrid .pix-policy-legacy-rules b{color:#9f2018}
+#pixPolicyGrid .pix-policy-legacy-rules span{line-height:1.65}
+#pixPolicyGrid .pix-policy-legacy-penalties{margin-top:18px}
+html[data-theme="dark"] #pixPolicyGrid .pix-policy-legacy-rules{background:#351e23;border-color:#8e4847;color:#ffb4ad}
+html[data-theme="dark"] #pixPolicyGrid .pix-policy-legacy-rules h3,html[data-theme="dark"] #pixPolicyGrid .pix-policy-legacy-rules span,html[data-theme="dark"] #pixPolicyGrid .pix-policy-legacy-rules b{color:#ffb4ad}
+@media print{#pixPolicyGrid .pix-policy-legacy-rules{background:#fff!important}#pixPolicyGrid .pix-policy-legacy-rules h3,#pixPolicyGrid .pix-policy-legacy-rules span,#pixPolicyGrid .pix-policy-legacy-rules b{color:#9f2018!important}}

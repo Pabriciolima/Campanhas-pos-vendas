@@ -3359,7 +3359,7 @@ function renderPoliticasPix() {
           </article>`;
       }).join("")}
     </div>
-    <section class="pix-policy-general">
+    <section class="pix-policy-general ${novaRegra ? "" : "pix-policy-legacy-rules"}">
       <h3>📋 REGRAS GERAIS — PIX DO PRESIDENTE</h3>
       <div>
         ${novaRegra ? `
@@ -3368,12 +3368,25 @@ function renderPoliticasPix() {
         <span><b>Calendário:</b> gordura ou déficit segue para os próximos dias e semanas da mesma competência. Datas não se repetem para o colaborador; domingos não podem ser selecionados.</span>
         <span><b>O.S. na semana 4:</b> todos os cargos informam o percentual. Acima de 28%, desconto de 50% sobre o subtotal da semana, incluindo o NPS liberado.</span>
         ` : `
-        <span>✓ Regulamento histórico da competência selecionada, até outubro de 2026, inclusive.</span>
-        <span>✓ Base e faixas calculadas conforme o atingimento semanal previsto na regra anterior.</span>
-        <span>✓ NPS e penalidades seguem os critérios históricos da campanha.</span>
+        <span><b>Vigência:</b> regulamento histórico da competência selecionada, até outubro de 2026, inclusive. A apuração é semanal; o modelo diário e o cofrinho NPS por semana começam em novembro/2026.</span>
+        <span><b>Meta semanal obrigatória:</b> o bônus-base integral do cargo e o adicional de ticket/margem exigem pelo menos 100% da meta semanal e os dados obrigatórios completos. Abaixo de 100%, ambos são R$ 0. Não há pagamento de metade da base por dias atingidos neste modelo.</span>
+        <span><b>Ticket médio ou margem:</b> aplica-se somente a maior faixa atingida pelo cargo, sem somar as faixas anteriores. Abaixo da primeira faixa, não há adicional. Os valores e limites estão nos cartões de cada cargo.</span>
+        <span><b>NPS mensal:</b> somente cargos com bônus de NPS participam. Na semana 4, atingir a meta de NPS informada libera o bônus mensal previsto no cartão, com os dados obrigatórios completos. O NPS tem critério próprio e não exige atingir a meta de faturamento. Em outubro não há reserva de R$ 250 por semana nem bloqueio pelo NPS geral da filial do modelo de novembro.</span>
+        <span><b>Sem meta individual:</b> meta de faturamento zerada ou marcada como sem meta não libera bônus-base nem adicional de ticket/margem.</span>
+        <span><b>Informações obrigatórias:</b> ticket médio ou margem devem estar preenchidos. Na semana 4, o percentual de O.S. em aberto é obrigatório para todos os cargos. Campo obrigatório ausente bloqueia o pagamento do lançamento até a regularização; vazio não é tratado como zero.</span>
         `}
       </div>
     </section>
+    ${!novaRegra ? `
+    <section class="pix-policy-general pix-policy-legacy-rules pix-policy-legacy-penalties" aria-label="Penalidades do PIX até outubro de 2026">
+      <h3>⚠ PENALIDADES — REGULAMENTO ATÉ OUTUBRO/2026</h3>
+      <div>
+        <span><b>Semana 4 — todos os cargos:</b> O.S. em aberto acima de ${LIMITE_OS_ABERTA}% descontam ${PENALIDADE_OS * 100}% do subtotal da própria semana 4, incluindo bônus-base, ticket/margem e NPS mensal, quando devidos.</span>
+        <span><b>Limite exato:</b> com ${LIMITE_OS_ABERTA}% não há esse desconto. A penalidade começa somente acima de ${LIMITE_OS_ABERTA}%. Não é aplicada às semanas 1, 2 e 3.</span>
+        <span><b>Exemplo:</b> subtotal de R$ 2.000,00 na semana 4 e O.S. de 29% resultam em desconto de R$ 1.000,00 e bonificação final de R$ 1.000,00.</span>
+        <span><b>NPS abaixo da meta:</b> não libera o bônus mensal de NPS. Os demais componentes mantêm seus próprios critérios e continuam sujeitos ao desconto de O.S. da semana 4.</span>
+      </div>
+    </section>` : ""}
     ${novaRegra ? `
     <section class="pix-policy-general pix-policy-nps-geral">
       <h3>🏦 COFRINHO NPS — INDIVIDUAL + FILIAL</h3>
