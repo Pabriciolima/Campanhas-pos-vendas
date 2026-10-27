@@ -1,4 +1,4 @@
-import {importarOriginal,mesclar,vazio,apurarPessoa,chavePessoa,filial,normalizar,numero} from './garantia-dados.js?v=20261023-lote';
+import {importarOriginal,mesclar,vazio,apurarPessoa,chavePessoa,filial,normalizar,numero} from './garantia-dados.js?v=20261027-minimo80';
 import {registrarImportacao} from './garantia-importacoes.js?v=20261023-lote';
 import {importarArquivamento,importarErros,importarAEG,importarOSCompleta,importarFrete,importarSolicitacoes,importarFiscal,tipoAuxiliar} from './garantia-arquivos.js?v=20261023-lote';
 import {temMalote,importarMalote} from './garantia-malote.js?v=20261023-malote-conformidade';

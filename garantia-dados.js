@@ -47,8 +47,10 @@ export function apurarPessoa(p,mes){
  const ref=p.referencia,divergente=numero(ref)!==null&&total!==null&&Math.abs(total-ref)>.01;
  if(p.naCampos?.length)itens.push({nome:'Não aplicável na origem: '+p.naCampos.map(k=>CAMPOS[k]||k).join(', '),valor:0});
  if(p.suspenso===true){total=0;itens.push({nome:'Pagamento suspenso: '+(p.observacao||'decisão registrada'),valor:0});}
- const calculadoAntesConferencia=total;if(p.conferirReferencia){if(numero(ref)===null)pendencias.push('Valor final não preenchido no Excel: confirmar situação antes de fechar.');else if(total!==null&&Math.abs(total-ref)>.01)pendencias.push('Divergência com o Excel: aguarda decisão sobre a regra.');}
- return {p,calculadoAntesConferencia,total:pendencias.length?null:total,subtotal,penalidade,itens,pendencias,divergente:numero(ref)!==null&&total!==null&&Math.abs(total-ref)>.01,referencia:ref,faturamento:fat,recebimento:rec,insercao:ins,erros:err,status:pendencias.length?'PENDENTE':p.suspenso?'SUSPENSO':!mes.validados[chavePessoa(p)]?'EM CONFERÊNCIA':total>0?'VALIDADO':'NÃO HABILITADO'};
+ // Decisão confirmada: a referência do Excel não libera faturamento local abaixo de 80%.
+ const bloqueadoFaturamento=['localAssist','localAux','admPv'].includes(p.perfil)&&fat!==null&&fat>=0&&fat<80;
+ const calculadoAntesConferencia=total;if(p.conferirReferencia){if(numero(ref)===null)pendencias.push('Valor final não preenchido no Excel: confirmar situação antes de fechar.');else if(!bloqueadoFaturamento&&total!==null&&Math.abs(total-ref)>.01)pendencias.push('Divergência com o Excel: aguarda decisão sobre a regra.');}
+ return {p,calculadoAntesConferencia,total:pendencias.length?null:total,subtotal,penalidade,itens,pendencias,divergente:numero(ref)!==null&&total!==null&&Math.abs(total-ref)>.01,referencia:ref,faturamento:fat,recebimento:rec,insercao:ins,erros:err,status:pendencias.length?'PENDENTE':p.suspenso?'SUSPENSO':total===0?'NÃO HABILITADO':!mes.validados[chavePessoa(p)]?'EM CONFERÊNCIA':'VALIDADO'};
 }
 // Importa valores armazenados no XLSX. Fórmulas nunca são executadas pelo aplicativo.
 export function importarOriginal(wb,competencia){

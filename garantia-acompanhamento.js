@@ -1,4 +1,4 @@
-import {apurarPessoa,escopoPessoa,indice,numero} from './garantia-dados.js?v=20261023-lote';
+import {apurarPessoa,escopoPessoa,indice,numero} from './garantia-dados.js?v=20261027-minimo80';
 // Projeção de apresentação: o valor final e as conferências continuam no motor oficial.
 export function acompanharPessoa(p,mes){
  const r=apurarPessoa(p,mes),m=mes.metricas[escopoPessoa(p)]||{},local=['localAssist','localAux','admPv'].includes(p.perfil),stale=!!m.desatualizado;
