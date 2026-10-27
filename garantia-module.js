@@ -65,12 +65,27 @@ function renderOverview(){
 
 // A base usa o mesmo padrão do PIX, mantendo os cadastros próprios da Garantia.
 let peopleRole='';
+// Arquiva o cadastro removido para manter rastreabilidade sem alterar outros meses.
+function deletePerson(p){
+ const competencia=month,key=chavePessoa(p),d=modal('Excluir participante');
+ d.append(el('p','Excluir '+p.nome+' da campanha de Garantia em '+competencia+'? O participante sairá da base e da apuração deste mês. Os indicadores das filiais e as demais competências serão preservados.'));
+ d.append(button('Cancelar',()=>d.close(),'secondary'),button('Confirmar exclusão',()=>{
+  const next=structuredClone(state),dest=next.competencias[competencia];
+  if(!dest?.participantes.some(x=>chavePessoa(x)===key)){d.close();return;}
+  const current=dest.participantes.find(x=>chavePessoa(x)===key);
+  (dest.participantesExcluidos??=[]).push({participante:structuredClone(current),data:new Date().toISOString(),validacao:dest.validados?.[key]||null});
+  dest.participantes=dest.participantes.filter(x=>chavePessoa(x)!==key);
+  if(dest.validados)delete dest.validados[key];
+  next.historico.push({data:new Date().toISOString(),competencia,acao:'Exclusão de participante da competência',participante:key});
+  if(persist(next))d.close();
+ },'mini-btn delete'));
+}
 function renderPeople(){
  const a=el('article',undefined,'panel g-people');roots.funcionarios.append(a);
  const head=el('div',undefined,'panel-header'),intro=el('div');intro.append(el('p','Cadastro exclusivo','eyebrow'),el('h2','Base de participantes'),el('p','Equipe da campanha de Garantia. Cadastros e vínculos da competência selecionada.','pix-section-description'));head.append(intro,button('+ Novo participante',()=>personEditor(),'primary'));a.append(head);
  const filters=el('div',undefined,'filters'),q=el('input'),branches=el('select'),roles=el('select'),date=el('input');q.type='search';q.placeholder='Buscar participante';q.value=search;q.setAttribute('aria-label','Buscar participante da Garantia');branches.setAttribute('aria-label','Filial dos participantes da Garantia');const units=[...new Set(m().participantes.flatMap(p=>[p.filial,...(p.unidades||[])]))].filter(Boolean).sort();options(branches,units.map(x=>[x,x]),'Todas as filiais');branches.value=filter;roles.setAttribute('aria-label','Cargo dos participantes da Garantia');options(roles,[...new Set(m().participantes.map(p=>p.perfil))].map(k=>[k,PERFIS[k]]),'Todos os cargos');roles.value=peopleRole;date.type='month';date.value=month;date.setAttribute('aria-label','Competência dos participantes da Garantia');filters.append(q,branches,roles,date);a.append(filters);
  const content=el('div');a.append(content);
- function draw(){content.replaceChildren();const rows=selected().filter(p=>!peopleRole||p.perfil===peopleRole);content.append(el('p',rows.length+' participante'+(rows.length===1?'':'s')+' nesta seleção','g-people-count'));const wrap=table(content,['DN','Filial','Nome','Cargo','Status','Ações'],rows.map(p=>{const dn=Object.entries(DNS).find(([,units])=>units.some(u=>filial(u)===filial(p.filial)))?.[0]||'—',name=el('strong',p.nome),unit=el('div',p.filial);if(p.unidades?.length)unit.append(el('small','Vínculos: '+p.unidades.join(' · '),'g-people-links'));const status=el('span',p.suspenso?'SUSPENSO':'ATIVO','badge '+(p.suspenso?'no':'ok'));status.title=p.observacao|| (p.suspenso?'Pagamento suspenso nesta competência':'Participante ativo nesta competência');return [dn,unit,name,p.cargoPlanilha||PERFIS[p.perfil],status,button('Editar',()=>personEditor(p),'mini-btn')];}));wrap.classList.add('g-people-table');prepararTabelasVisuais(content);}
+ function draw(){content.replaceChildren();const rows=selected().filter(p=>!peopleRole||p.perfil===peopleRole);content.append(el('p',rows.length+' participante'+(rows.length===1?'':'s')+' nesta seleção','g-people-count'));const wrap=table(content,['DN','Filial','Nome','Cargo','Status','Ações'],rows.map(p=>{const dn=Object.entries(DNS).find(([,units])=>units.some(u=>filial(u)===filial(p.filial)))?.[0]||'—',name=el('strong',p.nome),unit=el('div',p.filial);if(p.unidades?.length)unit.append(el('small','Vínculos: '+p.unidades.join(' · '),'g-people-links'));const status=el('span',p.suspenso?'SUSPENSO':'ATIVO','badge '+(p.suspenso?'no':'ok'));status.title=p.observacao|| (p.suspenso?'Pagamento suspenso nesta competência':'Participante ativo nesta competência');const actions=el('div',undefined,'actions g-people-actions');actions.append(button('Editar',()=>personEditor(p),'mini-btn'),button('Excluir',()=>deletePerson(p),'mini-btn delete'));return [dn,unit,name,p.cargoPlanilha||PERFIS[p.perfil],status,actions];}));wrap.classList.add('g-people-table');prepararTabelasVisuais(content);}
  q.addEventListener('input',()=>{search=q.value;draw();});q.addEventListener('change',()=>render());branches.addEventListener('change',()=>{filter=branches.value;render();});roles.addEventListener('change',()=>{peopleRole=roles.value;draw();});date.addEventListener('change',()=>{if(date.value&&date.value!==month){month=date.value;pending=null;render();}});draw();
 }
 

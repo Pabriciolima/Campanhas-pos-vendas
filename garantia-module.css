@@ -201,3 +201,5 @@ html[data-theme="dark"] .g-people .badge.ok{background:#143e30;color:#9ce6be}
 html[data-theme="dark"] .g-people .badge.no{background:#4b3020;color:#ffd0a6}
 @media(max-width:1000px){.g-people .filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.g-people .panel-header{align-items:flex-start;flex-direction:column}.g-people .filters{grid-template-columns:1fr}.g-people-table td:nth-child(2),.g-people-table td:nth-child(3){min-width:0}.g-people-table th:first-child,.g-people-table td:first-child{width:100%}}
+
+.g-people-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.g-people-actions .delete{color:#b42318;border-color:#f4b4af;background:transparent}html[data-theme="dark"] .g-people-actions .delete{color:#fda29b;border-color:#80413d}
