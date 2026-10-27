@@ -25,3 +25,16 @@ export function removerImportacao(state,month,id){
  if(r.fontes){const atuais=(m.auditoriaFontes||[]).filter(x=>x.arquivo===r.arquivo);if(JSON.stringify(r.fontes.formato==='imagem-hash-v1'?fontesComparaveis(atuais):atuais)===JSON.stringify(r.fontes.depois)){m.auditoriaFontes=[...(m.auditoriaFontes||[]).filter(x=>x.arquivo!==r.arquivo),...r.fontes.antes];if(!m.auditoriaFontes.length&&!r.fontes.existia)delete m.auditoriaFontes;}}
  m.validados={};r.removida=true;next.historico.push({data:new Date().toISOString(),competencia:month,acao:'Importação removida; conferências invalidadas',arquivo:r.arquivo});return next;
 }
+
+// Limpeza do indicador atual, sem restaurar valores de arquivos anteriores.
+// Um arquivo pode alimentar vários cartões: os demais indicadores permanecem intactos.
+export function removerDadosIndicador(state,month,group,fields){
+ if(!Array.isArray(fields)||!fields.length)throw Error('Indicador inválido.');
+ const next=structuredClone(state),m=next.competencias[month];if(!m)return next;
+ const keys=[...new Set(fields)],alteradas=[];
+ for(const [scope,v] of Object.entries(m.metricas||{}))for(const field of keys){if(Object.hasOwn(v,field)){alteradas.push({scope,field});delete v[field];if(v.fontesCampos)delete v.fontesCampos[field];}}
+ // Mantém a quantidade de processos derivada das fechadas e limpa sua origem ao retirar faturamento.
+ if(keys.includes('osFechadas'))for(const v of Object.values(m.metricas||{})){delete v.maloteProcessos;if(v.fontesCampos)delete v.fontesCampos.maloteProcessos;}
+ for(const r of m.importacoes||[])if(!r.removida&&r.celulas?.some(c=>keys.includes(c.field))){r.indicadoresRemovidos=[...new Set([...(r.indicadoresRemovidos||[]),group])];}
+ m.validados={};next.historico.push({data:new Date().toISOString(),competencia:month,acao:'Dados do indicador removidos; conferências invalidadas',indicador:group,campos:keys,celulas:alteradas.length});return next;
+}
