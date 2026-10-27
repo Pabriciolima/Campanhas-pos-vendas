@@ -1,10 +1,10 @@
 import {tipoAuxiliar} from './garantia-arquivos.js?v=20261023-lote';
-import {prepararCampanha,importarArquivoAuditavel,importarInsercaoCampanha,eCampanha} from './garantia-lote.js?v=20261023-lote';
+import {prepararCampanha,importarArquivoAuditavel,importarInsercaoCampanha,eCampanha} from './garantia-lote.js?v=20261027-diesel';
 import {temMalote,importarMalote} from './garantia-malote.js?v=20261023-malote-conformidade';
 import {temInsercao,importarInsercao} from './garantia-insercao.js?v=20261023-insercao';
 import {temFaturadoMonetario,importarFaturadoMonetario} from './garantia-faturado-importacao.js?v=20261023-importacao';
 import {normalizar} from './garantia-dados.js?v=20261022-fontes';
-import {temAbasMensais,importarRecebimento} from './garantia-recebimento.js?v=20261022-fontes';
+import {temAbasMensais,importarRecebimento} from './garantia-recebimento.js?v=20261027-diesel';
 import {temBaseFaturamento,importarFaturamento} from './garantia-faturamento.js?v=20261022-faturamento';
 import {importarOriginal} from './garantia-dados.js?v=20261022-fontes';
 // Classifica pela estrutura interna. O nome do arquivo não determina o indicador.
