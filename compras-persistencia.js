@@ -12,10 +12,16 @@ export function aplicarOperacoesCompras(base,ops,agora=new Date().toISOString())
   else{nova.colecoes[o.colecao][o.id]={...(o.merge?nova.colecoes[o.colecao][o.id]||{}:{}),...o.dados,id:o.id};delete nova.exclusoes[chave];}
   nova.alterados[chave]=agora;
  }
+ // Ao remover o último lançamento, encerra a recuperação dos testes antigos.
+ // Mantém os responsáveis e o registro de exclusões para não restaurar arquivos removidos.
+ if(ops.some(o=>o.tipo==='delete'&&o.colecao!==COLECOES_COMPRAS[0])&&COLECOES_COMPRAS.slice(1).every(c=>Object.keys(nova.colecoes[c]).length===0)){
+  nova.migracao={...nova.migracao,status:'concluida',concluidaEm:agora,limpezaEm:agora,motivo:'Lançamentos removidos; iniciar novas importações.',erro:''};
+ }
  return nova;
 }
 export function mesclarLegadoCompras(base,legado){
  if(!validarBaseCompras(base)||!COLECOES_COMPRAS.every(c=>objeto(legado[c])))throw Error('Histórico legado inválido.');
+ if(base.migracao.limpezaEm)return structuredClone(base);
  const nova=structuredClone(base),recebidos={},copiados={};
  const importacoesAlteradas=Object.entries(nova.colecoes.compras_campanha_importacoes).filter(([id])=>nova.alterados['compras_campanha_importacoes/'+id]).map(([,d])=>[d.competencia,d.tipoEfetivo||d.tipo]);
  for(const c of COLECOES_COMPRAS){recebidos[c]=Object.keys(legado[c]).length;copiados[c]=0;
