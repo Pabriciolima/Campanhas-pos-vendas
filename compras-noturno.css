@@ -65,3 +65,8 @@ html[data-theme="dark"] .compras-confirm-dialog .compras-confirm-highlight{backg
 html[data-theme="dark"] .compras-confirm-dialog :is(.compras-confirm-cancel,.compras-confirm-close){background:#203147!important;color:#e1ecfa!important;border-color:#40546d!important;}
 html[data-theme="dark"] .compras-confirm-dialog .compras-confirm-icon.danger{background:#452735!important;color:#ffabba!important;box-shadow:none!important;}
 html[data-theme="dark"] .compras-confirm-dialog .compras-confirm-icon.warning{background:#403423!important;color:#f3d69a!important;box-shadow:none!important;}
+
+/* Apuração por casa: superfícies escuras e texto legível em todos os níveis. */
+html[data-theme="dark"] .compras-page .compras-casa-resultado{background:#1b2e43!important;border-color:#405873!important;color:#e3eefb!important;}
+html[data-theme="dark"] .compras-page .compras-casas-total{background:#193c34!important;color:#b8f3d8!important;border:1px solid #36715e;}
+html[data-theme="dark"] .compras-page :is(.compras-casa-resultado,.compras-casas-total) :is(strong,b,small){color:inherit!important;-webkit-text-fill-color:currentColor!important;}

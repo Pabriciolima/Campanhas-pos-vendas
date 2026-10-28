@@ -9,7 +9,7 @@ import {lerPrintsABC, consolidarPrintsABC, CASAS_ABC} from "./compras-imagens.js
 
 import {bancoCompras,collection,getDocs,doc,setDoc,deleteDoc,writeBatch,serverTimestamp} from "./compras-supabase.js?v=20261028-supabase";
 
-import {calcularDisponibilidadeCasa} from "./compras-apuracao.js?v=20261028-por-casa";
+import {calcularDisponibilidadeCasa} from "./compras-apuracao.js?v=20261028-rateio";
 
 const VERSAO = "2026.07.23-15";
 const TAMANHO_LOTE = 400;
@@ -1178,12 +1178,18 @@ function calcularApuracaoResponsavel(
       ])
     );
 
+  const chaveCasa = item => normalizar(casaEquipeCompras(item)?.unidade || item.unidade);
+  const casasCadastradas = [...new Map((responsavel.unidades || []).map(unidade => [chaveCasa({unidade}),unidade])).values()];
+  const quantidadeCasasRateio = casasCadastradas.length;
+  // Exibe também as casas sem arquivo, sem redistribuir suas parcelas às que possuem dados.
+  const casasParaExibir = casasCadastradas.map(unidade => atuais.find(item => chaveCasa(item)===chaveCasa({unidade})) || {unidade});
+
   /*
   DETALHAMENTO DE OBSOLESCÊNCIA POR CASA
   Mantém a regra mensal de redução acima de 365 dias.
   */
   const detalhesUnidades =
-    atuais.map(item => {
+    casasParaExibir.map((item,indiceCasa) => {
       const anterior =
         mapaAnterior.get(
           normalizar(
@@ -1209,7 +1215,7 @@ function calcularApuracaoResponsavel(
         regiao:
           item.regiao || "",
 
-        ...calcularDisponibilidadeCasa(item, POLITICA),
+        ...calcularDisponibilidadeCasa(item, POLITICA, quantidadeCasasRateio, indiceCasa),
         disponibilidadeA:
           item.disponibilidadeA,
         disponibilidadeB:
@@ -1247,13 +1253,13 @@ function calcularApuracaoResponsavel(
   const registrosDisponibilidade = detalhesUnidades.filter(item =>
     item.disponibilidadeA != null || item.disponibilidadeB != null
   );
-  const detalhesCasasDisponibilidade = registrosDisponibilidade;
+  const detalhesCasasDisponibilidade = detalhesUnidades;
   const casasAtingiramA = registrosDisponibilidade.filter(item => item.atingiuA).length;
   const casasAtingiramB = registrosDisponibilidade.filter(item => item.atingiuB).length;
   const atingiuA = casasAtingiramA > 0;
   const atingiuB = casasAtingiramB > 0;
-  const bonusA = somar(registrosDisponibilidade.map(item => item.bonusA));
-  const bonusB = somar(registrosDisponibilidade.map(item => item.bonusB));
+  const bonusA = Math.round(somar(registrosDisponibilidade.map(item => item.bonusA))*100)/100;
+  const bonusB = Math.round(somar(registrosDisponibilidade.map(item => item.bonusB))*100)/100;
 
   const bonusObsolescencia =
     somar(
@@ -1292,11 +1298,7 @@ function calcularApuracaoResponsavel(
       ? POLITICA.controleOs.bonus
       : 0;
 
-  const bonusTotal =
-    bonusA +
-    bonusB +
-    bonusObsolescencia +
-    bonusOs;
+  const bonusTotal = Math.round((bonusA + bonusB + bonusObsolescencia + bonusOs)*100)/100;
 
   const unidadesComObsolescencia =
     detalhesUnidades.filter(item =>
@@ -1313,9 +1315,7 @@ function calcularApuracaoResponsavel(
     ).length;
 
   const indicadoresAtingidos = casasAtingiramA + casasAtingiramB + reducoesObsolescencia + Number(atingiuOs);
-  const totalMetasPossiveis = registrosDisponibilidade.reduce((total,item) =>
-    total + Number(item.disponibilidadeA != null) + Number(item.disponibilidadeB != null), 0
-  ) + unidadesComObsolescencia.length + Number(controleOs !== null);
+  const totalMetasPossiveis = quantidadeCasasRateio * 2 + unidadesComObsolescencia.length + Number(controleOs !== null);
 
   const status =
     totalMetasPossiveis > 0 &&
@@ -1357,11 +1357,12 @@ function calcularApuracaoResponsavel(
       ),
 
     quantidadeUnidades:
-      detalhesUnidades.length,
+      atuais.length,
 
     detalhesUnidades,
     detalhesCasasDisponibilidade,
 
+    quantidadeCasasRateio,
     casasAtingiramA,
     casasAtingiramB,
     obsolescenciaAtual,
@@ -2557,7 +2558,7 @@ function processarDisponibilidadeCurvas() {
   );
 
   importacao.avisos.push(
-    "Cada casa que atingir A ≥ 95% gera R$ 300,00 e cada casa que atingir B ≥ 90% gera R$ 300,00. Os bônus das casas são somados para o colaborador."
+    "Os R$ 300,00 da Curva A e os R$ 300,00 da Curva B são divididos entre todas as casas cadastradas do colaborador. Cada casa recebe sua parcela somente quando atingir a respectiva meta. Casas sem dados não redistribuem sua parcela."
   );
 }
 
@@ -3516,6 +3517,8 @@ function estilos() {
       .compras-casas-picker :focus-visible{outline:2px solid #0b9672;outline-offset:2px;}
       #comprasResponsavelModal .compras-casa-opcao[hidden],.compras-casas-lista fieldset[hidden],.compras-casas-vazio[hidden]{display:none;}
       @keyframes comprasCasasEntrada{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+      .compras-casa-resultado{margin:6px 0;padding:10px 12px;border:1px solid #d8e5eb;border-radius:9px;background:#f7fafb;color:#18334b;font-size:13px;line-height:1.55;}
+      .compras-casas-total{padding:9px 12px;border-radius:8px;background:#eef6f2;color:#173f34;font-size:13px;line-height:1.5;}
       @media(prefers-reduced-motion:reduce){.compras-casas-dropdown{animation:none}.compras-casas-picker>summary svg{transition:none}}
       @media(max-width:600px){.compras-casas-lista{max-height:210px}.compras-casas-picker>summary{padding:11px 12px}}
       /* A largura mínima global das tabelas não deve expandir os cartões de Compras. */
@@ -4389,10 +4392,12 @@ function htmlPaginas() {
 
         <p>
           A política de analista é aplicada a Jéssica, Gabriel e Mykaela, conforme a base aprovada.
-          Cada casa vinculada ao colaborador é avaliada individualmente: Curva A ≥ 95% paga R$ 300,00
-          e Curva B ≥ 90% paga R$ 300,00 por casa. Se a casa atingir as duas metas, gera R$ 600,00.
-          O colaborador recebe a soma dos bônus de todas as suas casas que atingiram as metas.
-          Não há média entre casas nem limite de um único pagamento mensal para A ou B.
+          Os R$ 300,00 da Curva A e os R$ 300,00 da Curva B são divididos em partes iguais entre
+          todas as casas cadastradas do colaborador. Cada casa é avaliada separadamente: recebe sua
+          parcela de A se atingir 95% e sua parcela de B se atingir 90%. Com seis casas, cada parcela
+          vale R$ 50,00 por curva. Casas abaixo da meta ou sem informação não geram pagamento nem
+          transferem sua parcela para as demais. Pequenas diferenças de um centavo no rateio garantem
+          que o total feche em R$ 300,00 por curva quando todas atingirem.
         </p>
 
         <p>
@@ -4520,13 +4525,13 @@ function htmlPoliticas() {
     <article class="compras-policy-card">
       <span>Disponibilidade A</span>
       <strong>Meta ≥ 95%</strong>
-      <b>${moeda(POLITICA.disponibilidadeA.bonus)} por casa</b>
+      <b>${moeda(POLITICA.disponibilidadeA.bonus)} divididos entre as casas</b>
     </article>
 
     <article class="compras-policy-card">
       <span>Disponibilidade B</span>
       <strong>Meta ≥ 90%</strong>
-      <b>${moeda(POLITICA.disponibilidadeB.bonus)} por casa</b>
+      <b>${moeda(POLITICA.disponibilidadeB.bonus)} divididos entre as casas</b>
     </article>
 
     <article class="compras-policy-card">
@@ -5574,7 +5579,7 @@ function htmlTabelaApuracao(
                           ${
                             item.detalhesCasasDisponibilidade
                               .map(nucleo => `
-                                <div style="margin:5px 0;padding:8px 10px;border:1px solid #d8e5eb;border-radius:9px;background:#f7fafb">
+                                <div class="compras-casa-resultado">
                                   <strong>
                                     ${escapar(nucleo.unidade)}
                                   </strong>
@@ -5599,13 +5604,15 @@ function htmlTabelaApuracao(
 
                                   · Total:
                                   ${percentual(nucleo.disponibilidadeTotal)}
+                                  <br><small>Parcela A: ${moeda(nucleo.parcelaA)} · Parcela B: ${moeda(nucleo.parcelaB)} (${item.quantidadeCasasRateio} casas cadastradas)</small>
+                                  <br><b>Recebe A: ${moeda(nucleo.bonusA)} · B: ${moeda(nucleo.bonusB)}</b>
                                   <br><b>Bônus da casa: ${moeda(nucleo.bonusDisponibilidade)}</b>
                                 </div>
                               `)
                               .join("")
                           }
 
-                          <div style="padding:7px 9px;border-radius:8px;background:#eef6f2">
+                          <div class="compras-casas-total">
                             <b>
                               Soma dos bônus das casas:
                               A ${moeda(item.bonusA)}
@@ -5635,7 +5642,7 @@ function htmlTabelaApuracao(
                                 unidade.obsolescenciaAtual !== undefined
                               )
                               .map(unidade => `
-                            <div style="margin:5px 0;padding:7px 9px;border:1px solid #e0e8ec;border-radius:8px;background:#f8fafb">
+                            <div class="compras-casa-resultado">
                               <strong>${escapar(unidade.unidade)}</strong>
                               ${
                                 unidade.regiao
@@ -6152,7 +6159,7 @@ function renderizarPreviaResponsaveisCompras() {
   if(alvo.hidden){alvo.replaceChildren();return;}
   const pessoas=state.responsaveis.length?state.responsaveis:EQUIPE_COMPRAS;
   const calculos=pessoas.filter(p=>p.ativo!==false).map(p=>({p,r:calcularApuracaoResponsavel(p,imp.competencia,imp.registros)}));
-  alvo.innerHTML=`<h3>Prévia dos bônus por casa e colaborador</h3><p>Cada casa é avaliada separadamente e seus bônus são somados. Calculada somente com este arquivo, antes de salvar. ${state.responsaveis.length?'Vínculos da base carregada.':'O banco está indisponível; esta prévia usa a base de analistas aprovada em 28/10/2026.'} Não inclui outros indicadores da campanha.</p><div class="compras-table-wrap"><table class="compras-table"><thead><tr><th>Colaborador</th><th>Casas encontradas / cadastradas</th><th>Curva A</th><th>Curva B</th><th>Bônus ABC</th></tr></thead><tbody>${calculos.map(({p,r})=>`<tr><td><strong>${escapar(p.nome)}</strong></td><td>${r.quantidadeUnidades} / ${p.unidades.length}</td><td>${moeda(r.bonusA)}</td><td>${moeda(r.bonusB)}</td><td><strong>${moeda(r.bonusA+r.bonusB)}</strong></td></tr>`).join('')}</tbody></table></div>`;
+  alvo.innerHTML=`<h3>Prévia dos bônus por casa e colaborador</h3><p>Cada casa recebe uma parcela dos R$ 300,00 de cada curva, divididos por todas as suas casas cadastradas. Calculada somente com este arquivo, antes de salvar. ${state.responsaveis.length?'Vínculos da base carregada.':'O banco está indisponível; esta prévia usa a base de analistas aprovada em 28/10/2026.'} Não inclui outros indicadores da campanha.</p><div class="compras-table-wrap"><table class="compras-table"><thead><tr><th>Colaborador</th><th>Casas encontradas / cadastradas</th><th>Parcela por casa (cada curva)</th><th>Curva A</th><th>Curva B</th><th>Bônus ABC</th></tr></thead><tbody>${calculos.map(({p,r})=>`<tr><td><strong>${escapar(p.nome)}</strong></td><td>${r.quantidadeUnidades} / ${p.unidades.length}</td><td>${moeda(POLITICA.disponibilidadeA.bonus/r.quantidadeCasasRateio || 0)}</td><td>${moeda(r.bonusA)}</td><td>${moeda(r.bonusB)}</td><td><strong>${moeda(r.bonusA+r.bonusB)}</strong></td></tr>`).join('')}</tbody></table></div>`;
 }
 
 function renderizarImportacao() {
@@ -6925,6 +6932,7 @@ function linhaApuracaoExportacao(
       item.nome,
     Unidades:
       item.unidadesAvaliadas.join(", "),
+    Casas_Cadastradas_Rateio: item.quantidadeCasasRateio,
     Casas_Atingiram_A:
       item.casasAtingiramA,
     Atingiu_A:
@@ -6976,6 +6984,8 @@ function linhaApuracaoExportacao(
           `Curva B ${percentual(nucleo.disponibilidadeB)} (${nucleo.atingiuB ? "ATINGIU" : "NÃO ATINGIU"})`,
           `Curva C ${percentual(nucleo.disponibilidadeC)}`,
           `Total ${percentual(nucleo.disponibilidadeTotal)}`,
+          `Parcela A ${moeda(nucleo.parcelaA)}`,
+          `Parcela B ${moeda(nucleo.parcelaB)}`,
           `Bônus A ${moeda(nucleo.bonusA)}`,
           `Bônus B ${moeda(nucleo.bonusB)}`,
           `Bônus da casa ${moeda(nucleo.bonusDisponibilidade)}`
@@ -7082,6 +7092,7 @@ function exportarApuracaoExcel() {
 
   const bonusPorCasa = apuracao.flatMap(item => item.detalhesCasasDisponibilidade.map(casa => ({
     Competencia:item.competencia, Colaborador:item.nome, Casa:casa.unidade, Nucleo:casa.nucleo,
+    Casas_Cadastradas_Rateio:item.quantidadeCasasRateio, Parcela_A:casa.parcelaA, Parcela_B:casa.parcelaB,
     Curva_A:casa.disponibilidadeA, Atingiu_A:casa.atingiuA?'SIM':'NÃO', Bonus_A:casa.bonusA,
     Curva_B:casa.disponibilidadeB, Atingiu_B:casa.atingiuB?'SIM':'NÃO', Bonus_B:casa.bonusB,
     Bonus_ABC_Casa:casa.bonusDisponibilidade
@@ -7552,9 +7563,9 @@ function exportarApuracaoPdf() {
 
         <section class="print-section">
           <h2>Disponibilidade ABC — bônus por casa</h2>
-          <p>Cada casa é avaliada individualmente. A ≥ 95%: R$ 300,00 por casa. B ≥ 90%: R$ 300,00 por casa. O total do colaborador soma os bônus das suas casas.</p>
-          <table><thead><tr><th>Colaborador</th><th>Casa</th><th>Curva A</th><th>Bônus A</th><th>Curva B</th><th>Bônus B</th><th>Bônus ABC da casa</th></tr></thead><tbody>
-            ${apuracao.flatMap(item=>item.detalhesCasasDisponibilidade.map(casa=>`<tr><td>${escapar(item.nome)}</td><td>${escapar(casa.unidade)}</td><td>${percentual(casa.disponibilidadeA)}</td><td class="money">${moeda(casa.bonusA)}</td><td>${percentual(casa.disponibilidadeB)}</td><td class="money">${moeda(casa.bonusB)}</td><td class="money">${moeda(casa.bonusDisponibilidade)}</td></tr>`)).join('')}
+          <p>Cada casa é avaliada individualmente. Os R$ 300,00 de cada curva são divididos entre todas as casas cadastradas do colaborador. Cada casa recebe sua parcela se atingir A ≥ 95% ou B ≥ 90%, conforme a curva. Casas sem medição não geram bônus.</p>
+          <table><thead><tr><th>Colaborador</th><th>Casa</th><th>Parcela A / B</th><th>Curva A</th><th>Bônus A</th><th>Curva B</th><th>Bônus B</th><th>Bônus ABC da casa</th></tr></thead><tbody>
+            ${apuracao.flatMap(item=>item.detalhesCasasDisponibilidade.map(casa=>`<tr><td>${escapar(item.nome)}</td><td>${escapar(casa.unidade)}</td><td>${moeda(casa.parcelaA)} / ${moeda(casa.parcelaB)}</td><td>${percentual(casa.disponibilidadeA)}</td><td class="money">${moeda(casa.bonusA)}</td><td>${percentual(casa.disponibilidadeB)}</td><td class="money">${moeda(casa.bonusB)}</td><td class="money">${moeda(casa.bonusDisponibilidade)}</td></tr>`)).join('')}
           </tbody></table>
         </section>
 
