@@ -247,6 +247,8 @@ Também aceita arquivos separados:
 ===============================================================================
 */
 
+import {lerPrintsABC, consolidarPrintsABC, CASAS_ABC} from "./compras-imagens.js?v=20261028-prints-abc";
+
 import { firestore } from "./firebase-config.js";
 
 import {
@@ -535,6 +537,8 @@ function numero(valor) {
 
 function percentualNormalizado(valor) {
   const convertido = numero(valor);
+  // Um percentual explícito (ex.: 1%) não é uma fração de planilha.
+  if (typeof valor === "string" && valor.includes("%")) return convertido;
 
   if (
     convertido > 0 &&
@@ -3314,6 +3318,10 @@ function processarDisponibilidadeCurvas() {
       }
     );
 
+  importacao.registros.forEach(registro=>{
+    registro.responsaveisVinculados=state.responsaveis.filter(p=>p.ativo!==false&&unidadeCorresponde(p,registro)).map(p=>p.nome).join(", ");
+    if(!registro.responsaveisVinculados)importacao.avisos.push("Sem responsável vinculado: "+registro.unidade+". Confira a base de responsáveis.");
+  });
   const nucleos =
     new Set(
       importacao.registros.map(item =>
@@ -3529,6 +3537,10 @@ function processarImportacao() {
   importacao.registros = [];
   importacao.erros = [];
   importacao.avisos = [];
+  if(importacao.competenciaImagens && importacao.competenciaImagens !== importacao.competencia){
+    importacao.erros.push("A competência dos prints mudou. Abra Conferir prints do conjunto e confirme novamente o mês.");
+    renderizarImportacao();return;
+  }
 
   if (
     importacao.formatoEspecial ===
@@ -3758,6 +3770,76 @@ function processarImportacao() {
   renderizarImportacao();
 }
 
+let imagensABC = [], arquivosABC = [], lendoImagensABC = false;
+
+// Os prints são reunidos e revisados antes de gerar os indicadores oficiais.
+function conferirImagensABC() {
+  const anterior = $("#comprasRevisaoImagens");
+  anterior?.remove();
+  const dialog = document.createElement("dialog");
+  dialog.id = "comprasRevisaoImagens";
+  dialog.className = "compras-modal compras-revisao-imagens";
+  const competencia = state.importacao.competencia;
+  dialog.innerHTML = `<header class="compras-modal-header"><div><small>DISPONIBILIDADE ABC</small><h3>Conferir prints por unidade</h3></div><button type="button" data-fechar class="compras-btn compras-btn-danger">Fechar</button></header>
+    <div class="compras-revisao-body"><p>Confira nomes e percentuais nas imagens originais. Linhas de resumo dos núcleos não devem ser incluídas como casas. Repetições idênticas serão unificadas; divergências precisam ser corrigidas.</p>
+    <div class="compras-prints-originais"></div>
+    <div class="compras-table-wrap"><table class="compras-table"><thead><tr><th>Print / leitura</th><th>Unidade / núcleo</th><th>A %</th><th>B %</th><th>C %</th><th>Total %</th><th>Ação</th></tr></thead><tbody></tbody></table></div>
+    <p><label><input type="checkbox" data-mes> Confirmo que todos os prints pertencem à competência <strong>${escapar(competenciaBr(competencia))}</strong> e revisei as unidades e percentuais.</label></p>
+    <p>Os prints compõem uma única importação ABC do mês. Ao confirmar a importação, este conjunto substituirá a disponibilidade anterior desta competência. Inclua todas as casas necessárias; os responsáveis serão apurados conforme seus vínculos cadastrados.</p>
+    <p role="alert" data-erro></p><button type="button" data-aplicar class="compras-btn compras-btn-primary">Usar percentuais conferidos</button></div>`;
+  const urls=[];
+  arquivosABC.forEach(f=>{const u=URL.createObjectURL(f);urls.push(u);const details=document.createElement('details');const summary=document.createElement('summary');summary.textContent=f.name;const img=document.createElement('img');img.src=u;img.alt='Print original '+f.name;details.append(summary,img);dialog.querySelector('.compras-prints-originais').append(details);});
+  const tbody=dialog.querySelector('tbody');
+  imagensABC.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${escapar(r.arquivo)}<br><small>${escapar(r.nomeLido)}</small></td><td><select aria-label="Unidade"><option value="">Selecione a unidade</option>${CASAS_ABC.map(c=>`<option value="${escapar(c.unidade)}">${escapar(c.nucleo+' · '+c.unidade)}</option>`).join('')}</select></td>${r.valores.map((v,i)=>`<td><input aria-label="${['A','B','C','Total'][i]} %" type="number" min="0" max="100" step="0.01" value="${v===null?'':v}"></td>`).join('')}<td><button type="button" class="compras-btn compras-btn-danger" data-remover>Remover linha</button></td>`;
+    tr.querySelector('select').value=r.unidade;
+    tr.querySelector('select').onchange=e=>{r.unidade=e.target.value;};
+    tr.querySelectorAll('input').forEach((input,i)=>input.oninput=()=>{r.valores[i]=input.value.trim()===''?null:Number(input.value);});
+    tr.querySelector('[data-remover]').onclick=()=>{imagensABC=imagensABC.filter(item=>item!==r);tr.remove();};
+    tbody.append(tr);
+  });
+  dialog.querySelector('[data-fechar]').onclick=()=>dialog.close();
+  dialog.addEventListener('close',()=>{urls.forEach(URL.revokeObjectURL);dialog.remove();},{once:true});
+  dialog.querySelector('[data-aplicar]').onclick=()=>{
+    try{
+      if(state.importacao.competencia!==competencia)throw Error('A competência mudou. Reabra a conferência.');
+      if(!dialog.querySelector('[data-mes]').checked)throw Error('Confirme o mês dos prints e a conferência dos percentuais.');
+      const rows=consolidarPrintsABC(imagensABC),imp=state.importacao;
+      imp.arquivo={name:arquivosABC.map(f=>f.name).join(' + ')};
+      imp.competenciaImagens=competencia;imp.workbook=null;imp.aba='Prints ABC conferidos';imp.tipo='disponibilidade';imp.formatoEspecial='disponibilidade_curvas';
+      imp.headers=['Nucleo','Empresa','Disponibilidade A','Disponibilidade B','Disponibilidade C','Disponibilidade Total'];
+      imp.rows=rows.map(r=>[r.nucleo,r.unidade,...r.valores.map(v=>v+"%")]);
+      $('#comprasImportTipo').value='disponibilidade';
+      $('#comprasImportAba').innerHTML='<option>Prints ABC conferidos</option>';
+      processarImportacao();
+      imp.registros.forEach((r,i)=>{r.arquivosOrigem=[...new Set(rows[i].fontes)];r.arquivoOrigem=r.arquivosOrigem.join(' + ');r.conferenciaImagem=true;});
+      imp.avisos.push('Prints conferidos pelo usuário. Apenas as casas listadas serão avaliadas; resumos não são duplicados. Confirme que o conjunto do mês está completo.');
+      renderizarImportacao();dialog.close();
+    }catch(e){dialog.querySelector('[data-erro]').textContent=e.message;}
+  };
+  document.body.append(dialog);dialog.showModal();
+}
+
+async function selecionarArquivosCompras(files) {
+  if(lendoImagensABC)return;
+  const imagens=files.filter(f=>/^image\//.test(f.type));
+  if(!imagens.length){if(files.length!==1)throw Error('Selecione uma planilha ou vários prints ABC.');imagensABC=[];arquivosABC=[];return lerArquivoImportacao(files[0]);}
+  if(imagens.length!==files.length)throw Error('Selecione apenas prints para compor o ABC. Importe planilhas separadamente.');
+  if(arquivosABC.length+files.length>8)throw Error('O conjunto aceita até 8 prints. Use Limpar para começar outro conjunto.');
+  lendoImagensABC=true;
+  const input=$('#comprasImportArquivo'),status=$('#comprasLeituraStatus');input.disabled=true;
+  $('#btnConfirmarImportacaoCompras').disabled=true;
+  try{
+    const lidos=await lerPrintsABC(files,m=>status.textContent=m);
+    imagensABC.push(...lidos);arquivosABC.push(...files);
+    // Uma seleção adicional invalida a prévia anterior até a nova conferência.
+    state.importacao.registros=[];
+    renderizarImportacao();conferirImagensABC();
+    status.textContent=arquivosABC.length+' print(s) no conjunto. Você pode adicionar outros antes de confirmar.';
+  }finally{lendoImagensABC=false;input.disabled=false;input.value='';renderizarImportacao();}
+}
+
 async function lerArquivoImportacao(
   arquivo
 ) {
@@ -3787,6 +3869,7 @@ async function lerArquivoImportacao(
   const importacao =
     state.importacao;
 
+  delete importacao.competenciaImagens;
   importacao.arquivo =
     arquivo;
 
@@ -4025,6 +4108,9 @@ function limparImportacao() {
   const importacao =
     state.importacao;
 
+  delete importacao.competenciaImagens;
+  imagensABC=[];arquivosABC=[];
+  $("#comprasLeituraStatus").textContent="";
   importacao.arquivo = null;
   importacao.workbook = null;
   importacao.aba = "";
@@ -4176,6 +4262,14 @@ function estilos() {
         outline:2px solid #ffd666;outline-offset:2px;
       }
 
+      .compras-revisao-imagens{width:min(1150px,calc(100vw - 24px));max-width:1150px;max-height:90vh;overflow:auto;}
+      .compras-revisao-body{padding:20px;line-height:1.5;}
+      .compras-revisao-body input[type=number]{width:90px;min-height:36px;}
+      .compras-revisao-body select{min-width:230px;max-width:340px;}
+      .compras-prints-originais{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0;}
+      .compras-prints-originais details{max-width:100%;}
+      .compras-prints-originais img{display:block;max-width:100%;max-height:600px;object-fit:contain;}
+      .compras-revisao-body [data-erro]{color:#b42318;font-weight:700;}
       .compras-page{
         display:none;
         color:#12283a
@@ -4820,7 +4914,7 @@ function htmlPaginas() {
         <header class="compras-panel-header">
           <div>
             <small>IMPORTAÇÃO OPCIONAL</small>
-            <h3>Alimentar campanha por Excel</h3>
+            <h3>Alimentar campanha por planilhas ou prints</h3>
           </div>
 
           <button
@@ -4883,21 +4977,23 @@ function htmlPaginas() {
 
         <label class="compras-import-drop">
           <strong>
-            Clique ou arraste o XLSX, XLS ou CSV
+            Selecionar planilha ou vários prints ABC
           </strong>
 
           <small>
-            O sistema reconhece automaticamente os relatórios de curvas A/B/C/Total, justificativas de O.S. e obsolescência “Maior que 365 dias”.
+            Planilhas: XLSX, XLS ou CSV. Disponibilidade ABC: selecione até 8 prints PNG, JPG ou WebP, confira os percentuais e reúna as regiões antes de confirmar.
           </small>
 
           <input
             type="file"
             id="comprasImportArquivo"
-            accept=".xlsx,.xls,.csv"
+            accept=".xlsx,.xls,.csv,.png,.jpg,.jpeg,.webp" multiple
             hidden
           >
         </label>
 
+        <p id="comprasLeituraStatus" role="status" aria-live="polite"></p>
+        <button type="button" id="comprasReverPrints" class="compras-btn compras-btn-light">Conferir prints do conjunto</button>
         <div class="compras-import-summary">
           <article>
             <span>Arquivo</span>
@@ -6777,6 +6873,8 @@ function renderizarImportacao() {
     $("#comprasImportNome");
 
   if (!nome) return;
+  $("#comprasReverPrints").hidden = !imagensABC.length;
+  $("#comprasReverPrints").onclick = conferirImagensABC;
 
   nome.textContent =
     importacao.arquivo?.name ||
@@ -6797,6 +6895,8 @@ function renderizarImportacao() {
   const campos = [
     "competencia",
     "unidade",
+    "nucleo",
+    "responsaveisVinculados",
     "regiao",
     "disponibilidadeA",
     "disponibilidadeB",
@@ -6887,7 +6987,7 @@ function renderizarImportacao() {
     $("#btnConfirmarImportacaoCompras");
 
   confirmar.disabled =
-    importacao.processando ||
+    lendoImagensABC || importacao.processando ||
     importacao.erros.length > 0 ||
     importacao.registros.length === 0;
 
@@ -8241,9 +8341,7 @@ function configurarEventosPaginas() {
     .onchange =
       async evento => {
         try {
-          await lerArquivoImportacao(
-            evento.target.files?.[0]
-          );
+          await selecionarArquivosCompras([...evento.target.files]);
         } catch (erro) {
           await alerta(
             erro.message
