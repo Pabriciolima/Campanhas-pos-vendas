@@ -1,0 +1,67 @@
+/* Paleta noturna de Compras. Escopo local para preservar o tema claro e as demais campanhas. */
+html[data-theme="dark"] :is(.compras-page,.compras-modal,.compras-confirm-dialog){
+  --cmp-surface:#111c2b;--cmp-raised:#172538;--cmp-input:#0c1726;
+  --cmp-line:#2a3b50;--cmp-text:#e7eef8;--cmp-muted:#a8bbcf;--cmp-accent:#6be0c1;
+  color:var(--cmp-text)!important;color-scheme:dark;
+}
+html[data-theme="dark"] .compras-page :is(h1,h2,h3,h4,strong,b),
+html[data-theme="dark"] .compras-modal :is(h1,h2,h3,h4,strong,b){color:var(--cmp-text)!important;-webkit-text-fill-color:currentColor!important;}
+html[data-theme="dark"] .compras-page :is(p,td),
+html[data-theme="dark"] .compras-modal :is(p,label){color:var(--cmp-muted);}
+html[data-theme="dark"] .compras-page :is(.compras-panel,.compras-kpi,.compras-policy-card),
+html[data-theme="dark"] :is(.compras-modal,.compras-confirm-dialog){background:var(--cmp-surface)!important;border:1px solid var(--cmp-line)!important;box-shadow:0 14px 36px #02081233!important;}
+html[data-theme="dark"] .compras-page :is(.compras-panel-header small,.compras-topbar small,.compras-policy-card b){color:var(--cmp-accent)!important;-webkit-text-fill-color:currentColor!important;}
+html[data-theme="dark"] .compras-page :is(.compras-kpi span,.compras-policy-card span,.compras-field>span,.compras-import-summary span,.compras-metric small),
+html[data-theme="dark"] .compras-modal .compras-field>span{color:var(--cmp-muted)!important;}
+html[data-theme="dark"] .compras-hero{background:linear-gradient(120deg,#142b43,#153b3c)!important;border:1px solid #2b4b5b;}
+html[data-theme="dark"] .compras-hero small{color:#8be3d1!important;}
+html[data-theme="dark"] .compras-hero p{color:#c0d5e4!important;}
+html[data-theme="dark"] .compras-table{color:var(--cmp-text)!important;background:transparent!important;}
+html[data-theme="dark"] .compras-table thead th{background:#0c1726!important;color:#a9bfd6!important;border-color:var(--cmp-line)!important;}
+html[data-theme="dark"] .compras-table tbody :is(tr,td){background:#142133!important;color:#c4d2e3!important;border-color:#26384e!important;}
+html[data-theme="dark"] .compras-table tbody tr:nth-child(even) :is(td,th){background:#162538!important;}
+html[data-theme="dark"] .compras-table tbody tr:hover :is(td,th){background:#1c3046!important;}
+html[data-theme="dark"] .compras-table td small{color:#9bb0c7!important;}
+html[data-theme="dark"] :is(.compras-page,.compras-modal) :is(input:not([type="checkbox"]):not([type="hidden"]),select,textarea){background:var(--cmp-input)!important;color:var(--cmp-text)!important;-webkit-text-fill-color:var(--cmp-text)!important;border-color:var(--cmp-line)!important;box-shadow:none!important;}
+html[data-theme="dark"] :is(.compras-page,.compras-modal) :is(input,textarea)::placeholder{color:#829ab4!important;-webkit-text-fill-color:#829ab4!important;}
+html[data-theme="dark"] :is(.compras-page,.compras-modal) :is(input,select,textarea):focus-visible{outline:2px solid #53cfb1!important;outline-offset:2px;border-color:#53cfb1!important;}
+html[data-theme="dark"] :is(.compras-page,.compras-modal,.compras-confirm-dialog) :is(.compras-btn-light,.compras-btn-dark,.compras-history button){background:#1b2d42!important;color:#e1ecfa!important;border-color:#354b65!important;}
+html[data-theme="dark"] :is(.compras-page,.compras-modal,.compras-confirm-dialog) .compras-btn-primary{background:#137b69!important;color:#f0fff9!important;border-color:#30947f!important;}
+html[data-theme="dark"] :is(.compras-page,.compras-modal,.compras-confirm-dialog) .compras-btn-danger{background:#3a2430!important;color:#ffb1bf!important;border-color:#714052!important;}
+html[data-theme="dark"] :is(.compras-page,.compras-modal) .compras-btn:hover{filter:brightness(1.14);}
+html[data-theme="dark"] :is(.compras-page,.compras-modal) .compras-btn:disabled{opacity:.48;filter:none;}
+html[data-theme="dark"] .compras-page :is(.compras-success,.compras-ok){background:#14392f!important;color:#8be7bf!important;border-color:#2f6756!important;}
+html[data-theme="dark"] .compras-page :is(.compras-danger,.compras-error){background:#38222e!important;color:#ffabba!important;border-color:#6c394c!important;}
+html[data-theme="dark"] .compras-page :is(.compras-warning,.compras-alert){background:#3a3020!important;color:#f3d69a!important;border-color:#6a5736!important;}
+html[data-theme="dark"] .compras-page .compras-neutral{background:#263449!important;color:#c0d0e3!important;}
+html[data-theme="dark"] .compras-page .compras-delta-positive{color:#8be7bf!important;}
+html[data-theme="dark"] .compras-page .compras-delta-negative{color:#ffabba!important;}
+html[data-theme="dark"] .compras-page :is(.compras-empty,.compras-import-drop,.compras-import-summary article){background:#101c2c!important;border-color:#344a64!important;color:#afc3da!important;}
+html[data-theme="dark"] .compras-import-drop:hover{background:#172b3c!important;border-color:#56c9b0!important;}
+html[data-theme="dark"] .compras-import-drop small{color:#a1b7ce!important;}
+html[data-theme="dark"] .compras-modal :is(.compras-modal-header,.compras-modal-footer){background:#17283b!important;border-color:var(--cmp-line)!important;}
+html[data-theme="dark"] .compras-modal .compras-modal-header{background:linear-gradient(110deg,#172d45,#183c3c)!important;}
+html[data-theme="dark"] .compras-modal-header small{color:#a7d8d3!important;}
+html[data-theme="dark"] .compras-modal .compras-modal-close{background:#283d50!important;border-color:#4b6378!important;color:#e7eef8!important;}
+html[data-theme="dark"] .compras-modal::backdrop{background:#020813b3;backdrop-filter:blur(5px);}
+html[data-theme="dark"] .compras-modal .compras-casas-picker{background:#101d2e!important;color:var(--cmp-text)!important;border-color:#354b64!important;}
+html[data-theme="dark"] .compras-casas-picker[open]>summary{border-color:#2b4058!important;}
+html[data-theme="dark"] .compras-modal :is(.compras-casas-picker summary span,.compras-casa-opcao span){color:#dce8f5!important;}
+html[data-theme="dark"] .compras-modal :is(.compras-casas-lista legend,.compras-casas-ajuda,.compras-casas-vazio){color:#a2b7ce!important;}
+html[data-theme="dark"] .compras-casas-acoes button{color:#78dfc3!important;}
+html[data-theme="dark"] #comprasResponsavelModal .compras-casa-opcao:hover{background:#20354b!important;}
+html[data-theme="dark"] #comprasResponsavelModal .compras-casa-opcao:has(input:checked){background:#183c36!important;color:#d4f9ed!important;}
+html[data-theme="dark"] .compras-modal input[type="checkbox"]{accent-color:#58d0ad;color-scheme:dark;}
+html[data-theme="dark"] .compras-modal input[aria-invalid="true"]{background:#35212b!important;border-color:#ed91a6!important;color:#ffd1db!important;}
+html[data-theme="dark"] .compras-revisao-body [data-erro]{color:#ffabba!important;}
+/* O título compartilhado tinha tinta de tema claro com especificidade maior. */
+html[data-theme="dark"] body .topbar[data-campanha="COMPRAS"] #pageTitle{color:#e9f2fc!important;-webkit-text-fill-color:#e9f2fc!important;}
+html[data-theme="dark"] body .topbar[data-campanha="COMPRAS"] #pageTitle::after{color:#a2bad0!important;}
+html[data-theme="dark"] body .topbar[data-campanha="COMPRAS"]::after{color:#a3d5d9!important;opacity:.045!important;}
+html[data-theme="dark"] .compras-confirm-dialog .compras-confirm-title{color:#e7eef8!important;}
+html[data-theme="dark"] .compras-confirm-dialog .compras-confirm-message{color:#b8c9dc!important;}
+html[data-theme="dark"] .compras-confirm-dialog .compras-confirm-eyebrow{color:#6be0c1!important;}
+html[data-theme="dark"] .compras-confirm-dialog .compras-confirm-highlight{background:#35242f!important;color:#ffc1cd!important;border-color:#654052!important;}
+html[data-theme="dark"] .compras-confirm-dialog :is(.compras-confirm-cancel,.compras-confirm-close){background:#203147!important;color:#e1ecfa!important;border-color:#40546d!important;}
+html[data-theme="dark"] .compras-confirm-dialog .compras-confirm-icon.danger{background:#452735!important;color:#ffabba!important;box-shadow:none!important;}
+html[data-theme="dark"] .compras-confirm-dialog .compras-confirm-icon.warning{background:#403423!important;color:#f3d69a!important;box-shadow:none!important;}
