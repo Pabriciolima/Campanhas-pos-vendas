@@ -4,7 +4,7 @@
  * A política vigente de Compras é aplicada aos analistas sem alteração de metas ou valores.
  */
 
-import {EQUIPE_COMPRAS, planejarBaseCompras, recebeCasaEquipeCompras} from "./compras-equipe.js?v=20261028-analistas";
+import {EQUIPE_COMPRAS, CASAS_EQUIPE_COMPRAS, casaEquipeCompras, planejarBaseCompras, recebeCasaEquipeCompras} from "./compras-equipe.js?v=20261028-analistas";
 import {lerPrintsABC, consolidarPrintsABC, CASAS_ABC} from "./compras-imagens.js?v=20261028-ocr-celulas";
 
 import { firestore } from "./firebase-config.js";
@@ -3837,6 +3837,30 @@ function estilos() {
       .compras-prints-originais details{max-width:100%;}
       .compras-prints-originais img{display:block;max-width:100%;max-height:600px;object-fit:contain;}
       .compras-revisao-body [data-erro]{color:#b42318;font-weight:700;}
+      .compras-casas-picker{border:1px solid #d3e0e7;border-radius:12px;background:#fff;color:#173a50;overflow:hidden;}
+      .compras-casas-picker>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;}
+      .compras-casas-picker>summary::-webkit-details-marker{display:none;}
+      .compras-casas-picker>summary svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;transition:transform .18s;}
+      .compras-casas-picker[open]>summary svg{transform:rotate(180deg);}
+      .compras-casas-picker[open]>summary{border-bottom:1px solid #e5edf2;}
+      .compras-casas-dropdown{padding:12px;animation:comprasCasasEntrada .16s ease;}
+      #comprasResponsavelModal .compras-casas-busca{width:100%;min-width:0;border:1px solid #d6e2e9;border-radius:8px;padding:9px 11px;font:inherit;font-size:13px;}
+      .compras-casas-acoes{display:flex;justify-content:space-between;gap:12px;padding:9px 2px;}
+      .compras-casas-acoes button{border:0;background:none;color:#08765a;cursor:pointer;font-family:inherit;font-size:11px;font-weight:600;padding:4px;}
+      .compras-casas-lista{max-height:230px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;}
+      .compras-casas-lista fieldset{border:0;padding:0;margin:8px 0;min-width:0;}
+      .compras-casas-lista legend{padding:4px 6px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#748591;}
+      #comprasResponsavelModal .compras-casa-opcao{display:flex;align-items:center;gap:9px;padding:8px;border-radius:7px;cursor:pointer;margin:0;font-size:12px;}
+      #comprasResponsavelModal .compras-casa-opcao:hover{background:#f1f7f6;}
+      #comprasResponsavelModal .compras-casa-opcao:has(input:checked){background:#edf8f3;}
+      #comprasResponsavelModal .compras-casa-opcao input{width:15px;height:15px;min-height:0;margin:0;flex:0 0 15px;accent-color:#09855f;}
+      #comprasResponsavelModal .compras-casa-opcao span{font:inherit;color:inherit;text-transform:none;letter-spacing:0;}
+      .compras-casas-ajuda,.compras-casas-vazio{font-size:11px;color:#72838d;margin:9px 2px 0;}
+      .compras-casas-picker :focus-visible{outline:2px solid #0b9672;outline-offset:2px;}
+      #comprasResponsavelModal .compras-casa-opcao[hidden],.compras-casas-lista fieldset[hidden],.compras-casas-vazio[hidden]{display:none;}
+      @keyframes comprasCasasEntrada{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+      @media(prefers-reduced-motion:reduce){.compras-casas-dropdown{animation:none}.compras-casas-picker>summary svg{transition:none}}
+      @media(max-width:600px){.compras-casas-lista{max-height:210px}.compras-casas-picker>summary{padding:11px 12px}}
       .compras-page{
         display:none;
         color:#12283a
@@ -6921,16 +6945,11 @@ function garantirModalResponsavel() {
             >
           </label>
 
-          <label
-            class="compras-field"
-            style="margin-top:11px"
-          >
-            <span>Unidades específicas, separadas por vírgula</span>
-            <textarea
-              id="comprasResponsavelUnidades"
-              placeholder="JATAI, MINEIROS, JEEP RAM"
-            ></textarea>
-          </label>
+          <div class="compras-field" style="margin-top:11px">
+            <span id="comprasCasasLabel">Casas atendidas</span>
+            <input type="hidden" id="comprasResponsavelUnidades">
+            <div id="comprasCasasSeletor"></div>
+          </div>
         </div>
 
         <footer class="compras-modal-footer">
@@ -6968,6 +6987,33 @@ function garantirModalResponsavel() {
       salvarModalResponsavel;
 }
 
+// A seleção fica no formulário até Salvar; cancelar não altera a base online.
+function renderSeletorCasasCompras(unidades) {
+  const selecionadas=new Set(unidades.map(u=>normalizar(casaEquipeCompras({unidade:u})?.unidade || u)));
+  const grupos=[
+    {nome:"Diesel",casas:CASAS_EQUIPE_COMPRAS.filter(c=>c.categoria==='diesel').map(c=>c.unidade)},
+    {nome:"Fiat",casas:CASAS_EQUIPE_COMPRAS.filter(c=>c.categoria==='fiat').map(c=>c.unidade)},
+    {nome:"Jeep RAM",casas:CASAS_EQUIPE_COMPRAS.filter(c=>c.categoria==='jeep').map(c=>c.unidade)}
+  ];
+  const conhecidas=new Set(grupos.flatMap(g=>g.casas).map(normalizar));
+  const extras=[...new Set(unidades.filter(u=>!conhecidas.has(normalizar(casaEquipeCompras({unidade:u})?.unidade || u))))];
+  if(extras.length)grupos.push({nome:"Outras casas já cadastradas",casas:extras});
+  const root=$("#comprasCasasSeletor");
+  root.innerHTML=`<details class="compras-casas-picker"><summary aria-labelledby="comprasCasasLabel comprasCasasContador"><span id="comprasCasasContador"></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+    <div class="compras-casas-dropdown"><input type="search" class="compras-casas-busca" placeholder="Buscar casa…" aria-label="Buscar casas">
+    <div class="compras-casas-acoes"><button type="button" data-casas-todas>Marcar visíveis</button><button type="button" data-casas-limpar>Limpar seleção</button></div>
+    <div class="compras-casas-lista">${grupos.map(g=>`<fieldset><legend>${escapar(g.nome)}</legend>${g.casas.map(c=>`<label class="compras-casa-opcao"><input type="checkbox" value="${escapar(c)}" ${selecionadas.has(normalizar(c))?'checked':''}><span>${escapar(c)}</span></label>`).join('')}</fieldset>`).join('')}<p class="compras-casas-vazio" hidden>Nenhuma casa encontrada.</p></div>
+    <p class="compras-casas-ajuda">A alteração será aplicada ao clicar em Salvar.</p></div></details>`;
+  const boxes=[...root.querySelectorAll('input[type=checkbox]')];
+  function sincronizar(){const marcadas=boxes.filter(b=>b.checked);$("#comprasResponsavelUnidades").value=marcadas.map(b=>b.value).join(', ');$("#comprasCasasContador").textContent=marcadas.length?marcadas.length+' casa'+(marcadas.length===1?' selecionada':'s selecionadas'):'Selecionar casas';}
+  boxes.forEach(box=>box.onchange=sincronizar);
+  root.querySelector('[data-casas-todas]').onclick=()=>{boxes.filter(b=>!b.closest('label').hidden).forEach(b=>b.checked=true);sincronizar();};
+  root.querySelector('[data-casas-limpar]').onclick=()=>{boxes.forEach(b=>b.checked=false);sincronizar();};
+  root.querySelector('input[type=search]').oninput=e=>{const termo=normalizar(e.target.value);boxes.forEach(b=>b.closest('label').hidden=!normalizar(b.value).includes(termo));root.querySelectorAll('fieldset').forEach(g=>g.hidden=![...g.querySelectorAll('label')].some(l=>!l.hidden));root.querySelector('.compras-casas-vazio').hidden=boxes.some(b=>!b.closest('label').hidden);};
+  root.querySelector('details').onkeydown=e=>{if(e.key==='Escape'&&e.currentTarget.open){e.preventDefault();e.stopPropagation();e.currentTarget.open=false;e.currentTarget.querySelector('summary').focus();}};
+  sincronizar();
+}
+
 function abrirModalResponsavel(
   responsavel = null
 ) {
@@ -6998,10 +7044,7 @@ function abrirModalResponsavel(
       (responsavel?.regioes || [])
         .join(", ");
 
-  $("#comprasResponsavelUnidades")
-    .value =
-      (responsavel?.unidades || [])
-        .join(", ");
+  renderSeletorCasasCompras(responsavel?.unidades || []);
 
   $("#comprasResponsavelModal")
     .showModal();
