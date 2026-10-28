@@ -4147,82 +4147,33 @@ function estilos() {
     "beforeend",
     `
     <style id="comprasModuleCss">
-      .compras-module-card{
-        margin-top:12px
+      /* O menu reutiliza a estrutura e os estados visuais das outras campanhas. */
+      #comprasModuleWrapper .module-icon-compras{
+        background:linear-gradient(135deg,#ffd666,#efad16);
+        color:#593900;
       }
-
-      .compras-sidebar-card{
-        width:100%;
+      #comprasModuleWrapper .compras-menu-btn{
         display:flex;
         align-items:center;
         gap:10px;
-        padding:12px;
-        border:1px solid rgba(255,255,255,.14);
-        border-radius:14px;
-        background:rgba(255,255,255,.04);
-        color:#fff;
-        cursor:pointer;
-        text-align:left
-      }
-
-      .compras-sidebar-card:hover,
-      .compras-sidebar-card.active{
-        background:rgba(255,255,255,.1)
-      }
-
-      .compras-sidebar-icon{
-        width:38px;
-        height:38px;
-        display:grid;
-        place-items:center;
-        border-radius:10px;
-        background:linear-gradient(135deg,#d99a12,#f1c93d);
-        color:#173044;
-        font-weight:900;
-        flex:0 0 auto
-      }
-
-      .compras-sidebar-text{
-        flex:1
-      }
-
-      .compras-sidebar-text strong{
-        display:block;
-        font-size:.84rem
-      }
-
-      .compras-sidebar-text small{
-        display:block;
-        margin-top:2px;
-        color:#a9c4d7;
-        font-size:.68rem
-      }
-
-      .compras-submenu{
-        display:grid;
-        gap:4px;
-        padding:7px 0 0 12px
-      }
-
-      .compras-submenu[hidden]{
-        display:none
-      }
-
-      .compras-submenu button{
-        padding:9px 11px;
-        border:0;
-        border-radius:8px;
-        background:transparent;
-        color:#dcecf6;
+        font-family:inherit;
         text-align:left;
-        cursor:pointer;
-        font-size:.76rem
       }
-
-      .compras-submenu button:hover,
-      .compras-submenu button.active{
-        background:rgba(255,255,255,.1);
-        color:#fff
+      #comprasModuleWrapper .compras-menu-btn svg{
+        width:18px;height:18px;flex:0 0 18px;
+        stroke:currentColor;fill:none;stroke-width:1.7;
+        stroke-linecap:round;stroke-linejoin:round;
+      }
+      #comprasModuleWrapper .compras-menu-btn.active{
+        position:relative;
+      }
+      #comprasModuleWrapper .compras-menu-btn.active::before{
+        content:"";position:absolute;left:0;top:8px;bottom:8px;
+        width:3px;border-radius:3px;background:#13b8a6;
+      }
+      #comprasModuleWrapper .module-toggle:focus-visible,
+      #comprasModuleWrapper .compras-menu-btn:focus-visible{
+        outline:2px solid #ffd666;outline-offset:2px;
       }
 
       .compras-page{
@@ -5285,54 +5236,61 @@ function garantirMenu() {
     "comprasModuleWrapper";
 
   wrapper.className =
-    "compras-module-card";
+    "campaign-module-group";
+
+  wrapper.dataset.moduleGroup = "compras";
 
   wrapper.innerHTML = `
     <button
       type="button"
       id="comprasModuleBtn"
-      class="compras-sidebar-card"
+      class="module-toggle"
+      aria-expanded="false" aria-controls="comprasSubmenu"
     >
-      <span class="compras-sidebar-icon">
+      <span class="module-icon module-icon-compras">
         CMP
       </span>
 
-      <span class="compras-sidebar-text">
+      <span class="module-toggle-text">
         <strong>
-          Campanha do Compras
+          Campanha de Compras
         </strong>
         <small>
           Central de compras
         </small>
       </span>
 
-      <span id="comprasModuleArrow">
-        ▾
+      <span id="comprasModuleArrow" class="module-chevron" aria-hidden="true">
+        ⌄
       </span>
     </button>
 
     <div
       id="comprasSubmenu"
-      class="compras-submenu"
-      hidden
+      class="module-dropdown"
     >
-      <button type="button" data-compras-nav="visao-geral">
+      <button type="button" class="nav-btn compras-menu-btn" data-compras-nav="visao-geral">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="18"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
         Visão geral
       </button>
 
-      <button type="button" data-compras-nav="responsaveis">
+      <button type="button" class="nav-btn compras-menu-btn" data-compras-nav="responsaveis">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6M21 21v-3a6 6 0 0 0-4-5"/></svg>
         Base de responsáveis
       </button>
 
-      <button type="button" data-compras-nav="importacao">
+      <button type="button" class="nav-btn compras-menu-btn" data-compras-nav="importacao">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V3m-5 5 5-5 5 5M4 16v5h16v-5"/></svg>
         Importação
       </button>
 
-      <button type="button" data-compras-nav="apuracao">
+      <button type="button" class="nav-btn compras-menu-btn" data-compras-nav="apuracao">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M7 15l4-5 4 3 5-8"/></svg>
         Apuração
       </button>
 
-      <button type="button" data-compras-nav="politicas">
+      <button type="button" class="nav-btn compras-menu-btn" data-compras-nav="politicas">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 4v6c0 5-9 9-9 9s-9-4-9-9V7l9-4Z"/><path d="m8 12 3 3 5-6"/></svg>
         Políticas
       </button>
     </div>
@@ -5360,29 +5318,10 @@ function garantirMenu() {
   $("#comprasModuleBtn")
     ?.addEventListener(
       "click",
-      () => {
-        const submenu =
-          $("#comprasSubmenu");
-
-        if (!submenu) return;
-
-        submenu.hidden = false;
-
-        const seta =
-          $("#comprasModuleArrow");
-
-        if (seta) {
-          seta.textContent =
-            submenu.hidden
-              ? "▾"
-              : "▴";
-        }
-
-        if (!submenu.hidden) {
-          abrirView(
-            "visao-geral"
-          );
-        }
+      evento => {
+        // O clique é tratado aqui; não deve acionar o módulo Oficina no menu compartilhado.
+        evento.stopPropagation();
+        abrirView("visao-geral");
       }
     );
 
@@ -5471,15 +5410,30 @@ function ocultarCompras() {
       );
     });
 
-  $("#comprasModuleBtn")
-    ?.classList.remove(
-      "active"
-    );
+  $("#comprasModuleBtn")?.classList.remove("active");
+  $("#comprasModuleWrapper")?.classList.remove("open");
+  $("#comprasModuleBtn")?.setAttribute("aria-expanded", "false");
+  $$("[data-compras-nav]").forEach(botao => {
+    botao.classList.remove("active");
+    botao.removeAttribute("aria-current");
+  });
 }
 
 async function abrirView(view) {
   state.view = view;
+  // Cancela uma transição anterior ainda agendada de outra campanha.
+  document.body.dataset.campanhasTroca = `compras-${Date.now()}`;
 
+  // Somente o módulo atual permanece expandido, como nas demais campanhas.
+  $$(".campaign-module-group").forEach(grupo => {
+    const atual = grupo.id === "comprasModuleWrapper";
+    grupo.classList.toggle("open", atual);
+    grupo.querySelector(".module-toggle")?.setAttribute("aria-expanded", String(atual));
+  });
+  $$(".nav-btn, .pix-menu-btn, .crm-menu-btn, .garantia-menu-btn").forEach(botao => botao.classList.remove("active"));
+  $$(".view.active, .pix-subview.active").forEach(tela => tela.classList.remove("active"));
+  localStorage.setItem("modulo_campanha_ativo", "compras");
+  localStorage.setItem("modulo_dropdown_aberto", "compras");
   ocultarViewsExternas();
 
   $$("[data-compras-view]")
@@ -5505,6 +5459,11 @@ async function abrirView(view) {
       "active"
     );
 
+  $$("[data-compras-nav]").forEach(botao => {
+    if (botao.classList.contains("active")) botao.setAttribute("aria-current", "page");
+    else botao.removeAttribute("aria-current");
+  });
+  window.dispatchEvent(new CustomEvent("campanhas:viewready", {detail:{modulo:"compras",pagina:view}}));
   await renderizarTudo();
 }
 
