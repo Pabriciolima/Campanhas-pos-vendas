@@ -7,21 +7,11 @@
 import {EQUIPE_COMPRAS, CASAS_EQUIPE_COMPRAS, casaEquipeCompras, planejarBaseCompras, recebeCasaEquipeCompras} from "./compras-equipe.js?v=20261028-analistas";
 import {lerPrintsABC, consolidarPrintsABC, CASAS_ABC} from "./compras-imagens.js?v=20261028-ocr-celulas";
 
-import { firestore } from "./firebase-config.js";
-
-import {
-  collection,
-  getDocs,
-  doc,
-  setDoc,
-  deleteDoc,
-  writeBatch,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+import {bancoCompras,collection,getDocs,doc,setDoc,deleteDoc,writeBatch,serverTimestamp} from "./compras-supabase.js?v=20261028-supabase";
 
 const VERSAO = "2026.07.23-15";
 const TAMANHO_LOTE = 400;
-const TIMEOUT_FIREBASE = 90000;
+const TIMEOUT_BANCO = 90000;
 
 const COLECOES = {
   responsaveis: "compras_campanha_responsaveis",
@@ -405,7 +395,7 @@ function toast(mensagem) {
 }
 
 /* ==========================================================================
-   FIREBASE
+   SUPABASE
 ========================================================================== */
 
 async function lerColecao(nome) {
@@ -413,11 +403,11 @@ async function lerColecao(nome) {
     await comTimeout(
       getDocs(
         collection(
-          firestore,
+          bancoCompras,
           nome
         )
       ),
-      TIMEOUT_FIREBASE,
+      TIMEOUT_BANCO,
       `Não foi possível carregar ${nome}.`
     );
 
@@ -458,9 +448,9 @@ async function garantirResponsaveisPadrao() {
   if(!alteracoes.length)return existentes.filter(p=>p.foraDaBase!==true);
   if(alteracoes.length){
     // Uma transação em lote troca a base inteira sem apagar indicadores ou importações.
-    const batch=writeBatch(firestore);
-    for(const {id,dados} of alteracoes)batch.set(doc(firestore,COLECOES.responsaveis,id),{...dados,atualizadoEm:serverTimestamp()},{merge:true});
-    await comTimeout(batch.commit(),TIMEOUT_FIREBASE,"Não foi possível atualizar a base de analistas de Compras.");
+    const batch=writeBatch(bancoCompras);
+    for(const {id,dados} of alteracoes)batch.set(doc(bancoCompras,COLECOES.responsaveis,id),{...dados,atualizadoEm:serverTimestamp()},{merge:true});
+    await comTimeout(batch.commit(),TIMEOUT_BANCO,"Não foi possível atualizar a base de analistas de Compras.");
   }
   return (await lerColecao(COLECOES.responsaveis)).filter(p=>p.foraDaBase!==true);
 }
@@ -516,7 +506,7 @@ async function salvarResponsavel(
   await comTimeout(
     setDoc(
       doc(
-        firestore,
+        bancoCompras,
         COLECOES.responsaveis,
         idDocumento
       ),
@@ -525,7 +515,7 @@ async function salvarResponsavel(
         merge: true
       }
     ),
-    TIMEOUT_FIREBASE,
+    TIMEOUT_BANCO,
     "Não foi possível salvar as atribuições do responsável."
   );
 
@@ -555,12 +545,12 @@ async function salvarResponsavel(
 
     for (const lote of lotes) {
       const batch =
-        writeBatch(firestore);
+        writeBatch(bancoCompras);
 
       lote.forEach(item => {
         batch.delete(
           doc(
-            firestore,
+            bancoCompras,
             COLECOES.responsaveis,
             item.id
           )
@@ -569,7 +559,7 @@ async function salvarResponsavel(
 
       await comTimeout(
         batch.commit(),
-        TIMEOUT_FIREBASE,
+        TIMEOUT_BANCO,
         "As atribuições foram salvas, mas não foi possível remover cadastros duplicados."
       );
     }
@@ -587,7 +577,7 @@ async function salvarResponsavel(
 
   if (!salvo) {
     throw new Error(
-      "O Firebase não confirmou a atualização do responsável."
+      "O Supabase não confirmou a atualização do responsável."
     );
   }
 
@@ -618,12 +608,12 @@ async function restaurarResponsaveisPadrao() {
   if (!confirmou) return;
 
   const batch =
-    writeBatch(firestore);
+    writeBatch(bancoCompras);
 
   RESPONSAVEIS_PADRAO.forEach(item => {
     batch.set(
       doc(
-        firestore,
+        bancoCompras,
         COLECOES.responsaveis,
         item.id
       ),
@@ -640,7 +630,7 @@ async function restaurarResponsaveisPadrao() {
 
   await comTimeout(
     batch.commit(),
-    TIMEOUT_FIREBASE,
+    TIMEOUT_BANCO,
     "Não foi possível restaurar as atribuições padrão."
   );
 
@@ -655,12 +645,12 @@ async function excluirResponsavel(id) {
   await comTimeout(
     deleteDoc(
       doc(
-        firestore,
+        bancoCompras,
         COLECOES.responsaveis,
         id
       )
     ),
-    TIMEOUT_FIREBASE,
+    TIMEOUT_BANCO,
     "Não foi possível excluir o responsável."
   );
 }
@@ -675,184 +665,20 @@ function chaveIndicador(
   ].join("__");
 }
 
-async function salvarIndicadoresEmLote(
-  registros,
-  historicoImportacao
-) {
-  const competenciaImportada =
-    historicoImportacao.competencia;
-
-  const tipoImportado =
-    registros[0]?.tipoImportacao ||
-    historicoImportacao.tipo ||
-    "consolidado";
-
-  /*
-  Antes de gravar a nova versão do mesmo mês e tipo, remove os
-  registros antigos daquela importação. Isso elimina filiais que
-  não existem mais no novo arquivo e linhas técnicas importadas
-  em versões anteriores, sem afetar outros meses.
-  */
-  const indicadoresExistentes =
-    await lerColecao(
-      COLECOES.indicadores
-    );
-
-  const antigosDoMesmoTipo =
-    indicadoresExistentes.filter(item =>
-      item.competencia ===
-        competenciaImportada &&
-      (
-        item.tipoImportacao ===
-          tipoImportado ||
-        (
-          tipoImportado ===
-            "disponibilidade" &&
-          (
-            item.disponibilidadeA !==
-              undefined ||
-            item.disponibilidadeB !==
-              undefined
-          )
-        ) ||
-        (
-          tipoImportado === "os" &&
-          item.controleOs !== undefined
-        ) ||
-        (
-          tipoImportado ===
-            "obsolescencia" &&
-          item.indiceObsolescencia !==
-            undefined
-        )
-      )
-    );
-
-  const lotesExclusao =
-    dividirEmLotes(
-      antigosDoMesmoTipo,
-      TAMANHO_LOTE
-    );
-
-  for (const lote of lotesExclusao) {
-    const batchExclusao =
-      writeBatch(firestore);
-
-    lote.forEach(item => {
-      batchExclusao.delete(
-        doc(
-          firestore,
-          COLECOES.indicadores,
-          item.id
-        )
-      );
-    });
-
-    await comTimeout(
-      batchExclusao.commit(),
-      TIMEOUT_FIREBASE,
-      "Não foi possível substituir os indicadores anteriores do mês."
-    );
-  }
-
-
-  const lotes =
-    dividirEmLotes(
-      registros,
-      TAMANHO_LOTE
-    );
-
-  for (
-    let indice = 0;
-    indice < lotes.length;
-    indice += 1
-  ) {
-    const batch =
-      writeBatch(firestore);
-
-    lotes[indice].forEach(registro => {
-      const referencia =
-        doc(
-          firestore,
-          COLECOES.indicadores,
-          chaveIndicador(
-            registro.competencia,
-            registro.unidade
-          )
-        );
-
-      /*
-      A chave competência + unidade faz uma nova importação
-      do mesmo mês substituir os valores anteriores daquela
-      unidade. Importações de meses diferentes são preservadas.
-      */
-      batch.set(
-        referencia,
-        {
-          ...registro,
-          atualizadoEm:
-            serverTimestamp()
-        },
-        {
-          merge: true
-        }
-      );
-    });
-
-    await comTimeout(
-      batch.commit(),
-      TIMEOUT_FIREBASE,
-      "A gravação dos indicadores demorou mais do que o esperado."
-    );
-  }
-
-  const tipoEvidencia =
-    tipoImportado;
-
-  /*
-  Uma única evidência por competência + tipo.
-  Nova importação no mesmo mês e tipo substitui a anterior.
-  Quando o mês muda, a evidência anterior permanece salva.
-  */
-  const idImportacao =
-    [
-      historicoImportacao.competencia,
-      slug(tipoEvidencia)
-    ].join("__");
-
-  await setDoc(
-    doc(
-      firestore,
-      COLECOES.importacoes,
-      idImportacao
-    ),
-    {
-      id:
-        idImportacao,
-      ...historicoImportacao,
-      tipoEfetivo:
-        tipoEvidencia,
-      registros:
-        registros.map(registro => {
-          const copia = {
-            ...registro
-          };
-
-          delete copia.atualizadoEm;
-          delete copia.criadoEm;
-
-          return copia;
-        }),
-      substituiImportacaoAnterior:
-        true,
-      atualizadoEm:
-        serverTimestamp()
-    },
-    {
-      merge: false
-    }
-  );
+async function salvarIndicadoresEmLote(registros,historicoImportacao) {
+  const cp=historicoImportacao.competencia,tipo=registros[0]?.tipoImportacao||historicoImportacao.tipo||'consolidado';
+  const existentes=await lerColecao(COLECOES.indicadores);
+  const anteriores=existentes.filter(r=>r.competencia===cp&&(r.tipoImportacao===tipo||tipo==='disponibilidade'&&(r.disponibilidadeA!==undefined||r.disponibilidadeB!==undefined)||tipo==='os'&&r.controleOs!==undefined||tipo==='obsolescencia'&&r.indiceObsolescencia!==undefined));
+  // Remoção, novos dados, evidência e ajustes são confirmados em uma única transação do Supabase.
+  const batch=writeBatch(bancoCompras);
+  anteriores.forEach(r=>batch.delete(doc(bancoCompras,COLECOES.indicadores,r.id)));
+  registros.forEach(r=>batch.set(doc(bancoCompras,COLECOES.indicadores,chaveIndicador(r.competencia,r.unidade)),{...r,atualizadoEm:serverTimestamp()},{merge:true}));
+  const id=[cp,slug(tipo)].join('__');
+  batch.set(doc(bancoCompras,COLECOES.importacoes,id),{id,...historicoImportacao,tipoEfetivo:tipo,registros:registros.map(r=>{const c={...r};delete c.atualizadoEm;delete c.criadoEm;return c;}),substituiImportacaoAnterior:true,atualizadoEm:serverTimestamp()});
+  state.ajustes.filter(r=>r.competencia===cp).forEach(r=>batch.delete(doc(bancoCompras,COLECOES.ajustes,r.id||chaveAjusteApuracao(r.competencia,r.responsavelId))));
+  await comTimeout(batch.commit(),TIMEOUT_BANCO,'O Supabase não confirmou a importação. Nenhum dado foi substituído.');
 }
+
 
 /* ==========================================================================
    APURAÇÃO
@@ -1840,7 +1666,7 @@ async function salvarAjusteApuracao(
   await comTimeout(
     setDoc(
       doc(
-        firestore,
+        bancoCompras,
         COLECOES.ajustes,
         id
       ),
@@ -1854,7 +1680,7 @@ async function salvarAjusteApuracao(
         merge: true
       }
     ),
-    TIMEOUT_FIREBASE,
+    TIMEOUT_BANCO,
     "Não foi possível salvar a correção da apuração."
   );
 }
@@ -1894,12 +1720,12 @@ async function limparAjustesCompetencia(
 
   for (const lote of lotes) {
     const batch =
-      writeBatch(firestore);
+      writeBatch(bancoCompras);
 
     lote.forEach(item => {
       batch.delete(
         doc(
-          firestore,
+          bancoCompras,
           COLECOES.ajustes,
           item.id ||
             chaveAjusteApuracao(
@@ -1912,7 +1738,7 @@ async function limparAjustesCompetencia(
 
     await comTimeout(
       batch.commit(),
-      TIMEOUT_FIREBASE,
+      TIMEOUT_BANCO,
       "Não foi possível limpar os ajustes do mês."
     );
   }
@@ -3626,10 +3452,6 @@ async function confirmarImportacao() {
     Uma nova importação no mesmo mês passa a ser a fonte oficial.
     Por isso, correções/exclusões manuais daquele mês são removidas.
     */
-    await limparAjustesCompetencia(
-      importacao.competencia
-    );
-
     await salvarIndicadoresEmLote(
       importacao.registros,
       {
@@ -3885,6 +3707,9 @@ function estilos() {
       .compras-panel-header>div{min-width:0;}
       .compras-sync-status{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:12px 0;line-height:1.5;}
       .compras-sync-status span{flex:1 1 300px;}
+      .compras-sync-status details{flex-basis:100%;text-align:left;font-size:12px;}
+      .compras-sync-status summary{cursor:pointer;}
+      .compras-sync-status.compras-ok{padding:10px 14px;font-size:12px;}
       #comprasImportPorResponsavel{margin:18px 0;padding:16px;border:1px solid #90b9aa;border-radius:12px;}
       #comprasImportPorResponsavel p{font-size:12px;line-height:1.5;}
       .compras-page{
@@ -6483,17 +6308,20 @@ function renderizarResponsaveis() {
 }
 
 function mensagemErroCompras(erro) {
-  if(/quota|resource.exhausted|resource-exhausted/i.test(String(erro?.message||erro?.code||erro)))return "O limite de uso do Firebase foi atingido. A leitura ou gravação online não foi confirmada. Os dados já carregados e a prévia da importação foram mantidos; tente novamente quando o banco estiver disponível.";
-  return "Não foi possível atualizar a base online de Compras. "+(erro?.message||"Verifique a conexão e tente novamente.");
+  if(erro?.status===409)return erro.message;
+  return "Não foi possível atualizar a base de Compras no Supabase. "+(erro?.message||"Verifique a conexão e tente novamente.");
 }
 
 function renderizarStatusNuvemCompras() {
+  const migracao=bancoCompras.migracao();
   $$("[data-compras-view]").forEach(view=>{
     let aviso=view.querySelector('.compras-sync-status');
-    if(!state.erroNuvem){aviso?.remove();return;}
-    if(!aviso){aviso=document.createElement('div');aviso.className='compras-alert compras-sync-status';aviso.setAttribute('role','alert');view.querySelector('.compras-topbar')?.after(aviso);}
-    aviso.replaceChildren();const texto=document.createElement('span');texto.textContent=state.erroNuvem+(state.ultimaLeituraConfirmada?' Última leitura confirmada: '+new Date(state.ultimaLeituraConfirmada).toLocaleString('pt-BR')+'.':' A base online ainda não foi carregada nesta janela.');
-    const btn=document.createElement('button');btn.type='button';btn.className='compras-btn compras-btn-light';btn.textContent='Tentar carregar novamente';btn.disabled=state.carregando;btn.onclick=carregarDados;aviso.append(texto,btn);
+    if(!aviso){aviso=document.createElement('div');aviso.className='compras-ok compras-sync-status';aviso.setAttribute('role','status');view.querySelector('.compras-topbar')?.after(aviso);}
+    aviso.classList.toggle('compras-alert',!!state.erroNuvem);aviso.classList.toggle('compras-ok',!state.erroNuvem);
+    aviso.replaceChildren();const texto=document.createElement('span');
+    texto.textContent=state.erroNuvem||(state.ultimaLeituraConfirmada?'Supabase online · Dados compartilhados entre os computadores.':'Conectando Compras ao Supabase…');
+    const btn=document.createElement('button');btn.type='button';btn.className='compras-btn compras-btn-light';btn.textContent='Atualizar base';btn.disabled=state.carregando;btn.onclick=()=>carregarDados();aviso.append(texto,btn);
+    if(migracao?.status==='pendente'){const detalhe=document.createElement('details');const sum=document.createElement('summary');sum.textContent='Histórico anterior: recuperação pendente';const p=document.createElement('p');p.textContent=migracao.erro||'A cópia histórica disponível foi preservada. A verificação dos registros mais recentes do Firebase ainda está pendente; novos lançamentos já usam o Supabase.';const retry=document.createElement('button');retry.type='button';retry.className='compras-btn compras-btn-light';retry.textContent='Recuperar histórico anterior';retry.onclick=async()=>{retry.disabled=true;try{await bancoCompras.recuperar();await carregarDados();}catch(e){state.erroNuvem=mensagemErroCompras(e);renderizarStatusNuvemCompras();}finally{retry.disabled=false;}};detalhe.append(sum,p,retry);aviso.append(detalhe);}
   });
 }
 
@@ -7218,7 +7046,7 @@ async function salvarModalResponsavel() {
       !unidadesCorretas
     ) {
       throw new Error(
-        "O Firebase respondeu, mas as atribuições salvas não correspondem ao que foi informado."
+        "O Supabase respondeu, mas as atribuições salvas não correspondem ao que foi informado."
       );
     }
 
@@ -8076,6 +7904,7 @@ async function carregarDados() {
   state.carregando=true;
   renderizarStatusNuvemCompras();
   try{
+    await bancoCompras.sincronizar();
     const responsaveis=await garantirResponsaveisPadrao();
     // Falha de leitura não significa coleção vazia. Só troca a base quando todas as consultas terminarem.
     const [indicadores,importacoes,ajustes]=await Promise.all([
@@ -8089,6 +7918,12 @@ async function carregarDados() {
     renderizarPreviaResponsaveisCompras();
     toast(state.erroNuvem);return false;
   }finally{state.carregando=false;renderizarStatusNuvemCompras();}
+}
+
+async function verificarAtualizacaoCompras(){
+  if(document.hidden||!$("[data-compras-view].active")||state.carregando||bancoCompras.ocupado()||$("dialog[open]")||state.importacao.arquivo||lendoImagensABC)return;
+  try{const resultado=await bancoCompras.sincronizar();if(!resultado.unchanged)await carregarDados();}
+  catch(e){state.erroNuvem=mensagemErroCompras(e);renderizarStatusNuvemCompras();}
 }
 
 async function iniciar() {
@@ -8121,7 +7956,7 @@ async function iniciar() {
   }
 
   /*
-  O menu é criado antes de qualquer consulta ao Firebase.
+  O menu é criado antes de qualquer consulta ao Supabase.
   Assim ele não desaparece por erro de permissão ou rede.
   */
   garantirMenu();
@@ -8164,6 +7999,13 @@ async function iniciar() {
   garantirMenu();
   configurarOcultacaoExterna();
 
+  window.setInterval(verificarAtualizacaoCompras,15000);
+  window.addEventListener('focus',verificarAtualizacaoCompras);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)verificarAtualizacaoCompras();});
+  const legado=bancoCompras.migracao();
+  if(legado?.status==='pendente'&&Date.now()-Date.parse(legado.tentativaEm||0)>=900000){
+    bancoCompras.recuperar().then(()=>carregarDados()).catch(e=>console.warn('[COMPRAS] Recuperação pendente:',e.message));
+  }
   window.comprasModule = {
     abrir(view = "visao-geral") {
       garantirMenu();
@@ -8191,6 +8033,7 @@ async function iniciar() {
       };
     },
 
+    banco: "supabase",
     versao:
       VERSAO
   };
