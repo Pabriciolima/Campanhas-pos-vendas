@@ -3861,6 +3861,21 @@ function estilos() {
       @keyframes comprasCasasEntrada{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
       @media(prefers-reduced-motion:reduce){.compras-casas-dropdown{animation:none}.compras-casas-picker>summary svg{transition:none}}
       @media(max-width:600px){.compras-casas-lista{max-height:210px}.compras-casas-picker>summary{padding:11px 12px}}
+      /* A largura mínima global das tabelas não deve expandir os cartões de Compras. */
+      .compras-page,.compras-grid,.compras-grid>.compras-panel,.compras-panel{
+        min-width:0;max-width:100%;box-sizing:border-box;
+      }
+      .compras-page .compras-table-wrap,.compras-modal .compras-table-wrap{
+        display:block;width:100%;max-width:100%;min-width:0;
+        overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;
+      }
+      .compras-page .compras-table,.compras-modal .compras-table{
+        min-width:0;width:100%;max-width:none;
+      }
+      .compras-page .compras-table-resumo .compras-table{min-width:400px;}
+      .compras-page .compras-table-resumo th{white-space:normal;}
+      .compras-page .compras-table-resumo:focus-visible{outline:2px solid #17a589;outline-offset:3px;border-radius:6px;}
+      .compras-panel-header>div{min-width:0;}
       .compras-page{
         display:none;
         color:#12283a
@@ -4433,7 +4448,7 @@ function htmlPaginas() {
           </header>
 
           <div
-            id="comprasResumoIndicadores"
+            id="comprasResumoIndicadores" class="compras-table-wrap compras-table-resumo" role="region" aria-label="Resultado por indicador" tabindex="0"
           ></div>
         </section>
 
@@ -4446,7 +4461,7 @@ function htmlPaginas() {
           </header>
 
           <div
-            id="comprasRanking"
+            id="comprasRanking" class="compras-table-wrap compras-table-resumo" role="region" aria-label="Ranking mensal" tabindex="0"
           ></div>
         </section>
       </div>
