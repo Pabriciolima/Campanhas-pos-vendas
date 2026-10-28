@@ -100,6 +100,8 @@ const state = {
     processando: false
   },
   carregando: false,
+  erroNuvem: "",
+  ultimaLeituraConfirmada: "",
   menuConfigurado: false,
   observerMenu: null,
   inicializado: false,
@@ -453,6 +455,7 @@ async function lerColecaoOpcional(
 async function garantirResponsaveisPadrao() {
   const existentes=await lerColecao(COLECOES.responsaveis);
   const alteracoes=planejarBaseCompras(existentes);
+  if(!alteracoes.length)return existentes.filter(p=>p.foraDaBase!==true);
   if(alteracoes.length){
     // Uma transação em lote troca a base inteira sem apagar indicadores ou importações.
     const batch=writeBatch(firestore);
@@ -1298,7 +1301,8 @@ function calcularBonusObsolescencia(
 
 function calcularApuracaoResponsavel(
   responsavel,
-  competencia
+  competencia,
+  indicadores = state.indicadores
 ) {
   const anteriorCompetencia =
     competenciaAnterior(
@@ -1306,7 +1310,7 @@ function calcularApuracaoResponsavel(
     );
 
   const atuais =
-    state.indicadores.filter(
+    indicadores.filter(
       indicador =>
         indicador.competencia ===
           competencia &&
@@ -1321,7 +1325,7 @@ function calcularApuracaoResponsavel(
     );
 
   const anteriores =
-    state.indicadores.filter(
+    indicadores.filter(
       indicador =>
         indicador.competencia ===
           anteriorCompetencia &&
@@ -1566,7 +1570,7 @@ function calcularApuracaoResponsavel(
 
   const controleOs =
     media(
-      state.indicadores
+      indicadores
         .filter(
           indicador =>
             indicador.competencia ===
@@ -3643,7 +3647,11 @@ async function confirmarImportacao() {
       }
     );
 
-    await carregarDados();
+    const leituraConfirmada=await carregarDados();
+    if(!leituraConfirmada){
+      await alerta('A gravação do arquivo foi confirmada, mas o banco não permitiu reler a base. A prévia foi mantida. Use Tentar carregar novamente antes de realizar outra importação.');
+      return;
+    }
 
     limparImportacao();
 
@@ -3660,10 +3668,9 @@ async function confirmarImportacao() {
       erro
     );
 
-    await alerta(
-      erro.message ||
-      "Não foi possível concluir a importação."
-    );
+    state.erroNuvem=mensagemErroCompras(erro);
+    renderizarStatusNuvemCompras();
+    await alerta(state.erroNuvem);
   } finally {
     importacao.processando = false;
     renderizarImportacao();
@@ -3876,6 +3883,10 @@ function estilos() {
       .compras-page .compras-table-resumo th{white-space:normal;}
       .compras-page .compras-table-resumo:focus-visible{outline:2px solid #17a589;outline-offset:3px;border-radius:6px;}
       .compras-panel-header>div{min-width:0;}
+      .compras-sync-status{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:12px 0;line-height:1.5;}
+      .compras-sync-status span{flex:1 1 300px;}
+      #comprasImportPorResponsavel{margin:18px 0;padding:16px;border:1px solid #90b9aa;border-radius:12px;}
+      #comprasImportPorResponsavel p{font-size:12px;line-height:1.5;}
       .compras-page{
         display:none;
         color:#12283a
@@ -4636,6 +4647,7 @@ function htmlPaginas() {
           style="margin-top:12px"
         ></div>
 
+        <section id="comprasImportPorResponsavel" hidden></section>
         <div
           id="comprasImportValidacao"
           class="compras-validation"
@@ -6470,6 +6482,31 @@ function renderizarResponsaveis() {
     });
 }
 
+function mensagemErroCompras(erro) {
+  if(/quota|resource.exhausted|resource-exhausted/i.test(String(erro?.message||erro?.code||erro)))return "O limite de uso do Firebase foi atingido. A leitura ou gravação online não foi confirmada. Os dados já carregados e a prévia da importação foram mantidos; tente novamente quando o banco estiver disponível.";
+  return "Não foi possível atualizar a base online de Compras. "+(erro?.message||"Verifique a conexão e tente novamente.");
+}
+
+function renderizarStatusNuvemCompras() {
+  $$("[data-compras-view]").forEach(view=>{
+    let aviso=view.querySelector('.compras-sync-status');
+    if(!state.erroNuvem){aviso?.remove();return;}
+    if(!aviso){aviso=document.createElement('div');aviso.className='compras-alert compras-sync-status';aviso.setAttribute('role','alert');view.querySelector('.compras-topbar')?.after(aviso);}
+    aviso.replaceChildren();const texto=document.createElement('span');texto.textContent=state.erroNuvem+(state.ultimaLeituraConfirmada?' Última leitura confirmada: '+new Date(state.ultimaLeituraConfirmada).toLocaleString('pt-BR')+'.':' A base online ainda não foi carregada nesta janela.');
+    const btn=document.createElement('button');btn.type='button';btn.className='compras-btn compras-btn-light';btn.textContent='Tentar carregar novamente';btn.disabled=state.carregando;btn.onclick=carregarDados;aviso.append(texto,btn);
+  });
+}
+
+function renderizarPreviaResponsaveisCompras() {
+  const alvo=$('#comprasImportPorResponsavel'),imp=state.importacao;
+  if(!alvo)return;
+  alvo.hidden=!imp.registros.some(r=>r.tipoImportacao==='disponibilidade')||imp.erros.length>0;
+  if(alvo.hidden){alvo.replaceChildren();return;}
+  const pessoas=state.responsaveis.length?state.responsaveis:EQUIPE_COMPRAS;
+  const calculos=pessoas.filter(p=>p.ativo!==false).map(p=>({p,r:calcularApuracaoResponsavel(p,imp.competencia,imp.registros)}));
+  alvo.innerHTML=`<h3>Prévia da disponibilidade por colaborador</h3><p>Calculada somente com este arquivo, antes de salvar. ${state.responsaveis.length?'Vínculos da base carregada.':'O banco está indisponível; esta prévia usa a base de analistas aprovada em 28/10/2026.'} Não inclui outros indicadores da campanha.</p><div class="compras-table-wrap"><table class="compras-table"><thead><tr><th>Colaborador</th><th>Casas encontradas / cadastradas</th><th>Curva A</th><th>Curva B</th><th>Bônus ABC</th></tr></thead><tbody>${calculos.map(({p,r})=>`<tr><td><strong>${escapar(p.nome)}</strong></td><td>${r.quantidadeUnidades} / ${p.unidades.length}</td><td>${moeda(r.bonusA)}</td><td>${moeda(r.bonusB)}</td><td><strong>${moeda(r.bonusA+r.bonusB)}</strong></td></tr>`).join('')}</tbody></table></div>`;
+}
+
 function renderizarImportacao() {
   const importacao =
     state.importacao;
@@ -6563,6 +6600,8 @@ function renderizarImportacao() {
           </div>
         `;
 
+  renderizarPreviaResponsaveisCompras();
+
   const mensagens = [
     ...importacao.erros.map(mensagem => ({
       tipo: "error",
@@ -6629,6 +6668,7 @@ async function renderizarTudo() {
   renderizarApuracao();
   renderizarResponsaveis();
   renderizarImportacao();
+  renderizarStatusNuvemCompras();
 }
 
 
@@ -8032,63 +8072,23 @@ function configurarEventosPaginas() {
 ========================================================================== */
 
 async function carregarDados() {
-  if (state.carregando) {
-    return;
-  }
-
-  state.carregando = true;
-
-  try {
-    state.responsaveis =
-      await garantirResponsaveisPadrao();
-
-    const [
-      indicadores,
-      importacoes,
-      ajustes
-    ] = await Promise.all([
-      lerColecaoOpcional(
-        COLECOES.indicadores,
-        []
-      ),
-      lerColecaoOpcional(
-        COLECOES.importacoes,
-        []
-      ),
-      lerColecaoOpcional(
-        COLECOES.ajustes,
-        []
-      )
+  if(state.carregando)return false;
+  state.carregando=true;
+  renderizarStatusNuvemCompras();
+  try{
+    const responsaveis=await garantirResponsaveisPadrao();
+    // Falha de leitura não significa coleção vazia. Só troca a base quando todas as consultas terminarem.
+    const [indicadores,importacoes,ajustes]=await Promise.all([
+      lerColecao(COLECOES.indicadores),lerColecao(COLECOES.importacoes),lerColecao(COLECOES.ajustes)
     ]);
-
-    state.indicadores =
-      indicadores;
-
-    state.importacoes =
-      importacoes;
-
-    state.ajustes =
-      ajustes;
-
-    recalcularApuracao();
-
-    await renderizarTudo();
-  } catch (erro) {
-    console.error(
-      "[CAMPANHA COMPRAS]",
-      erro
-    );
-
-    /*
-    Mesmo com erro de Firebase, o menu e as páginas permanecem
-    disponíveis. O erro fica no console para diagnóstico.
-    */
-    toast(
-      "O módulo de Compras abriu, mas alguns dados não puderam ser carregados."
-    );
-  } finally {
-    state.carregando = false;
-  }
+    Object.assign(state,{responsaveis,indicadores,importacoes,ajustes,erroNuvem:'',ultimaLeituraConfirmada:new Date().toISOString()});
+    await renderizarTudo();return true;
+  }catch(erro){
+    console.error('[CAMPANHA COMPRAS]',erro);
+    state.erroNuvem=mensagemErroCompras(erro);
+    renderizarPreviaResponsaveisCompras();
+    toast(state.erroNuvem);return false;
+  }finally{state.carregando=false;renderizarStatusNuvemCompras();}
 }
 
 async function iniciar() {
