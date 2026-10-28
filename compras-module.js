@@ -1,252 +1,10 @@
-/*
-===============================================================================
-MÓDULO — CAMPANHA CENTRAL DE COMPRAS
-Arquivo: compras-module.js
-Versão: 2026.07.23-15
-===============================================================================
+/* Campanha Central de Compras — base de analistas aprovada em 28/10/2026.
+ * Jéssica: Diesel MT/RO; Gabriel: Diesel PA/AP/MA/PI; Mykaela: Fiat PA/MT/GO e Jeep RAM Barra do Garça.
+ * Os demais cadastros ficam arquivados. Indicadores, fontes e importações permanecem preservados.
+ * A política vigente de Compras é aplicada aos analistas sem alteração de metas ou valores.
+ */
 
-INSTALAÇÃO NO INDEX.HTML
-
-1. Garanta que a biblioteca XLSX esteja carregada:
-
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
-2. Carregue este módulo DEPOIS de script.js, pix-presidente.js e module-switcher.js:
-
-<script
-  type="module"
-  src="./compras-module.js?v=20260723-15"
-></script>
-
-O módulo é independente e não substitui nenhuma funcionalidade existente.
-
-===============================================================================
-REGRAS DA CAMPANHA
-
-NOVO MODELO ABC POR NÚCLEO E CASA
-- Reconhece a planilha com:
-  Núcleo, Empresa_Abreviado, A, B, C e Total.
-- Linhas "Total" do núcleo são ignoradas no cálculo.
-- A média é calculada somente com as casas atendidas pelo colaborador.
-- As casas são agrupadas por núcleo.
-- Cada núcleo é avaliado separadamente:
-  Curva A >= 95%;
-  Curva B >= 90%.
-- Se o colaborador atende mais de um núcleo e um ou vários atingem,
-  ele recebe apenas uma vez R$ 300,00 na política A e uma vez
-  R$ 300,00 na política B.
-- Não existe multiplicação do bônus A/B pela quantidade de núcleos.
-- A apuração e as exportações mostram as casas e as médias por núcleo.
-
-NOMES COMPLETOS ATUALIZADOS
-- Jéssica Alves de Jesus
-- Rone César Praseres Chaves Filho
-- Juliana Lima Martins
-- Gabriel Campos Dias
-- Rodrigo Santos da Silva
-- A atualização altera somente o nome no Firestore e preserva
-  todas as atribuições editadas de regiões e casas.
-
-
-NOVA REGRA DE OBSOLESCÊNCIA — ESTOQUE ACIMA DE 365 DIAS
-- Reconhece automaticamente a planilha Classificacao_Dias_Mo.
-- Lê por unidade o Valor e o percentual da faixa "Maior que 365".
-- Compara a competência atual com a competência imediatamente anterior.
-- Redução = percentual anterior - percentual atual.
-- Cada 1 ponto percentual reduzido paga R$ 60,00.
-- Reduções fracionadas são calculadas proporcionalmente.
-- Teto bonificado: 5 pontos percentuais.
-- Bônus máximo por unidade: R$ 300,00.
-- Redução zero ou aumento: bônus R$ 0,00.
-- Primeira medição: sem bônus por ausência de histórico.
-- Nova importação no mesmo mês substitui a evidência daquele mês.
-- Meses anteriores permanecem preservados para comparação.
-
-
-EXPORTAÇÃO COMPLETA DO MÓDULO COMPRAS
-- Filtro: todos os responsáveis ou somente quem recebeu alguma bonificação.
-- Excel inclui a aba de apuração e uma aba para cada evidência importada.
-- PDF inclui a apuração e, nas páginas seguintes, as tabelas usadas na importação.
-- As evidências são filtradas pela competência selecionada.
-- Arquivos de outros meses não aparecem na impressão do mês atual.
-- O PDF utiliza a janela de impressão do navegador para salvar em PDF.
-
-
-CORREÇÃO GLOBAL DE FILIAIS FORA DA ALÇADA
-- Siglas de estado são comparadas somente de forma exata.
-- "MA" não corresponde mais a "MATO GROSSO".
-- "PA" não é procurado dentro de nomes de unidades.
-- Casas específicas usam prioridade pelo vínculo mais completo.
-- "MÔNACO LEAPMOTOR - BELÉM" fica com Juliana, não com Gabriel.
-- "FIAT PARÁ" e "FIAT CENTRO OESTE" ficam com Mykaela.
-- "JEEP RAM - BARRA DO GARÇAS" fica com Juliana.
-- A mesma correção é aplicada a todos os responsáveis atuais e futuros.
-- Não é necessário importar novamente: a apuração é recalculada
-  com os indicadores já salvos.
-
-
-CORREÇÃO DEFINITIVA DA EDIÇÃO DE RESPONSÁVEIS
-- O ID real do documento do Firestore agora sempre prevalece.
-- Campos "id" antigos dentro dos documentos não podem mais desviar a edição.
-- A edição atualiza o documento exibido, em vez de criar outro documento.
-- Cadastros duplicados do mesmo nome são removidos automaticamente.
-- O sistema lê novamente o Firestore e confirma regiões e unidades antes de fechar.
-- O botão mostra "Salvando..." e exibe erro quando a persistência não for confirmada.
-
-
-CORREÇÃO DA EDIÇÃO DE ATRIBUIÇÕES
-- A configuração padrão não sobrescreve mais alterações feitas pelo usuário.
-- Responsáveis padrão são criados apenas quando ainda não existem.
-- Editar regiões e casas mantém o mesmo ID do colaborador.
-- A interface é atualizada logo após salvar, sem recarregar os padrões.
-- Para restaurar manualmente a configuração inicial, use:
-  window.comprasModule.restaurarResponsaveisPadrao()
-
-
-ALERTAS PREMIUM
-- Remove o window.confirm nativo do navegador.
-- Exclusão de apuração e responsável utiliza modal estilizado.
-- Possui blur, animação, ícone, destaque de risco e layout responsivo.
-- ESC, botão fechar, cancelar e clique fora encerram o modal.
-- Nenhuma funcionalidade ou dado dos outros módulos é alterado.
-
-
-CORREÇÃO DE DESAPARECIMENTO DO MÓDULO
-- O menu é criado antes de qualquer consulta ao Firebase.
-- Falha de permissão, rede ou coleção opcional não remove mais o módulo.
-- Um MutationObserver recria o botão se outro script reconstruir a sidebar.
-- A inicialização é protegida contra execução duplicada.
-- O módulo expõe comprasModule.restaurarMenu() para diagnóstico manual.
-
-
-CORREÇÃO DE ALÇADA E LIMPEZA DA APURAÇÃO
-- Filiais específicas têm prioridade sobre a região geral.
-- Gabriel e Rodrigo não recebem Leapmotor Belém, Jeep RAM, Fiat Pará
-  ou Fiat Centro Oeste quando essas unidades estão atribuídas a outros.
-- Comparações com região vazia foram bloqueadas.
-- Linhas “Filtros aplicados”, filtros técnicos, CLASS_ABC e rodapés
-  nunca entram na importação nem aparecem na apuração.
-- Uma nova importação no mesmo mês e tipo remove a versão anterior
-  antes de gravar a nova, sem afetar competências de outros meses.
-
-
-CRUD E EVIDÊNCIAS DA APURAÇÃO
-- Cada responsável possui ações Editar e Excluir na apuração mensal.
-- Editar grava uma correção manual de bônus e status, sem alterar a planilha original.
-- Excluir oculta somente a apuração do responsável naquele mês.
-- Uma nova importação no mesmo mês remove correções/exclusões manuais e passa a ser a fonte oficial.
-- A nova importação substitui os valores anteriores da mesma competência/unidade.
-- Importações de meses diferentes são preservadas.
-- A última planilha processada de cada competência e tipo fica salva como evidência,
-  podendo ser baixada novamente na tela de Apuração.
-
-
-DISTRIBUIÇÃO DEFINITIVA DOS RESPONSÁVEIS
-
-JESSICA E RONE
-- Regiões: MT e RO
-- Casas: Sinop, Cuiabá, Rondonópolis, Porto Velho e Vilhena
-
-GABRIEL E RODRIGO
-- Regiões: PA, PI, MA e AP
-- Casas: São Luís, Bacabal, Belém, Macapá e Teresina
-
-JULIANA
-- Responsabilidades: Jataí, Mineiros, Jeep RAM e Barra do Garças
-- Casas específicas:
-  - Monaco Veículos JEEP RAM - Barra do Garças-MT
-  - Mônaco LEAPMOTOR - Belém
-
-MYKAELA
-- Núcleos: Fiat Pará e Fiat Centro Oeste
-- Casas específicas:
-  - BR
-  - Doca
-  - Altamira
-  - Rondonópolis
-  - Primavera do Leste
-
-A função garantirResponsaveisPadrao atualiza automaticamente os cadastros
-já existentes no Firestore, mantendo o mesmo ID de cada colaborador.
-
-
-ATUALIZAÇÃO DA APURAÇÃO POR RESPONSÁVEL E REGIÃO
-- A disponibilidade é apurada por Núcleo/região, e não mais globalmente.
-- Cada Núcleo que atingir a política gera sua própria bonificação.
-- Jessica e Rone recebem pelos Núcleos de MT/RO.
-- Gabriel e Rodrigo recebem pelos Núcleos de PA/PI/MA/AP.
-- Juliana recebe por Jataí, Mineiros, Jeep RAM e Barra do Garças.
-- Mykaela recebe por BR, Doca, Altamira, Rondonópolis e Primavera do Leste.
-- O Controle de O.S. continua geral para todos, pois o relatório possui
-  apenas o percentual consolidado “AGUARDANDO PEÇAS - DEPTO COMPRAS”.
-
-
-ATUALIZAÇÃO DO MODELO REAL
-- Disponibilidade: importa tabela CLASS_ABC com A, B, C e Total.
-- Para a campanha são avaliadas as curvas A e B.
-- O sistema usa preferencialmente a linha Total oficial do relatório.
-- Controle de O.S.: considera somente a linha
-  "AGUARDANDO PEÇAS - DEPTO COMPRAS".
-- Disponibilidade e Controle de O.S. são resultados gerais:
-  quando a meta é atingida, a bonificação é aplicada a todos.
-
-===============================================================================
-
-DISPONIBILIDADE DE ESTOQUE
-- Curva A >= 95%: R$ 300,00
-- Curva B >= 90%: R$ 300,00
-
-ÍNDICE DE OBSOLESCÊNCIA
-- Redução em relação ao mês anterior: R$ 300,00
-- Quanto menor o índice atual, melhor.
-- É necessário existir histórico do mês anterior para pagar este indicador.
-
-CONTROLE DE O.S.
-- Percentual <= 10%: R$ 300,00
-
-PREMIAÇÃO MÁXIMA
-- R$ 1.200,00 por colaborador/mês.
-
-===============================================================================
-COLABORADORES E RESPONSABILIDADES INICIAIS
-===============================================================================
-
-- JESSICA: regiões MT e RO
-- RONE: regiões MT e RO
-- GABRIEL: regiões PA, PI, MA e AP
-- RODRIGO: regiões PA, PI, MA e AP
-- JULIANA: JATAI, MINEIROS, JEEP RAM e BARRA DO GARÇAS
-- MYKAELA: BR, DOCA, ALTAMIRA, RONDONOPOLIS e PRIMAVERA DO LESTE
-
-A base pode ser editada dentro do próprio módulo.
-Unidades específicas possuem prioridade sobre regiões gerais.
-
-===============================================================================
-MODELO DE IMPORTAÇÃO
-===============================================================================
-
-O módulo aceita XLSX, XLS e CSV.
-
-Importação consolidada:
-Competencia
-Nucleo
-Unidade
-Regiao
-Disponibilidade A
-Disponibilidade B
-Indice Obsolescencia
-Controle OS
-Valor Estoque
-Observacao
-
-Também aceita arquivos separados:
-- Disponibilidade
-- Obsolescência
-- Controle de O.S.
-
-===============================================================================
-*/
-
+import {EQUIPE_COMPRAS, planejarBaseCompras, recebeCasaEquipeCompras} from "./compras-equipe.js?v=20261028-analistas";
 import {lerPrintsABC, consolidarPrintsABC, CASAS_ABC} from "./compras-imagens.js?v=20261028-ocr-celulas";
 
 import { firestore } from "./firebase-config.js";
@@ -272,7 +30,7 @@ const COLECOES = {
   ajustes: "compras_campanha_ajustes_apuracao"
 };
 
-const POLITICA = {
+const POLITICA_ANALISTA = {
   disponibilidadeA: {
     meta: 95,
     bonus: 300
@@ -292,127 +50,8 @@ const POLITICA = {
   }
 };
 
-const RESPONSAVEIS_PADRAO = [
-  {
-    id: "jessica",
-    nome: "JÉSSICA ALVES DE JESUS",
-    regioes: [
-      "MT",
-      "RO",
-      "D MATO GROSSO",
-      "D RONDONIA"
-    ],
-    unidades: [
-      "SINOP",
-      "CUIABA",
-      "RONDONOPOLIS",
-      "PORTO VELHO",
-      "VILHENA"
-    ],
-    ativo: true
-  },
-  {
-    id: "rone",
-    nome: "RONE CÉSAR PRASERES CHAVES FILHO",
-    regioes: [
-      "MT",
-      "RO",
-      "D MATO GROSSO",
-      "D RONDONIA"
-    ],
-    unidades: [
-      "SINOP",
-      "CUIABA",
-      "RONDONOPOLIS",
-      "PORTO VELHO",
-      "VILHENA"
-    ],
-    ativo: true
-  },
-  {
-    id: "gabriel",
-    nome: "GABRIEL CAMPOS DIAS",
-    regioes: [
-      "PA",
-      "PI",
-      "MA",
-      "AP",
-      "D PARA",
-      "M PARA",
-      "D PIAUI",
-      "D MARANHAO",
-      "M AMAPA"
-    ],
-    unidades: [
-      "SAO LUIS",
-      "BACABAL",
-      "BELEM",
-      "MACAPA",
-      "TERESINA"
-    ],
-    ativo: true
-  },
-  {
-    id: "rodrigo",
-    nome: "RODRIGO SANTOS DA SILVA",
-    regioes: [
-      "PA",
-      "PI",
-      "MA",
-      "AP",
-      "D PARA",
-      "M PARA",
-      "D PIAUI",
-      "D MARANHAO",
-      "M AMAPA"
-    ],
-    unidades: [
-      "SAO LUIS",
-      "BACABAL",
-      "BELEM",
-      "MACAPA",
-      "TERESINA"
-    ],
-    ativo: true
-  },
-  {
-    id: "juliana",
-    nome: "JULIANA LIMA MARTINS",
-    regioes: [
-      "JATAI",
-      "MINEIROS",
-      "JEEP RAM",
-      "BARRA DO GARCAS"
-    ],
-    unidades: [
-      "JATAI",
-      "MINEIROS",
-      "JEEP RAM",
-      "BARRA DO GARCAS",
-      "MONACO VEICULOS JEEP RAM BARRA DO GARCAS MT",
-      "MONACO LEAPMOTOR BELEM"
-    ],
-    ativo: true
-  },
-  {
-    id: "mykaela",
-    nome: "Mykaela de Araújo Marques",
-    regioes: [
-      "FIAT PARA",
-      "FIAT CENTRO OESTE"
-    ],
-    unidades: [
-      "BR",
-      "DOCA",
-      "ALTAMIRA",
-      "RONDONOPOLIS",
-      "PRIMAVERA DO LESTE",
-      "FIAT PARA",
-      "FIAT CENTRO OESTE"
-    ],
-    ativo: true
-  }
-];
+const POLITICA = POLITICA_ANALISTA;
+const RESPONSAVEIS_PADRAO = EQUIPE_COMPRAS;
 
 const FILIAIS_SUGERIDAS = [
   "ANANINDEUA",
@@ -812,93 +451,15 @@ async function lerColecaoOpcional(
 }
 
 async function garantirResponsaveisPadrao() {
-  const existentes =
-    await lerColecao(
-      COLECOES.responsaveis
-    );
-
-  const mapaPorId =
-    new Map(
-      existentes.map(item => [
-        item.id,
-        item
-      ])
-    );
-
-  const batch =
-    writeBatch(firestore);
-
-  let possuiOperacao = false;
-
-  RESPONSAVEIS_PADRAO.forEach(
-    padrao => {
-      const existente =
-        mapaPorId.get(
-          padrao.id
-        );
-
-      if (!existente) {
-        batch.set(
-          doc(
-            firestore,
-            COLECOES.responsaveis,
-            padrao.id
-          ),
-          {
-            ...padrao,
-            criadoEm:
-              serverTimestamp(),
-            atualizadoEm:
-              serverTimestamp()
-          }
-        );
-
-        possuiOperacao = true;
-        return;
-      }
-
-      /*
-      Atualiza apenas o nome completo.
-      Regiões, casas, status e demais atribuições editadas
-      pelo usuário são preservadas.
-      */
-      if (
-        normalizar(existente.nome) !==
-        normalizar(padrao.nome)
-      ) {
-        batch.set(
-          doc(
-            firestore,
-            COLECOES.responsaveis,
-            existente.id
-          ),
-          {
-            nome:
-              padrao.nome,
-            atualizadoEm:
-              serverTimestamp()
-          },
-          {
-            merge: true
-          }
-        );
-
-        possuiOperacao = true;
-      }
-    }
-  );
-
-  if (possuiOperacao) {
-    await comTimeout(
-      batch.commit(),
-      TIMEOUT_FIREBASE,
-      "Não foi possível atualizar a base de responsáveis."
-    );
+  const existentes=await lerColecao(COLECOES.responsaveis);
+  const alteracoes=planejarBaseCompras(existentes);
+  if(alteracoes.length){
+    // Uma transação em lote troca a base inteira sem apagar indicadores ou importações.
+    const batch=writeBatch(firestore);
+    for(const {id,dados} of alteracoes)batch.set(doc(firestore,COLECOES.responsaveis,id),{...dados,atualizadoEm:serverTimestamp()},{merge:true});
+    await comTimeout(batch.commit(),TIMEOUT_FIREBASE,"Não foi possível atualizar a base de analistas de Compras.");
   }
-
-  return lerColecao(
-    COLECOES.responsaveis
-  );
+  return (await lerColecao(COLECOES.responsaveis)).filter(p=>p.foraDaBase!==true);
 }
 
 async function salvarResponsavel(
@@ -1040,7 +601,7 @@ async function restaurarResponsaveisPadrao() {
       titulo:
         "Restaurar atribuições padrão?",
       mensagem:
-        "As regiões e casas de Jessica, Rone, Gabriel, Rodrigo, Juliana e Mykaela voltarão para a configuração inicial.",
+        "As regiões e casas de Jéssica, Gabriel e Mykaela voltarão para a base de analistas aprovada em 28/10/2026.",
       destaque:
         "As alterações personalizadas atuais serão substituídas.",
       textoConfirmar:
@@ -1515,6 +1076,10 @@ function unidadeCorresponde(
   if (indicadorEhGlobal(indicador)) {
     return true;
   }
+
+  // A lista aprovada distingue Diesel de Fiat mesmo quando a cidade é a mesma.
+  const vinculoAprovado=recebeCasaEquipeCompras(responsavel,indicador);
+  if(vinculoAprovado!==null)return vinculoAprovado;
 
   const unidade =
     nomeUnidadeIndicador(
@@ -5104,7 +4669,7 @@ function htmlPaginas() {
       class="compras-page"
       data-compras-view="politicas"
     >
-      ${htmlTopbar("Políticas da campanha")}
+      ${htmlTopbar("Política dos analistas de Compras")}
 
       <div class="compras-policy-grid">
         ${htmlPoliticas()}
@@ -5119,7 +4684,7 @@ function htmlPaginas() {
         </header>
 
         <p>
-          A disponibilidade ABC é calculada pela média das
+          A política de analista é aplicada a Jéssica, Gabriel e Mykaela, conforme a base aprovada. A disponibilidade ABC é calculada pela média das
           casas efetivamente atendidas pelo colaborador dentro de
           cada núcleo. Quando o colaborador atende mais de um núcleo,
           cada núcleo é avaliado separadamente; porém, se um ou mais
@@ -5137,8 +4702,7 @@ function htmlPaginas() {
         </p>
 
         <p>
-          Unidades específicas cadastradas no responsável têm
-          prioridade sobre a região geral. Dessa forma, Jataí,
+          Somente as casas cadastradas em cada analista são consideradas. Diesel, Fiat e Jeep RAM são tratados separadamente, inclusive quando compartilham a mesma cidade. Dessa forma, Jataí,
           Mineiros, Jeep RAM, Barra do Garças, BR, Doca,
           Altamira, Rondonópolis e Primavera do Leste podem ser
           direcionadas individualmente.
@@ -6757,7 +6321,7 @@ function renderizarResponsaveis() {
                   .map(item => `
                     <tr>
                       <td>
-                        <strong>${escapar(item.nome)}</strong>
+                        <strong>${escapar(item.nome)}</strong><br><small>${escapar(item.cargo || "Analista de Compras")}</small>
                       </td>
 
                       <td>
