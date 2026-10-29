@@ -4596,6 +4596,13 @@ function garantirMenu() {
       evento => {
         // O clique é tratado aqui; não deve acionar o módulo Oficina no menu compartilhado.
         evento.stopPropagation();
+        const grupo = $("#comprasModuleWrapper");
+        if (grupo?.classList.contains("open")) {
+          grupo.classList.remove("open");
+          evento.currentTarget.setAttribute("aria-expanded", "false");
+          localStorage.removeItem("modulo_dropdown_aberto");
+          return;
+        }
         abrirView("visao-geral");
       }
     );

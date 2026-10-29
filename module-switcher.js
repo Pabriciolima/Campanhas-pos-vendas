@@ -527,7 +527,12 @@
       return;
     }
 
-    // O cartão do módulo sempre abre a visão geral, mesmo se o menu já estiver aberto.
+    // Recolher o grupo não troca a campanha ou a página em exibição.
+    if (grupo.classList.contains("open")) {
+      definirDropdown(modulo, false);
+      return;
+    }
+    // Ao expandir um grupo fechado, abre a visão geral da campanha.
     if (modulo === "pix") { abrirPaginaPix("dashboard"); return; }
     if (modulo === "garantia") { abrirPaginaGarantia("dashboard"); return; }
     if (modulo === "crm") {
