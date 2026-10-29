@@ -9,7 +9,8 @@ import {lerPrintsABC, consolidarPrintsABC, CASAS_ABC} from "./compras-imagens.js
 
 import {bancoCompras,collection,getDocs,doc,setDoc,deleteDoc,writeBatch,serverTimestamp} from "./compras-supabase.js?v=20261028-supabase";
 
-import {calcularDisponibilidadeCasa} from "./compras-apuracao.js?v=20261028-rateio";
+import {calcularObsolescenciaCasa,consolidarMetricasCasas,prepararSubstituicaoMetrica,lerPercentualObsoleto} from "./compras-obsolescencia.js?v=20261029-rateio";
+import {calcularDisponibilidadeCasa,parcelaCasa} from "./compras-apuracao.js?v=20261028-rateio";
 
 const VERSAO = "2026.07.23-15";
 const TAMANHO_LOTE = 400;
@@ -32,8 +33,6 @@ const POLITICA_ANALISTA = {
     bonus: 300
   },
   obsolescencia: {
-    valorPorPercentual: 60,
-    tetoPercentual: 5,
     bonusMaximo: 300
   },
   controleOs: {
@@ -670,11 +669,16 @@ function chaveIndicador(
 async function salvarIndicadoresEmLote(registros,historicoImportacao) {
   const cp=historicoImportacao.competencia,tipo=registros[0]?.tipoImportacao||historicoImportacao.tipo||'consolidado';
   const existentes=await lerColecao(COLECOES.indicadores);
-  const anteriores=existentes.filter(r=>r.competencia===cp&&(r.tipoImportacao===tipo||tipo==='disponibilidade'&&(r.disponibilidadeA!==undefined||r.disponibilidadeB!==undefined)||tipo==='os'&&r.controleOs!==undefined||tipo==='obsolescencia'&&r.indiceObsolescencia!==undefined));
-  // Remoção, novos dados, evidência e ajustes são confirmados em uma única transação do Supabase.
   const batch=writeBatch(bancoCompras);
-  anteriores.forEach(r=>batch.delete(doc(bancoCompras,COLECOES.indicadores,r.id)));
-  registros.forEach(r=>batch.set(doc(bancoCompras,COLECOES.indicadores,chaveIndicador(r.competencia,r.unidade)),{...r,atualizadoEm:serverTimestamp()},{merge:true}));
+  for(const {id,restante} of prepararSubstituicaoMetrica(existentes,cp,tipo)){
+    batch.delete(doc(bancoCompras,COLECOES.indicadores,id));
+    if(restante)batch.set(doc(bancoCompras,COLECOES.indicadores,id),restante);
+  }
+  registros.forEach(r=>{
+    const unidade=casaEquipeCompras(r)?.unidade||r.unidade;
+    const id=chaveIndicador(r.competencia,unidade)+'__'+slug(tipo);
+    batch.set(doc(bancoCompras,COLECOES.indicadores,id),{...r,atualizadoEm:serverTimestamp()});
+  });
   const id=[cp,slug(tipo)].join('__');
   batch.set(doc(bancoCompras,COLECOES.importacoes,id),{id,...historicoImportacao,tipoEfetivo:tipo,registros:registros.map(r=>{const c={...r};delete c.atualizadoEm;delete c.criadoEm;return c;}),substituiImportacaoAnterior:true,atualizadoEm:serverTimestamp()});
   state.ajustes.filter(r=>r.competencia===cp).forEach(r=>batch.delete(doc(bancoCompras,COLECOES.ajustes,r.id||chaveAjusteApuracao(r.competencia,r.responsavelId))));
@@ -1055,78 +1059,6 @@ function obterIndicadoresResponsavel(
 }
 
 
-function calcularBonusObsolescencia(
-  percentualAnterior,
-  percentualAtual
-) {
-  const anterior =
-    Number(percentualAnterior);
-
-  const atual =
-    Number(percentualAtual);
-
-  if (
-    !Number.isFinite(anterior) ||
-    !Number.isFinite(atual)
-  ) {
-    return {
-      possuiHistorico: false,
-      reducao: null,
-      reducaoBonificada: 0,
-      bonus: 0,
-      status: "PRIMEIRA MEDIÇÃO"
-    };
-  }
-
-  const reducao =
-    anterior - atual;
-
-  if (reducao <= 0) {
-    return {
-      possuiHistorico: true,
-      reducao,
-      reducaoBonificada: 0,
-      bonus: 0,
-      status:
-        reducao < 0
-          ? "AUMENTOU"
-          : "SEM REDUÇÃO"
-    };
-  }
-
-  const reducaoBonificada =
-    Math.min(
-      reducao,
-      POLITICA.obsolescencia
-        .tetoPercentual
-    );
-
-  const bonus =
-    Math.min(
-      reducaoBonificada *
-        POLITICA.obsolescencia
-          .valorPorPercentual,
-      POLITICA.obsolescencia
-        .bonusMaximo
-    );
-
-  return {
-    possuiHistorico: true,
-    reducao,
-    reducaoBonificada,
-    bonus:
-      Math.round(
-        bonus * 100
-      ) / 100,
-    status:
-      reducao >=
-        POLITICA.obsolescencia
-          .tetoPercentual
-        ? "TETO ATINGIDO"
-        : "REDUZIU"
-  };
-}
-
 function calcularApuracaoResponsavel(
   responsavel,
   competencia,
@@ -1167,22 +1099,13 @@ function calcularApuracaoResponsavel(
         )
     );
 
-  const mapaAnterior =
-    new Map(
-      anteriores.map(item => [
-        normalizar(
-          item.unidade ||
-          item.nucleo
-        ),
-        item
-      ])
-    );
-
   const chaveCasa = item => normalizar(casaEquipeCompras(item)?.unidade || item.unidade);
+  const mapaAnterior = consolidarMetricasCasas(anteriores,chaveCasa);
+  const mapaAtual = consolidarMetricasCasas(atuais,chaveCasa);
   const casasCadastradas = [...new Map((responsavel.unidades || []).map(unidade => [chaveCasa({unidade}),unidade])).values()];
   const quantidadeCasasRateio = casasCadastradas.length;
   // Exibe também as casas sem arquivo, sem redistribuir suas parcelas às que possuem dados.
-  const casasParaExibir = casasCadastradas.map(unidade => atuais.find(item => chaveCasa(item)===chaveCasa({unidade})) || {unidade});
+  const casasParaExibir = casasCadastradas.map(unidade => mapaAtual.get(chaveCasa({unidade})) || {unidade});
 
   /*
   DETALHAMENTO DE OBSOLESCÊNCIA POR CASA
@@ -1190,19 +1113,9 @@ function calcularApuracaoResponsavel(
   */
   const detalhesUnidades =
     casasParaExibir.map((item,indiceCasa) => {
-      const anterior =
-        mapaAnterior.get(
-          normalizar(
-            item.unidade ||
-            item.nucleo
-          )
-        );
-
-      const calculoObsolescencia =
-        calcularBonusObsolescencia(
-          anterior?.indiceObsolescencia,
-          item.indiceObsolescencia
-        );
+      const anterior = mapaAnterior.get(chaveCasa(item));
+      const parcelaObsolescencia = parcelaCasa(POLITICA.obsolescencia.bonusMaximo,quantidadeCasasRateio,indiceCasa);
+      const calculoObsolescencia = calcularObsolescenciaCasa(anterior?.indiceObsolescencia,item.indiceObsolescencia,parcelaObsolescencia);
 
       return {
         unidade:
@@ -1244,6 +1157,7 @@ function calcularApuracaoResponsavel(
           calculoObsolescencia.reducao !==
             null &&
           calculoObsolescencia.reducao > 0,
+        parcelaObsolescencia,
         bonusObsolescencia:
           calculoObsolescencia.bonus
       };
@@ -1261,12 +1175,7 @@ function calcularApuracaoResponsavel(
   const bonusA = Math.round(somar(registrosDisponibilidade.map(item => item.bonusA))*100)/100;
   const bonusB = Math.round(somar(registrosDisponibilidade.map(item => item.bonusB))*100)/100;
 
-  const bonusObsolescencia =
-    somar(
-      detalhesUnidades.map(item =>
-        item.bonusObsolescencia
-      )
-    );
+  const bonusObsolescencia = Math.round(somar(detalhesUnidades.map(item=>item.bonusObsolescencia))*100)/100;
 
   const controleOs =
     media(
@@ -1357,7 +1266,7 @@ function calcularApuracaoResponsavel(
       ),
 
     quantidadeUnidades:
-      atuais.length,
+      [...mapaAtual.keys()].length,
 
     detalhesUnidades,
     detalhesCasasDisponibilidade,
@@ -2338,10 +2247,11 @@ function prepararMatrizEspecial(
           .slice(
             indiceLinhaEmpresa + 1
           )
-          .map(linha => [
+          .map((linha,indice) => [
             linha[0] ?? "",
             linha[indiceValor365] ?? "",
-            linha[indicePercentual365] ?? ""
+            linha[indicePercentual365] ?? "",
+            indice + indiceLinhaEmpresa + 2
           ])
     };
   }
@@ -2601,14 +2511,13 @@ function processarObsolescencia365() {
       }
 
       const indice =
-        percentualNormalizado(
+        lerPercentualObsoleto(
           linha[2]
         );
 
+      if(indice === null)importacao.avisos.push(`Sem percentual na coluna I para ${texto(linha[0])}. Esta casa não será bonificada sem medição.`);
       return (
-        Number.isFinite(
-          Number(indice)
-        ) &&
+        indice !== null && indice !== undefined && Number.isFinite(Number(indice)) &&
         Number(indice) >= 0 &&
         Number(indice) <= 100
       );
@@ -2648,7 +2557,7 @@ function processarObsolescencia365() {
             ),
 
           indiceObsolescencia:
-            percentualNormalizado(
+            lerPercentualObsoleto(
               linha[2]
             ),
 
@@ -2661,10 +2570,12 @@ function processarObsolescencia365() {
             importacao.aba ||
             "",
           linhaOrigem:
-            indiceLinha + 1,
+            linha[3] || indiceLinha + 1,
+          colunaPercentualOrigem: "I",
+          colunaValorOrigem: "H",
 
           observacao:
-            "Percentual de estoque com mais de 365 dias."
+            "Percentual da coluna I (maior que 365 dias); comparar com a mesma casa no mês imediatamente anterior."
         };
       }
     );
@@ -2684,7 +2595,7 @@ function processarObsolescencia365() {
     )
   ) {
     importacao.avisos.push(
-      "Não existe histórico do mês anterior. Esta competência será tratada como primeira medição e não gerará bônus de obsolescência."
+      "Não existe planilha do mês anterior. Esta competência será tratada como primeira medição e não gerará bônus de obsolescência."
     );
   }
 }
@@ -4401,11 +4312,7 @@ function htmlPaginas() {
         </p>
 
         <p>
-          O bônus de obsolescência compara o percentual de
-          estoque com mais de 365 dias do mês anterior com o
-          mês atual. Cada ponto percentual reduzido paga
-          R$ 60,00, limitado a 5 pontos e R$ 300,00 por unidade.
-          Na primeira medição não há pagamento por falta de histórico.
+          O bônus de obsolescência compara, casa por casa, o percentual da coluna I (maior que 365 dias) com o mês imediatamente anterior. Os R$ 300,00 são divididos entre todas as casas cadastradas do colaborador. Qualquer redução paga a parcela da casa; percentual igual ou maior não paga. Sem a planilha do mês anterior ou sem o percentual da casa, o sistema informa a falta de histórico e não bonifica. Com seis casas, cada redução paga R$ 50,00; todas reduzindo somam R$ 300,00.
         </p>
 
         <p>
@@ -4537,13 +4444,10 @@ function htmlPoliticas() {
     <article class="compras-policy-card">
       <span>Obsolescência &gt; 365 dias</span>
       <strong>
-        R$ 60 por ponto percentual reduzido
+        Reduzir o percentual em relação ao mês anterior
       </strong>
       <b>
-        Teto:
-        ${percentual(POLITICA.obsolescencia.tetoPercentual)}
-        ·
-        ${moeda(POLITICA.obsolescencia.bonusMaximo)}
+        ${moeda(POLITICA.obsolescencia.bonusMaximo)} divididos entre todas as casas
       </b>
     </article>
 
@@ -5460,7 +5364,7 @@ function renderizarDashboard() {
             <td><strong>Obsolescência</strong></td>
             <td>Reduzir vs. mês anterior</td>
             <td>${totalObs}</td>
-            <td>${moeda(totalObs * POLITICA.obsolescencia.bonus)}</td>
+            <td>${moeda(somar(state.apuracao.map(item=>item.bonusObsolescencia)))}</td>
           </tr>
 
           <tr>
@@ -5620,10 +5524,7 @@ function htmlTabelaApuracao(
                   }
 
                   ${
-                    item.detalhesUnidades.some(unidade =>
-                      unidade.obsolescenciaAtual !== null &&
-                      unidade.obsolescenciaAtual !== undefined
-                    )
+                    item.detalhesUnidades.length > 0
                       ? `
                         <div>
                           <b style="color:#087354">
@@ -5632,10 +5533,6 @@ function htmlTabelaApuracao(
 
                           ${
                             item.detalhesUnidades
-                              .filter(unidade =>
-                                unidade.obsolescenciaAtual !== null &&
-                                unidade.obsolescenciaAtual !== undefined
-                              )
                               .map(unidade => `
                             <div class="compras-casa-resultado">
                               <strong>${escapar(unidade.unidade)}</strong>
@@ -5658,7 +5555,7 @@ function htmlTabelaApuracao(
                                   null ||
                                 unidade.obsolescenciaAtual ===
                                   undefined
-                                  ? "sem medição"
+                                  ? "SEM PLANILHA DO MÊS ATUAL — não bonifica"
                                   : `
                                     anterior:
                                     ${percentual(unidade.obsolescenciaAnterior)}
@@ -5666,7 +5563,7 @@ function htmlTabelaApuracao(
                                     ${percentual(unidade.obsolescenciaAtual)}
                                     · ${
                                       unidade.reducaoObsolescencia === null
-                                        ? "primeira medição"
+                                        ? "SEM PLANILHA DO MÊS ANTERIOR — não bonifica"
                                         : unidade.reducaoObsolescencia > 0
                                           ? `reduziu ${percentual(unidade.reducaoObsolescencia)} ✅`
                                           : unidade.reducaoObsolescencia < 0
@@ -5677,6 +5574,7 @@ function htmlTabelaApuracao(
                                     ${moeda(unidade.bonusObsolescencia)}
                                   `
                               }
+                              <br><small>Parcela de obsolescência: ${moeda(unidade.parcelaObsolescencia)} · ${escapar(unidade.statusObsolescencia)}</small>
                               <br>
                               <b>
                                 Bônus da casa:
@@ -6982,10 +6880,6 @@ function linhaApuracaoExportacao(
         .join(" ; "),
     Detalhamento_Obsolescencia:
       item.detalhesUnidades
-        .filter(unidade =>
-          unidade.obsolescenciaAtual !== null &&
-          unidade.obsolescenciaAtual !== undefined
-        )
         .map(unidade => [
           unidade.unidade,
           `A ${percentual(unidade.disponibilidadeA)} (${unidade.atingiuA ? "SIM" : "NÃO"})`,
@@ -6993,6 +6887,8 @@ function linhaApuracaoExportacao(
           `Obsolescência anterior ${percentual(unidade.obsolescenciaAnterior)}`,
           `Obsolescência atual ${percentual(unidade.obsolescenciaAtual)}`,
           `Redução ${percentual(unidade.reducaoObsolescencia)}`,
+          `Parcela obsolescência ${moeda(unidade.parcelaObsolescencia)}`,
+          `Status ${unidade.statusObsolescencia}`,
           `Bônus obsolescência ${moeda(unidade.bonusObsolescencia)}`,
           `Bônus ${moeda(
             unidade.bonusA +
@@ -7078,6 +6974,9 @@ function exportarApuracaoExcel() {
     planilhaApuracao,
     "APURACAO COMPRAS"
   );
+
+  const obsPorCasa=apuracao.flatMap(item=>item.detalhesUnidades.map(casa=>({Competencia:item.competencia,Mes_Anterior:item.competenciaAnterior,Colaborador:item.nome,Casa:casa.unidade,Percentual_Anterior:casa.obsolescenciaAnterior,Percentual_Atual:casa.obsolescenciaAtual,Reducao_PP:casa.reducaoObsolescencia,Parcela:casa.parcelaObsolescencia,Bonus:casa.bonusObsolescencia,Status:casa.statusObsolescencia})));
+  if(obsPorCasa.length)XLSX.utils.book_append_sheet(livro,XLSX.utils.json_to_sheet(obsPorCasa),'OBSOLESCENCIA POR CASA');
 
   const bonusPorCasa = apuracao.flatMap(item => item.detalhesCasasDisponibilidade.map(casa => ({
     Competencia:item.competencia, Colaborador:item.nome, Casa:casa.unidade, Nucleo:casa.nucleo,
@@ -7558,6 +7457,11 @@ function exportarApuracaoPdf() {
           </tbody></table>
         </section>
 
+        <section class="print-section"><h2>Redução dos obsoletos — por casa</h2>
+        <p>Coluna I comparada com o mês imediatamente anterior. R$ 300,00 divididos entre todas as casas cadastradas. Sem histórico, não bonifica.</p>
+        <table><thead><tr><th>Colaborador</th><th>Casa</th><th>Mês anterior</th><th>Atual</th><th>Parcela</th><th>Bônus</th><th>Situação</th></tr></thead><tbody>
+        ${apuracao.flatMap(item=>item.detalhesUnidades.map(casa=>`<tr><td>${escapar(item.nome)}</td><td>${escapar(casa.unidade)}</td><td>${percentual(casa.obsolescenciaAnterior)}</td><td>${percentual(casa.obsolescenciaAtual)}</td><td>${moeda(casa.parcelaObsolescencia)}</td><td>${moeda(casa.bonusObsolescencia)}</td><td>${escapar(casa.statusObsolescencia)}</td></tr>`)).join('')}
+        </tbody></table></section>
         ${htmlEvidenciasParaImpressao()}
       </body>
     </html>
