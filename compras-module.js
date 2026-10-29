@@ -4044,6 +4044,7 @@ function htmlPaginas() {
         </section>
       </div>
 
+      ${htmlAcompanhamentoObsolescencia()}
       <section class="compras-panel">
         <header class="compras-panel-header">
           <div>
@@ -4250,6 +4251,7 @@ function htmlPaginas() {
       data-compras-view="apuracao"
     >
       ${htmlTopbar("Apuração mensal", true)}
+      ${htmlAcompanhamentoObsolescencia()}
 
       <section class="compras-panel">
         <header class="compras-panel-header">
@@ -5880,6 +5882,32 @@ function configurarEventosApuracao() {
     });
 }
 
+// O acompanhamento usa as medições, mesmo sem histórico, bônus ou apuração habilitada.
+function htmlAcompanhamentoObsolescencia(){
+ return `<section class="compras-panel" data-compras-evolucao><header class="compras-panel-header"><div><small>ACOMPANHAMENTO POR CASA</small><h3>Evolução da obsolescência</h3></div><label class="compras-field"><span>Colaborador</span><select data-evolucao-colaborador aria-label="Colaborador para acompanhar obsolescência"></select></label></header><p>O percentual atual aparece mesmo sem bônus. A comparação usa o mês imediatamente anterior; sem esse histórico, a redução fica pendente de comparação.</p><div class="compras-table-wrap" style="max-height:420px;overflow:auto" role="region" aria-label="Evolução da obsolescência por casa" tabindex="0" data-evolucao-tabela></div></section>`;
+}
+function renderizarAcompanhamentoObsolescencia(){
+ const pessoas=state.responsaveis.filter(p=>p.ativo!==false);
+ const dados=pessoas.map(p=>calcularApuracaoResponsavel(p,state.competencia));
+ $$('[data-compras-evolucao]').forEach(painel=>{
+  const select=painel.querySelector('[data-evolucao-colaborador]'),anterior=select.value;
+  select.innerHTML='<option value="">Todos os colaboradores</option>'+pessoas.map(p=>`<option value="${escapar(p.id)}">${escapar(p.nome)}</option>`).join('');
+  if(pessoas.some(p=>p.id===anterior))select.value=anterior;
+  const exibir=()=>{
+   const linhas=dados.filter(p=>!select.value||p.responsavelId===select.value).flatMap(p=>p.detalhesUnidades.map(casa=>{
+    const variacao=casa.reducaoObsolescencia;
+    const mensagem=variacao===null?'Sem comparação':variacao>0?'Reduziu':variacao<0?'Aumentou':'Sem alteração';
+    const classe=variacao>0?'compras-success':variacao<0?'compras-danger':'compras-neutral';
+    const diferenca=variacao===null?'—':Math.abs(variacao).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:4})+' p.p.';
+    const situacao=casa.obsolescenciaAtual==null?'Sem planilha/medição atual':casa.obsolescenciaAnterior==null?'Sem planilha/medição do mês anterior':mensagem;
+    return `<tr><td><strong>${escapar(p.nome)}</strong></td><td>${escapar(casa.unidade)}</td><td>${percentual(casa.obsolescenciaAnterior)}</td><td><strong>${percentual(casa.obsolescenciaAtual)}</strong></td><td><span class="compras-badge ${classe}">${mensagem}</span> ${diferenca}</td><td>${escapar(situacao)}</td></tr>`;
+   }));
+   painel.querySelector('[data-evolucao-tabela]').innerHTML=linhas.length?`<table class="compras-table"><thead><tr><th>Colaborador</th><th>Casa</th><th>${escapar(competenciaBr(competenciaAnterior(state.competencia)))}</th><th>${escapar(competenciaBr(state.competencia))}</th><th>Evolução</th><th>Situação</th></tr></thead><tbody>${linhas.join('')}</tbody></table>`:'<div class="compras-empty">Nenhuma casa cadastrada para acompanhar.</div>';
+  };
+  select.onchange=exibir;exibir();
+ });
+}
+
 function renderizarApuracao() {
   $("#comprasApuracaoTabela")
     .innerHTML =
@@ -6210,6 +6238,7 @@ async function renderizarTudo() {
   renderizarCompetencias();
   renderizarDashboard();
   renderizarApuracao();
+  renderizarAcompanhamentoObsolescencia();
   renderizarResponsaveis();
   renderizarImportacao();
   renderizarStatusNuvemCompras();
