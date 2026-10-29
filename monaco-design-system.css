@@ -1,0 +1,104 @@
+/* Mônaco: hierarquia, superfícies e controles orientados pelas Apple HIG.
+ * Somente apresentação. As cores semânticas, tabelas congeladas e regras são preservadas.
+ * Fontes nativas: San Francisco é usada pelo SO Apple; nenhum arquivo proprietário é servido.
+ */
+:root{
+ --monaco-font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+ --monaco-bg:#f5f5f7;--monaco-surface:#fff;--monaco-secondary:#f0f1f4;
+ --monaco-text:#1d1d1f;--monaco-muted:#5d6370;--monaco-line:#d8dbe1;
+ --monaco-accent:#08745e;--monaco-soft:#e3f3ed;--monaco-focus:#0875d1;
+ --monaco-shadow:0 2px 5px #17243b04,0 12px 32px #17243b08;
+ --monaco-glass:rgba(248,249,252,.94);--monaco-sidebar:rgba(244,245,248,.97);
+}
+html[data-theme="dark"]{
+ --monaco-bg:#101114;--monaco-surface:#1c1e23;--monaco-secondary:#252830;
+ --monaco-text:#f3f4f7;--monaco-muted:#b5bac6;--monaco-line:#3a3e49;
+ --monaco-accent:#83e2c1;--monaco-soft:#193b32;--monaco-focus:#80bfff;
+ --monaco-shadow:0 2px 5px #0002,0 14px 36px #0002;
+ --monaco-glass:rgba(27,29,34,.95);--monaco-sidebar:rgba(24,26,31,.97);
+}
+html body{
+ --bg:var(--monaco-bg);--panel:var(--monaco-surface);--text:var(--monaco-text);--muted:var(--monaco-muted);--line:var(--monaco-line);
+ background:var(--monaco-bg)!important;color:var(--monaco-text)!important;
+ font-family:var(--monaco-font)!important;-webkit-font-smoothing:antialiased;
+ font-size:15px;line-height:1.5;
+}
+html body :is(button,input,select,textarea){font-family:var(--monaco-font)!important;}
+html body :is(h1,h2,h3,h4){font-family:var(--monaco-font)!important;letter-spacing:-.025em;line-height:1.22;}
+html body :is(.topbar,.compras-topbar) h1{font-size:clamp(24px,2.4vw,34px)!important;font-weight:730!important;}
+/* A navegação é a camada translúcida; os dados ficam sobre superfícies opacas. */
+html body .sidebar{
+ background:var(--monaco-sidebar)!important;color:var(--monaco-text)!important;
+ border-right:1px solid var(--monaco-line);box-shadow:4px 0 28px #00000005;
+}
+html body .sidebar :is(.brand strong,.module-toggle-text strong){color:var(--monaco-text)!important;-webkit-text-fill-color:currentColor!important;}
+html body .sidebar :is(.brand span,.module-toggle-text small,.sidebar-footer){color:var(--monaco-muted)!important;}
+html body .sidebar .brand-mark{background:#08745e!important;color:#fff!important;border-radius:13px;box-shadow:0 4px 10px #08745e24;}
+html body .sidebar .module-toggle{
+ min-height:56px;background:transparent!important;border:1px solid transparent!important;
+ border-radius:14px!important;padding:10px!important;box-shadow:none!important;
+}
+html body .sidebar .module-toggle:hover{background:var(--monaco-secondary)!important;}
+html body .sidebar .campaign-module-group.open>.module-toggle{background:var(--monaco-surface)!important;border-color:var(--monaco-line)!important;box-shadow:0 2px 7px #00000006!important;}
+html body .sidebar :is(.nav-btn,.pix-menu-btn,.crm-menu-btn,.garantia-menu-btn,.compras-menu-btn){
+ color:var(--monaco-muted)!important;min-height:42px;border-radius:10px!important;
+ font-size:12px!important;font-weight:600!important;line-height:1.4!important;
+}
+html body .sidebar :is(.nav-btn,.pix-menu-btn,.crm-menu-btn,.garantia-menu-btn,.compras-menu-btn):is(:hover,.active){background:var(--monaco-soft)!important;color:var(--monaco-accent)!important;}
+html body .sidebar .module-icon{box-shadow:none!important;border-radius:11px!important;}
+html body .sidebar .module-chevron{color:var(--monaco-muted)!important;}
+html body :is(.topbar,.compras-topbar){border-radius:18px!important;box-shadow:var(--monaco-shadow)!important;}
+html body .topbar{background:var(--monaco-glass)!important;border:1px solid var(--monaco-line)!important;}
+html body .topbar :is(h1,#pageTitle){color:var(--monaco-text)!important;-webkit-text-fill-color:currentColor!important;}
+html body .topbar :is(.subtitle,.eyebrow){color:var(--monaco-muted)!important;}
+/* Une les modules sans remplacer leurs composants ou leurs états métier. */
+html body :is(.panel,.card,.stat-card,.dashboard-card,.summary-card,.kpi-card,.pix-dashboard-card,.crm-panel,.crm-kpi,.g-overview-panel,.g-overview-kpi,.compras-panel,.compras-kpi,.compras-policy-card){
+ background:var(--monaco-surface)!important;border:1px solid var(--monaco-line)!important;
+ border-radius:17px!important;box-shadow:var(--monaco-shadow)!important;transform:none!important;
+}
+html body :is(.panel,.card,.crm-panel,.compras-panel){padding:clamp(16px,1.6vw,24px);}
+html body :is(.panel,.card,.crm-panel,.compras-panel) :is(h2,h3){color:var(--monaco-text)!important;-webkit-text-fill-color:currentColor!important;font-weight:680;}
+html body :is(.kpi-card,.stat-card,.crm-kpi,.compras-kpi) strong{font-variant-numeric:tabular-nums;letter-spacing:-.035em;}
+html body :is(.btn,.compras-btn,.crm-btn,button[data-compras-exportar]){
+ min-height:42px;min-width:42px;border-radius:11px!important;font-size:13px;font-weight:650;
+ transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease,transform .12s ease;
+}
+html body :is(.btn-primary,.compras-btn-primary){background:#08745e!important;color:#fff!important;border:1px solid #08745e!important;box-shadow:0 2px 4px #08745e16!important;}
+html body :is(.btn-light,.btn-secondary,.compras-btn-light,.compras-btn-dark){background:var(--monaco-secondary)!important;color:var(--monaco-text)!important;border-color:var(--monaco-line)!important;}
+html body :is(.btn,.compras-btn,.crm-btn):not(:disabled):active{transform:translateY(1px);}
+html body :is(button,input,select,textarea,a,summary):focus-visible{outline:3px solid var(--monaco-focus)!important;outline-offset:3px!important;}
+html body :is(button,input,select,textarea):disabled{cursor:not-allowed;opacity:.6;}
+html body :is(input,select,textarea):not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]){
+ min-height:42px;border:1px solid #969da9;border-radius:10px!important;
+ background:var(--monaco-surface)!important;color:var(--monaco-text)!important;-webkit-text-fill-color:currentColor!important;
+ font-size:14px;box-shadow:inset 0 1px 2px #00000003;
+}
+html[data-theme="dark"] body :is(input,select,textarea):not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]){border-color:#737b89!important;}
+html body :is(input,textarea)::placeholder{color:var(--monaco-muted)!important;opacity:1;}
+html body :is(input[type="checkbox"],input[type="radio"]){accent-color:#08745e;}
+html body table{font-variant-numeric:tabular-nums;font-family:var(--monaco-font)!important;}
+html body :is(.compras-table,.crm-table,.data-table) th{font-size:11px!important;letter-spacing:.035em;line-height:1.4;}
+html body :is(.compras-table,.crm-table,.data-table) td{font-size:13px;line-height:1.5;}
+html body .compras-table thead th{background:var(--monaco-secondary)!important;color:var(--monaco-muted)!important;border-color:var(--monaco-line)!important;}
+html body .compras-table tbody :is(tr,td){background:var(--monaco-surface)!important;color:var(--monaco-text)!important;border-color:var(--monaco-line)!important;}
+html body .compras-table tbody tr:nth-child(even) td{background:var(--monaco-secondary)!important;}
+html body :is(.compras-table-wrap,.table-wrap){border-radius:12px;scrollbar-width:thin;scrollbar-color:#8b929c transparent;}
+html body .compras-casa-resultado{border-radius:12px!important;padding:12px 14px!important;}
+html body dialog{border-radius:20px!important;max-width:calc(100vw - 24px);max-height:calc(100dvh - 32px);box-shadow:0 24px 80px #0005;}
+html body dialog::backdrop{background:#10142166;}
+html body .compras-import-drop{border-radius:16px!important;background:var(--monaco-secondary)!important;border-color:var(--monaco-line)!important;color:var(--monaco-text)!important;}
+/* Transparência discreta apenas na navegação. Os números permanecem em fundo opaco. */
+@supports(backdrop-filter:blur(12px)){
+ html body :is(.sidebar,.topbar){backdrop-filter:blur(18px) saturate(115%);-webkit-backdrop-filter:blur(18px) saturate(115%);}
+}
+@media(pointer:coarse){html body :is(.btn,.compras-btn,.crm-btn,.sidebar button){min-height:44px;min-width:44px;}html body :is(input,select):not([type="checkbox"]):not([type="radio"]){min-height:44px;font-size:16px;}}
+@media(max-width:700px){html body{font-size:15px;}html body :is(.panel,.card,.crm-panel,.compras-panel){border-radius:14px!important;padding:16px;}html body .topbar{border-radius:14px!important;}html body .compras-topbar h1{font-size:25px!important;}}
+@media(prefers-reduced-motion:reduce){html body *,html body *::before,html body *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important;}}
+@media(prefers-reduced-transparency:reduce){html body :is(.sidebar,.topbar){backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:var(--monaco-surface)!important;}}
+@media(prefers-contrast:more){html body{--monaco-line:var(--monaco-muted);}html body :is(input,select,textarea,button){border-width:2px!important;}html body .sidebar{background:var(--monaco-surface)!important;backdrop-filter:none!important;}}
+@media(forced-colors:active){html body :is(button,a,input,select,textarea){forced-color-adjust:auto;}html body :is(.sidebar,.topbar){backdrop-filter:none!important;}}
+html body .sidebar .developer-credit{display:flex;align-items:center;justify-content:center;gap:6px;max-width:100%;border:0!important;background:transparent!important;color:var(--monaco-muted)!important;font-size:11px;line-height:1.4;padding:10px 4px;cursor:pointer;}
+html body .sidebar .developer-credit strong{font-weight:600;color:inherit!important;}
+/* Erros continuam inequívocos após a padronização dos campos. */
+html body :is(input,select,textarea)[aria-invalid="true"]{border-color:#b42332!important;background:#fff3f3!important;color:#7f1822!important;}
+html[data-theme="dark"] body :is(input,select,textarea)[aria-invalid="true"]{border-color:#f298a2!important;background:#38252b!important;color:#ffd7dc!important;}
