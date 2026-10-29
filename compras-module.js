@@ -5,7 +5,7 @@
  */
 
 import {EQUIPE_COMPRAS, CASAS_EQUIPE_COMPRAS, casaEquipeCompras, planejarBaseCompras, recebeCasaEquipeCompras} from "./compras-equipe.js?v=20261028-analistas";
-import {lerPrintsABC, consolidarPrintsABC, CASAS_ABC} from "./compras-imagens.js?v=20261028-ocr-celulas";
+import {lerPrintsABC, consolidarPrintsABC, CASAS_ABC} from "./compras-imagens.js?v=20261029-apenas-ab";
 
 import {bancoCompras,collection,getDocs,doc,setDoc,deleteDoc,writeBatch,serverTimestamp} from "./compras-supabase.js?v=20261028-supabase";
 
@@ -2537,7 +2537,7 @@ function processarDisponibilidadeCurvas() {
             indice + 1,
 
           observacao:
-            "Disponibilidade ABC calculada individualmente por casa, somando os bônus das casas que atingiram a meta."
+            "Disponibilidade A/B calculada individualmente por casa, somando os bônus das casas que atingiram a meta."
         };
       }
     );
@@ -3004,10 +3004,10 @@ function conferirImagensABC() {
   dialog.id = "comprasRevisaoImagens";
   dialog.className = "compras-modal compras-revisao-imagens";
   const competencia = state.importacao.competencia;
-  dialog.innerHTML = `<header class="compras-modal-header"><div><small>DISPONIBILIDADE ABC</small><h3>Conferir prints por unidade</h3></div><button type="button" data-fechar class="compras-btn compras-btn-danger">Fechar</button></header>
+  dialog.innerHTML = `<header class="compras-modal-header"><div><small>DISPONIBILIDADE A/B</small><h3>Conferir prints por unidade</h3></div><button type="button" data-fechar class="compras-btn compras-btn-danger">Fechar</button></header>
     <div class="compras-revisao-body"><p>A leitura separa cada célula e confere os percentuais em mais de uma passagem. Confira nomes e valores nas imagens originais; campos pendentes precisam ser revisados. Linhas de resumo dos núcleos não devem ser incluídas como casas. Repetições idênticas serão unificadas; divergências precisam ser corrigidas.</p>
     <div class="compras-prints-originais"></div>
-    <div class="compras-table-wrap"><table class="compras-table"><thead><tr><th>Print / leitura</th><th>Unidade / núcleo</th><th>A %</th><th>B %</th><th>C %</th><th>Total %</th><th>Ação</th></tr></thead><tbody></tbody></table></div>
+    <div class="compras-table-wrap"><table class="compras-table"><thead><tr><th>Print / leitura</th><th>Unidade / núcleo</th><th>A %</th><th>B %</th><th>Ação</th></tr></thead><tbody></tbody></table></div>
     <p><label><input type="checkbox" data-mes> Confirmo que todos os prints pertencem à competência <strong>${escapar(competenciaBr(competencia))}</strong> e revisei as unidades e percentuais.</label></p>
     <p>Os prints compõem uma única importação ABC do mês. Ao confirmar a importação, este conjunto substituirá a disponibilidade anterior desta competência. Inclua todas as casas necessárias; os responsáveis serão apurados conforme seus vínculos cadastrados.</p>
     <p role="alert" data-erro></p><button type="button" data-aplicar class="compras-btn compras-btn-primary">Usar percentuais conferidos</button></div>`;
@@ -3016,7 +3016,7 @@ function conferirImagensABC() {
   const tbody=dialog.querySelector('tbody');
   imagensABC.forEach(r=>{
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${escapar(r.arquivo)}<br><small>${escapar(r.nomeLido)}</small></td><td><select aria-label="Unidade"><option value="">Selecione a unidade</option>${CASAS_ABC.map(c=>`<option value="${escapar(c.unidade)}">${escapar(c.nucleo+' · '+c.unidade)}</option>`).join('')}</select></td>${r.valores.map((v,i)=>`<td><input aria-label="${['A','B','C','Total'][i]} %" type="number" min="0" max="100" step="0.01" aria-invalid="${v===null}" value="${v===null?'':v}"></td>`).join('')}<td><button type="button" class="compras-btn compras-btn-danger" data-remover>Remover linha</button></td>`;
+    tr.innerHTML=`<td>${escapar(r.arquivo)}<br><small>${escapar(r.nomeLido)}</small></td><td><select aria-label="Unidade"><option value="">Selecione a unidade</option>${CASAS_ABC.map(c=>`<option value="${escapar(c.unidade)}">${escapar(c.nucleo+' · '+c.unidade)}</option>`).join('')}</select></td>${r.valores.slice(0,2).map((v,i)=>`<td><input aria-label="${['A','B','C','Total'][i]} %" type="number" min="0" max="100" step="0.01" aria-invalid="${v===null}" value="${v===null?'':v}"></td>`).join('')}<td><button type="button" class="compras-btn compras-btn-danger" data-remover>Remover linha</button></td>`;
     tr.querySelector('select').value=r.unidade;
     tr.querySelector('select').onchange=e=>{r.unidade=e.target.value;};
     tr.querySelectorAll('input').forEach((input,i)=>input.oninput=()=>{r.valores[i]=input.value.trim()===''?null:Number(input.value);input.setAttribute('aria-invalid',String(r.valores[i]===null||r.valores[i]<0||r.valores[i]>100));});
@@ -3029,11 +3029,11 @@ function conferirImagensABC() {
     try{
       if(state.importacao.competencia!==competencia)throw Error('A competência mudou. Reabra a conferência.');
       if(!dialog.querySelector('[data-mes]').checked)throw Error('Confirme o mês dos prints e a conferência dos percentuais.');
-      const rows=consolidarPrintsABC(imagensABC),imp=state.importacao;
+      const rows=consolidarPrintsABC(imagensABC,[0,1]),imp=state.importacao;
       imp.arquivo={name:arquivosABC.map(f=>f.name).join(' + ')};
       imp.competenciaImagens=competencia;imp.workbook=null;imp.aba='Prints ABC conferidos';imp.tipo='disponibilidade';imp.formatoEspecial='disponibilidade_curvas';
       imp.headers=['Nucleo','Empresa','Disponibilidade A','Disponibilidade B','Disponibilidade C','Disponibilidade Total'];
-      imp.rows=rows.map(r=>[r.nucleo,r.unidade,...r.valores.map(v=>v+"%")]);
+      imp.rows=rows.map(r=>[r.nucleo,r.unidade,...r.valores.map(v=>v==null?"":v+"%")]);
       $('#comprasImportTipo').value='disponibilidade';
       $('#comprasImportAba').innerHTML='<option>Prints ABC conferidos</option>';
       processarImportacao();
@@ -3060,7 +3060,7 @@ async function selecionarArquivosCompras(files) {
     // Uma seleção adicional invalida a prévia anterior até a nova conferência.
     state.importacao.registros=[];
     renderizarImportacao();conferirImagensABC();
-    const pendencias=imagensABC.reduce((n,r)=>n+r.valores.filter(v=>v===null).length+(!r.unidade?1:0),0);
+    const pendencias=imagensABC.reduce((n,r)=>n+r.valores.slice(0,2).filter(v=>v===null).length+(!r.unidade?1:0),0);
     status.textContent=arquivosABC.length+' print(s) · '+imagensABC.length+' linhas lidas · '+(pendencias?pendencias+' campo(s) para conferir.':'Todos os campos reconhecidos.')+' Você pode adicionar outros prints antes de confirmar.';
   }finally{lendoImagensABC=false;input.disabled=false;input.value='';renderizarImportacao();}
 }
@@ -4254,7 +4254,7 @@ function htmlPaginas() {
           </strong>
 
           <small>
-            Planilhas: XLSX, XLS ou CSV. Disponibilidade ABC: selecione até 8 prints PNG, JPG ou WebP, confira os percentuais e reúna as regiões antes de confirmar.
+            Planilhas: XLSX, XLS ou CSV. Disponibilidade A/B: selecione até 8 prints PNG, JPG ou WebP, confira os percentuais e reúna as regiões antes de confirmar.
           </small>
 
           <input
@@ -5573,7 +5573,7 @@ function htmlTabelaApuracao(
                       ? `
                         <div style="margin-bottom:8px">
                           <b style="color:#087354">
-                            DISPONIBILIDADE ABC — POR CASA
+                            DISPONIBILIDADE A/B — POR CASA
                           </b>
 
                           ${
@@ -5599,11 +5599,6 @@ function htmlTabelaApuracao(
                                   ${percentual(nucleo.disponibilidadeB)}
                                   ${nucleo.atingiuB ? "✅" : "❌"}
 
-                                  · Curva C:
-                                  ${percentual(nucleo.disponibilidadeC)}
-
-                                  · Total:
-                                  ${percentual(nucleo.disponibilidadeTotal)}
                                   <br><small>Parcela A: ${moeda(nucleo.parcelaA)} · Parcela B: ${moeda(nucleo.parcelaB)} (${item.quantidadeCasasRateio} casas cadastradas)</small>
                                   <br><b>Recebe A: ${moeda(nucleo.bonusA)} · B: ${moeda(nucleo.bonusB)}</b>
                                   <br><b>Bônus da casa: ${moeda(nucleo.bonusDisponibilidade)}</b>
@@ -6159,7 +6154,7 @@ function renderizarPreviaResponsaveisCompras() {
   if(alvo.hidden){alvo.replaceChildren();return;}
   const pessoas=state.responsaveis.length?state.responsaveis:EQUIPE_COMPRAS;
   const calculos=pessoas.filter(p=>p.ativo!==false).map(p=>({p,r:calcularApuracaoResponsavel(p,imp.competencia,imp.registros)}));
-  alvo.innerHTML=`<h3>Prévia dos bônus por casa e colaborador</h3><p>Cada casa recebe uma parcela dos R$ 300,00 de cada curva, divididos por todas as suas casas cadastradas. Calculada somente com este arquivo, antes de salvar. ${state.responsaveis.length?'Vínculos da base carregada.':'O banco está indisponível; esta prévia usa a base de analistas aprovada em 28/10/2026.'} Não inclui outros indicadores da campanha.</p><div class="compras-table-wrap"><table class="compras-table"><thead><tr><th>Colaborador</th><th>Casas encontradas / cadastradas</th><th>Parcela por casa (cada curva)</th><th>Curva A</th><th>Curva B</th><th>Bônus ABC</th></tr></thead><tbody>${calculos.map(({p,r})=>`<tr><td><strong>${escapar(p.nome)}</strong></td><td>${r.quantidadeUnidades} / ${p.unidades.length}</td><td>${moeda(POLITICA.disponibilidadeA.bonus/r.quantidadeCasasRateio || 0)}</td><td>${moeda(r.bonusA)}</td><td>${moeda(r.bonusB)}</td><td><strong>${moeda(r.bonusA+r.bonusB)}</strong></td></tr>`).join('')}</tbody></table></div>`;
+  alvo.innerHTML=`<h3>Prévia dos bônus por casa e colaborador</h3><p>Cada casa recebe uma parcela dos R$ 300,00 de cada curva, divididos por todas as suas casas cadastradas. Calculada somente com este arquivo, antes de salvar. ${state.responsaveis.length?'Vínculos da base carregada.':'O banco está indisponível; esta prévia usa a base de analistas aprovada em 28/10/2026.'} Não inclui outros indicadores da campanha.</p><div class="compras-table-wrap"><table class="compras-table"><thead><tr><th>Colaborador</th><th>Casas encontradas / cadastradas</th><th>Parcela por casa (cada curva)</th><th>Curva A</th><th>Curva B</th><th>Bônus A/B</th></tr></thead><tbody>${calculos.map(({p,r})=>`<tr><td><strong>${escapar(p.nome)}</strong></td><td>${r.quantidadeUnidades} / ${p.unidades.length}</td><td>${moeda(POLITICA.disponibilidadeA.bonus/r.quantidadeCasasRateio || 0)}</td><td>${moeda(r.bonusA)}</td><td>${moeda(r.bonusB)}</td><td><strong>${moeda(r.bonusA+r.bonusB)}</strong></td></tr>`).join('')}</tbody></table></div>`;
 }
 
 function renderizarImportacao() {
@@ -6197,8 +6192,6 @@ function renderizarImportacao() {
     "regiao",
     "disponibilidadeA",
     "disponibilidadeB",
-    "disponibilidadeC",
-    "disponibilidadeTotal",
     "indiceObsolescencia",
     "controleOs"
   ];
@@ -6231,9 +6224,7 @@ function renderizarImportacao() {
                               [
                                 "disponibilidadeA",
                                 "disponibilidadeB",
-                                "disponibilidadeC",
-                                "disponibilidadeTotal",
-                                "indiceObsolescencia",
+                                                                                        "indiceObsolescencia",
                                 "controleOs"
                               ].includes(campo)
                                 ? percentual(item[campo])
@@ -6975,15 +6966,13 @@ function linhaApuracaoExportacao(
       item.bonusTotal,
     Status:
       item.status,
-    Detalhamento_Disponibilidade_ABC:
+    Detalhamento_Disponibilidade_AB:
       (item.detalhesCasasDisponibilidade || [])
         .map(nucleo => [
           `Núcleo ${nucleo.nucleo}`,
           `Casa ${nucleo.unidade}`,
           `Curva A ${percentual(nucleo.disponibilidadeA)} (${nucleo.atingiuA ? "ATINGIU" : "NÃO ATINGIU"})`,
           `Curva B ${percentual(nucleo.disponibilidadeB)} (${nucleo.atingiuB ? "ATINGIU" : "NÃO ATINGIU"})`,
-          `Curva C ${percentual(nucleo.disponibilidadeC)}`,
-          `Total ${percentual(nucleo.disponibilidadeTotal)}`,
           `Parcela A ${moeda(nucleo.parcelaA)}`,
           `Parcela B ${moeda(nucleo.parcelaB)}`,
           `Bônus A ${moeda(nucleo.bonusA)}`,
@@ -7562,9 +7551,9 @@ function exportarApuracaoPdf() {
         </section>
 
         <section class="print-section">
-          <h2>Disponibilidade ABC — bônus por casa</h2>
+          <h2>Disponibilidade A/B — bônus por casa</h2>
           <p>Cada casa é avaliada individualmente. Os R$ 300,00 de cada curva são divididos entre todas as casas cadastradas do colaborador. Cada casa recebe sua parcela se atingir A ≥ 95% ou B ≥ 90%, conforme a curva. Casas sem medição não geram bônus.</p>
-          <table><thead><tr><th>Colaborador</th><th>Casa</th><th>Parcela A / B</th><th>Curva A</th><th>Bônus A</th><th>Curva B</th><th>Bônus B</th><th>Bônus ABC da casa</th></tr></thead><tbody>
+          <table><thead><tr><th>Colaborador</th><th>Casa</th><th>Parcela A / B</th><th>Curva A</th><th>Bônus A</th><th>Curva B</th><th>Bônus B</th><th>Bônus A/B da casa</th></tr></thead><tbody>
             ${apuracao.flatMap(item=>item.detalhesCasasDisponibilidade.map(casa=>`<tr><td>${escapar(item.nome)}</td><td>${escapar(casa.unidade)}</td><td>${moeda(casa.parcelaA)} / ${moeda(casa.parcelaB)}</td><td>${percentual(casa.disponibilidadeA)}</td><td class="money">${moeda(casa.bonusA)}</td><td>${percentual(casa.disponibilidadeB)}</td><td class="money">${moeda(casa.bonusB)}</td><td class="money">${moeda(casa.bonusDisponibilidade)}</td></tr>`)).join('')}
           </tbody></table>
         </section>

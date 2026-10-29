@@ -25,13 +25,13 @@ export function interpretarPrintABC(texto,arquivo){
  if(!rows.length)throw Error('Não foi possível ler linhas ABC neste print. Use uma imagem nítida com nome da unidade e as quatro colunas A, B, C e Total.');
  return rows;
 }
-export function consolidarPrintsABC(rows){
+export function consolidarPrintsABC(rows,indices=[0,1,2,3]){
  const casas=new Map();
  for(const r of rows){
   const casa=CASAS_ABC.find(c=>c.unidade===r.unidade);
-  if(!casa||r.valores.length!==4||r.valores.some(v=>typeof v!=='number'||!Number.isFinite(v)||v<0||v>100))throw Error('Confira a unidade e os quatro percentuais de todas as linhas.');
+  if(!casa||r.valores.length!==4||indices.some(i=>typeof r.valores[i]!=='number'||!Number.isFinite(r.valores[i])||r.valores[i]<0||r.valores[i]>100))throw Error('Confira a unidade e os percentuais exigidos de todas as linhas.');
   const key=normalizar(casa.unidade),anterior=casas.get(key);
-  if(anterior){if(anterior.valores.some((v,i)=>v!==r.valores[i]))throw Error('Percentuais divergentes para '+casa.unidade+'. Corrija ou remova a linha duplicada antes de continuar.');anterior.fontes.push(r.arquivo);}
+  if(anterior){if(indices.some(i=>anterior.valores[i]!==r.valores[i]))throw Error('Percentuais divergentes para '+casa.unidade+'. Corrija ou remova a linha duplicada antes de continuar.');anterior.fontes.push(r.arquivo);}
   else casas.set(key,{...casa,valores:[...r.valores],fontes:[r.arquivo]});
  }
  if(!casas.size)throw Error('Inclua ao menos uma unidade.');
