@@ -1,4 +1,4 @@
-import {POLITICA_ANALISTA, POLITICA_ASSISTENTE, politicaCompras} from "./compras-politicas.js?v=20261030-assistentes";
+import {POLITICA_ANALISTA, POLITICA_ASSISTENTE, politicaCompras} from "./compras-politicas.js?v=20261030-pesos";
 /* Campanha Central de Compras — base de analistas aprovada em 28/10/2026.
  * Jéssica: Diesel MT/RO; Gabriel: Diesel PA/AP/MA/PI; Mykaela: Fiat PA/MT/GO e Jeep RAM Barra do Garça.
  * Os demais cadastros ficam arquivados. Indicadores, fontes e importações permanecem preservados.
@@ -15,7 +15,7 @@ import {calcularDisponibilidadeCasa,parcelaCasa} from "./compras-apuracao.js?v=2
 
 import {analisarOsCompras,calcularOsResponsavel,rankingMotivosOs} from "./compras-os.js?v=20261030";
 
-import {htmlApuracaoVisual,configurarApuracaoVisual,filtrarApuracaoVisual} from "./compras-apuracao-ui.js?v=20261030-assistentes-layout";
+import {htmlApuracaoVisual,configurarApuracaoVisual,filtrarApuracaoVisual} from "./compras-apuracao-ui.js?v=20261030-pesos";
 
 const VERSAO = "2026.07.23-15";
 const TAMANHO_LOTE = 400;
@@ -1051,7 +1051,7 @@ function calcularApuracaoResponsavel(
   competencia,
   indicadores = state.indicadores
 ) {
-  const POLITICA = politicaCompras(responsavel);
+  const POLITICA = politicaCompras(responsavel, competencia);
   const anteriorCompetencia =
     competenciaAnterior(
       competencia
@@ -1194,7 +1194,7 @@ function calcularApuracaoResponsavel(
     ).length;
 
   const indicadoresAtingidos = casasAtingiramA + casasAtingiramB + reducoesObsolescencia + Number(atingiuOs);
-  const totalMetasPossiveis = quantidadeCasasRateio * 2 + unidadesComObsolescencia.length + Number(controleOs !== null);
+  const totalMetasPossiveis = quantidadeCasasRateio * 2 + unidadesComObsolescencia.length + Number(controleOs !== null) + Number(POLITICA.cobertura.pendente);
 
   const status =
     totalMetasPossiveis > 0 &&
@@ -1229,6 +1229,9 @@ function calcularApuracaoResponsavel(
     cargo: responsavel.cargo || "Analista de Compras",
     politica: responsavel.politica || "analista",
     limites: POLITICA,
+    bonusCobertura: 0,
+    coberturaPendente: POLITICA.cobertura.pendente,
+    statusCobertura: POLITICA.cobertura.pendente ? "Pendente: aguardando planilha e metas" : "Não prevista nesta competência",
     competencia,
     competenciaAnterior:
       anteriorCompetencia,
@@ -2446,7 +2449,7 @@ function processarDisponibilidadeCurvas() {
   );
 
   importacao.avisos.push(
-    "A verba de cada curva (R$ 300,00 para analista e R$ 250,00 para assistente) é dividida entre todas as casas cadastradas do colaborador. Cada casa recebe sua parcela somente quando atingir a respectiva meta. Casas sem dados não redistribuem sua parcela."
+    "A verba de cada curva, conforme cargo e competência, é dividida entre todas as casas cadastradas do colaborador. Cada casa recebe sua parcela somente quando atingir a respectiva meta. Casas sem dados não redistribuem sua parcela."
   );
 }
 
@@ -2583,7 +2586,7 @@ function processarOsDetalhadas(){
  try{
   const resultado=analisarOsCompras(imp.rows);
   imp.registros=resultado.registros.map(r=>({...r,competencia:imp.competencia,nucleo:r.unidade,aplicacaoGlobal:false,tipoImportacao:'os',arquivoOrigem:imp.arquivo?.name||'',abaOrigem:imp.aba,colunaFilialOrigem:'A',colunaMotivoOrigem:'J',modeloImportacao:'OS_DETALHADAS_POR_FILIAL',responsaveisVinculados:state.responsaveis.filter(p=>p.ativo!==false&&unidadeCorresponde(p,r)).map(p=>p.nome).join(', ')}));
-  imp.avisos.push(`${resultado.totalOs} O.S. em ${imp.registros.length} filiais. ${resultado.aguardandoCompras} aguardando Compras. Percentual da filial = O.S. aguardando Compras / total de O.S. abertas da filial. Bônus de R$ 300 para analista ou R$ 250 para assistente pela média simples de todas as filiais cadastradas do colaborador, até 10%.`);
+  imp.avisos.push(`${resultado.totalOs} O.S. em ${imp.registros.length} filiais. ${resultado.aguardandoCompras} aguardando Compras. Percentual da filial = O.S. aguardando Compras / total de O.S. abertas da filial. Bônus conforme cargo e competência pela média simples de todas as filiais cadastradas do colaborador, até 10%.`);
   if(resultado.duplicadas)imp.avisos.push(`${resultado.duplicadas} linha(s) duplicada(s) da mesma O.S. e filial foram contadas uma única vez.`);
   for(const r of imp.registros)if(!r.responsaveisVinculados)imp.avisos.push('Sem responsável vinculado: '+r.unidade+'.');
  }catch(e){imp.erros.push(e.message);}
@@ -3931,7 +3934,7 @@ function htmlPaginas() {
       ${htmlTopbar("Visão geral de Compras", true)}
       <p class="cmp-overview-intro">Acompanhe os ganhos do mês e o desempenho da equipe em cada indicador.</p>
       <div id="comprasDashboardKpis" class="compras-kpis cmp-overview-kpis"></div>
-      <section class="cmp-overview-section" aria-labelledby="cmpOverviewIndicadores"><header><div><small>RESULTADO DA CAMPANHA</small><h2 id="cmpOverviewIndicadores">Três indicadores, uma visão clara</h2></div></header><div id="comprasResumoIndicadores" class="cmp-overview-metrics"></div></section>
+      <section class="cmp-overview-section" aria-labelledby="cmpOverviewIndicadores"><header><div><small>RESULTADO DA CAMPANHA</small><h2 id="cmpOverviewIndicadores">Resultado por indicador</h2></div></header><div id="comprasResumoIndicadores" class="cmp-overview-metrics"></div></section>
       <section class="compras-panel cmp-overview-team"><header class="compras-panel-header"><div><small>EQUIPE</small><h3>Bonificação por colaborador</h3><p>Ordenado pelo total apurado. Consulte os cálculos por casa na apuração.</p></div><button type="button" class="compras-btn compras-btn-light" data-compras-nav="apuracao">Abrir apuração</button></header><div id="comprasRanking" class="compras-table-wrap" role="region" aria-label="Bonificação por colaborador" tabindex="0"></div></section>
       <div class="cmp-overview-analysis"><h2>Análises complementares</h2><p>Abra somente a informação que deseja conferir.</p>
       <details class="cmp-analysis"><summary>Evolução da obsolescência por casa</summary>${htmlAcompanhamentoObsolescencia()}</details>
@@ -4019,15 +4022,7 @@ function htmlPaginas() {
       data-compras-view="politicas"
     >
       ${htmlTopbar("Políticas de Compras")}
-      <p class="cmp-policy-intro">Entenda o que gera bonificação, como cada casa participa e o que impede o pagamento.</p>
-      <section class="cmp-policy-benefit" aria-labelledby="cmpPolicyBeneficio"><div><span class="cmp-policy-eyebrow">ANALISTAS E ASSISTENTES · CAMPANHA MENSAL</span><h2 id="cmpPolicyBeneficio">Quatro oportunidades de bonificação</h2><p>Disponibilidade A e B, redução de obsolescência e controle de O.S. são avaliados separadamente.</p></div><div class="cmp-policy-ceiling"><span>Potencial mensal · Analista</span><strong>${moeda(1200)}</strong><span>Potencial mensal · Assistente</span><strong>${moeda(1000)}</strong><small>Ao atingir todas as condições da política</small></div></section>
-      <div class="cmp-policy-section-title"><h2>Como conquistar cada bônus</h2><p>Os valores abaixo são o limite de cada indicador por colaborador.</p></div>
-      <div class="cmp-policy-cards">${htmlPoliticas()}</div>
-      <aside class="cmp-policy-warning" aria-labelledby="cmpPolicyPenalidades"><span class="cmp-policy-warning-icon" aria-hidden="true">!</span><div><h2 id="cmpPolicyPenalidades">Penalidades e bloqueios de bonificação</h2><p>A consequência prevista é não receber a parcela ou o bônus do indicador que não cumpriu a regra. Os demais indicadores continuam sendo avaliados pelas suas próprias condições.</p><ul><li><strong>Disponibilidade:</strong> a casa abaixo da meta ou sem percentual perde somente sua parcela da curva correspondente.</li><li><strong>Obsolescência:</strong> percentual igual ou maior não bonifica a casa. Sem o mês anterior ou sem os percentuais, o ganho fica zerado até haver comparação válida.</li><li><strong>O.S.:</strong> média acima de 10% ou qualquer casa sem informação impede o bônus integral do cargo (R$ 300,00 para analista; R$ 250,00 para assistente).</li></ul></div></aside>
-      <section class="cmp-policy-reference" aria-labelledby="cmpPolicyConferencia"><h2 id="cmpPolicyConferencia">Exemplos e critérios de conferência</h2><p>Consulte os detalhes para entender o rateio e a origem dos números.</p>
-      <details class="cmp-analysis"><summary>Exemplos práticos de analistas e assistentes</summary><div class="cmp-policy-detail"><dl class="cmp-policy-examples"><div><dt>Analista · Disponibilidade A/B</dt><dd>R$ 300,00 ÷ 6 = R$ 50,00 por casa, por curva. Se quatro casas atingirem A e duas atingirem B: R$ 200,00 + R$ 100,00 = <strong>R$ 300,00</strong>.</dd></div><div><dt>Obsolescência</dt><dd>Uma casa passa de 48% para 45%: recebe <strong>R$ 50,00</strong>. Se todas as seis reduzirem, o indicador soma R$ 300,00.</dd></div><div><dt>O.S. aguardando Compras</dt><dd>Percentuais de 5%, 8%, 10%, 12%, 15% e 10% resultam em média simples de <strong>10%</strong>: recebe R$ 300,00. Todas as seis casas precisam estar informadas.</dd></div><div><dt>Assistente · rateio</dt><dd>R$ 250,00 por indicador rateado. Com três casas, as parcelas são R$ 83,34, R$ 83,33 e R$ 83,33: juntas somam R$ 250,00. O.S. paga R$ 250,00 uma única vez se cumprir a regra.</dd></div></dl></div></details>
-      <details class="cmp-analysis"><summary>Casas consideradas e critérios de cálculo</summary><div class="cmp-policy-detail"><ul><li>Participam as casas cadastradas em cada colaborador na Base de responsáveis. Diesel, Fiat e Jeep RAM são tratados separadamente, mesmo na mesma cidade.</li><li>O rateio usa todas as casas cadastradas, inclusive as que não atingiram a meta. Uma parcela não paga não é transferida às demais casas.</li><li>Diferenças residuais de um centavo garantem que o rateio feche na verba do cargo (R$ 300,00 para analista ou R$ 250,00 para assistente) por indicador rateado quando todas as casas atingem.</li><li>A Curva C não é avaliada nem gera bonificação.</li><li>Na O.S., a decisão usa os percentuais completos, sem arredondamento. Justificativa vazia conta no total de O.S. como não informada.</li></ul></div></details>
-      <details class="cmp-analysis"><summary>De onde vêm os dados importados</summary><div class="cmp-policy-detail"><dl class="cmp-policy-examples"><div><dt>Disponibilidade A/B</dt><dd>Planilha de Disponibilidade por Curva ABC ou prints conferidos, com os percentuais A e B de cada casa.</dd></div><div><dt>Obsolescência</dt><dd>Planilha de Estoque por Classificação de Dias Último Movimento: percentual maior que 365 dias da coluna I, comparado com a mesma casa no mês imediatamente anterior.</dd></div><div><dt>O.S.</dt><dd>Planilha ANÁLISE DE O.S.: filial na coluna A e justificativa na J. Para cada filial: O.S. aguardando Compras ÷ total de O.S. abertas × 100. Depois, média simples dos percentuais das casas do responsável.</dd></div></dl></div></details></section>
+      <div id="comprasPoliticasConteudo">${htmlConteudoPoliticas()}</div>
     </section>
   `;
 }
@@ -4133,14 +4128,28 @@ function htmlTopbar(
   `;
 }
 
-function htmlPoliticas() {
-  const regras = [
-    {numero:"01",nome:"Disponibilidade · Curva A",valor:POLITICA.disponibilidadeA.bonus,modo:"Divididos entre todas as casas",meta:"Disponibilidade de pelo menos 95% em cada casa.",ganho:"Cada casa que atinge a meta recebe sua parcela da Curva A.",bloqueio:"Abaixo de 95% ou sem informação: a casa não recebe sua parcela de A."},
-    {numero:"02",nome:"Disponibilidade · Curva B",valor:POLITICA.disponibilidadeB.bonus,modo:"Divididos entre todas as casas",meta:"Disponibilidade de pelo menos 90% em cada casa.",ganho:"Cada casa que atinge a meta recebe sua parcela da Curva B, independentemente da Curva A.",bloqueio:"Abaixo de 90% ou sem informação: a casa não recebe sua parcela de B."},
-    {numero:"03",nome:"Redução de obsolescência",valor:POLITICA.obsolescencia.bonusMaximo,modo:"Divididos entre todas as casas",meta:"Reduzir o percentual de estoque acima de 365 dias em relação ao mês imediatamente anterior.",ganho:"Qualquer redução paga a parcela da casa, sem exigir uma redução mínima.",bloqueio:"Percentual igual, maior ou sem comparação válida: a casa não bonifica."},
-    {numero:"04",nome:"O.S. aguardando Compras",valor:POLITICA.controleOs.bonus,modo:"Bônus único · sem rateio por casa",meta:"Média simples dos percentuais de todas as casas menor ou igual a 10%.",ganho:"Com todas as casas informadas e média até 10%, o colaborador recebe o valor integral do seu cargo.",bloqueio:"Média acima de 10% ou alguma casa sem dados: não recebe este bônus."}
-  ];
-  return regras.map(r=>`<article class="cmp-policy-card"><header><span class="cmp-policy-number" aria-hidden="true">${r.numero}</span><h3>${r.nome}</h3></header><div class="cmp-policy-value"><span>Analista</span><strong>${moeda(r.valor)}</strong><span>Assistente</span><strong>${moeda(POLITICA_ASSISTENTE.disponibilidadeA.bonus)}</strong><span>${r.modo}</span></div><dl><div><dt>Meta para receber</dt><dd>${r.meta}</dd></div><div class="cmp-policy-positive"><dt>Benefício</dt><dd>${r.ganho}</dd></div><div class="cmp-policy-negative"><dt>Quando não bonifica</dt><dd>${r.bloqueio}</dd></div></dl></article>`).join("");
+function htmlConteudoPoliticas(){
+ const a=politicaCompras({politica:'analista'},state.competencia),b=politicaCompras({politica:'assistente'},state.competencia),nova=a.cobertura.pendente;
+ const total=p=>p.disponibilidadeA.bonus+p.disponibilidadeB.bonus+p.obsolescencia.bonusMaximo+p.controleOs.bonus+p.cobertura.bonusMaximo;
+ return `<p class="cmp-policy-intro">Regras de ${competenciaBr(state.competencia)}. ${nova?'Nova distribuição vigente desde outubro/2026.':'Política anterior a outubro/2026 preservada.'}</p>
+ <section class="cmp-policy-benefit"><div><span class="cmp-policy-eyebrow">ANALISTAS E ASSISTENTES · CAMPANHA MENSAL</span><h2>Bonificação conforme a atuação</h2><p>${nova?'Quatro indicadores: disponibilidade A/B, O.S., obsolescência e redução de cobertura.':'Disponibilidade A e B, obsolescência e O.S.'}</p>${nova?'<p><strong>Cobertura: R$ 300 por pessoa reservados na política, ainda sem bonificação. Aguardando planilha e metas.</strong></p>':''}</div><div class="cmp-policy-ceiling"><span>Potencial mensal · Analista</span><strong>${moeda(total(a))}</strong><span>Potencial mensal · Assistente</span><strong>${moeda(total(b))}</strong><small>${nova?'Até R$ 900 por pessoa nos indicadores já definidos + R$ 300 de cobertura pendentes. Orçamento máximo dos sete: R$ 8.400.':'Ao atingir todas as condições da política.'}</small></div></section>
+ <div class="cmp-policy-section-title"><h2>Como conquistar cada bônus</h2><p>Valores máximos por colaborador. Disponibilidade A e B têm verbas separadas.</p></div><div class="cmp-policy-cards">${htmlPoliticas()}</div>
+ ${nova?'<aside class="cmp-policy-warning"><span class="cmp-policy-warning-icon" aria-hidden="true">!</span><div><h2>Redução de cobertura · R$ 300 por colaborador</h2><p>Pendente de definição. Meta, forma de cálculo, fonte e eventual rateio ainda serão informados. O sistema não presume resultado nem concede esse bônus. A cobertura não é a cobertura de filiais do relatório de O.S.</p></div></aside>':''}
+ <aside class="cmp-policy-warning"><span class="cmp-policy-warning-icon" aria-hidden="true">!</span><div><h2>Penalidades e bloqueios de bonificação</h2><p>Não cumprir uma condição impede somente a parcela ou o bônus do respectivo indicador.</p><ul><li><strong>A/B:</strong> casa abaixo de 95% em A ou 90% em B, ou sem percentual, não recebe a parcela correspondente. Não há redistribuição.</li><li><strong>Obsolescência:</strong> percentual igual, maior ou sem comparação válida com o mês imediatamente anterior não bonifica a casa.</li><li><strong>O.S.:</strong> média acima de 10% ou qualquer casa sem dados impede o bônus do cargo: analista ${moeda(a.controleOs.bonus)}; assistente ${moeda(b.controleOs.bonus)}.</li></ul></div></aside>
+ <section class="cmp-policy-reference"><h2>Exemplos e critérios de conferência</h2><p>Abra os detalhes para conferir o rateio e as fontes.</p>
+ <details class="cmp-analysis"><summary>Exemplos de rateio e metas</summary><div class="cmp-policy-detail"><dl class="cmp-policy-examples"><div><dt>Disponibilidade A/B</dt><dd>Analista: ${moeda(a.disponibilidadeA.bonus)} para A + ${moeda(a.disponibilidadeB.bonus)} para B. Assistente: ${moeda(b.disponibilidadeA.bonus)} para A + ${moeda(b.disponibilidadeB.bonus)} para B. Cada verba é dividida entre todas as casas cadastradas; A e B são conquistadas independentemente.</dd></div><div><dt>Exemplo · seis casas</dt><dd>Uma casa de assistente que atinge A recebe ${moeda(parcelaCasa(b.disponibilidadeA.bonus,6,0))}. Com todas atingindo A, recebe ${moeda(b.disponibilidadeA.bonus)}. Na obsolescência, cada casa que reduz recebe ${moeda(parcelaCasa(b.obsolescencia.bonusMaximo,6,0))}.</dd></div><div><dt>O.S. aguardando Compras</dt><dd>Média simples de todas as casas até 10%, com todas informadas, paga ${moeda(a.controleOs.bonus)} para analista ou ${moeda(b.controleOs.bonus)} para assistente, uma única vez.</dd></div></dl></div></details>
+ <details class="cmp-analysis"><summary>Casas consideradas e critérios de cálculo</summary><div class="cmp-policy-detail"><ul><li>Somente as casas vinculadas ao colaborador participam. Diesel, Fiat e Jeep RAM são separados mesmo na mesma cidade.</li><li>O rateio considera todas as casas cadastradas. Parcelas não conquistadas não são transferidas. Centavos residuais garantem o fechamento exato da verba do cargo.</li><li>Curva C não é avaliada nem bonifica.</li><li>O.S. usa os percentuais completos, sem arredondar para decidir. Justificativa vazia participa do total como não informada.</li></ul></div></details>
+ <details class="cmp-analysis"><summary>De onde vêm os dados importados</summary><div class="cmp-policy-detail"><dl class="cmp-policy-examples"><div><dt>Disponibilidade</dt><dd>Planilha ou prints de Disponibilidade por Curva ABC, percentuais A e B por casa.</dd></div><div><dt>Obsolescência</dt><dd>Estoque por Classificação de Dias Último Movimento, coluna I (maior que 365 dias), contra a mesma casa no mês imediatamente anterior.</dd></div><div><dt>O.S.</dt><dd>ANÁLISE DE O.S.: filial na coluna A, justificativa na J. Percentual da filial = aguardando Compras ÷ total de O.S. abertas × 100. Depois, média simples das casas do colaborador.</dd></div>${nova?'<div><dt>Redução de cobertura</dt><dd>Planilha e metas ainda não fornecidas. Importação e cálculo aguardam definição.</dd></div>':''}</dl></div></details></section>`;
+}
+function htmlPoliticas(){
+ const a=politicaCompras({politica:'analista'},state.competencia),b=politicaCompras({politica:'assistente'},state.competencia);
+ const regras=[
+ ['01','Disponibilidade · Curva A',a.disponibilidadeA.bonus,b.disponibilidadeA.bonus,'Divididos entre todas as casas','Disponibilidade de pelo menos 95% em cada casa.','Cada casa que atinge a meta recebe sua parcela de A.','Abaixo de 95% ou sem percentual: a casa não recebe A.'],
+ ['02','Disponibilidade · Curva B',a.disponibilidadeB.bonus,b.disponibilidadeB.bonus,'Divididos entre todas as casas','Disponibilidade de pelo menos 90% em cada casa.','Cada casa que atinge a meta recebe sua parcela de B, independentemente de A.','Abaixo de 90% ou sem percentual: a casa não recebe B.'],
+ ['03','Redução de obsolescência',a.obsolescencia.bonusMaximo,b.obsolescencia.bonusMaximo,'Divididos entre todas as casas','Reduzir o percentual de estoque acima de 365 dias contra o mês imediatamente anterior.','Qualquer redução paga a parcela da casa.','Percentual igual, maior ou sem histórico válido: não bonifica a casa.'],
+ ['04','O.S. aguardando Compras',a.controleOs.bonus,b.controleOs.bonus,'Bônus único · sem rateio por casa','Média simples de todas as casas menor ou igual a 10%.','Com todas as casas informadas e meta atingida, recebe o bônus do cargo.','Média acima de 10% ou casa sem dados: sem bônus neste indicador.']
+ ];
+ return regras.map(([n,nome,va,vb,modo,meta,ganho,bloqueio])=>`<article class="cmp-policy-card"><header><span class="cmp-policy-number" aria-hidden="true">${n}</span><h3>${nome}</h3></header><div class="cmp-policy-value"><span>Analista</span><strong>${moeda(va)}</strong><span>Assistente</span><strong>${moeda(vb)}</strong><span>${modo}</span></div><dl><div><dt>Meta para receber</dt><dd>${meta}</dd></div><div class="cmp-policy-positive"><dt>Benefício</dt><dd>${ganho}</dd></div><div class="cmp-policy-negative"><dt>Quando não bonifica</dt><dd>${bloqueio}</dd></div></dl></article>`).join('');
 }
 
 function garantirPaginas() {
@@ -4963,11 +4972,11 @@ function renderizarDashboard() {
     );
 
   const comBonus = state.apuracao.filter(item => item.bonusTotal > 0).length;
-  const pendentes = state.apuracao.filter(item => !item.osCompleto || item.detalhesUnidades.some(casa => casa.obsolescenciaAnterior == null || casa.obsolescenciaAtual == null)).length;
+  const pendentes = state.apuracao.filter(item => !item.osCompleto || item.coberturaPendente || item.detalhesUnidades.some(casa => casa.obsolescenciaAnterior == null || casa.obsolescenciaAtual == null)).length;
   $("#comprasDashboardKpis").innerHTML = `
     <article class="compras-kpi cmp-overview-total"><span>Bonificação total apurada</span><strong>${moeda(totalInvestido)}</strong><small>${competenciaBr(state.competencia)} · valores calculados até agora</small></article>
     <article class="compras-kpi"><span>Colaboradores com bônus</span><strong>${comBonus}<small> / ${state.apuracao.length}</small></strong><small>Com valor apurado maior que zero</small></article>
-    <article class="compras-kpi"><span>Com dados pendentes</span><strong>${pendentes}</strong><small>Falta histórico de obsolescência ou cobertura de O.S.</small></article>`;
+    <article class="compras-kpi"><span>Com dados pendentes</span><strong>${pendentes}</strong><small>Histórico, filiais de O.S. ou definição de redução de cobertura.</small></article>`;
 
   const totalA = somar(state.apuracao.map(item => item.casasAtingiramA));
   const totalB = somar(state.apuracao.map(item => item.casasAtingiramB));
@@ -4988,9 +4997,9 @@ function renderizarDashboard() {
 
   // O resumo agrega cada verba uma vez; ajustes permanecem no total individual.
   $("#comprasResumoIndicadores").innerHTML = `
-    <article class="cmp-overview-metric"><span class="cmp-overview-symbol" aria-hidden="true">A/B</span><h3>Disponibilidade</h3><strong>${moeda(somar(state.apuracao.map(item=>item.bonusA+item.bonusB)))}</strong><p>Curva A ≥ 95% · Curva B ≥ 90%</p><dl><div><dt>Curva A</dt><dd>${totalA} avaliações · ${moeda(somar(state.apuracao.map(item=>item.bonusA)))}</dd></div><div><dt>Curva B</dt><dd>${totalB} avaliações · ${moeda(somar(state.apuracao.map(item=>item.bonusB)))}</dd></div></dl><small>Analista: R$ 300 por curva. Assistente: R$ 250 por curva. Valores divididos entre as casas de cada responsável.</small></article>
-    <article class="cmp-overview-metric"><span class="cmp-overview-symbol" aria-hidden="true">365</span><h3>Obsolescência</h3><strong>${moeda(somar(state.apuracao.map(item=>item.bonusObsolescencia)))}</strong><p>${totalObs} avaliações com redução em relação ao mês anterior</p><small>Analista: R$ 300. Assistente: R$ 250. Divididos entre as casas. Sem histórico do mês anterior, não há bonificação.</small></article>
-    <article class="cmp-overview-metric"><span class="cmp-overview-symbol" aria-hidden="true">O.S.</span><h3>Aguardando Compras</h3><strong>${moeda(somar(state.apuracao.map(item=>item.bonusOs)))}</strong><p>${totalOs} colaboradores atingiram a meta</p><small>Analista: R$ 300. Assistente: R$ 250, quando a média das casas é de até 10%, com todas as casas informadas.</small></article>`;
+    <article class="cmp-overview-metric"><span class="cmp-overview-symbol" aria-hidden="true">A/B</span><h3>Disponibilidade</h3><strong>${moeda(somar(state.apuracao.map(item=>item.bonusA+item.bonusB)))}</strong><p>Curva A ≥ 95% · Curva B ≥ 90%</p><dl><div><dt>Curva A</dt><dd>${totalA} avaliações · ${moeda(somar(state.apuracao.map(item=>item.bonusA)))}</dd></div><div><dt>Curva B</dt><dd>${totalB} avaliações · ${moeda(somar(state.apuracao.map(item=>item.bonusB)))}</dd></div></dl><small>Analista: ${moeda(politicaCompras({politica:"analista"},state.competencia).disponibilidadeA.bonus)} por curva. Assistente: ${moeda(politicaCompras({politica:"assistente"},state.competencia).disponibilidadeA.bonus)} por curva. Valores divididos entre as casas de cada responsável.</small></article>
+    <article class="cmp-overview-metric"><span class="cmp-overview-symbol" aria-hidden="true">365</span><h3>Obsolescência</h3><strong>${moeda(somar(state.apuracao.map(item=>item.bonusObsolescencia)))}</strong><p>${totalObs} avaliações com redução em relação ao mês anterior</p><small>${moeda(politicaCompras({politica:"analista"},state.competencia).obsolescencia.bonusMaximo)} para analista e ${moeda(politicaCompras({politica:"assistente"},state.competencia).obsolescencia.bonusMaximo)} para assistente, divididos entre as casas. Sem histórico do mês anterior, não há bonificação.</small></article>
+    <article class="cmp-overview-metric"><span class="cmp-overview-symbol" aria-hidden="true">O.S.</span><h3>Aguardando Compras</h3><strong>${moeda(somar(state.apuracao.map(item=>item.bonusOs)))}</strong><p>${totalOs} colaboradores atingiram a meta</p><small>Analista: ${moeda(politicaCompras({politica:"analista"},state.competencia).controleOs.bonus)}. Assistente: ${moeda(politicaCompras({politica:"assistente"},state.competencia).controleOs.bonus)}, quando a média das casas é de até 10%, com todas as casas informadas.</small></article>${state.competencia>='2026-10'?'<article class="cmp-overview-metric"><span class="cmp-overview-symbol" aria-hidden="true">04</span><h3>Redução de cobertura</h3><strong>R$ 0,00</strong><p>Pendente de definição</p><small>R$ 300 por colaborador previstos. Aguardando planilha e metas; sem bônus por enquanto.</small></article>':''}`;
 
   const ranking =
     [...state.apuracao]
@@ -5623,6 +5632,7 @@ function renderizarImportacao() {
 }
 
 function renderizarCompetencias() {
+  if ($("#comprasPoliticasConteudo")) $("#comprasPoliticasConteudo").innerHTML = htmlConteudoPoliticas();
   $$(".compras-competencia-input")
     .forEach(input => {
       input.value =
@@ -5962,7 +5972,7 @@ function garantirModalResponsavel() {
             </label>
 
             <label class="compras-field">
-              <span>Cargo e política</span><select id="comprasResponsavelPolitica"><option value="analista">Analista · até R$ 1.200/mês</option><option value="assistente">Assistente · até R$ 1.000/mês</option></select></label><label class="compras-field"><span>Status</span>
+              <span>Cargo e política</span><select id="comprasResponsavelPolitica"><option value="analista">Analista de Compras</option><option value="assistente">Assistente de Compras</option></select></label><label class="compras-field"><span>Status</span>
               <select id="comprasResponsavelAtivo">
                 <option value="true">Ativo</option>
                 <option value="false">Inativo</option>
@@ -6308,6 +6318,8 @@ function linhaApuracaoExportacao(
       item.bonusOs,
     Indicadores_Atingidos:
       item.indicadoresAtingidos,
+    Bonus_Cobertura: item.bonusCobertura,
+    Status_Reducao_Cobertura: item.statusCobertura,
     Bonus_Total:
       item.bonusTotal,
     Status:
@@ -6898,18 +6910,18 @@ function exportarApuracaoPdf() {
 
         <section class="print-section">
           <h2>Disponibilidade A/B — bônus por casa</h2>
-          <p>Cada casa é avaliada individualmente. A verba de cada curva (R$ 300,00 para analista; R$ 250,00 para assistente) é dividida entre todas as casas cadastradas do colaborador. Cada casa recebe sua parcela se atingir A ≥ 95% ou B ≥ 90%, conforme a curva. Casas sem medição não geram bônus.</p>
+          <p>Cada casa é avaliada individualmente. A verba de cada curva, conforme cargo e competência, é dividida entre todas as casas cadastradas do colaborador. Cada casa recebe sua parcela se atingir A ≥ 95% ou B ≥ 90%, conforme a curva. Casas sem medição não geram bônus.</p>
           <table><thead><tr><th>Colaborador</th><th>Casa</th><th>Parcela A / B</th><th>Curva A</th><th>Bônus A</th><th>Curva B</th><th>Bônus B</th><th>Bônus A/B da casa</th></tr></thead><tbody>
             ${apuracao.flatMap(item=>item.detalhesCasasDisponibilidade.map(casa=>`<tr><td>${escapar(item.nome)}</td><td>${escapar(casa.unidade)}</td><td>${moeda(casa.parcelaA)} / ${moeda(casa.parcelaB)}</td><td>${percentual(casa.disponibilidadeA)}</td><td class="money">${moeda(casa.bonusA)}</td><td>${percentual(casa.disponibilidadeB)}</td><td class="money">${moeda(casa.bonusB)}</td><td class="money">${moeda(casa.bonusDisponibilidade)}</td></tr>`)).join('')}
           </tbody></table>
         </section>
 
         <section class="print-section"><h2>Redução dos obsoletos — por casa</h2>
-        <p>Coluna I comparada com o mês imediatamente anterior. R$ 300,00 para analista ou R$ 250,00 para assistente, divididos entre todas as casas cadastradas. Sem histórico, não bonifica.</p>
+        <p>Coluna I comparada com o mês imediatamente anterior. Verba do cargo e competência, dividida entre todas as casas cadastradas. Sem histórico, não bonifica.</p>
         <table><thead><tr><th>Colaborador</th><th>Casa</th><th>Mês anterior</th><th>Atual</th><th>Parcela</th><th>Bônus</th><th>Situação</th></tr></thead><tbody>
         ${apuracao.flatMap(item=>item.detalhesUnidades.map(casa=>`<tr><td>${escapar(item.nome)}</td><td>${escapar(casa.unidade)}</td><td>${percentual(casa.obsolescenciaAnterior)}</td><td>${percentual(casa.obsolescenciaAtual)}</td><td>${moeda(casa.parcelaObsolescencia)}</td><td>${moeda(casa.bonusObsolescencia)}</td><td>${escapar(casa.statusObsolescencia)}</td></tr>`)).join('')}
         </tbody></table></section>
-        <section class="print-section"><h2>O.S. aguardando Central de Compras</h2><p>Média simples das filiais cadastradas, até 10%: R$ 300 para analista e R$ 250 para assistente. Filiais ausentes deixam a bonificação pendente.</p><table><thead><tr><th>Colaborador</th><th>Filial</th><th>O.S. abertas</th><th>Aguardando Compras</th><th>% da filial</th></tr></thead><tbody>${apuracao.flatMap(p=>p.detalhesUnidades.map(c=>`<tr><td>${escapar(p.nome)}</td><td>${escapar(c.unidade)}</td><td>${c.totalOs??'—'}</td><td>${c.aguardandoCompras??'—'}</td><td>${percentual(c.controleOs)}</td></tr>`)).join('')}</tbody></table><h3>Ranking das justificativas</h3><table><thead><tr><th>Posição</th><th>Motivo</th><th>Quantidade</th><th>%</th></tr></thead><tbody>${rankingMotivosOs(state.indicadores.filter(r=>r.competencia===state.competencia&&Array.isArray(r.osRankingJustificativas)&&apuracao.some(p=>{const responsavel=state.responsaveis.find(x=>x.id===p.responsavelId);return responsavel&&unidadeCorresponde(responsavel,r);}))).map(r=>`<tr><td>${r.posicao}</td><td>${escapar(r.motivo)}</td><td>${r.quantidade}</td><td>${percentual(r.percentual)}</td></tr>`).join('')}</tbody></table></section>
+        ${state.competencia>='2026-10'?'<section class="print-section"><h2>Redução de cobertura</h2><p>R$ 300 por colaborador previstos na política; meta e fonte pendentes. Bônus de cobertura: R$ 0,00. Os totais atuais não incluem esta verba.</p></section>':''}<section class="print-section"><h2>O.S. aguardando Central de Compras</h2><p>Média simples das filiais cadastradas, até 10% paga o bônus do cargo e competência. Filiais ausentes deixam a bonificação pendente.</p><table><thead><tr><th>Colaborador</th><th>Filial</th><th>O.S. abertas</th><th>Aguardando Compras</th><th>% da filial</th></tr></thead><tbody>${apuracao.flatMap(p=>p.detalhesUnidades.map(c=>`<tr><td>${escapar(p.nome)}</td><td>${escapar(c.unidade)}</td><td>${c.totalOs??'—'}</td><td>${c.aguardandoCompras??'—'}</td><td>${percentual(c.controleOs)}</td></tr>`)).join('')}</tbody></table><h3>Ranking das justificativas</h3><table><thead><tr><th>Posição</th><th>Motivo</th><th>Quantidade</th><th>%</th></tr></thead><tbody>${rankingMotivosOs(state.indicadores.filter(r=>r.competencia===state.competencia&&Array.isArray(r.osRankingJustificativas)&&apuracao.some(p=>{const responsavel=state.responsaveis.find(x=>x.id===p.responsavelId);return responsavel&&unidadeCorresponde(responsavel,r);}))).map(r=>`<tr><td>${r.posicao}</td><td>${escapar(r.motivo)}</td><td>${r.quantidade}</td><td>${percentual(r.percentual)}</td></tr>`).join('')}</tbody></table></section>
         ${htmlEvidenciasParaImpressao()}
       </body>
     </html>

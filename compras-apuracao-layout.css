@@ -67,3 +67,5 @@ html body:has(#compras-apuracao.active) main>.topbar{display:none!important;}
 
 /* A sincronização continua disponível sem competir com os valores da apuração. */
 html body #compras-apuracao .compras-sync-status:not(.compras-alert){background:transparent!important;color:var(--monaco-muted,#5d6875)!important;border:1px solid var(--monaco-line,#dbe2e7)!important;padding:8px 12px;margin:8px 0 16px;font-size:12px;box-shadow:none;}
+
+@media(min-width:601px){.cmp-indicators:has(>section:nth-child(4)){grid-template-columns:repeat(2,minmax(0,1fr));}}
