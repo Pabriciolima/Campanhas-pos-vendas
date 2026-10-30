@@ -1,10 +1,10 @@
 // Cobertura é um índice (não percentual). A meta usa a precisão original.
 const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
 export const formatarCobertura=v=>typeof v==='number'&&Number.isFinite(v)?v.toLocaleString('pt-BR',{maximumFractionDigits:8}):'Sem dados';
-export function calcularCoberturaCasa(anterior,atual,parcela){
+export function calcularCoberturaCasa(anterior,atual,parcela,politica={meta:4,pendente:false}){
  const valido=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0;
- const temAtual=valido(atual),temAnterior=valido(anterior),atingiu=temAtual&&atual<=4;
- return {atual:temAtual?atual:null,anterior:temAnterior?anterior:null,variacao:temAtual&&temAnterior?anterior-atual:null,atingiu,bonus:atingiu?parcela:0,status:!temAtual?'SEM DADOS DO MÊS':atingiu?'ATINGIU · COBERTURA ≤ 4':'ACIMA DA META 4'};
+ const temAtual=valido(atual),temAnterior=valido(anterior),atingiu=!politica.pendente&&temAtual&&atual<=politica.meta;
+ return {atual:temAtual?atual:null,anterior:temAnterior?anterior:null,variacao:temAtual&&temAnterior?anterior-atual:null,atingiu,bonus:atingiu?parcela:0,status:politica.pendente?'REGRA PENDENTE PARA ANALISTAS':!temAtual?'SEM DADOS DO MÊS':atingiu?'ATINGIU · COBERTURA ≤ 4':'ACIMA DA META 4'};
 }
 const meses=['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
 function mes(v){if(v instanceof Date&&!Number.isNaN(+v))return v.toISOString().slice(0,7);const t=norm(v),m=t.match(/^(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)[A-Z]*[ /-](\d{4})$/);if(m)return m[2]+'-'+String(meses.indexOf(m[1])+1).padStart(2,'0');return /^\d{4}-\d{2}$/.test(t)?t:null;}
