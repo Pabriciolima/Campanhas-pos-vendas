@@ -16,7 +16,7 @@ export function consolidarMetricasCasas(registros,chave){
  return casas;
 }
 // Cada importação substitui só a métrica do mês, preservando os demais indicadores.
-export const CAMPOS_METRICAS_COMPRAS={disponibilidade:['disponibilidadeA','disponibilidadeB','disponibilidadeC','disponibilidadeTotal'],obsolescencia:['indiceObsolescencia','valorObsoleto365'],os:['controleOs']};
+export const CAMPOS_METRICAS_COMPRAS={disponibilidade:['disponibilidadeA','disponibilidadeB','disponibilidadeC','disponibilidadeTotal'],obsolescencia:['indiceObsolescencia','valorObsoleto365'],os:['controleOs','totalOs','aguardandoCompras','osRankingJustificativas','empresaOrigem']};
 export function prepararSubstituicaoMetrica(existentes,competencia,tipo){
  const campos=CAMPOS_METRICAS_COMPRAS[tipo];
  if(!campos)return [];

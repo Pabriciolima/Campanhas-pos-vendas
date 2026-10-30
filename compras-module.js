@@ -4,13 +4,15 @@
  * A política vigente de Compras é aplicada aos analistas sem alteração de metas ou valores.
  */
 
-import {EQUIPE_COMPRAS, CASAS_EQUIPE_COMPRAS, casaEquipeCompras, planejarBaseCompras, recebeCasaEquipeCompras} from "./compras-equipe.js?v=20261028-analistas";
+import {EQUIPE_COMPRAS, CASAS_EQUIPE_COMPRAS, casaEquipeCompras, planejarBaseCompras, recebeCasaEquipeCompras} from "./compras-equipe.js?v=20261030-os";
 import {lerPrintsABC, consolidarPrintsABC, CASAS_ABC} from "./compras-imagens.js?v=20261029-apenas-ab";
 
 import {bancoCompras,collection,getDocs,doc,setDoc,deleteDoc,writeBatch,serverTimestamp} from "./compras-supabase.js?v=20261028-supabase";
 
-import {calcularObsolescenciaCasa,consolidarMetricasCasas,prepararSubstituicaoMetrica,lerPercentualObsoleto} from "./compras-obsolescencia.js?v=20261029-rateio";
+import {calcularObsolescenciaCasa,consolidarMetricasCasas,prepararSubstituicaoMetrica,lerPercentualObsoleto} from "./compras-obsolescencia.js?v=20261030-os";
 import {calcularDisponibilidadeCasa,parcelaCasa} from "./compras-apuracao.js?v=20261028-rateio";
+
+import {analisarOsCompras,calcularOsResponsavel,rankingMotivosOs} from "./compras-os.js?v=20261030";
 
 const VERSAO = "2026.07.23-15";
 const TAMANHO_LOTE = 400;
@@ -1127,6 +1129,9 @@ function calcularApuracaoResponsavel(
           item.unidade,
         regiao:
           item.regiao || "",
+        controleOs:item.controleOs ?? null,
+        totalOs:item.totalOs ?? null,
+        aguardandoCompras:item.aguardandoCompras ?? null,
 
         ...calcularDisponibilidadeCasa(item, POLITICA, quantidadeCasasRateio, indiceCasa),
         disponibilidadeA:
@@ -1177,30 +1182,9 @@ function calcularApuracaoResponsavel(
 
   const bonusObsolescencia = Math.round(somar(detalhesUnidades.map(item=>item.bonusObsolescencia))*100)/100;
 
-  const controleOs =
-    media(
-      indicadores
-        .filter(
-          indicador =>
-            indicador.competencia ===
-              competencia &&
-            indicadorEhGlobal(
-              indicador
-            ) &&
-            indicador.controleOs !==
-              null &&
-            indicador.controleOs !==
-              undefined
-        )
-        .map(item =>
-          item.controleOs
-        )
-    );
-
-  const atingiuOs =
-    controleOs !== null &&
-    controleOs <=
-      POLITICA.controleOs.meta;
+  const avaliacaoOs=calcularOsResponsavel(detalhesUnidades,POLITICA.controleOs.meta);
+  const controleOs=avaliacaoOs.media;
+  const atingiuOs=avaliacaoOs.atingiu;
 
   const bonusOs =
     atingiuOs
@@ -1285,6 +1269,9 @@ function calcularApuracaoResponsavel(
         : null,
 
     controleOs,
+    osCompleto:avaliacaoOs.completo,
+    osFiliaisInformadas:avaliacaoOs.filiaisInformadas,
+    osFiliaisEsperadas:avaliacaoOs.filiaisEsperadas,
     atingiuA,
     atingiuB,
     reduziuObsolescencia:
@@ -1829,6 +1816,7 @@ function inferirRegiao(
 function detectarFormatoEspecial(
   matriz
 ) {
+  if(matriz.slice(0,8).some(r=>normalizar(r[0])==='EMPRESA'&&normalizar(r[2])==='NRO OS'&&normalizar(r[9])==='JUSTIFICATIVA'))return 'os_detalhadas';
   const primeirasLinhas =
     matriz.slice(0, 8);
 
@@ -1960,6 +1948,7 @@ function prepararMatrizEspecial(
   matriz,
   formato
 ) {
+  if(formato==='os_detalhadas')return {headers:['Empresa','Categoria','NRO_OS','','','','','','','Justificativa'],rows:matriz};
   if (
     formato ===
     "disponibilidade_curvas"
@@ -2600,70 +2589,19 @@ function processarObsolescencia365() {
   }
 }
 
-function processarOsJustificativas() {
-  const importacao =
-    state.importacao;
-
-  const linhaCompras =
-    importacao.rows.find(linha => {
-      const justificativa =
-        normalizar(linha[0]);
-
-      return (
-        justificativa.includes(
-          "AGUARDANDO PECAS"
-        ) &&
-        justificativa.includes(
-          "DEPTO COMPRAS"
-        )
-      );
-    });
-
-  if (!linhaCompras) {
-    importacao.erros.push(
-      'A linha "AGUARDANDO PEÇAS - DEPTO COMPRAS" não foi encontrada.'
-    );
-
-    return;
-  }
-
-  const controleOs =
-    percentualNormalizado(
-      linhaCompras[1]
-    );
-
-  importacao.registros = [
-    {
-      competencia:
-        importacao.competencia,
-      nucleo:
-        "GLOBAL",
-      unidade:
-        "GLOBAL",
-      regiao:
-        "GLOBAL",
-      aplicacaoGlobal:
-        true,
-
-      controleOs,
-
-      tipoImportacao:
-        "os",
-      arquivoOrigem:
-        importacao.arquivo?.name ||
-        "",
-      linhaOrigem:
-        "AGUARDANDO PEÇAS - DEPTO COMPRAS",
-
-      observacao:
-        "Percentual geral do Departamento de Compras aplicado a todos os colaboradores."
-    }
-  ];
-
-  importacao.avisos.push(
-    `O percentual geral de O.S. (${percentual(controleOs)}) será aplicado igualmente a todos os colaboradores.`
-  );
+function processarOsDetalhadas(){
+ const imp=state.importacao;
+ try{
+  const resultado=analisarOsCompras(imp.rows);
+  imp.registros=resultado.registros.map(r=>({...r,competencia:imp.competencia,nucleo:r.unidade,aplicacaoGlobal:false,tipoImportacao:'os',arquivoOrigem:imp.arquivo?.name||'',abaOrigem:imp.aba,colunaFilialOrigem:'A',colunaMotivoOrigem:'J',modeloImportacao:'OS_DETALHADAS_POR_FILIAL',responsaveisVinculados:state.responsaveis.filter(p=>p.ativo!==false&&unidadeCorresponde(p,r)).map(p=>p.nome).join(', ')}));
+  imp.avisos.push(`${resultado.totalOs} O.S. em ${imp.registros.length} filiais. ${resultado.aguardandoCompras} aguardando Compras. Percentual da filial = O.S. aguardando Compras / total de O.S. abertas da filial. Bônus de R$ 300 pela média simples de todas as filiais cadastradas do colaborador, até 10%.`);
+  if(resultado.duplicadas)imp.avisos.push(`${resultado.duplicadas} linha(s) duplicada(s) da mesma O.S. e filial foram contadas uma única vez.`);
+  for(const r of imp.registros)if(!r.responsaveisVinculados)imp.avisos.push('Sem responsável vinculado: '+r.unidade+'.');
+ }catch(e){imp.erros.push(e.message);}
 }
+
+function processarOsJustificativas(){state.importacao.erros.push('O resumo global não permite apurar por filial. Importe ANÁLISE DE O.S. com EMPRESA (A), NRO_OS (C) e JUSTIFICATIVA (J).');}
+
 
 function processarImportacao() {
   const importacao =
@@ -2703,6 +2641,8 @@ function processarImportacao() {
     renderizarImportacao();
     return;
   }
+
+  if(importacao.formatoEspecial==='os_detalhadas'){processarOsDetalhadas();renderizarImportacao();return;}
 
   const mapa =
     mapaImportacao();
@@ -3104,7 +3044,7 @@ function carregarAbaImportacao(
 
     if (
       importacao.formatoEspecial ===
-      "os_justificativas"
+      "os_justificativas" || importacao.formatoEspecial === "os_detalhadas"
     ) {
       importacao.tipo =
         "os";
@@ -4044,6 +3984,7 @@ function htmlPaginas() {
         </section>
       </div>
 
+      ${htmlRankingOsCompras()}
       ${htmlAcompanhamentoObsolescencia()}
       <section class="compras-panel">
         <header class="compras-panel-header">
@@ -4216,6 +4157,7 @@ function htmlPaginas() {
         ></div>
 
         <section id="comprasImportPorResponsavel" hidden></section>
+        ${htmlRankingOsCompras(true)}
         <div
           id="comprasImportValidacao"
           class="compras-validation"
@@ -4251,6 +4193,7 @@ function htmlPaginas() {
       data-compras-view="apuracao"
     >
       ${htmlTopbar("Apuração mensal", true)}
+      ${htmlRankingOsCompras()}
       ${htmlAcompanhamentoObsolescencia()}
 
       <section class="compras-panel">
@@ -4317,6 +4260,7 @@ function htmlPaginas() {
           O bônus de obsolescência compara, casa por casa, o percentual da coluna I (maior que 365 dias) com o mês imediatamente anterior. Os R$ 300,00 são divididos entre todas as casas cadastradas do colaborador. Qualquer redução paga a parcela da casa; percentual igual ou maior não paga. Sem a planilha do mês anterior ou sem o percentual da casa, o sistema informa a falta de histórico e não bonifica. Com seis casas, cada redução paga R$ 50,00; todas reduzindo somam R$ 300,00.
         </p>
 
+        <p>O terceiro indicador usa a coluna A (filial) e J (justificativa) de ANÁLISE DE O.S. Cada filial tem seu percentual de O.S. aguardando Compras sobre o total de O.S. abertas. O colaborador recebe R$ 300,00 se a média simples dos percentuais de todas as suas filiais for menor ou igual a 10%. Não é rateado por casa. Se faltar alguma filial, a média parcial aparece para acompanhamento, mas não há bonificação até completar a cobertura. A comparação usa os percentuais completos, sem arredondar para decidir o bônus. Justificativas vazias contam como não informadas no total de O.S.</p>
         <p>
           Somente as casas cadastradas em cada analista são consideradas. Diesel, Fiat e Jeep RAM são tratados separadamente, inclusive quando compartilham a mesma cidade. Dessa forma, Jataí,
           Mineiros, Jeep RAM, Barra do Garças, BR, Doca,
@@ -4454,8 +4398,8 @@ function htmlPoliticas() {
     </article>
 
     <article class="compras-policy-card">
-      <span>Controle de O.S.</span>
-      <strong>Meta ≤ 10%</strong>
+      <span>O.S. aguardando Compras</span>
+      <strong>Média das filiais ≤ 10%</strong>
       <b>${moeda(POLITICA.controleOs.bonus)}</b>
     </article>
   `;
@@ -5614,6 +5558,9 @@ function htmlTabelaApuracao(
                 <td>
                   <div class="compras-metric">
                     <strong>${percentual(item.controleOs)}</strong>
+                    <small>Média das filiais · ${item.osFiliaisInformadas}/${item.osFiliaisEsperadas} informadas</small>
+                    <details><summary>Ver filiais</summary>${item.detalhesUnidades.map(c=>`<div>${escapar(c.unidade)}: ${percentual(c.controleOs)}${c.totalOs!=null?` (${c.aguardandoCompras}/${c.totalOs} O.S.)`:' · sem informação'}</div>`).join('')}</details>
+                    ${item.osCompleto?'':'<small class="compras-badge compras-warning">Pendente: faltam filiais</small>'}
                     <small>
                       ${badgeIndicador(item.atingiuOs)}
                     </small>
@@ -5890,6 +5837,33 @@ function configurarEventosApuracao() {
 }
 
 // O acompanhamento usa as medições, mesmo sem histórico, bônus ou apuração habilitada.
+function htmlRankingOsCompras(previa=false){
+ return `<section class="compras-panel" data-ranking-os="${previa?'previa':'mensal'}" ${previa?'hidden':''}><header class="compras-panel-header"><div><small>${previa?'PRÉVIA ANTES DE SALVAR':'TERCEIRO INDICADOR'}</small><h3>Ranking dos motivos das O.S. em aberto</h3></div><div class="compras-actions"><label class="compras-field"><span>Colaborador</span><select data-os-colaborador aria-label="Colaborador do ranking de O.S."></select></label><label class="compras-field"><span>Filial</span><select data-os-filial aria-label="Filial do ranking de O.S."></select></label></div></header><p>Coluna J: quantidade e percentual de cada motivo. O bônus usa a média simples dos percentuais das filiais do colaborador, até 10%, com todas as suas filiais informadas.</p><div data-os-resumo></div><div class="compras-table-wrap" style="max-height:420px;overflow:auto" data-os-ranking></div><details><summary>Percentual por filial</summary><div class="compras-table-wrap" data-os-casas></div></details></section>`;
+}
+function renderizarRankingOsCompras(){
+ $$('[data-ranking-os]').forEach(painel=>{
+  const previa=painel.dataset.rankingOs==='previa',cp=previa?state.importacao.competencia:state.competencia;
+  const fonte=previa?state.importacao.registros:state.indicadores;
+  const registros=[...consolidarMetricasCasas(fonte.filter(r=>r.competencia===cp&&Array.isArray(r.osRankingJustificativas)),r=>normalizar(casaEquipeCompras(r)?.unidade||r.unidade)).values()];
+  painel.hidden=previa&&!registros.length;
+  const pessoa=painel.querySelector('[data-os-colaborador]'),filial=painel.querySelector('[data-os-filial]'),pAnt=pessoa.value,fAnt=filial.value;
+  pessoa.innerHTML='<option value="">Todos os colaboradores</option>'+state.responsaveis.filter(p=>p.ativo!==false).map(p=>`<option value="${escapar(p.id)}">${escapar(p.nome)}</option>`).join('');
+  if([...pessoa.options].some(o=>o.value===pAnt))pessoa.value=pAnt;
+  const desenhar=()=>{
+   const responsavel=state.responsaveis.find(p=>p.id===pessoa.value);
+   const permitidos=registros.filter(r=>!responsavel||unidadeCorresponde(responsavel,r));
+   const itens=permitidos.filter(r=>!filial.value||r.unidade===filial.value);
+   const ranking=rankingMotivosOs(itens),total=itens.reduce((n,r)=>n+r.totalOs,0),central=itens.reduce((n,r)=>n+r.aguardandoCompras,0);
+   const calculo=responsavel?calcularApuracaoResponsavel(responsavel,cp,fonte):null;
+   painel.querySelector('[data-os-resumo]').innerHTML=`<p><strong>${total} O.S. abertas · ${central} aguardando Compras · ${percentual(total?central/total*100:null)} no conjunto selecionado</strong></p>${calculo?`<p>Média do colaborador: <strong>${percentual(calculo.controleOs)}</strong> · ${calculo.osFiliaisInformadas}/${calculo.osFiliaisEsperadas} filiais · ${calculo.osCompleto?(calculo.atingiuOs?'Meta atingida · bônus R$ 300,00':'Acima de 10% · sem bônus'):'Pendente: faltam filiais, sem bônus'}${previa?' · Prévia não salva':''}</p>`:''}`;
+   painel.querySelector('[data-os-ranking]').innerHTML=ranking.length?`<table class="compras-table"><thead><tr><th>Posição</th><th>Justificativa (J)</th><th>Quantidade</th><th>% das O.S. abertas</th></tr></thead><tbody>${ranking.map(r=>`<tr><td>${r.posicao}</td><td>${escapar(r.motivo)} ${r.compras?'<span class="compras-badge compras-warning">Central de Compras</span>':''}</td><td>${r.quantidade}</td><td>${percentual(r.percentual)}</td></tr>`).join('')}</tbody></table>`:'<div class="compras-empty">Sem planilha detalhada de O.S. para esta seleção. Importe ANÁLISE DE O.S. na competência correta.</div>';
+   painel.querySelector('[data-os-casas]').innerHTML=`<table class="compras-table"><thead><tr><th>Filial (A)</th><th>O.S. abertas</th><th>Aguardando Compras</th><th>% da filial</th></tr></thead><tbody>${itens.map(r=>`<tr><td>${escapar(r.unidade)}</td><td>${r.totalOs}</td><td>${r.aguardandoCompras}</td><td>${percentual(r.controleOs)}</td></tr>`).join('')}</tbody></table>`;
+  };
+  const atualizarFiliais=valor=>{const p=state.responsaveis.find(p=>p.id===pessoa.value);filial.innerHTML='<option value="">Todas as filiais</option>'+registros.filter(r=>!p||unidadeCorresponde(p,r)).map(r=>`<option value="${escapar(r.unidade)}">${escapar(r.unidade)}</option>`).join('');if([...filial.options].some(o=>o.value===valor))filial.value=valor;desenhar();};
+  pessoa.onchange=()=>atualizarFiliais('');filial.onchange=desenhar;atualizarFiliais(fAnt);
+ });
+}
+
 function htmlAcompanhamentoObsolescencia(){
  return `<section class="compras-panel" data-compras-evolucao><header class="compras-panel-header"><div><small>ACOMPANHAMENTO POR CASA</small><h3>Evolução da obsolescência</h3></div><label class="compras-field"><span>Colaborador</span><select data-evolucao-colaborador aria-label="Colaborador para acompanhar obsolescência"></select></label></header><p>O percentual atual aparece mesmo sem bônus. A comparação usa o mês imediatamente anterior; sem esse histórico, a redução fica pendente de comparação.</p><div class="compras-table-wrap" style="max-height:420px;overflow:auto" role="region" aria-label="Evolução da obsolescência por casa" tabindex="0" data-evolucao-tabela></div></section>`;
 }
@@ -6091,6 +6065,7 @@ function renderizarPreviaResponsaveisCompras() {
 }
 
 function renderizarImportacao() {
+  renderizarRankingOsCompras();
   const importacao =
     state.importacao;
 
@@ -6126,7 +6101,9 @@ function renderizarImportacao() {
     "disponibilidadeA",
     "disponibilidadeB",
     "indiceObsolescencia",
-    "controleOs"
+    "controleOs",
+    "totalOs",
+    "aguardandoCompras"
   ];
 
   $("#comprasImportPreview")
@@ -6886,8 +6863,11 @@ function linhaApuracaoExportacao(
         : "NÃO",
     Bonus_Obsolescencia:
       item.bonusObsolescencia,
-    Controle_OS:
+    Media_OS_Aguardando_Compras:
       item.controleOs,
+    Filiais_OS_Informadas:item.osFiliaisInformadas,
+    Filiais_OS_Esperadas:item.osFiliaisEsperadas,
+    Cobertura_OS_Completa:item.osCompleto?'SIM':'NÃO',
     Atingiu_OS:
       item.atingiuOs
         ? "SIM"
@@ -7010,6 +6990,12 @@ function exportarApuracaoExcel() {
     planilhaApuracao,
     "APURACAO COMPRAS"
   );
+
+  const dadosOs=state.indicadores.filter(r=>r.competencia===state.competencia&&Array.isArray(r.osRankingJustificativas));
+  if(dadosOs.length){
+    XLSX.utils.book_append_sheet(livro,XLSX.utils.json_to_sheet(rankingMotivosOs(dadosOs).map(r=>({Posicao:r.posicao,Justificativa:r.motivo,Quantidade:r.quantidade,Percentual:r.percentual,Central_Compras:r.compras?'SIM':'NÃO'}))),'RANKING JUSTIFICATIVAS');
+    XLSX.utils.book_append_sheet(livro,XLSX.utils.json_to_sheet(dadosOs.map(r=>({Filial:r.unidade,OS_Abertas:r.totalOs,Aguardando_Compras:r.aguardandoCompras,Percentual:r.controleOs}))),'OS POR FILIAL');
+  }
 
   const obsPorCasa=apuracao.flatMap(item=>item.detalhesUnidades.map(casa=>({Competencia:item.competencia,Mes_Anterior:item.competenciaAnterior,Colaborador:item.nome,Casa:casa.unidade,Percentual_Anterior:casa.obsolescenciaAnterior,Percentual_Atual:casa.obsolescenciaAtual,Reducao_PP:casa.reducaoObsolescencia,Parcela:casa.parcelaObsolescencia,Bonus:casa.bonusObsolescencia,Status:casa.statusObsolescencia})));
   if(obsPorCasa.length)XLSX.utils.book_append_sheet(livro,XLSX.utils.json_to_sheet(obsPorCasa),'OBSOLESCENCIA POR CASA');
@@ -7498,6 +7484,7 @@ function exportarApuracaoPdf() {
         <table><thead><tr><th>Colaborador</th><th>Casa</th><th>Mês anterior</th><th>Atual</th><th>Parcela</th><th>Bônus</th><th>Situação</th></tr></thead><tbody>
         ${apuracao.flatMap(item=>item.detalhesUnidades.map(casa=>`<tr><td>${escapar(item.nome)}</td><td>${escapar(casa.unidade)}</td><td>${percentual(casa.obsolescenciaAnterior)}</td><td>${percentual(casa.obsolescenciaAtual)}</td><td>${moeda(casa.parcelaObsolescencia)}</td><td>${moeda(casa.bonusObsolescencia)}</td><td>${escapar(casa.statusObsolescencia)}</td></tr>`)).join('')}
         </tbody></table></section>
+        <section class="print-section"><h2>O.S. aguardando Central de Compras</h2><p>Média simples das filiais cadastradas, até 10%: R$ 300. Filiais ausentes deixam a bonificação pendente.</p><table><thead><tr><th>Colaborador</th><th>Filial</th><th>O.S. abertas</th><th>Aguardando Compras</th><th>% da filial</th></tr></thead><tbody>${apuracao.flatMap(p=>p.detalhesUnidades.map(c=>`<tr><td>${escapar(p.nome)}</td><td>${escapar(c.unidade)}</td><td>${c.totalOs??'—'}</td><td>${c.aguardandoCompras??'—'}</td><td>${percentual(c.controleOs)}</td></tr>`)).join('')}</tbody></table><h3>Ranking das justificativas</h3><table><thead><tr><th>Posição</th><th>Motivo</th><th>Quantidade</th><th>%</th></tr></thead><tbody>${rankingMotivosOs(state.indicadores.filter(r=>r.competencia===state.competencia&&Array.isArray(r.osRankingJustificativas))).map(r=>`<tr><td>${r.posicao}</td><td>${escapar(r.motivo)}</td><td>${r.quantidade}</td><td>${percentual(r.percentual)}</td></tr>`).join('')}</tbody></table></section>
         ${htmlEvidenciasParaImpressao()}
       </body>
     </html>

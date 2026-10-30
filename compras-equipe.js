@@ -20,8 +20,8 @@ export function planejarBaseCompras(existentes){
  for(const p of existentes.filter(e=>!EQUIPE_COMPRAS.some(n=>n.id===e.id))){alteracoes.push({id:p.id,dados:{ativo:false,foraDaBase:true,motivoArquivamento:'Fora da base de analistas aprovada em 28/10/2026',versaoBase:VERSAO_EQUIPE_COMPRAS}});}
  return alteracoes;
 }
-function categoria(texto){const n=normalizar(texto);if(n.includes('LEAPMOTOR'))return 'fora';if(n.includes('JEEP')||n.includes('RAM'))return 'jeep';if(n.includes('FIAT'))return 'fiat';if(/^D |^DIESEL |D MATO GROSSO|D RONDONIA|D PIAUI|D PARA|D MARANHAO|M AMAPA/.test(n))return 'diesel';return '';}
-function cidade(texto){let n=normalizar(texto).replace(/^MONACO VEICULOS /,'').replace(/^(?:DIESEL|D|M|FIAT) /,'').replace(/^JEEP RAM /,'').replace(/ MT$/,'');if(n==='ALTAMIRA NOVA')n='ALTAMIRA';if(n==='PRIMAVERA')n='PRIMAVERA DO LESTE';if(n==='BARRA DO GARCAS')n='BARRA DO GARCA';if(n==='BELEM')n='ANANINDEUA';return n.replace(/ /g,'');}
+function categoria(texto){const n=normalizar(texto);if(n.includes('LEAPMOTOR'))return 'fora';if(n.includes('JEEP')||n.includes('RAM'))return 'jeep';if(n.includes('FIAT'))return 'fiat';if(/^D |^(?:M )?DIESEL |D MATO GROSSO|D RONDONIA|D PIAUI|D PARA|D MARANHAO|M AMAPA/.test(n))return 'diesel';return '';}
+function cidade(texto){let n=normalizar(texto).replace(/^MONACO VEICULOS /,'').replace(/^M DIESEL /,'').replace(/^(?:DIESEL|D|M|FIAT) /,'').replace(/^JEEP RAM /,'').replace(/ MT$/,'');if(n==='ALTAMIRA NOVA')n='ALTAMIRA';if(n==='PRIMAVERA')n='PRIMAVERA DO LESTE';if(n==='BARRA DO GARCAS')n='BARRA DO GARCA';if(n==='BELEM')n='ANANINDEUA';return n.replace(/ /g,'');}
 export function casaEquipeCompras(indicador){
  const unidade=indicador.unidade||indicador.nucleo||'',tipo=categoria(unidade)||categoria(indicador.nucleo||'');
  if(tipo==='fora')return null;
