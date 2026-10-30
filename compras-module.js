@@ -5487,7 +5487,7 @@ function htmlTabelaApuracao(
                           ${
                             item.detalhesUnidades
                               .map(unidade => `
-                            <div class="compras-casa-resultado">
+                            <div class="compras-casa-resultado" data-obsolescencia-casa>
                               <strong>${escapar(unidade.unidade)}</strong>
                               ${
                                 unidade.regiao
@@ -5495,47 +5495,17 @@ function htmlTabelaApuracao(
                                   : ""
                               }
                               <br>
-                              A:
-                              ${percentual(unidade.disponibilidadeA)}
-                              ${unidade.atingiuA ? "✅" : "❌"}
-                              · B:
-                              ${percentual(unidade.disponibilidadeB)}
-                              ${unidade.atingiuB ? "✅" : "❌"}
-                              <br>
-                              Obsolescência:
-                              ${
-                                unidade.obsolescenciaAtual ===
-                                  null ||
-                                unidade.obsolescenciaAtual ===
-                                  undefined
-                                  ? "SEM PLANILHA DO MÊS ATUAL — não bonifica"
-                                  : `
-                                    anterior:
-                                    ${percentual(unidade.obsolescenciaAnterior)}
-                                    → atual:
-                                    ${percentual(unidade.obsolescenciaAtual)}
-                                    · ${
-                                      unidade.reducaoObsolescencia === null
-                                        ? "SEM PLANILHA DO MÊS ANTERIOR — não bonifica"
-                                        : unidade.reducaoObsolescencia > 0
-                                          ? `reduziu ${percentual(unidade.reducaoObsolescencia)} ✅`
-                                          : unidade.reducaoObsolescencia < 0
-                                            ? `aumentou ${percentual(Math.abs(unidade.reducaoObsolescencia))} ❌`
-                                            : "sem redução ❌"
-                                    }
-                                    · bônus:
-                                    ${moeda(unidade.bonusObsolescencia)}
-                                  `
-                              }
-                              <br><small>Parcela de obsolescência: ${moeda(unidade.parcelaObsolescencia)} · ${escapar(unidade.statusObsolescencia)}</small>
+                              Anterior (${escapar(competenciaBr(item.competenciaAnterior))}): ${percentual(unidade.obsolescenciaAnterior)}
+                              <br>Atual (${escapar(competenciaBr(item.competencia))}): ${percentual(unidade.obsolescenciaAtual)}
+                              <br>${unidade.reducaoObsolescencia === null
+                                ? escapar(unidade.statusObsolescencia)
+                                : unidade.reducaoObsolescencia === 0 ? 'Sem redução'
+                                : `${unidade.reducaoObsolescencia > 0 ? 'Reduziu' : 'Aumentou'} ${Math.abs(unidade.reducaoObsolescencia).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:4})} p.p.`}
+                              <br><small>Parcela prevista pela política: ${moeda(unidade.parcelaObsolescencia)}</small>
                               <br>
                               <b>
-                                Bônus da casa:
-                                ${moeda(
-                                  unidade.bonusA +
-                                  unidade.bonusB +
-                                  unidade.bonusObsolescencia
-                                )}
+                                Ganho de obsolescência desta casa:
+                                ${moeda(unidade.bonusObsolescencia)}
                               </b>
                             </div>
                               `)
@@ -6898,19 +6868,12 @@ function linhaApuracaoExportacao(
       item.detalhesUnidades
         .map(unidade => [
           unidade.unidade,
-          `A ${percentual(unidade.disponibilidadeA)} (${unidade.atingiuA ? "SIM" : "NÃO"})`,
-          `B ${percentual(unidade.disponibilidadeB)} (${unidade.atingiuB ? "SIM" : "NÃO"})`,
           `Obsolescência anterior ${percentual(unidade.obsolescenciaAnterior)}`,
           `Obsolescência atual ${percentual(unidade.obsolescenciaAtual)}`,
           `Redução ${percentual(unidade.reducaoObsolescencia)}`,
           `Parcela obsolescência ${moeda(unidade.parcelaObsolescencia)}`,
           `Status ${unidade.statusObsolescencia}`,
-          `Bônus obsolescência ${moeda(unidade.bonusObsolescencia)}`,
-          `Bônus ${moeda(
-            unidade.bonusA +
-            unidade.bonusB +
-            unidade.bonusObsolescencia
-          )}`
+          `Bônus obsolescência ${moeda(unidade.bonusObsolescencia)}`
         ].join(" | "))
         .join(" ; ")
   };
