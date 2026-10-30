@@ -4031,42 +4031,16 @@ function htmlPaginas() {
       class="compras-page"
       data-compras-view="politicas"
     >
-      ${htmlTopbar("Política dos analistas de Compras")}
-
-      <div class="compras-policy-grid">
-        ${htmlPoliticas()}
-      </div>
-
-      <section class="compras-panel">
-        <header class="compras-panel-header">
-          <div>
-            <small>REGRAS DE APURAÇÃO</small>
-            <h3>Como o sistema calcula</h3>
-          </div>
-        </header>
-
-        <p>
-          A política de analista é aplicada a Jéssica, Gabriel e Mykaela, conforme a base aprovada.
-          Os R$ 300,00 da Curva A e os R$ 300,00 da Curva B são divididos em partes iguais entre
-          todas as casas cadastradas do colaborador. Cada casa é avaliada separadamente: recebe sua
-          parcela de A se atingir 95% e sua parcela de B se atingir 90%. Com seis casas, cada parcela
-          vale R$ 50,00 por curva. Casas abaixo da meta ou sem informação não geram pagamento nem
-          transferem sua parcela para as demais. Pequenas diferenças de um centavo no rateio garantem
-          que o total feche em R$ 300,00 por curva quando todas atingirem.
-        </p>
-
-        <p>
-          O bônus de obsolescência compara, casa por casa, o percentual da coluna I (maior que 365 dias) com o mês imediatamente anterior. Os R$ 300,00 são divididos entre todas as casas cadastradas do colaborador. Qualquer redução paga a parcela da casa; percentual igual ou maior não paga. Sem a planilha do mês anterior ou sem o percentual da casa, o sistema informa a falta de histórico e não bonifica. Com seis casas, cada redução paga R$ 50,00; todas reduzindo somam R$ 300,00.
-        </p>
-
-        <p>O terceiro indicador usa a coluna A (filial) e J (justificativa) de ANÁLISE DE O.S. Cada filial tem seu percentual de O.S. aguardando Compras sobre o total de O.S. abertas. O colaborador recebe R$ 300,00 se a média simples dos percentuais de todas as suas filiais for menor ou igual a 10%. Não é rateado por casa. Se faltar alguma filial, a média parcial aparece para acompanhamento, mas não há bonificação até completar a cobertura. A comparação usa os percentuais completos, sem arredondar para decidir o bônus. Justificativas vazias contam como não informadas no total de O.S.</p>
-        <p>
-          Somente as casas cadastradas em cada analista são consideradas. Diesel, Fiat e Jeep RAM são tratados separadamente, inclusive quando compartilham a mesma cidade. Dessa forma, Jataí,
-          Mineiros, Jeep RAM, Barra do Garças, BR, Doca,
-          Altamira, Rondonópolis e Primavera do Leste podem ser
-          direcionadas individualmente.
-        </p>
-      </section>
+      ${htmlTopbar("Políticas de Compras")}
+      <p class="cmp-policy-intro">Entenda o que gera bonificação, como cada casa participa e o que impede o pagamento.</p>
+      <section class="cmp-policy-benefit" aria-labelledby="cmpPolicyBeneficio"><div><span class="cmp-policy-eyebrow">POLÍTICA DE ANALISTA · CAMPANHA MENSAL</span><h2 id="cmpPolicyBeneficio">Quatro oportunidades de bonificação</h2><p>Disponibilidade A e B, redução de obsolescência e controle de O.S. são avaliados separadamente.</p></div><div class="cmp-policy-ceiling"><span>Potencial por colaborador / mês</span><strong>${moeda(POLITICA.disponibilidadeA.bonus+POLITICA.disponibilidadeB.bonus+POLITICA.obsolescencia.bonusMaximo+POLITICA.controleOs.bonus)}</strong><small>Ao atingir todas as condições da política</small></div></section>
+      <div class="cmp-policy-section-title"><h2>Como conquistar cada bônus</h2><p>Os valores abaixo são o limite de cada indicador por colaborador.</p></div>
+      <div class="cmp-policy-cards">${htmlPoliticas()}</div>
+      <aside class="cmp-policy-warning" aria-labelledby="cmpPolicyPenalidades"><span class="cmp-policy-warning-icon" aria-hidden="true">!</span><div><h2 id="cmpPolicyPenalidades">Penalidades e bloqueios de bonificação</h2><p>A consequência prevista é não receber a parcela ou o bônus do indicador que não cumpriu a regra. Os demais indicadores continuam sendo avaliados pelas suas próprias condições.</p><ul><li><strong>Disponibilidade:</strong> a casa abaixo da meta ou sem percentual perde somente sua parcela da curva correspondente.</li><li><strong>Obsolescência:</strong> percentual igual ou maior não bonifica a casa. Sem o mês anterior ou sem os percentuais, o ganho fica zerado até haver comparação válida.</li><li><strong>O.S.:</strong> média acima de 10% ou qualquer casa sem informação impede o bônus integral de R$ 300,00.</li></ul></div></aside>
+      <section class="cmp-policy-reference" aria-labelledby="cmpPolicyConferencia"><h2 id="cmpPolicyConferencia">Exemplos e critérios de conferência</h2><p>Consulte os detalhes para entender o rateio e a origem dos números.</p>
+      <details class="cmp-analysis"><summary>Exemplos práticos com seis casas</summary><div class="cmp-policy-detail"><dl class="cmp-policy-examples"><div><dt>Disponibilidade A/B</dt><dd>R$ 300,00 ÷ 6 = R$ 50,00 por casa, por curva. Se quatro casas atingirem A e duas atingirem B: R$ 200,00 + R$ 100,00 = <strong>R$ 300,00</strong>.</dd></div><div><dt>Obsolescência</dt><dd>Uma casa passa de 48% para 45%: recebe <strong>R$ 50,00</strong>. Se todas as seis reduzirem, o indicador soma R$ 300,00.</dd></div><div><dt>O.S. aguardando Compras</dt><dd>Percentuais de 5%, 8%, 10%, 12%, 15% e 10% resultam em média simples de <strong>10%</strong>: recebe R$ 300,00. Todas as seis casas precisam estar informadas.</dd></div></dl></div></details>
+      <details class="cmp-analysis"><summary>Casas consideradas e critérios de cálculo</summary><div class="cmp-policy-detail"><ul><li>Participam as casas cadastradas em cada analista na Base de responsáveis. Diesel, Fiat e Jeep RAM são tratados separadamente, mesmo na mesma cidade.</li><li>O rateio usa todas as casas cadastradas, inclusive as que não atingiram a meta. Uma parcela não paga não é transferida às demais casas.</li><li>Diferenças residuais de um centavo garantem que o rateio feche em R$ 300,00 por indicador rateado quando todas as casas atingem.</li><li>A Curva C não é avaliada nem gera bonificação.</li><li>Na O.S., a decisão usa os percentuais completos, sem arredondamento. Justificativa vazia conta no total de O.S. como não informada.</li></ul></div></details>
+      <details class="cmp-analysis"><summary>De onde vêm os dados importados</summary><div class="cmp-policy-detail"><dl class="cmp-policy-examples"><div><dt>Disponibilidade A/B</dt><dd>Planilha de Disponibilidade por Curva ABC ou prints conferidos, com os percentuais A e B de cada casa.</dd></div><div><dt>Obsolescência</dt><dd>Planilha de Estoque por Classificação de Dias Último Movimento: percentual maior que 365 dias da coluna I, comparado com a mesma casa no mês imediatamente anterior.</dd></div><div><dt>O.S.</dt><dd>Planilha ANÁLISE DE O.S.: filial na coluna A e justificativa na J. Para cada filial: O.S. aguardando Compras ÷ total de O.S. abertas × 100. Depois, média simples dos percentuais das casas do responsável.</dd></div></dl></div></details></section>
     </section>
   `;
 }
@@ -4173,35 +4147,13 @@ function htmlTopbar(
 }
 
 function htmlPoliticas() {
-  return `
-    <article class="compras-policy-card">
-      <span>Disponibilidade A</span>
-      <strong>Meta ≥ 95%</strong>
-      <b>${moeda(POLITICA.disponibilidadeA.bonus)} divididos entre as casas</b>
-    </article>
-
-    <article class="compras-policy-card">
-      <span>Disponibilidade B</span>
-      <strong>Meta ≥ 90%</strong>
-      <b>${moeda(POLITICA.disponibilidadeB.bonus)} divididos entre as casas</b>
-    </article>
-
-    <article class="compras-policy-card">
-      <span>Obsolescência &gt; 365 dias</span>
-      <strong>
-        Reduzir o percentual em relação ao mês anterior
-      </strong>
-      <b>
-        ${moeda(POLITICA.obsolescencia.bonusMaximo)} divididos entre todas as casas
-      </b>
-    </article>
-
-    <article class="compras-policy-card">
-      <span>O.S. aguardando Compras</span>
-      <strong>Média das filiais ≤ 10%</strong>
-      <b>${moeda(POLITICA.controleOs.bonus)}</b>
-    </article>
-  `;
+  const regras = [
+    {numero:"01",nome:"Disponibilidade · Curva A",valor:POLITICA.disponibilidadeA.bonus,modo:"Divididos entre todas as casas",meta:"Disponibilidade de pelo menos 95% em cada casa.",ganho:"Cada casa que atinge a meta recebe sua parcela da Curva A.",bloqueio:"Abaixo de 95% ou sem informação: a casa não recebe sua parcela de A."},
+    {numero:"02",nome:"Disponibilidade · Curva B",valor:POLITICA.disponibilidadeB.bonus,modo:"Divididos entre todas as casas",meta:"Disponibilidade de pelo menos 90% em cada casa.",ganho:"Cada casa que atinge a meta recebe sua parcela da Curva B, independentemente da Curva A.",bloqueio:"Abaixo de 90% ou sem informação: a casa não recebe sua parcela de B."},
+    {numero:"03",nome:"Redução de obsolescência",valor:POLITICA.obsolescencia.bonusMaximo,modo:"Divididos entre todas as casas",meta:"Reduzir o percentual de estoque acima de 365 dias em relação ao mês imediatamente anterior.",ganho:"Qualquer redução paga a parcela da casa, sem exigir uma redução mínima.",bloqueio:"Percentual igual, maior ou sem comparação válida: a casa não bonifica."},
+    {numero:"04",nome:"O.S. aguardando Compras",valor:POLITICA.controleOs.bonus,modo:"Bônus único · sem rateio por casa",meta:"Média simples dos percentuais de todas as casas menor ou igual a 10%.",ganho:"Com todas as casas informadas e média até 10%, o colaborador recebe o valor integral.",bloqueio:"Média acima de 10% ou alguma casa sem dados: não recebe este bônus."}
+  ];
+  return regras.map(r=>`<article class="cmp-policy-card"><header><span class="cmp-policy-number" aria-hidden="true">${r.numero}</span><h3>${r.nome}</h3></header><div class="cmp-policy-value"><strong>${moeda(r.valor)}</strong><span>${r.modo}</span></div><dl><div><dt>Meta para receber</dt><dd>${r.meta}</dd></div><div class="cmp-policy-positive"><dt>Benefício</dt><dd>${r.ganho}</dd></div><div class="cmp-policy-negative"><dt>Quando não bonifica</dt><dd>${r.bloqueio}</dd></div></dl></article>`).join("");
 }
 
 function garantirPaginas() {
