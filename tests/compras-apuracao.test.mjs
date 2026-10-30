@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
+import {politicaCompras} from '../compras-politicas.js';
 import {calcularDisponibilidadeCasa,parcelaCasa} from '../compras-apuracao.js';
 import {calcularObsolescenciaCasa,consolidarMetricasCasas} from '../compras-obsolescencia.js';
 import {calcularOsResponsavel} from '../compras-os.js';
@@ -15,7 +16,7 @@ test('cada casa ganha A e B de forma independente e exige o percentual exato',()
 const source=readFileSync(new URL('../compras-module.js',import.meta.url),'utf8');
 const start=source.indexOf('function calcularApuracaoResponsavel('),end=source.indexOf('\nfunction chaveAjusteApuracao(',start);
 const calc=vm.runInNewContext(source.slice(start,end)+';calcularApuracaoResponsavel',{
- POLITICA,calcularOsResponsavel,calcularDisponibilidadeCasa,parcelaCasa,calcularObsolescenciaCasa,consolidarMetricasCasas,casaEquipeCompras:()=>null,competenciaAnterior:()=> '2026-09',
+ POLITICA,politicaCompras,calcularOsResponsavel,calcularDisponibilidadeCasa,parcelaCasa,calcularObsolescenciaCasa,consolidarMetricasCasas,casaEquipeCompras:()=>null,competenciaAnterior:()=> '2026-09',
  indicadorEhGlobal:r=>r.aplicacaoGlobal===true,indicadorInvalidoParaApuracao:()=>false,
  unidadeCorresponde:(p,r)=>p.unidades.includes(r.unidade),normalizar:s=>String(s).toUpperCase(),
  calcularBonusObsolescencia:()=>({bonus:0,reducao:null,reducaoBonificada:0,status:'SEM HISTÓRICO',possuiHistorico:false}),
@@ -47,3 +48,6 @@ test('obsoletos: sem mês anterior, mês antigo ou casa ausente não bonificam',
 test('apuração junta disponibilidade e obsoleto em documentos separados da mesma casa',()=>{const r=calc(pessoa,'2026-10',[casa('Casa 1',95,90),{competencia:'2026-10',unidade:'Casa 1',indiceObsolescencia:45},{competencia:'2026-09',unidade:'Casa 1',indiceObsolescencia:48}]);assert.equal(r.bonusA,100);assert.equal(r.bonusB,100);assert.equal(r.bonusObsolescencia,100);assert.equal(r.quantidadeUnidades,1);});
 
 test('O.S. regional: média até 10% com todas as casas paga R$300, uma única vez',()=>{const rs=pessoa.unidades.map((u,i)=>casa(u,0,0,{controleOs:[0,10,20][i],totalOs:10,aguardandoCompras:i}));const r=calc(pessoa,'2026-10',rs);assert.equal(r.controleOs,10);assert.equal(r.osCompleto,true);assert.equal(r.bonusOs,300);assert.equal(r.bonusTotal,300);const parcial=calc(pessoa,'2026-10',rs.slice(0,2));assert.equal(parcial.controleOs,5);assert.equal(parcial.osCompleto,false);assert.equal(parcial.bonusOs,0);});
+
+test('assistente recebe 250 por indicador e fecha em 1000 com metas exatas',()=>{for(const n of [3,6,7]){const p={id:'assistente',nome:'Assistente',cargo:'Assistente de Compras',politica:'assistente',unidades:Array.from({length:n},(_,i)=>'Casa '+i)};const dados=p.unidades.flatMap(unidade=>[casa(unidade,95,90,{indiceObsolescencia:45,controleOs:10}),casa(unidade,null,null,{competencia:'2026-09',indiceObsolescencia:48})]);const r=calc(p,'2026-10',dados);assert.equal(r.bonusA,250);assert.equal(r.bonusB,250);assert.equal(r.bonusObsolescencia,250);assert.equal(r.bonusOs,250);assert.equal(r.bonusTotal,1000);}});
+test('assistente não bonifica abaixo da meta ou sem histórico e sem cobertura total de OS',()=>{const p={...pessoa,politica:'assistente'};const r=calc(p,'2026-10',[casa('Casa 1',94.999,89.999,{controleOs:5})]);assert.equal(r.bonusTotal,0);assert.equal(r.detalhesUnidades[0].parcelaA,83.34);assert.equal(r.bonusOs,0);});
