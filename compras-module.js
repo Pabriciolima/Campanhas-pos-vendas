@@ -3941,65 +3941,14 @@ function htmlPaginas() {
       class="compras-page"
       data-compras-view="visao-geral"
     >
-      ${htmlTopbar("Campanha Central de Compras", true)}
-
-      <div class="compras-hero">
-        <small>CAMPANHA MENSAL</small>
-        <h2>Central de Compras</h2>
-        <p>
-          Apuração de disponibilidade de estoque,
-          redução de obsolescência e controle de O.S.,
-          com histórico mensal e comparação com o mês anterior.
-        </p>
-      </div>
-
-      <div
-        id="comprasDashboardKpis"
-        class="compras-kpis"
-      ></div>
-
-      <div class="compras-grid">
-        <section class="compras-panel">
-          <header class="compras-panel-header">
-            <div>
-              <small>INDICADORES</small>
-              <h3>Resultado por indicador</h3>
-            </div>
-          </header>
-
-          <div
-            id="comprasResumoIndicadores" class="compras-table-wrap compras-table-resumo" role="region" aria-label="Resultado por indicador" tabindex="0"
-          ></div>
-        </section>
-
-        <section class="compras-panel">
-          <header class="compras-panel-header">
-            <div>
-              <small>DESEMPENHO</small>
-              <h3>Ranking mensal</h3>
-            </div>
-          </header>
-
-          <div
-            id="comprasRanking" class="compras-table-wrap compras-table-resumo" role="region" aria-label="Ranking mensal" tabindex="0"
-          ></div>
-        </section>
-      </div>
-
-      ${htmlRankingOsCompras()}
-      ${htmlAcompanhamentoObsolescencia()}
-      <section class="compras-panel">
-        <header class="compras-panel-header">
-          <div>
-            <small>HISTÓRICO E AVALIAÇÃO</small>
-            <h3>Resultado individual do mês</h3>
-          </div>
-        </header>
-
-        <div
-          id="comprasResumoMensal"
-        ></div>
-      </section>
+      ${htmlTopbar("Visão geral de Compras", true)}
+      <p class="cmp-overview-intro">Acompanhe os ganhos do mês e o desempenho da equipe em cada indicador.</p>
+      <div id="comprasDashboardKpis" class="compras-kpis cmp-overview-kpis"></div>
+      <section class="cmp-overview-section" aria-labelledby="cmpOverviewIndicadores"><header><div><small>RESULTADO DA CAMPANHA</small><h2 id="cmpOverviewIndicadores">Três indicadores, uma visão clara</h2></div></header><div id="comprasResumoIndicadores" class="cmp-overview-metrics"></div></section>
+      <section class="compras-panel cmp-overview-team"><header class="compras-panel-header"><div><small>EQUIPE</small><h3>Bonificação por colaborador</h3><p>Ordenado pelo total apurado. Consulte os cálculos por casa na apuração.</p></div><button type="button" class="compras-btn compras-btn-light" data-compras-nav="apuracao">Abrir apuração</button></header><div id="comprasRanking" class="compras-table-wrap" role="region" aria-label="Bonificação por colaborador" tabindex="0"></div></section>
+      <div class="cmp-overview-analysis"><h2>Análises complementares</h2><p>Abra somente a informação que deseja conferir.</p>
+      <details class="cmp-analysis"><summary>Evolução da obsolescência por casa</summary>${htmlAcompanhamentoObsolescencia()}</details>
+      <details class="cmp-analysis"><summary>O.S. em aberto e ranking de justificativas</summary>${htmlRankingOsCompras()}</details></div>
     </section>
 
     <section
@@ -5074,50 +5023,12 @@ function renderizarDashboard() {
       )
     );
 
-  const completos =
-    state.apuracao.filter(item =>
-      item.status === "COMPLETO"
-    ).length;
-
-  const parciais =
-    state.apuracao.filter(item =>
-      item.status === "PARCIAL"
-    ).length;
-
-  const unidades =
-    new Set(
-      state.indicadores
-        .filter(item =>
-          item.competencia ===
-            state.competencia
-        )
-        .map(item =>
-          normalizar(item.unidade)
-        )
-    ).size;
-
-  $("#comprasDashboardKpis")
-    .innerHTML = `
-      <article class="compras-kpi">
-        <span>Total investido</span>
-        <strong>${moeda(totalInvestido)}</strong>
-      </article>
-
-      <article class="compras-kpi">
-        <span>Campanha completa</span>
-        <strong>${completos}</strong>
-      </article>
-
-      <article class="compras-kpi">
-        <span>Resultado parcial</span>
-        <strong>${parciais}</strong>
-      </article>
-
-      <article class="compras-kpi">
-        <span>Unidades avaliadas</span>
-        <strong>${unidades}</strong>
-      </article>
-    `;
+  const comBonus = state.apuracao.filter(item => item.bonusTotal > 0).length;
+  const pendentes = state.apuracao.filter(item => !item.osCompleto || item.detalhesUnidades.some(casa => casa.obsolescenciaAnterior == null || casa.obsolescenciaAtual == null)).length;
+  $("#comprasDashboardKpis").innerHTML = `
+    <article class="compras-kpi cmp-overview-total"><span>Bonificação total apurada</span><strong>${moeda(totalInvestido)}</strong><small>${competenciaBr(state.competencia)} · valores calculados até agora</small></article>
+    <article class="compras-kpi"><span>Colaboradores com bônus</span><strong>${comBonus}<small> / ${state.apuracao.length}</small></strong><small>Com valor apurado maior que zero</small></article>
+    <article class="compras-kpi"><span>Com dados pendentes</span><strong>${pendentes}</strong><small>Falta histórico de obsolescência ou cobertura de O.S.</small></article>`;
 
   const totalA = somar(state.apuracao.map(item => item.casasAtingiramA));
   const totalB = somar(state.apuracao.map(item => item.casasAtingiramB));
@@ -5136,49 +5047,11 @@ function renderizarDashboard() {
       item.atingiuOs
     ).length;
 
-  $("#comprasResumoIndicadores")
-    .innerHTML = `
-      <table class="compras-table">
-        <thead>
-          <tr>
-            <th>Indicador</th>
-            <th>Meta</th>
-            <th>Casas / participantes que atingiram</th>
-            <th>Investimento</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <tr>
-            <td><strong>Disponibilidade A</strong></td>
-            <td>≥ 95%</td>
-            <td>${totalA}</td>
-            <td>${moeda(somar(state.apuracao.map(item => item.bonusA)))}</td>
-          </tr>
-
-          <tr>
-            <td><strong>Disponibilidade B</strong></td>
-            <td>≥ 90%</td>
-            <td>${totalB}</td>
-            <td>${moeda(somar(state.apuracao.map(item => item.bonusB)))}</td>
-          </tr>
-
-          <tr>
-            <td><strong>Obsolescência</strong></td>
-            <td>Reduzir vs. mês anterior</td>
-            <td>${totalObs}</td>
-            <td>${moeda(somar(state.apuracao.map(item=>item.bonusObsolescencia)))}</td>
-          </tr>
-
-          <tr>
-            <td><strong>Controle de O.S.</strong></td>
-            <td>≤ 10%</td>
-            <td>${totalOs}</td>
-            <td>${moeda(totalOs * POLITICA.controleOs.bonus)}</td>
-          </tr>
-        </tbody>
-      </table>
-    `;
+  // O resumo agrega cada verba uma vez; ajustes permanecem no total individual.
+  $("#comprasResumoIndicadores").innerHTML = `
+    <article class="cmp-overview-metric"><span class="cmp-overview-symbol" aria-hidden="true">A/B</span><h3>Disponibilidade</h3><strong>${moeda(somar(state.apuracao.map(item=>item.bonusA+item.bonusB)))}</strong><p>Curva A ≥ 95% · Curva B ≥ 90%</p><dl><div><dt>Curva A</dt><dd>${totalA} casas · ${moeda(somar(state.apuracao.map(item=>item.bonusA)))}</dd></div><div><dt>Curva B</dt><dd>${totalB} casas · ${moeda(somar(state.apuracao.map(item=>item.bonusB)))}</dd></div></dl><small>R$ 300 por curva, divididos entre as casas de cada responsável.</small></article>
+    <article class="cmp-overview-metric"><span class="cmp-overview-symbol" aria-hidden="true">365</span><h3>Obsolescência</h3><strong>${moeda(somar(state.apuracao.map(item=>item.bonusObsolescencia)))}</strong><p>${totalObs} casas com redução em relação ao mês anterior</p><small>R$ 300 divididos entre as casas. Sem histórico do mês anterior, não há bonificação.</small></article>
+    <article class="cmp-overview-metric"><span class="cmp-overview-symbol" aria-hidden="true">O.S.</span><h3>Aguardando Compras</h3><strong>${moeda(somar(state.apuracao.map(item=>item.bonusOs)))}</strong><p>${totalOs} colaboradores atingiram a meta</p><small>R$ 300 quando a média das casas é de até 10%, com todas as casas informadas.</small></article>`;
 
   const ranking =
     [...state.apuracao]
@@ -5199,8 +5072,7 @@ function renderizarDashboard() {
               <tr>
                 <th>#</th>
                 <th>Colaborador</th>
-                <th>Indicadores</th>
-                <th>Bônus</th>
+                <th>Disponibilidade A/B</th><th>Obsolescência</th><th>O.S.</th><th>Total</th>
               </tr>
             </thead>
 
@@ -5211,8 +5083,7 @@ function renderizarDashboard() {
                     <tr>
                       <td>${indice + 1}</td>
                       <td><strong>${escapar(item.nome)}</strong></td>
-                      <td>${item.indicadoresAtingidos}/${item.totalMetasPossiveis}</td>
-                      <td>${moeda(item.bonusTotal)}</td>
+                      <td data-label="Disponibilidade A/B">${moeda(item.bonusA+item.bonusB)}</td><td data-label="Obsolescência">${moeda(item.bonusObsolescencia)}</td><td data-label="O.S.">${moeda(item.bonusOs)}</td><td data-label="Total"><strong class="cmp-overview-earned">${moeda(item.bonusTotal)}</strong>${item.ajusteManual ? '<small>Inclui ajuste de apuração</small>' : ''}</td>
                     </tr>
                   `)
                   .join("")
@@ -5226,12 +5097,7 @@ function renderizarDashboard() {
           </div>
         `;
 
-  $("#comprasResumoMensal")
-    .innerHTML =
-      htmlTabelaApuracao(
-        state.apuracao,
-        false
-      );
+
 }
 
 function htmlTabelaApuracao(dados,detalhada=true){
@@ -5513,7 +5379,7 @@ function renderizarApuracao() {
       );
 
   configurarApuracaoVisual($("#comprasApuracaoTabela"));
-  configurarApuracaoVisual($("#comprasResumoMensal"));
+
   configurarEventosApuracao();
   renderizarEvidenciasCompras();
 }

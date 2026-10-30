@@ -1,0 +1,28 @@
+/* Visão geral: resumo executivo sem repetir a apuração individual. */
+html body:has(#compras-visao-geral.active) main>.topbar{display:none!important}
+#compras-visao-geral{--cmp-over-text:var(--monaco-text,#203346);--cmp-over-muted:var(--monaco-muted,#5d6875);--cmp-over-line:var(--monaco-line,#dbe2e7)}
+.cmp-overview-intro{margin:0 0 22px;color:var(--cmp-over-muted);font-size:14px;line-height:1.6}
+html body .cmp-overview-kpis{grid-template-columns:1.4fr 1fr 1fr;gap:16px;margin-bottom:30px}
+html body .cmp-overview-kpis .compras-kpi{padding:22px;border-radius:17px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.cmp-overview-kpis strong{font-variant-numeric:tabular-nums;letter-spacing:-.035em}
+.cmp-overview-kpis strong small{font-size:16px;font-weight:500}
+.cmp-overview-kpis small{font-size:12px;line-height:1.5}
+html body .cmp-overview-kpis .cmp-overview-total{background:#0c6655!important;border-color:#0c6655!important}
+html body .cmp-overview-total :is(span,strong,small){color:#fff!important;-webkit-text-fill-color:currentColor!important}
+.cmp-overview-section{margin-bottom:24px}.cmp-overview-section header{margin-bottom:14px}
+.cmp-overview-section header small,.cmp-overview-team header small{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--cmp-over-muted)}
+html body .cmp-overview-section h2,html body .cmp-overview-analysis>h2{font-size:19px!important;letter-spacing:-.02em;margin:5px 0;color:var(--cmp-over-text)!important}
+.cmp-overview-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.cmp-overview-metric{position:relative;border:1px solid var(--cmp-over-line);border-radius:16px;padding:22px;background:var(--monaco-surface,#fff);min-width:0;display:flex;flex-direction:column;align-items:flex-start}
+.cmp-overview-symbol{font-size:12px;font-weight:700;background:var(--monaco-soft,#e8f4ef);color:var(--monaco-accent,#086c53);padding:7px 9px;border-radius:9px;margin-bottom:14px}
+html body .cmp-overview-metric h3{font-size:15px!important;margin:0 0 12px;color:var(--cmp-over-text)!important}
+.cmp-overview-metric>strong{font-size:27px;letter-spacing:-.035em;font-variant-numeric:tabular-nums;color:var(--cmp-over-text)}
+.cmp-overview-metric p{font-size:12px!important;line-height:1.6;margin:10px 0 16px;color:var(--cmp-over-muted)!important}
+.cmp-overview-metric>small{font-size:12px;line-height:1.6;color:var(--cmp-over-muted);margin-top:auto;padding-top:14px;border-top:1px solid var(--cmp-over-line);width:100%}
+.cmp-overview-metric dl{width:100%;margin:0 0 16px;font-size:12px}.cmp-overview-metric dl div{display:flex;justify-content:space-between;gap:10px;margin:7px 0}.cmp-overview-metric dd{margin:0;font-variant-numeric:tabular-nums}
+.cmp-overview-team header p,.cmp-overview-analysis>p{font-size:12px!important;color:var(--cmp-over-muted)!important;margin:6px 0 0;line-height:1.6}
+.cmp-overview-team .compras-table{min-width:760px!important}.cmp-overview-team td small{display:block;font-size:10px;margin-top:5px;white-space:normal}
+html body .cmp-overview-earned{color:#087052!important}html[data-theme="dark"] body .cmp-overview-earned{color:#88e3bf!important}
+.cmp-overview-analysis{margin-top:30px}.cmp-overview-analysis .cmp-analysis{margin-top:12px}
+@media(max-width:1050px){html body .cmp-overview-kpis{grid-template-columns:1fr 1fr}.cmp-overview-total{grid-column:1/-1}.cmp-overview-metrics{grid-template-columns:1fr}.cmp-overview-metric{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center}.cmp-overview-symbol{grid-row:1/3;margin:0}.cmp-overview-metric h3{margin:0!important}.cmp-overview-metric>strong{grid-column:3;grid-row:1/3;font-size:23px}.cmp-overview-metric p{grid-column:2;margin:0}.cmp-overview-metric dl,.cmp-overview-metric>small{grid-column:1/-1;margin:12px 0 0}}
+@media(max-width:520px){html body .cmp-overview-kpis{grid-template-columns:1fr;gap:10px}.cmp-overview-metric{display:flex;align-items:flex-start;padding:18px}.cmp-overview-symbol{margin-bottom:8px}.cmp-overview-metric>strong{margin-top:7px}.cmp-overview-team .compras-panel-header{align-items:stretch;flex-direction:column}}
