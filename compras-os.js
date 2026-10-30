@@ -1,9 +1,9 @@
-import {casaEquipeCompras} from './compras-equipe.js?v=20261030-os';
+import {casaEquipeCompras} from './compras-equipe.js?v=20261030-fiat-os';
 const normalizar=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,' ').trim();
 const nome=v=>String(v??'').trim();
 export function motivoCompras(v){const n=normalizar(v);return n==='AGUARDANDO CENTRAL DE COMPRAS'||n==='AGUARDANDO COMPRAS'||n==='AGUARDANDO PECAS DEPTO COMPRAS';}
 export function analisarOsCompras(matriz){
- const inicio=matriz.findIndex(r=>normalizar(r[0])==='EMPRESA'&&normalizar(r[2])==='NRO OS'&&normalizar(r[9])==='JUSTIFICATIVA');
+ const inicio=matriz.findIndex(r=>normalizar(r[0])==='EMPRESA'&&normalizar(r[2])==='NRO OS'&&['JUSTIFICATIVA','DES JUSTIFICATIVA'].includes(normalizar(r[9])));
  if(inicio<0)throw Error('Use o relatório detalhado com EMPRESA na coluna A, NRO_OS na C e JUSTIFICATIVA na J.');
  const casas=new Map(),vistos=new Map();let duplicadas=0;
  for(let i=inicio+1;i<matriz.length;i++){
@@ -30,4 +30,12 @@ export function rankingMotivosOs(registros){
  const motivos=new Map();let total=0;
  for(const r of registros){total+=r.totalOs||0;for(const m of r.osRankingJustificativas||[]){const k=normalizar(m.motivo),atual=motivos.get(k)||{motivo:m.motivo,quantidade:0};atual.quantidade+=m.quantidade;motivos.set(k,atual);}}
  return [...motivos.values()].sort((a,b)=>b.quantidade-a.quantidade||a.motivo.localeCompare(b.motivo)).map((m,i)=>({...m,posicao:i+1,percentual:total?m.quantidade/total*100:0,compras:motivoCompras(m.motivo)}));
+}
+
+// Arquivos separados de Diesel e veículos coexistem; o escopo é inferido das casas reconhecidas.
+export function escopoOsCompras(registros){
+ const tipos=new Set(registros.map(r=>casaEquipeCompras(r)?.categoria).filter(Boolean));
+ const diesel=tipos.has('diesel'),veiculos=tipos.has('fiat')||tipos.has('jeep');
+ if(diesel&&veiculos)return 'misto';if(diesel)return 'diesel';if(veiculos)return 'fiat';
+ const explicitos=new Set(registros.map(r=>r.escopoOs).filter(Boolean));return explicitos.size===1?[...explicitos][0]:'desconhecido';
 }

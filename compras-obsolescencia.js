@@ -16,11 +16,11 @@ export function consolidarMetricasCasas(registros,chave){
  return casas;
 }
 // Cada importação substitui só a métrica do mês, preservando os demais indicadores.
-export const CAMPOS_METRICAS_COMPRAS={disponibilidade:['disponibilidadeA','disponibilidadeB','disponibilidadeC','disponibilidadeTotal'],obsolescencia:['indiceObsolescencia','valorObsoleto365'],cobertura:['coberturaEstoque','coberturaAnteriorFonte','competenciaAnteriorFonte','colunaCobertura','colunaCoberturaAnterior','origemCobertura'],os:['controleOs','totalOs','aguardandoCompras','osRankingJustificativas','empresaOrigem']};
-export function prepararSubstituicaoMetrica(existentes,competencia,tipo){
+export const CAMPOS_METRICAS_COMPRAS={disponibilidade:['disponibilidadeA','disponibilidadeB','disponibilidadeC','disponibilidadeTotal'],obsolescencia:['indiceObsolescencia','valorObsoleto365'],cobertura:['coberturaEstoque','coberturaAnteriorFonte','competenciaAnteriorFonte','colunaCobertura','colunaCoberturaAnterior','origemCobertura'],os:['controleOs','totalOs','aguardandoCompras','osRankingJustificativas','empresaOrigem','escopoOs']};
+export function prepararSubstituicaoMetrica(existentes,competencia,tipo,aceitar=()=>true){
  const campos=CAMPOS_METRICAS_COMPRAS[tipo];
  if(!campos)return [];
- return existentes.filter(r=>r.competencia===competencia&&(r.tipoImportacao===tipo||campos.some(c=>r[c]!=null))).map(r=>{
+ return existentes.filter(r=>aceitar(r)&&r.competencia===competencia&&(r.tipoImportacao===tipo||campos.some(c=>r[c]!=null))).map(r=>{
   const restante={...r};for(const c of campos)delete restante[c];
   const outros=Object.entries(CAMPOS_METRICAS_COMPRAS).filter(([t,cs])=>t!==tipo&&cs.some(c=>restante[c]!=null));
   if(outros.length===1)restante.tipoImportacao=outros[0][0];

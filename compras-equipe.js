@@ -38,7 +38,11 @@ export function planejarBaseCompras(existentes){
 function categoria(texto){const n=normalizar(texto);if(n.includes('LEAPMOTOR'))return 'fora';if(n.includes('JEEP')||n.includes('RAM'))return 'jeep';if(n.includes('FIAT'))return 'fiat';if(/^D |^(?:M )?DIESEL |D MATO GROSSO|D RONDONIA|D PIAUI|D PARA|D MARANHAO|M AMAPA/.test(n))return 'diesel';return '';}
 function cidade(texto){let n=normalizar(texto).replace(/^MONACO VEICULOS /,'').replace(/^M DIESEL /,'').replace(/^(?:DIESEL|D|M|FIAT) /,'').replace(/^JEEP RAM /,'').replace(/ MT$/,'');if(n==='ALTAMIRA NOVA')n='ALTAMIRA';if(n==='PRIMAVERA')n='PRIMAVERA DO LESTE';if(n==='BARRA DO GARCAS')n='BARRA DO GARCA';if(n==='BELEM')n='ANANINDEUA';return n.replace(/ /g,'');}
 export function casaEquipeCompras(indicador){
- const unidade=indicador.unidade||indicador.nucleo||'',tipo=categoria(unidade)||categoria(indicador.nucleo||'');
+ let unidade=indicador.unidade||indicador.nucleo||'';
+ const alias=normalizar(unidade);
+ if(alias==='M VEICULOS JEEP RAM')unidade='JEEP RAM - Barra do Garça';
+ else if(alias.startsWith('M VEICULOS '))unidade='Fiat '+alias.slice('M VEICULOS '.length);
+ const tipo=categoria(unidade)||categoria(indicador.nucleo||'');
  if(tipo==='fora')return null;
  const chave=cidade(unidade),candidatas=CASAS_EQUIPE_COMPRAS.filter(c=>(!tipo||tipo===c.categoria)&&cidade(c.cidade)===chave);
  return candidatas.length===1?candidatas[0]:null;

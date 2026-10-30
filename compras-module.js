@@ -7,15 +7,15 @@ import {POLITICA_ANALISTA, POLITICA_ASSISTENTE, politicaCompras} from "./compras
  * A política vigente de Compras é aplicada aos analistas sem alteração de metas ou valores.
  */
 
-import {EQUIPE_COMPRAS, CASAS_EQUIPE_COMPRAS, casaEquipeCompras, planejarBaseCompras, recebeCasaEquipeCompras} from "./compras-equipe.js?v=20261030-lideranca";
+import {EQUIPE_COMPRAS, CASAS_EQUIPE_COMPRAS, casaEquipeCompras, planejarBaseCompras, recebeCasaEquipeCompras} from "./compras-equipe.js?v=20261030-fiat-os";
 import {lerPrintsABC, consolidarPrintsABC, CASAS_ABC} from "./compras-imagens.js?v=20261029-apenas-ab";
 
 import {bancoCompras,collection,getDocs,doc,setDoc,deleteDoc,writeBatch,serverTimestamp} from "./compras-supabase.js?v=20261028-supabase";
 
-import {calcularObsolescenciaCasa,consolidarMetricasCasas,prepararSubstituicaoMetrica,lerPercentualObsoleto} from "./compras-obsolescencia.js?v=20261030-cobertura";
+import {calcularObsolescenciaCasa,consolidarMetricasCasas,prepararSubstituicaoMetrica,lerPercentualObsoleto} from "./compras-obsolescencia.js?v=20261030-fiat-os";
 import {calcularDisponibilidadeCasa,parcelaCasa} from "./compras-apuracao.js?v=20261028-rateio";
 
-import {analisarOsCompras,calcularOsResponsavel,rankingMotivosOs} from "./compras-os.js?v=20261030";
+import {analisarOsCompras,escopoOsCompras,calcularOsResponsavel,rankingMotivosOs} from "./compras-os.js?v=20261030-fiat";
 
 import {htmlApuracaoVisual,configurarApuracaoVisual,filtrarApuracaoVisual} from "./compras-apuracao-ui.js?v=20261030-lideranca";
 
@@ -658,8 +658,9 @@ function chaveIndicador(
 async function salvarIndicadoresEmLote(registros,historicoImportacao) {
   const cp=historicoImportacao.competencia,tipo=registros[0]?.tipoImportacao||historicoImportacao.tipo||'consolidado';
   const existentes=await lerColecao(COLECOES.indicadores);
+  const escopo=tipo==='os'?escopoOsCompras(registros):'';
   const batch=writeBatch(bancoCompras);
-  for(const {id,restante} of prepararSubstituicaoMetrica(existentes,cp,tipo)){
+  for(const {id,restante} of prepararSubstituicaoMetrica(existentes,cp,tipo,r=>tipo!=='os'||escopo==='misto'||escopoOsCompras([r])===escopo)){
     batch.delete(doc(bancoCompras,COLECOES.indicadores,id));
     if(restante)batch.set(doc(bancoCompras,COLECOES.indicadores,id),restante);
   }
@@ -668,9 +669,10 @@ async function salvarIndicadoresEmLote(registros,historicoImportacao) {
     const id=chaveIndicador(r.competencia,unidade)+'__'+slug(tipo);
     batch.set(doc(bancoCompras,COLECOES.indicadores,id),{...r,atualizadoEm:serverTimestamp()});
   });
-  const id=[cp,slug(tipo)].join('__');
-  batch.set(doc(bancoCompras,COLECOES.importacoes,id),{id,...historicoImportacao,tipoEfetivo:tipo,registros:registros.map(r=>{const c={...r};delete c.atualizadoEm;delete c.criadoEm;return c;}),substituiImportacaoAnterior:true,atualizadoEm:serverTimestamp()});
-  state.ajustes.filter(r=>r.competencia===cp).forEach(r=>batch.delete(doc(bancoCompras,COLECOES.ajustes,r.id||chaveAjusteApuracao(r.competencia,r.responsavelId))));
+  const id=[cp,slug(tipo),...(tipo==='os'?[escopo]:[])].join('__');
+  if(tipo==='os')for(const anterior of state.importacoes.filter(x=>x.competencia===cp&&(x.tipoEfetivo||x.tipo)==='os'&&x.id!==id&&Array.isArray(x.registros)&&escopoOsCompras(x.registros)===escopo))batch.delete(doc(bancoCompras,COLECOES.importacoes,anterior.id));
+  batch.set(doc(bancoCompras,COLECOES.importacoes,id),{id,...historicoImportacao,tipoEfetivo:tipo,...(tipo==='os'?{escopoOs:escopo}:{}),registros:registros.map(r=>{const c={...r};delete c.atualizadoEm;delete c.criadoEm;return c;}),substituiImportacaoAnterior:true,atualizadoEm:serverTimestamp()});
+  state.ajustes.filter(r=>r.competencia===cp&&(tipo!=='os'||escopo==='misto'||(state.responsaveis.find(p=>p.id===r.responsavelId)?.unidades||[]).some(unidade=>escopoOsCompras([{unidade}])===escopo))).forEach(r=>batch.delete(doc(bancoCompras,COLECOES.ajustes,r.id||chaveAjusteApuracao(r.competencia,r.responsavelId))));
   await comTimeout(batch.commit(),TIMEOUT_BANCO,'O Supabase não confirmou a importação. Nenhum dado foi substituído.');
 }
 
@@ -1798,7 +1800,7 @@ function inferirRegiao(
 function detectarFormatoEspecial(
   matriz
 ) {
-  if(matriz.slice(0,8).some(r=>normalizar(r[0])==='EMPRESA'&&normalizar(r[2])==='NRO OS'&&normalizar(r[9])==='JUSTIFICATIVA'))return 'os_detalhadas';
+  if(matriz.slice(0,8).some(r=>normalizar(r[0])==='EMPRESA'&&normalizar(r[2])==='NRO OS'&&['JUSTIFICATIVA','DES JUSTIFICATIVA'].includes(normalizar(r[9]))))return 'os_detalhadas';
   const primeirasLinhas =
     matriz.slice(0, 8);
 
@@ -2575,8 +2577,11 @@ function processarOsDetalhadas(){
  const imp=state.importacao;
  try{
   const resultado=analisarOsCompras(imp.rows);
-  imp.registros=resultado.registros.map(r=>({...r,competencia:imp.competencia,nucleo:r.unidade,aplicacaoGlobal:false,tipoImportacao:'os',arquivoOrigem:imp.arquivo?.name||'',abaOrigem:imp.aba,colunaFilialOrigem:'A',colunaMotivoOrigem:'J',modeloImportacao:'OS_DETALHADAS_POR_FILIAL',responsaveisVinculados:state.responsaveis.filter(p=>p.ativo!==false&&unidadeCorresponde(p,r)).map(p=>p.nome).join(', ')}));
+  const escopo=escopoOsCompras(resultado.registros);
+  imp.registros=resultado.registros.map(r=>({...r,competencia:imp.competencia,nucleo:r.unidade,aplicacaoGlobal:false,tipoImportacao:'os',arquivoOrigem:imp.arquivo?.name||'',abaOrigem:imp.aba,colunaFilialOrigem:'A',colunaMotivoOrigem:'J',modeloImportacao:'OS_DETALHADAS_POR_FILIAL',escopoOs:escopo,responsaveisVinculados:state.responsaveis.filter(p=>p.ativo!==false&&unidadeCorresponde(p,r)).map(p=>p.nome).join(', ')}));
   imp.avisos.push(`${resultado.totalOs} O.S. em ${imp.registros.length} filiais. ${resultado.aguardandoCompras} aguardando Compras. Percentual da filial = O.S. aguardando Compras / total de O.S. abertas da filial. Bônus conforme cargo e competência pela média simples de todas as filiais cadastradas do colaborador, até 10%.`);
+  imp.avisos.push('Escopo: '+escopo+'. A importação substitui somente O.S. deste grupo; os outros grupos e indicadores são preservados.');
+  for(const p of state.responsaveis.filter(p=>p.ativo!==false&&!fatorLideranca(p))){const casas=p.unidades||[];const doGrupo=casas.filter(unidade=>escopoOsCompras([{unidade}])===escopo);const faltam=doGrupo.filter(unidade=>!imp.registros.some(r=>casaEquipeCompras(r)?.unidade===casaEquipeCompras({unidade})?.unidade));if(faltam.length)imp.avisos.push(p.nome+': casas sem informação neste arquivo: '+faltam.join(', ')+'. Não serão consideradas como 0%.');}
   if(resultado.duplicadas)imp.avisos.push(`${resultado.duplicadas} linha(s) duplicada(s) da mesma O.S. e filial foram contadas uma única vez.`);
   for(const r of imp.registros)if(!r.responsaveisVinculados)imp.avisos.push('Sem responsável vinculado: '+r.unidade+'.');
  }catch(e){imp.erros.push(e.message);}
@@ -5488,7 +5493,8 @@ function renderizarPreviaResponsaveisCompras(){
  const pessoas=(state.responsaveis.length?state.responsaveis:EQUIPE_COMPRAS).filter(p=>p.ativo!==false&&!fatorLideranca(p));
  if(tipo==='cobertura'){const calculos=pessoas.map(p=>({p,r:calcularApuracaoResponsavel(p,imp.competencia,imp.registros)}));alvo.innerHTML='<h3>Prévia da cobertura · meta ≤ 4 para todos</h3><p>R$ 300 por colaborador divididos entre todas as suas casas. A evolução mensal é informativa; o pagamento depende do índice atual ≤ 4.</p><div class="compras-table-wrap"><table class="compras-table"><thead><tr><th>Colaborador</th><th>Casas na meta</th><th>Bônus de cobertura</th></tr></thead><tbody>'+calculos.map(({p,r})=>`<tr><td>${escapar(p.nome)}</td><td>${r.limites.cobertura.pendente?"Regra pendente":r.detalhesUnidades.filter(c=>c.atingiuCobertura).length+" / "+p.unidades.length}</td><td>${moeda(r.bonusCobertura)}</td></tr>`).join('')+'</tbody></table></div>';return;}
  const anteriores=tipo==='obsolescencia'?state.indicadores.filter(r=>r.competencia===competenciaAnterior(imp.competencia)):[];
- const calculos=pessoas.map(p=>({p,r:calcularApuracaoResponsavel(p,imp.competencia,[...anteriores,...imp.registros])}));
+ const preservados=tipo==='os'?state.indicadores.filter(r=>r.competencia===imp.competencia&&(r.controleOs!=null||r.totalOs!=null)&&escopoOsCompras([r])!==escopoOsCompras(imp.registros)):[];
+ const calculos=pessoas.map(p=>({p,r:calcularApuracaoResponsavel(p,imp.competencia,[...anteriores,...preservados,...imp.registros])}));
  const titulos={disponibilidade:'Prévia da disponibilidade A/B',obsolescencia:'Prévia da redução dos obsoletos',os:'Prévia de O.S. por colaborador'};
  const cab=tipo==='disponibilidade'?['Colaborador','Casas encontradas / cadastradas','Curva A','Curva B','Bônus A/B']:tipo==='obsolescencia'?['Colaborador','Casas com comparação','Casas que reduziram','Bônus de obsolescência']:['Colaborador','Filiais informadas','Média aguardando Compras','Bônus de O.S.'];
  alvo.innerHTML=`<h3>${titulos[tipo]}</h3><p>Conferência do arquivo para ${escapar(competenciaBr(imp.competencia))}. Valores previstos, ainda não salvos.${state.responsaveis.length?'':' Base online não carregada: esta prévia usa a base padrão aprovada; confira os vínculos antes de salvar.'}${tipo==='obsolescencia'?' Usa o histórico do mês anterior; sem comparação, não bonifica.':''}${tipo==='os'?' A falta de filiais deixa o bônus pendente.':''}</p><div class="compras-table-wrap"><table class="compras-table"><thead><tr>${cab.map(c=>`<th scope="col">${c}</th>`).join('')}</tr></thead><tbody>${calculos.map(({p,r})=>`<tr><td><strong>${escapar(p.nome)}</strong></td>${tipo==='disponibilidade'?`<td>${r.quantidadeUnidades} / ${p.unidades.length}</td><td>${moeda(r.bonusA)}</td><td>${moeda(r.bonusB)}</td><td><strong>${moeda(r.bonusA+r.bonusB)}</strong></td>`:tipo==='obsolescencia'?`<td>${r.detalhesUnidades.filter(c=>c.obsolescenciaAtual!=null&&c.obsolescenciaAnterior!=null).length} / ${p.unidades.length}</td><td>${r.detalhesUnidades.filter(c=>c.reducaoObsolescencia>0).length}</td><td><strong>${moeda(r.bonusObsolescencia)}</strong></td>`:`<td>${r.osFiliaisInformadas} / ${r.osFiliaisEsperadas}${r.osCompleto?'':' · pendente'}</td><td>${percentual(r.controleOs)}</td><td><strong>${moeda(r.bonusOs)}</strong></td>`}</tr>`).join('')}</tbody></table></div>`;
@@ -5510,7 +5516,7 @@ function atualizarImportacaoVisual(){
  $('[data-cmp-import-contexto]').textContent=`${nomes[imp.tipo]||'Indicador'} · ${competenciaBr(imp.competencia)}${imp.aba?' · Aba '+imp.aba:''}`;
  $('[data-cmp-import-status]').textContent=ocupado?'Salvando no banco…':imp.erros.length?'Corrija os erros para continuar':'Prévia · ainda não salva';
  $('[data-cmp-import-chamada]').textContent=carregado?'Selecionar outro arquivo':'Arraste sua planilha ou clique para selecionar';
- $('[data-cmp-import-confirmacao]').textContent=imp.erros.length?'A importação está bloqueada até corrigir os erros.':`Ao confirmar, ${imp.registros.length} registros serão aplicados a ${competenciaBr(imp.competencia)}. O mesmo indicador deste mês será substituído.`;
+ $('[data-cmp-import-confirmacao]').textContent=imp.erros.length?'A importação está bloqueada até corrigir os erros.':`Ao confirmar, ${imp.registros.length} registros serão aplicados a ${competenciaBr(imp.competencia)}. ${imp.tipo==='os'?'Somente as O.S. do grupo '+escopoOsCompras(imp.registros)+' deste mês serão substituídas; outros grupos serão mantidos.':'O mesmo indicador deste mês será substituído.'}`;
  $('#btnLimparImportacaoCompras').disabled=ocupado;
  $('#comprasImportCompetencia').disabled=ocupado;
  $('#comprasImportTipo').disabled=ocupado;
