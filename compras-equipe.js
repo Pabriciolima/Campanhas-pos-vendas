@@ -18,10 +18,14 @@ export const EQUIPE_COMPRAS=[
  {id:'rone',nome:'Rone César Praseres Chaves Filho',politica:'assistente',regioes:['DIESEL MT','DIESEL RO'],analista:'jessica'},
  {id:'joao-marcelo',nome:'João Marcelo Costa Leite Silva',politica:'assistente',regioes:['DIESEL PA','DIESEL AP','DIESEL MA','DIESEL PI'],analista:'gabriel'}
 ].map(({casas,analista,...p})=>({...p,cargo:p.politica==='assistente'?'Assistente de Compras':'Analista de Compras',politica:p.politica||'analista',escopoRestrito:true,unidades:casas||CASAS_EQUIPE_COMPRAS.filter(c=>c.responsavel===(analista||p.id)).map(c=>c.unidade),ativo:true,foraDaBase:false,versaoBase:p.politica==='assistente'?VERSAO_EQUIPE_COMPRAS:VERSAO_ANALISTAS}));
+export const LIDERANCA_COMPRAS=[
+ {id:'bruno-vitor',nome:'BRUNO VITOR DA PAZ SILVA',cargo:'Analista Sênior de Compras',politica:'senior'},
+ {id:'ricardo-wendell',nome:'RICARDO WENDELL PEREIRA',cargo:'Supervisor de Compras',politica:'supervisor'}
+].map(p=>({...p,unidades:[],regioes:[],escopoRestrito:true,ativo:true,foraDaBase:false,competenciaInicio:'2026-10',versaoBase:'20261030-lideranca'}));
 // Migração incremental: não redefine casas, cargos ou status já editados após a aprovação.
 export function planejarBaseCompras(existentes){
  const alteracoes=[];
- for(const p of EQUIPE_COMPRAS){
+ for(const p of [...EQUIPE_COMPRAS,...LIDERANCA_COMPRAS]){
   const anterior=existentes.find(e=>e.id===p.id);
   if(anterior?.versaoBase===p.versaoBase)continue;
   // Os analistas existentes mantêm suas atribuições; apenas a nova equipe é ativada.

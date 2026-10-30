@@ -1,3 +1,4 @@
+import {fatorLideranca,calcularLiderancaCompras} from "./compras-lideranca.js?v=20261030";
 import {calcularCoberturaCasa,lerCoberturaEstoque,ehPlanilhaCobertura,formatarCobertura} from "./compras-cobertura.js?v=20261030-todos";
 import {POLITICA_ANALISTA, POLITICA_ASSISTENTE, politicaCompras} from "./compras-politicas.js?v=20261030-cobertura-todos";
 /* Campanha Central de Compras — base de analistas aprovada em 28/10/2026.
@@ -6,7 +7,7 @@ import {POLITICA_ANALISTA, POLITICA_ASSISTENTE, politicaCompras} from "./compras
  * A política vigente de Compras é aplicada aos analistas sem alteração de metas ou valores.
  */
 
-import {EQUIPE_COMPRAS, CASAS_EQUIPE_COMPRAS, casaEquipeCompras, planejarBaseCompras, recebeCasaEquipeCompras} from "./compras-equipe.js?v=20261030-assistentes";
+import {EQUIPE_COMPRAS, CASAS_EQUIPE_COMPRAS, casaEquipeCompras, planejarBaseCompras, recebeCasaEquipeCompras} from "./compras-equipe.js?v=20261030-lideranca";
 import {lerPrintsABC, consolidarPrintsABC, CASAS_ABC} from "./compras-imagens.js?v=20261029-apenas-ab";
 
 import {bancoCompras,collection,getDocs,doc,setDoc,deleteDoc,writeBatch,serverTimestamp} from "./compras-supabase.js?v=20261028-supabase";
@@ -16,7 +17,7 @@ import {calcularDisponibilidadeCasa,parcelaCasa} from "./compras-apuracao.js?v=2
 
 import {analisarOsCompras,calcularOsResponsavel,rankingMotivosOs} from "./compras-os.js?v=20261030";
 
-import {htmlApuracaoVisual,configurarApuracaoVisual,filtrarApuracaoVisual} from "./compras-apuracao-ui.js?v=20261030-cobertura-todos";
+import {htmlApuracaoVisual,configurarApuracaoVisual,filtrarApuracaoVisual} from "./compras-apuracao-ui.js?v=20261030-lideranca";
 
 const VERSAO = "2026.07.23-15";
 const TAMANHO_LOTE = 400;
@@ -1525,27 +1526,11 @@ function auditarVinculosApuracao() {
 }
 
 function recalcularApuracao() {
-  state.apuracao =
-    state.responsaveis
-      .filter(item =>
-        item.ativo !== false
-      )
-      .map(responsavel =>
-        calcularApuracaoResponsavel(
-          responsavel,
-          state.competencia
-        )
-      )
-      .map(aplicarAjusteApuracao)
-      .filter(item =>
-        item.excluida !== true
-      );
-
-  /*
-  A auditoria usa a mesma regra para Jessica, Rone, Gabriel,
-  Rodrigo, Juliana, Mykaela e qualquer novo responsável.
-  */
-  auditarVinculosApuracao();
+ const ativos=state.responsaveis.filter(p=>p.ativo!==false&&(!p.competenciaInicio||state.competencia>=p.competenciaInicio));
+ const base=ativos.filter(p=>!fatorLideranca(p)).map(p=>calcularApuracaoResponsavel(p,state.competencia)).map(aplicarAjusteApuracao).filter(p=>!p.excluida);
+ const lideranca=ativos.filter(p=>fatorLideranca(p)).map(p=>({...calcularApuracaoResponsavel({...p,unidades:[]},state.competencia,[]),...calcularLiderancaCompras(p,base,state.competencia),coberturaPendente:false,osCompleto:true}));
+ state.apuracao=[...base,...lideranca];
+ auditarVinculosApuracao();
 }
 
 /* ==========================================================================
@@ -4142,6 +4127,7 @@ function htmlConteudoPoliticas(){
  return `<p class="cmp-policy-intro">Regras de ${competenciaBr(state.competencia)}. ${nova?'Nova distribuição vigente desde outubro/2026.':'Política anterior a outubro/2026 preservada.'}</p>
  <section class="cmp-policy-benefit"><div><span class="cmp-policy-eyebrow">ANALISTAS E ASSISTENTES · CAMPANHA MENSAL</span><h2>Bonificação conforme a atuação</h2><p>${nova?'Quatro indicadores: disponibilidade A/B, O.S., obsolescência e redução de cobertura.':'Disponibilidade A e B, obsolescência e O.S.'}</p>${nova?'<p><strong>Analistas e assistentes: cobertura atual de 4 ou menos bonifica a casa. R$ 300 por pessoa divididos entre todas as suas casas.</strong></p>':''}</div><div class="cmp-policy-ceiling"><span>Potencial mensal · Analista</span><strong>${moeda(total(a))}</strong><span>Potencial mensal · Assistente</span><strong>${moeda(total(b))}</strong><small>${nova?'Potencial de R$ 1.200 por pessoa ao atingir todas as metas. Orçamento máximo dos sete: R$ 8.400.':'Ao atingir todas as condições da política.'}</small></div></section>
  ${nova?`<section class="compras-panel cmp-policy-budget" aria-labelledby="cmpPolicyBudgetTitulo"><header class="compras-panel-header"><div><small>DISTRIBUIÇÃO APROVADA · 7 COLABORADORES</small><h3 id="cmpPolicyBudgetTitulo">Pesos e orçamento por indicador</h3></div></header><div class="compras-table-wrap" role="region" aria-label="Distribuição da bonificação por cargo" tabindex="0"><table class="compras-table"><thead><tr><th scope="col">Indicador</th><th scope="col">Analista · por pessoa</th><th scope="col">Assistente · por pessoa</th><th scope="col">Equipe · 3 analistas + 4 assistentes</th></tr></thead><tbody>${[['Disponibilidade A/B',a.disponibilidadeA.bonus+a.disponibilidadeB.bonus,b.disponibilidadeA.bonus+b.disponibilidadeB.bonus],['O.S. aguardando Compras',a.controleOs.bonus,b.controleOs.bonus],['Redução de obsolescência',a.obsolescencia.bonusMaximo,b.obsolescencia.bonusMaximo],['Cobertura de estoque ≤ 4',a.cobertura.bonusMaximo,b.cobertura.bonusMaximo]].map(([nome,va,vb])=>`<tr><th scope="row">${nome}</th><td>${moeda(va)}</td><td>${moeda(vb)}</td><td>${moeda(va*3+vb*4)}</td></tr>`).join('')}</tbody><tfoot><tr><th scope="row">Potencial mensal</th><td><strong>${moeda(total(a))}</strong></td><td><strong>${moeda(total(b))}</strong></td><td><strong>${moeda(total(a)*3+total(b)*4)}</strong></td></tr></tfoot></table></div><p class="cmp-policy-budget-note">A/B: ${moeda(a.disponibilidadeA.bonus)} para A + ${moeda(a.disponibilidadeB.bonus)} para B por analista; ${moeda(b.disponibilidadeA.bonus)} para cada curva por assistente. Valores máximos condicionados às metas, sem pagamento garantido.</p></section>`:''}
+ ${nova?'<section class="compras-panel"><header class="compras-panel-header"><div><small>LIDERANÇA · ADICIONAL À BASE DE SETE</small><h3>Bruno e Ricardo: bonificação pela média da equipe</h3></div></header><p><strong>BRUNO VITOR DA PAZ SILVA:</strong> média dos ganhos × 1,30 (acréscimo de 30%). <strong>RICARDO WENDELL PEREIRA:</strong> média dos ganhos × 3.</p><p>A média considera os ganhos efetivamente apurados dos sete participantes da base, incluindo valores zerados e ajustes manuais identificados. Bruno e Ricardo não entram no denominador, nem no cálculo um do outro. O valor final é arredondado para centavos, sem arredondar a média antes de multiplicar.</p><p>Com a base inteira ganhando R$ 1.200 por pessoa: Bruno recebe R$ 1.560 e Ricardo R$ 3.600. Orçamento potencial da base: R$ 8.400; liderança: R$ 5.160; <strong>total geral: R$ 13.560 para nove colaboradores.</strong></p></section>':''}
  <div class="cmp-policy-section-title"><h2>Como conquistar cada bônus</h2><p>Valores máximos por colaborador. Disponibilidade A e B têm verbas separadas.</p></div><div class="cmp-policy-cards">${htmlPoliticas()}</div>
  ${nova?'<aside class="cmp-policy-warning"><span class="cmp-policy-warning-icon" aria-hidden="true">!</span><div><h2>Redução de cobertura · R$ 300 por colaborador</h2><p>Analistas e assistentes: cobertura atual ≤ 4, usando o índice completo, sem arredondar. R$ 300 divididos entre todas as casas cadastradas. Acima de 4 ou sem dado atual, a casa não recebe sua parcela. O mês anterior serve para acompanhar a evolução; uma redução que continue acima de 4 não bonifica. Este indicador é distinto da cobertura de filiais de O.S.</p></div></aside>':''}
  <aside class="cmp-policy-warning"><span class="cmp-policy-warning-icon" aria-hidden="true">!</span><div><h2>Penalidades e bloqueios de bonificação</h2><p>Não cumprir uma condição impede somente a parcela ou o bônus do respectivo indicador.</p><ul><li><strong>A/B:</strong> casa abaixo de 95% em A ou 90% em B, ou sem percentual, não recebe a parcela correspondente. Não há redistribuição.</li><li><strong>Obsolescência:</strong> percentual igual, maior ou sem comparação válida com o mês imediatamente anterior não bonifica a casa.</li><li><strong>O.S.:</strong> média acima de 10% ou qualquer casa sem dados impede o bônus do cargo: analista ${moeda(a.controleOs.bonus)}; assistente ${moeda(b.controleOs.bonus)}.</li>${nova?'<li><strong>Cobertura, para todos:</strong> índice atual maior que 4 ou sem dado válido não paga a parcela da casa. Reduzir e continuar acima de 4 não é suficiente.</li>':''}</ul></div></aside>
@@ -4983,7 +4969,7 @@ function renderizarDashboard() {
   const comBonus = state.apuracao.filter(item => item.bonusTotal > 0).length;
   const pendentes = state.apuracao.filter(item => !item.osCompleto || item.coberturaPendente || item.detalhesUnidades.some(casa => casa.obsolescenciaAnterior == null || casa.obsolescenciaAtual == null)).length;
   $("#comprasDashboardKpis").innerHTML = `
-    <article class="compras-kpi cmp-overview-total"><span>Bonificação total apurada</span><strong>${moeda(totalInvestido)}</strong><small>${competenciaBr(state.competencia)} · valores calculados até agora</small></article>
+    <article class="compras-kpi cmp-overview-total"><span>Bonificação total apurada · inclui liderança</span><strong>${moeda(totalInvestido)}</strong><small>${competenciaBr(state.competencia)} · valores calculados até agora</small></article>
     <article class="compras-kpi"><span>Colaboradores com bônus</span><strong>${comBonus}<small> / ${state.apuracao.length}</small></strong><small>Com valor apurado maior que zero</small></article>
     <article class="compras-kpi"><span>Com dados pendentes</span><strong>${pendentes}</strong><small>Histórico, filiais de O.S. ou dados de cobertura.</small></article>`;
 
@@ -5040,7 +5026,7 @@ function renderizarDashboard() {
                     <tr>
                       <td>${indice + 1}</td>
                       <td><strong>${escapar(item.nome)}</strong></td>
-                      <td data-label="Disponibilidade A/B">${moeda(item.bonusA+item.bonusB)}</td><td data-label="Obsolescência">${moeda(item.bonusObsolescencia)}</td><td data-label="O.S.">${moeda(item.bonusOs)}</td><td data-label="Cobertura">${moeda(item.bonusCobertura)}</td><td data-label="Total"><strong class="cmp-overview-earned">${moeda(item.bonusTotal)}</strong>${item.ajusteManual ? '<small>Inclui ajuste de apuração</small>' : ''}</td>
+                      <td data-label="Disponibilidade A/B">${item.derivada?"Média × "+item.multiplicador:moeda(item.bonusA+item.bonusB)}</td><td data-label="Obsolescência">${moeda(item.bonusObsolescencia)}</td><td data-label="O.S.">${moeda(item.bonusOs)}</td><td data-label="Cobertura">${moeda(item.bonusCobertura)}</td><td data-label="Total"><strong class="cmp-overview-earned">${moeda(item.bonusTotal)}</strong>${item.ajusteManual ? '<small>Inclui ajuste de apuração</small>' : ''}</td>
                     </tr>
                   `)
                   .join("")
@@ -5306,7 +5292,7 @@ function htmlAcompanhamentoObsolescencia(){
  return `<section class="compras-panel" data-compras-evolucao><header class="compras-panel-header"><div><small>ACOMPANHAMENTO POR CASA</small><h3>Evolução da obsolescência</h3></div><label class="compras-field"><span>Colaborador</span><select data-evolucao-colaborador aria-label="Colaborador para acompanhar obsolescência"></select></label></header><p>O percentual atual aparece mesmo sem bônus. A comparação usa o mês imediatamente anterior; sem esse histórico, a redução fica pendente de comparação.</p><div class="compras-table-wrap" style="max-height:420px;overflow:auto" role="region" aria-label="Evolução da obsolescência por casa" tabindex="0" data-evolucao-tabela></div></section>`;
 }
 function renderizarAcompanhamentoObsolescencia(){
- const pessoas=state.responsaveis.filter(p=>p.ativo!==false);
+ const pessoas=state.responsaveis.filter(p=>p.ativo!==false&&!fatorLideranca(p));
  const dados=pessoas.map(p=>calcularApuracaoResponsavel(p,state.competencia));
  $$('[data-compras-evolucao]').forEach(painel=>{
   const select=painel.querySelector('[data-evolucao-colaborador]'),anterior=select.value;
@@ -5499,7 +5485,7 @@ function renderizarPreviaResponsaveisCompras(){
  if(!alvo)return;
  alvo.hidden=!['disponibilidade','obsolescencia','os','cobertura'].includes(tipo)||imp.erros.length>0;
  if(alvo.hidden){alvo.replaceChildren();return;}
- const pessoas=(state.responsaveis.length?state.responsaveis:EQUIPE_COMPRAS).filter(p=>p.ativo!==false);
+ const pessoas=(state.responsaveis.length?state.responsaveis:EQUIPE_COMPRAS).filter(p=>p.ativo!==false&&!fatorLideranca(p));
  if(tipo==='cobertura'){const calculos=pessoas.map(p=>({p,r:calcularApuracaoResponsavel(p,imp.competencia,imp.registros)}));alvo.innerHTML='<h3>Prévia da cobertura · meta ≤ 4 para todos</h3><p>R$ 300 por colaborador divididos entre todas as suas casas. A evolução mensal é informativa; o pagamento depende do índice atual ≤ 4.</p><div class="compras-table-wrap"><table class="compras-table"><thead><tr><th>Colaborador</th><th>Casas na meta</th><th>Bônus de cobertura</th></tr></thead><tbody>'+calculos.map(({p,r})=>`<tr><td>${escapar(p.nome)}</td><td>${r.limites.cobertura.pendente?"Regra pendente":r.detalhesUnidades.filter(c=>c.atingiuCobertura).length+" / "+p.unidades.length}</td><td>${moeda(r.bonusCobertura)}</td></tr>`).join('')+'</tbody></table></div>';return;}
  const anteriores=tipo==='obsolescencia'?state.indicadores.filter(r=>r.competencia===competenciaAnterior(imp.competencia)):[];
  const calculos=pessoas.map(p=>({p,r:calcularApuracaoResponsavel(p,imp.competencia,[...anteriores,...imp.registros])}));
@@ -5982,7 +5968,7 @@ function garantirModalResponsavel() {
             </label>
 
             <label class="compras-field">
-              <span>Cargo e política</span><select id="comprasResponsavelPolitica"><option value="analista">Analista de Compras</option><option value="assistente">Assistente de Compras</option></select></label><label class="compras-field"><span>Status</span>
+              <span>Cargo e política</span><select id="comprasResponsavelPolitica"><option value="analista">Analista de Compras</option><option value="assistente">Assistente de Compras</option><option value="senior">Analista Sênior · média × 1,30</option><option value="supervisor">Supervisor · média × 3</option></select></label><label class="compras-field"><span>Status</span>
               <select id="comprasResponsavelAtivo">
                 <option value="true">Ativo</option>
                 <option value="false">Inativo</option>
@@ -6090,7 +6076,7 @@ function abrirModalResponsavel(
     .value =
       responsavel?.nome || "";
 
-  $("#comprasResponsavelPolitica").value = responsavel?.politica === "assistente" ? "assistente" : "analista";
+  $("#comprasResponsavelPolitica").value = ["assistente","senior","supervisor"].includes(responsavel?.politica)?responsavel.politica:"analista";
 
   $("#comprasResponsavelAtivo")
     .value =
@@ -6178,10 +6164,10 @@ async function salvarModalResponsavel() {
       slug(nome),
     nome,
     politica: $("#comprasResponsavelPolitica").value,
-    cargo: $("#comprasResponsavelPolitica").value === "assistente" ? "Assistente de Compras" : "Analista de Compras",
+    cargo: ({analista:"Analista de Compras",assistente:"Assistente de Compras",senior:"Analista Sênior de Compras",supervisor:"Supervisor de Compras"})[$("#comprasResponsavelPolitica").value],
     escopoRestrito: true,
-    regioes,
-    unidades,
+    regioes: fatorLideranca({politica:$("#comprasResponsavelPolitica").value})?[]:regioes,
+    unidades: fatorLideranca({politica:$("#comprasResponsavelPolitica").value})?[]:unidades,
     ativo:
       $("#comprasResponsavelAtivo")
         .value === "true"
@@ -6283,6 +6269,10 @@ function linhaApuracaoExportacao(
     Colaborador:
       item.nome,
     Cargo: item.cargo,
+    Bonus_Lideranca: item.bonusLideranca||0,
+    Media_Base_Lideranca: item.mediaBase,
+    Multiplicador_Lideranca: item.multiplicador,
+    Soma_Base_Lideranca: item.somaBase,
     Politica: item.politica,
     Unidades:
       item.unidadesAvaliadas.join(", "),
@@ -6933,7 +6923,7 @@ function exportarApuracaoPdf() {
         <table><thead><tr><th>Colaborador</th><th>Casa</th><th>Mês anterior</th><th>Atual</th><th>Parcela</th><th>Bônus</th><th>Situação</th></tr></thead><tbody>
         ${apuracao.flatMap(item=>item.detalhesUnidades.map(casa=>`<tr><td>${escapar(item.nome)}</td><td>${escapar(casa.unidade)}</td><td>${percentual(casa.obsolescenciaAnterior)}</td><td>${percentual(casa.obsolescenciaAtual)}</td><td>${moeda(casa.parcelaObsolescencia)}</td><td>${moeda(casa.bonusObsolescencia)}</td><td>${escapar(casa.statusObsolescencia)}</td></tr>`)).join('')}
         </tbody></table></section>
-        ${state.competencia>='2026-10'?`<section class="print-section"><h2>Redução de cobertura</h2><p>Analistas e assistentes: cobertura atual ≤ 4. R$ 300 por colaborador divididos entre todas as suas casas. Acima de 4 ou sem dados, não recebe a parcela. Comparação com o mês anterior para acompanhamento.</p><table><thead><tr><th>Colaborador</th><th>Casa</th><th>Anterior</th><th>Atual</th><th>Ganho</th></tr></thead><tbody>${apuracao.flatMap(p=>p.detalhesUnidades.map(c=>`<tr><td>${escapar(p.nome)}</td><td>${escapar(c.unidade)}</td><td>${formatarCobertura(c.coberturaAnterior)}</td><td>${formatarCobertura(c.coberturaAtual)}</td><td>${moeda(c.bonusCobertura)}</td></tr>`)).join('')}</tbody></table></section>`:''}<section class="print-section"><h2>O.S. aguardando Central de Compras</h2><p>Média simples das filiais cadastradas, até 10% paga o bônus do cargo e competência. Filiais ausentes deixam a bonificação pendente.</p><table><thead><tr><th>Colaborador</th><th>Filial</th><th>O.S. abertas</th><th>Aguardando Compras</th><th>% da filial</th></tr></thead><tbody>${apuracao.flatMap(p=>p.detalhesUnidades.map(c=>`<tr><td>${escapar(p.nome)}</td><td>${escapar(c.unidade)}</td><td>${c.totalOs??'—'}</td><td>${c.aguardandoCompras??'—'}</td><td>${percentual(c.controleOs)}</td></tr>`)).join('')}</tbody></table><h3>Ranking das justificativas</h3><table><thead><tr><th>Posição</th><th>Motivo</th><th>Quantidade</th><th>%</th></tr></thead><tbody>${rankingMotivosOs(state.indicadores.filter(r=>r.competencia===state.competencia&&Array.isArray(r.osRankingJustificativas)&&apuracao.some(p=>{const responsavel=state.responsaveis.find(x=>x.id===p.responsavelId);return responsavel&&unidadeCorresponde(responsavel,r);}))).map(r=>`<tr><td>${r.posicao}</td><td>${escapar(r.motivo)}</td><td>${r.quantidade}</td><td>${percentual(r.percentual)}</td></tr>`).join('')}</tbody></table></section>
+        ${apuracao.some(p=>p.derivada)?`<section class="print-section"><h2>Bonificação da liderança</h2><p>Média dos ganhos dos sete participantes da base, incluindo zeros. Liderança não entra na própria média.</p><table><thead><tr><th>Colaborador</th><th>Soma da base</th><th>Média / 7</th><th>Multiplicador</th><th>Bônus</th></tr></thead><tbody>${apuracao.filter(p=>p.derivada).map(p=>`<tr><td>${escapar(p.nome)}</td><td>${moeda(p.somaBase)}</td><td>${moeda(p.mediaBase)}</td><td>${p.multiplicador}</td><td>${moeda(p.bonusLideranca)}</td></tr>`).join('')}</tbody></table></section>`:''}${state.competencia>='2026-10'?`<section class="print-section"><h2>Redução de cobertura</h2><p>Analistas e assistentes: cobertura atual ≤ 4. R$ 300 por colaborador divididos entre todas as suas casas. Acima de 4 ou sem dados, não recebe a parcela. Comparação com o mês anterior para acompanhamento.</p><table><thead><tr><th>Colaborador</th><th>Casa</th><th>Anterior</th><th>Atual</th><th>Ganho</th></tr></thead><tbody>${apuracao.flatMap(p=>p.detalhesUnidades.map(c=>`<tr><td>${escapar(p.nome)}</td><td>${escapar(c.unidade)}</td><td>${formatarCobertura(c.coberturaAnterior)}</td><td>${formatarCobertura(c.coberturaAtual)}</td><td>${moeda(c.bonusCobertura)}</td></tr>`)).join('')}</tbody></table></section>`:''}<section class="print-section"><h2>O.S. aguardando Central de Compras</h2><p>Média simples das filiais cadastradas, até 10% paga o bônus do cargo e competência. Filiais ausentes deixam a bonificação pendente.</p><table><thead><tr><th>Colaborador</th><th>Filial</th><th>O.S. abertas</th><th>Aguardando Compras</th><th>% da filial</th></tr></thead><tbody>${apuracao.flatMap(p=>p.detalhesUnidades.map(c=>`<tr><td>${escapar(p.nome)}</td><td>${escapar(c.unidade)}</td><td>${c.totalOs??'—'}</td><td>${c.aguardandoCompras??'—'}</td><td>${percentual(c.controleOs)}</td></tr>`)).join('')}</tbody></table><h3>Ranking das justificativas</h3><table><thead><tr><th>Posição</th><th>Motivo</th><th>Quantidade</th><th>%</th></tr></thead><tbody>${rankingMotivosOs(state.indicadores.filter(r=>r.competencia===state.competencia&&Array.isArray(r.osRankingJustificativas)&&apuracao.some(p=>{const responsavel=state.responsaveis.find(x=>x.id===p.responsavelId);return responsavel&&unidadeCorresponde(responsavel,r);}))).map(r=>`<tr><td>${r.posicao}</td><td>${escapar(r.motivo)}</td><td>${r.quantidade}</td><td>${percentual(r.percentual)}</td></tr>`).join('')}</tbody></table></section>
         ${htmlEvidenciasParaImpressao()}
       </body>
     </html>
