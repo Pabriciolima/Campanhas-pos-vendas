@@ -1,0 +1,63 @@
+// Apresentação da apuração. Não recalcula nem altera as bonificações.
+const filtro={busca:'',situacao:'todos'};
+const expandidos=new Set(),abasAtivas=new Map();
+const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+export function filtrarApuracaoVisual(dados,opcoes=filtro){return dados.filter(p=>(!opcoes.busca||norm(p.nome).includes(norm(opcoes.busca)))&&(opcoes.situacao!=='com-bonus'||Number(p.bonusTotal)>0)&&(opcoes.situacao!=='sem-bonus'||Number(p.bonusTotal||0)===0));}
+const soma=(dados,chave)=>Math.round(dados.reduce((n,p)=>n+Number(p[chave]||0),0)*100)/100;
+export function htmlApuracaoVisual(dados,{detalhada=true,escapar:e,moeda:m,percentual:p,competenciaBr:mes,statusBadge:badge}){
+ if(!dados.length)return '<div class="compras-empty">Nenhuma apuração disponível para esta competência. Importe os indicadores para começar.</div>';
+ const prefix=detalhada?'apuracao':'resumo';
+ const comBonus=dados.filter(r=>r.bonusTotal>0).length;
+ const pendentes=dados.filter(r=>!r.osCompleto||r.detalhesUnidades.some(c=>c.obsolescenciaAtual==null||c.obsolescenciaAnterior==null)).length;
+ const visiveis=new Set(filtrarApuracaoVisual(dados).map(p=>p.responsavelId));
+ const dinheiro=v=>`<span class="cmp-money${Number(v)>0?' cmp-money-earned':''}">${m(v)}</span>`;
+ const tabela=(ths,rows)=>`<div class="cmp-detail-scroll" role="region" aria-label="Conferência por casa" tabindex="0"><table class="compras-table cmp-detail-table"><thead><tr>${ths.map(t=>`<th scope="col">${e(t)}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+ const medicao=v=>v==null?'<span class="cmp-muted">Sem dados</span>':p(v);
+ const pp=v=>v==null?'Sem comparação':v===0?'Sem alteração':(v>0?'Reduziu ':'Aumentou ')+Math.abs(v).toLocaleString('pt-BR',{maximumFractionDigits:4})+' p.p.';
+ return `<div class="cmp-settlement" data-cmp-settlement="${prefix}">
+ ${detalhada?`<div class="cmp-summary-grid"><article class="cmp-month-total"><span>Total apurado no mês</span><strong>${m(soma(dados,'bonusTotal'))}</strong><small>Soma das bonificações dos ${dados.length} colaboradores</small></article><article class="cmp-summary-stat"><span>Com bonificação</span><strong>${comBonus}<small> / ${dados.length}</small></strong><small>Colaboradores com valor a receber</small></article><article class="cmp-summary-stat"><span>Com dados pendentes</span><strong>${pendentes}</strong><small>Histórico de obsoletos ou filiais de O.S.</small></article></div>
+ <div class="cmp-settlement-tools"><label class="compras-field"><span>Buscar colaborador</span><input type="search" data-cmp-busca placeholder="Digite o nome" value="${e(filtro.busca)}" autocomplete="off"></label><label class="compras-field"><span>Exibir</span><select data-cmp-situacao><option value="todos" ${filtro.situacao==='todos'?'selected':''}>Todos os colaboradores</option><option value="com-bonus" ${filtro.situacao==='com-bonus'?'selected':''}>Com bonificação</option><option value="sem-bonus" ${filtro.situacao==='sem-bonus'?'selected':''}>Sem bonificação</option></select></label><p><span data-cmp-contagem aria-live="polite">${visiveis.size}</span> de ${dados.length} colaboradores<br><small>A busca e este filtro também se aplicam à exportação.</small></p></div>`:''}
+ <div class="cmp-people">${dados.map((r,i)=>{
+ const id=prefix+'-colaborador-'+i,casas=r.detalhesUnidades||[];
+ const hist=casas.filter(c=>c.obsolescenciaAtual!=null&&c.obsolescenciaAnterior!=null).length;
+ const reducoes=casas.filter(c=>c.reducaoObsolescencia>0).length;
+ const faltaObs=casas.some(c=>c.obsolescenciaAtual==null||c.obsolescenciaAnterior==null);
+ const iniciais=String(r.nome||'').trim().split(/\s+/).filter(Boolean).slice(0,2).map(n=>n[0]).join('');
+ const ab=tabela(['Casa','Curva A · meta 95%','Ganho A','Curva B · meta 90%','Ganho B','Total A/B'],casas.map(c=>`<tr><th scope="row">${e(c.unidade)}</th><td>${medicao(c.disponibilidadeA)}</td><td>${dinheiro(c.bonusA)}</td><td>${medicao(c.disponibilidadeB)}</td><td>${dinheiro(c.bonusB)}</td><td>${dinheiro(c.bonusDisponibilidade)}</td></tr>`));
+ const obs=tabela(['Casa',mes(r.competenciaAnterior),mes(r.competencia),'Evolução','Parcela prevista','Ganho de obsolescência'],casas.map(c=>`<tr data-obsolescencia-casa><th scope="row">${e(c.unidade)}</th><td>${medicao(c.obsolescenciaAnterior)}</td><td>${medicao(c.obsolescenciaAtual)}</td><td>${e(pp(c.reducaoObsolescencia))}${c.reducaoObsolescencia==null?`<small>${e(c.statusObsolescencia)}</small>`:''}</td><td>${m(c.parcelaObsolescencia)}</td><td>${dinheiro(c.bonusObsolescencia)}</td></tr>`));
+ const os=tabela(['Filial','O.S. abertas','Aguardando Compras','% da filial'],casas.map(c=>`<tr><th scope="row">${e(c.unidade)}</th><td>${c.totalOs??'—'}</td><td>${c.aguardandoCompras??'—'}</td><td>${medicao(c.controleOs)}</td></tr>`));
+ return `<article class="cmp-person" data-cmp-pessoa="${e(r.responsavelId)}" data-cmp-nome="${e(r.nome)}" data-cmp-valor="${Number(r.bonusTotal||0)}" ${detalhada&&!visiveis.has(r.responsavelId)?'hidden':''}>
+ <header class="cmp-person-head"><div class="cmp-person-identity"><span class="cmp-avatar" aria-hidden="true">${e(iniciais)}</span><div><h3>${e(r.nome)}</h3><p>${r.quantidadeCasasRateio??casas.length} casas vinculadas <span aria-hidden="true">·</span> ${e(mes(r.competencia))}</p></div></div><div class="cmp-person-total"><span>Total do colaborador</span>${dinheiro(r.bonusTotal)}${badge(r.status)}</div></header>
+ <div class="cmp-indicators"><section class="cmp-indicator"><div class="cmp-indicator-heading"><span class="cmp-indicator-number">01</span><h4>Disponibilidade A/B</h4></div><strong>${dinheiro(Number(r.bonusA||0)+Number(r.bonusB||0))}</strong><p>A ${m(r.bonusA)} <span aria-hidden="true">·</span> B ${m(r.bonusB)}</p><small>${r.casasAtingiramA??0} casas atingiram A · ${r.casasAtingiramB??0} atingiram B</small></section>
+ <section class="cmp-indicator"><div class="cmp-indicator-heading"><span class="cmp-indicator-number">02</span><h4>Obsolescência</h4></div><strong>${dinheiro(r.bonusObsolescencia)}</strong><p>${reducoes} ${reducoes===1?'casa reduziu':'casas reduziram'} o percentual</p><small class="${faltaObs?'cmp-pending':''}">${hist}/${casas.length} casas com comparação${faltaObs?' · falta histórico ou medição':''}</small></section>
+ <section class="cmp-indicator"><div class="cmp-indicator-heading"><span class="cmp-indicator-number">03</span><h4>O.S. aguardando Compras</h4></div><strong>${dinheiro(r.bonusOs)}</strong><p>Média ${p(r.controleOs)} <span aria-hidden="true">·</span> meta até 10%</p><small class="${r.osCompleto?'':'cmp-pending'}">${r.osFiliaisInformadas??0}/${r.osFiliaisEsperadas??casas.length} filiais informadas${r.osCompleto?'':' · bônus pendente'}</small></section></div>
+ ${r.ajusteManual?`<p class="cmp-adjustment">Ajuste manual aplicado${r.observacaoAjuste?': '+e(r.observacaoAjuste):''}. O detalhamento mantém os valores calculados por casa.</p>`:''}
+ <details class="cmp-person-details"><summary><span>Conferir cálculo por casa</span><span class="cmp-detail-hint">A/B · Obsolescência · O.S.</span><span class="cmp-detail-arrow" aria-hidden="true">⌄</span></summary><div class="cmp-person-detail-body">
+ <div class="cmp-tabs" role="tablist" aria-label="Indicadores de ${e(r.nome)}">${[['ab','Disponibilidade A/B'],['obs','Obsolescência'],['os','O.S. em aberto']].map(([key,label],n)=>`<button type="button" role="tab" id="${id}-tab-${key}" aria-controls="${id}-panel-${key}" aria-selected="${n===0}" tabindex="${n===0?0:-1}" data-cmp-tab="${key}">${label}</button>`).join('')}</div>
+ <section role="tabpanel" tabindex="0" id="${id}-panel-ab" aria-labelledby="${id}-tab-ab"><p class="cmp-rule">Cada casa recebe sua parcela dos R$ 300 de A e de B quando atinge a respectiva meta.</p>${ab}<div class="cmp-detail-total">Total de disponibilidade <strong>${m(Number(r.bonusA||0)+Number(r.bonusB||0))}</strong></div></section>
+ <section role="tabpanel" tabindex="0" id="${id}-panel-obs" aria-labelledby="${id}-tab-obs" hidden><p class="cmp-rule">Qualquer redução em relação ao mês anterior paga a parcela da casa. Sem comparação, não bonifica.</p>${obs}<div class="cmp-detail-total">Total de obsolescência <strong>${m(r.bonusObsolescencia)}</strong></div></section>
+ <section role="tabpanel" tabindex="0" id="${id}-panel-os" aria-labelledby="${id}-tab-os" hidden><p class="cmp-rule">Média simples das filiais até 10% paga R$ 300. Todas as filiais precisam estar informadas.</p>${os}<div class="cmp-detail-total">Média ${p(r.controleOs)} · ${r.osFiliaisInformadas??0}/${r.osFiliaisEsperadas??casas.length} filiais <strong>${m(r.bonusOs)}</strong></div></section>
+ ${detalhada?`<footer class="cmp-person-actions"><span>Correções da apuração mensal</span><button type="button" class="compras-btn compras-btn-light" data-compras-editar-apuracao="${e(r.responsavelId)}">Editar valores</button><button type="button" class="compras-btn compras-btn-danger" data-compras-excluir-apuracao="${e(r.responsavelId)}">Excluir apuração</button></footer>`:''}
+ </div></details></article>`;
+ }).join('')}</div><div class="compras-empty" data-cmp-sem-resultados ${!detalhada||visiveis.size?'hidden':''}>Nenhum colaborador corresponde à busca e ao filtro.</div></div>`;
+}
+export function configurarApuracaoVisual(root){
+ if(!root)return;
+ const prefix=root.querySelector('[data-cmp-settlement]')?.dataset.cmpSettlement||'';
+ root.querySelectorAll('.cmp-person').forEach(card=>{
+  const chave=prefix+'/'+card.dataset.cmpPessoa,detalhe=card.querySelector('.cmp-person-details');
+  detalhe.open=expandidos.has(chave);
+  detalhe.ontoggle=()=>{if(detalhe.open)expandidos.add(chave);else expandidos.delete(chave);};
+ });
+ root.querySelectorAll('[role="tab"]').forEach(botao=>{
+  const tabs=botao.closest('[role="tablist"]'),body=tabs.parentElement,chave=prefix+'/'+botao.closest('.cmp-person').dataset.cmpPessoa;
+  const selecionar=alvo=>{abasAtivas.set(chave,alvo.dataset.cmpTab);tabs.querySelectorAll('[role="tab"]').forEach(b=>{const ativo=b===alvo;b.setAttribute('aria-selected',String(ativo));b.tabIndex=ativo?0:-1;body.querySelector('#'+b.getAttribute('aria-controls')).hidden=!ativo;});};
+  if(abasAtivas.get(chave)===botao.dataset.cmpTab)selecionar(botao);
+  botao.onclick=()=>selecionar(botao);
+  botao.onkeydown=evento=>{const itens=[...tabs.querySelectorAll('[role="tab"]')],i=itens.indexOf(botao);let n;if(evento.key==='ArrowRight')n=(i+1)%itens.length;else if(evento.key==='ArrowLeft')n=(i+itens.length-1)%itens.length;else if(evento.key==='Home')n=0;else if(evento.key==='End')n=itens.length-1;else return;evento.preventDefault();selecionar(itens[n]);itens[n].focus();};
+ });
+ const busca=root.querySelector('[data-cmp-busca]'),situacao=root.querySelector('[data-cmp-situacao]');
+ if(!busca)return;
+ const atualizar=()=>{filtro.busca=busca.value;filtro.situacao=situacao.value;let n=0;root.querySelectorAll('[data-cmp-pessoa]').forEach(el=>{const visivel=filtrarApuracaoVisual([{nome:el.dataset.cmpNome,bonusTotal:Number(el.dataset.cmpValor)}]).length>0;el.hidden=!visivel;if(visivel)n++;});root.querySelector('[data-cmp-contagem]').textContent=n;root.querySelector('[data-cmp-sem-resultados]').hidden=n>0;};
+ busca.oninput=atualizar;situacao.onchange=atualizar;
+}

@@ -14,6 +14,8 @@ import {calcularDisponibilidadeCasa,parcelaCasa} from "./compras-apuracao.js?v=2
 
 import {analisarOsCompras,calcularOsResponsavel,rankingMotivosOs} from "./compras-os.js?v=20261030";
 
+import {htmlApuracaoVisual,configurarApuracaoVisual,filtrarApuracaoVisual} from "./compras-apuracao-ui.js?v=20261030-layout";
+
 const VERSAO = "2026.07.23-15";
 const TAMANHO_LOTE = 400;
 const TIMEOUT_BANCO = 90000;
@@ -4187,44 +4189,13 @@ function htmlPaginas() {
       </section>
     </section>
 
-    <section
-      id="compras-apuracao"
-      class="compras-page"
-      data-compras-view="apuracao"
-    >
-      ${htmlTopbar("Apuração mensal", true)}
-      ${htmlRankingOsCompras()}
-      ${htmlAcompanhamentoObsolescencia()}
-
-      <section class="compras-panel">
-        <header class="compras-panel-header">
-          <div>
-            <small>RESULTADO MENSAL</small>
-            <h3>Quem bateu os indicadores</h3>
-          </div>
-
-          <div class="compras-actions">
-            <span class="compras-badge compras-neutral">
-              A exportação inclui as evidências do mês
-            </span>
-          </div>
-        </header>
-
-        <div
-          id="comprasApuracaoTabela"
-        ></div>
-      </section>
-
-      <section class="compras-panel">
-        <header class="compras-panel-header">
-          <div>
-            <small>EVIDÊNCIAS DO MÊS</small>
-            <h3>Planilhas importadas</h3>
-          </div>
-        </header>
-
-        <div id="comprasEvidenciasTabela"></div>
-      </section>
+    <section id="compras-apuracao" class="compras-page" data-compras-view="apuracao">
+      ${htmlTopbar("Apuração de Compras",true)}
+      <p class="cmp-apuracao-intro">Confira o valor de cada colaborador. Abra a conferência para entender o cálculo de cada indicador, casa por casa.</p>
+      <div id="comprasApuracaoTabela"></div>
+      <details class="cmp-analysis"><summary>Ranking dos motivos das O.S. em aberto</summary>${htmlRankingOsCompras()}</details>
+      <details class="cmp-analysis"><summary>Acompanhar evolução da obsolescência</summary>${htmlAcompanhamentoObsolescencia()}</details>
+      <details class="cmp-analysis"><summary>Planilhas usadas nesta competência</summary><section class="compras-panel"><div id="comprasEvidenciasTabela"></div></section></details>
     </section>
 
     <section
@@ -4279,7 +4250,7 @@ function htmlTopbar(
   return `
     <header class="compras-topbar">
       <div>
-        <small>MVP</small>
+        <small>CENTRAL DE COMPRAS</small>
         <h1>${escapar(titulo)}</h1>
       </div>
 
@@ -5384,213 +5355,8 @@ function renderizarDashboard() {
       );
 }
 
-function htmlTabelaApuracao(
-  dados,
-  detalhada = true
-) {
-  if (!dados.length) {
-    return `
-      <div class="compras-empty">
-        Nenhuma apuração registrada para
-        ${escapar(competenciaBr(state.competencia))}.
-      </div>
-    `;
-  }
-
-  return `
-    <div class="compras-table-wrap">
-      <table class="compras-table">
-        <thead>
-          <tr>
-            <th>Colaborador</th>
-            <th>Apuração por casa</th>
-            <th>Controle O.S.</th>
-            <th>Metas atingidas</th>
-            <th>Bônus A</th>
-            <th>Bônus B</th>
-            <th>Bônus Obsolescência</th>
-            <th>Bônus O.S.</th>
-            <th>Bônus total</th>
-            <th>Status</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          ${
-            dados.map(item => `
-              <tr>
-                <td>
-                  <strong>${escapar(item.nome)}</strong>
-                </td>
-
-                <td style="min-width:330px">
-                  ${
-                    item.detalhesCasasDisponibilidade?.length
-                      ? `
-                        <div style="margin-bottom:8px">
-                          <b style="color:#087354">
-                            DISPONIBILIDADE A/B — POR CASA
-                          </b>
-
-                          ${
-                            item.detalhesCasasDisponibilidade
-                              .map(nucleo => `
-                                <div class="compras-casa-resultado">
-                                  <strong>
-                                    ${escapar(nucleo.unidade)}
-                                  </strong>
-                                  <br>
-
-                                  <small>
-                                    Núcleo:
-                                    ${escapar(nucleo.nucleo)}
-                                  </small>
-                                  <br>
-
-                                  Curva A:
-                                  ${percentual(nucleo.disponibilidadeA)}
-                                  ${nucleo.atingiuA ? "✅" : "❌"}
-
-                                  · Curva B:
-                                  ${percentual(nucleo.disponibilidadeB)}
-                                  ${nucleo.atingiuB ? "✅" : "❌"}
-
-                                  <br><small>Parcela A: ${moeda(nucleo.parcelaA)} · Parcela B: ${moeda(nucleo.parcelaB)} (${item.quantidadeCasasRateio} casas cadastradas)</small>
-                                  <br><b>Recebe A: ${moeda(nucleo.bonusA)} · B: ${moeda(nucleo.bonusB)}</b>
-                                  <br><b>Bônus da casa: ${moeda(nucleo.bonusDisponibilidade)}</b>
-                                </div>
-                              `)
-                              .join("")
-                          }
-
-                          <div class="compras-casas-total">
-                            <b>
-                              Soma dos bônus das casas:
-                              A ${moeda(item.bonusA)}
-                              · B ${moeda(item.bonusB)}
-                            </b>
-                          </div>
-                        </div>
-                      `
-                      : ""
-                  }
-
-                  ${
-                    item.detalhesUnidades.length > 0
-                      ? `
-                        <div>
-                          <b style="color:#087354">
-                            OBSOLESCÊNCIA POR CASA
-                          </b>
-
-                          ${
-                            item.detalhesUnidades
-                              .map(unidade => `
-                            <div class="compras-casa-resultado" data-obsolescencia-casa>
-                              <strong>${escapar(unidade.unidade)}</strong>
-                              ${
-                                unidade.regiao
-                                  ? ` · ${escapar(unidade.regiao)}`
-                                  : ""
-                              }
-                              <br>
-                              Anterior (${escapar(competenciaBr(item.competenciaAnterior))}): ${percentual(unidade.obsolescenciaAnterior)}
-                              <br>Atual (${escapar(competenciaBr(item.competencia))}): ${percentual(unidade.obsolescenciaAtual)}
-                              <br>${unidade.reducaoObsolescencia === null
-                                ? escapar(unidade.statusObsolescencia)
-                                : unidade.reducaoObsolescencia === 0 ? 'Sem redução'
-                                : `${unidade.reducaoObsolescencia > 0 ? 'Reduziu' : 'Aumentou'} ${Math.abs(unidade.reducaoObsolescencia).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:4})} p.p.`}
-                              <br><small>Parcela prevista pela política: ${moeda(unidade.parcelaObsolescencia)}</small>
-                              <br>
-                              <b>
-                                Ganho de obsolescência desta casa:
-                                ${moeda(unidade.bonusObsolescencia)}
-                              </b>
-                            </div>
-                              `)
-                              .join("")
-                          }
-                        </div>
-                      `
-                      : (
-                          item.detalhesCasasDisponibilidade?.length
-                            ? ""
-                            : `
-                              <span class="compras-badge compras-neutral">
-                                SEM DADOS VINCULADOS
-                              </span>
-                            `
-                        )
-                  }
-                </td>
-
-                <td>
-                  <div class="compras-metric">
-                    <strong>${percentual(item.controleOs)}</strong>
-                    <small>Média das filiais · ${item.osFiliaisInformadas}/${item.osFiliaisEsperadas} informadas</small>
-                    <details><summary>Ver filiais</summary>${item.detalhesUnidades.map(c=>`<div>${escapar(c.unidade)}: ${percentual(c.controleOs)}${c.totalOs!=null?` (${c.aguardandoCompras}/${c.totalOs} O.S.)`:' · sem informação'}</div>`).join('')}</details>
-                    ${item.osCompleto?'':'<small class="compras-badge compras-warning">Pendente: faltam filiais</small>'}
-                    <small>
-                      ${badgeIndicador(item.atingiuOs)}
-                    </small>
-                  </div>
-                </td>
-
-                <td>
-                  <strong>
-                    ${item.indicadoresAtingidos}/${item.totalMetasPossiveis}
-                  </strong>
-                </td>
-
-                <td><strong>${moeda(item.bonusA)}</strong></td>
-                <td><strong>${moeda(item.bonusB)}</strong></td>
-                <td><strong>${moeda(item.bonusObsolescencia)}</strong></td>
-                <td><strong>${moeda(item.bonusOs)}</strong></td>
-                <td><strong>${moeda(item.bonusTotal)}</strong></td>
-
-                <td>
-                  ${statusBadge(item.status)}
-                  ${
-                    item.ajusteManual
-                      ? `
-                        <small
-                          style="display:block;margin-top:5px;color:#6b7d8a"
-                          title="${escapar(item.observacaoAjuste || "")}"
-                        >
-                          Ajuste manual
-                        </small>
-                      `
-                      : ""
-                  }
-                </td>
-
-                <td>
-                  <div class="compras-actions">
-                    <button
-                      type="button"
-                      class="compras-btn compras-btn-light"
-                      data-compras-editar-apuracao="${escapar(item.responsavelId)}"
-                    >
-                      Editar
-                    </button>
-
-                    <button
-                      type="button"
-                      class="compras-btn compras-btn-danger"
-                      data-compras-excluir-apuracao="${escapar(item.responsavelId)}"
-                    >
-                      Excluir
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            `).join("")
-          }
-        </tbody>
-      </table>
-    </div>
-  `;
+function htmlTabelaApuracao(dados,detalhada=true){
+ return htmlApuracaoVisual(dados,{detalhada,escapar,moeda,percentual,competenciaBr,statusBadge});
 }
 
 
@@ -5867,6 +5633,8 @@ function renderizarApuracao() {
         true
       );
 
+  configurarApuracaoVisual($("#comprasApuracaoTabela"));
+  configurarApuracaoVisual($("#comprasResumoMensal"));
   configurarEventosApuracao();
   renderizarEvidenciasCompras();
 }
@@ -6791,7 +6559,7 @@ function obterApuracaoParaExportacao() {
         )
       : [...state.apuracao];
 
-  return dados;
+  return $("#compras-apuracao.active") ? filtrarApuracaoVisual(dados) : dados;
 }
 
 function linhaApuracaoExportacao(
@@ -6954,7 +6722,7 @@ function exportarApuracaoExcel() {
     "APURACAO COMPRAS"
   );
 
-  const dadosOs=state.indicadores.filter(r=>r.competencia===state.competencia&&Array.isArray(r.osRankingJustificativas));
+  const dadosOs=state.indicadores.filter(r=>r.competencia===state.competencia&&Array.isArray(r.osRankingJustificativas)&&apuracao.some(p=>{const responsavel=state.responsaveis.find(x=>x.id===p.responsavelId);return responsavel&&unidadeCorresponde(responsavel,r);}));
   if(dadosOs.length){
     XLSX.utils.book_append_sheet(livro,XLSX.utils.json_to_sheet(rankingMotivosOs(dadosOs).map(r=>({Posicao:r.posicao,Justificativa:r.motivo,Quantidade:r.quantidade,Percentual:r.percentual,Central_Compras:r.compras?'SIM':'NÃO'}))),'RANKING JUSTIFICATIVAS');
     XLSX.utils.book_append_sheet(livro,XLSX.utils.json_to_sheet(dadosOs.map(r=>({Filial:r.unidade,OS_Abertas:r.totalOs,Aguardando_Compras:r.aguardandoCompras,Percentual:r.controleOs}))),'OS POR FILIAL');
@@ -7447,7 +7215,7 @@ function exportarApuracaoPdf() {
         <table><thead><tr><th>Colaborador</th><th>Casa</th><th>Mês anterior</th><th>Atual</th><th>Parcela</th><th>Bônus</th><th>Situação</th></tr></thead><tbody>
         ${apuracao.flatMap(item=>item.detalhesUnidades.map(casa=>`<tr><td>${escapar(item.nome)}</td><td>${escapar(casa.unidade)}</td><td>${percentual(casa.obsolescenciaAnterior)}</td><td>${percentual(casa.obsolescenciaAtual)}</td><td>${moeda(casa.parcelaObsolescencia)}</td><td>${moeda(casa.bonusObsolescencia)}</td><td>${escapar(casa.statusObsolescencia)}</td></tr>`)).join('')}
         </tbody></table></section>
-        <section class="print-section"><h2>O.S. aguardando Central de Compras</h2><p>Média simples das filiais cadastradas, até 10%: R$ 300. Filiais ausentes deixam a bonificação pendente.</p><table><thead><tr><th>Colaborador</th><th>Filial</th><th>O.S. abertas</th><th>Aguardando Compras</th><th>% da filial</th></tr></thead><tbody>${apuracao.flatMap(p=>p.detalhesUnidades.map(c=>`<tr><td>${escapar(p.nome)}</td><td>${escapar(c.unidade)}</td><td>${c.totalOs??'—'}</td><td>${c.aguardandoCompras??'—'}</td><td>${percentual(c.controleOs)}</td></tr>`)).join('')}</tbody></table><h3>Ranking das justificativas</h3><table><thead><tr><th>Posição</th><th>Motivo</th><th>Quantidade</th><th>%</th></tr></thead><tbody>${rankingMotivosOs(state.indicadores.filter(r=>r.competencia===state.competencia&&Array.isArray(r.osRankingJustificativas))).map(r=>`<tr><td>${r.posicao}</td><td>${escapar(r.motivo)}</td><td>${r.quantidade}</td><td>${percentual(r.percentual)}</td></tr>`).join('')}</tbody></table></section>
+        <section class="print-section"><h2>O.S. aguardando Central de Compras</h2><p>Média simples das filiais cadastradas, até 10%: R$ 300. Filiais ausentes deixam a bonificação pendente.</p><table><thead><tr><th>Colaborador</th><th>Filial</th><th>O.S. abertas</th><th>Aguardando Compras</th><th>% da filial</th></tr></thead><tbody>${apuracao.flatMap(p=>p.detalhesUnidades.map(c=>`<tr><td>${escapar(p.nome)}</td><td>${escapar(c.unidade)}</td><td>${c.totalOs??'—'}</td><td>${c.aguardandoCompras??'—'}</td><td>${percentual(c.controleOs)}</td></tr>`)).join('')}</tbody></table><h3>Ranking das justificativas</h3><table><thead><tr><th>Posição</th><th>Motivo</th><th>Quantidade</th><th>%</th></tr></thead><tbody>${rankingMotivosOs(state.indicadores.filter(r=>r.competencia===state.competencia&&Array.isArray(r.osRankingJustificativas)&&apuracao.some(p=>{const responsavel=state.responsaveis.find(x=>x.id===p.responsavelId);return responsavel&&unidadeCorresponde(responsavel,r);}))).map(r=>`<tr><td>${r.posicao}</td><td>${escapar(r.motivo)}</td><td>${r.quantidade}</td><td>${percentual(r.percentual)}</td></tr>`).join('')}</tbody></table></section>
         ${htmlEvidenciasParaImpressao()}
       </body>
     </html>
