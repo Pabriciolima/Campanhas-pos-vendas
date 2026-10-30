@@ -1,4 +1,5 @@
-import {POLITICA_ANALISTA, POLITICA_ASSISTENTE, politicaCompras} from "./compras-politicas.js?v=20261030-pesos";
+import {calcularCoberturaCasa,lerCoberturaEstoque,ehPlanilhaCobertura,formatarCobertura} from "./compras-cobertura.js?v=20261030";
+import {POLITICA_ANALISTA, POLITICA_ASSISTENTE, politicaCompras} from "./compras-politicas.js?v=20261030-cobertura";
 /* Campanha Central de Compras — base de analistas aprovada em 28/10/2026.
  * Jéssica: Diesel MT/RO; Gabriel: Diesel PA/AP/MA/PI; Mykaela: Fiat PA/MT/GO e Jeep RAM Barra do Garça.
  * Os demais cadastros ficam arquivados. Indicadores, fontes e importações permanecem preservados.
@@ -10,12 +11,12 @@ import {lerPrintsABC, consolidarPrintsABC, CASAS_ABC} from "./compras-imagens.js
 
 import {bancoCompras,collection,getDocs,doc,setDoc,deleteDoc,writeBatch,serverTimestamp} from "./compras-supabase.js?v=20261028-supabase";
 
-import {calcularObsolescenciaCasa,consolidarMetricasCasas,prepararSubstituicaoMetrica,lerPercentualObsoleto} from "./compras-obsolescencia.js?v=20261030-os";
+import {calcularObsolescenciaCasa,consolidarMetricasCasas,prepararSubstituicaoMetrica,lerPercentualObsoleto} from "./compras-obsolescencia.js?v=20261030-cobertura";
 import {calcularDisponibilidadeCasa,parcelaCasa} from "./compras-apuracao.js?v=20261028-rateio";
 
 import {analisarOsCompras,calcularOsResponsavel,rankingMotivosOs} from "./compras-os.js?v=20261030";
 
-import {htmlApuracaoVisual,configurarApuracaoVisual,filtrarApuracaoVisual} from "./compras-apuracao-ui.js?v=20261030-pesos";
+import {htmlApuracaoVisual,configurarApuracaoVisual,filtrarApuracaoVisual} from "./compras-apuracao-ui.js?v=20261030-cobertura";
 
 const VERSAO = "2026.07.23-15";
 const TAMANHO_LOTE = 400;
@@ -1103,6 +1104,8 @@ function calcularApuracaoResponsavel(
     casasParaExibir.map((item,indiceCasa) => {
       const anterior = mapaAnterior.get(chaveCasa(item));
       const parcelaObsolescencia = parcelaCasa(POLITICA.obsolescencia.bonusMaximo,quantidadeCasasRateio,indiceCasa);
+      const parcelaCobertura=parcelaCasa(POLITICA.cobertura.bonusMaximo,quantidadeCasasRateio,indiceCasa);
+      const calculoCobertura=calcularCoberturaCasa(item.competenciaAnteriorFonte===anteriorCompetencia?item.coberturaAnteriorFonte:anterior?.coberturaEstoque,item.coberturaEstoque,parcelaCobertura);
       const calculoObsolescencia = calcularObsolescenciaCasa(anterior?.indiceObsolescencia,item.indiceObsolescencia,parcelaObsolescencia);
 
       return {
@@ -1115,6 +1118,7 @@ function calcularApuracaoResponsavel(
           item.unidade,
         regiao:
           item.regiao || "",
+        coberturaAtual:calculoCobertura.atual, coberturaAnterior:calculoCobertura.anterior, variacaoCobertura:calculoCobertura.variacao, atingiuCobertura:calculoCobertura.atingiu, bonusCobertura:calculoCobertura.bonus, parcelaCobertura, statusCobertura:calculoCobertura.status, origemCobertura:item.origemCobertura||"",
         controleOs:item.controleOs ?? null,
         totalOs:item.totalOs ?? null,
         aguardandoCompras:item.aguardandoCompras ?? null,
@@ -1177,7 +1181,8 @@ function calcularApuracaoResponsavel(
       ? POLITICA.controleOs.bonus
       : 0;
 
-  const bonusTotal = Math.round((bonusA + bonusB + bonusObsolescencia + bonusOs)*100)/100;
+  const bonusCobertura=Math.round(somar(detalhesUnidades.map(c=>c.bonusCobertura))*100)/100;
+  const bonusTotal = Math.round((bonusA + bonusB + bonusObsolescencia + bonusOs + bonusCobertura)*100)/100;
 
   const unidadesComObsolescencia =
     detalhesUnidades.filter(item =>
@@ -1193,8 +1198,8 @@ function calcularApuracaoResponsavel(
         item.reduziuObsolescencia
     ).length;
 
-  const indicadoresAtingidos = casasAtingiramA + casasAtingiramB + reducoesObsolescencia + Number(atingiuOs);
-  const totalMetasPossiveis = quantidadeCasasRateio * 2 + unidadesComObsolescencia.length + Number(controleOs !== null) + Number(POLITICA.cobertura.pendente);
+  const indicadoresAtingidos = casasAtingiramA + casasAtingiramB + reducoesObsolescencia + Number(atingiuOs) + (POLITICA.cobertura.bonusMaximo>0?detalhesUnidades.filter(c=>c.atingiuCobertura).length:0);
+  const totalMetasPossiveis = quantidadeCasasRateio * 2 + unidadesComObsolescencia.length + Number(controleOs !== null) + (POLITICA.cobertura.bonusMaximo>0?quantidadeCasasRateio:0);
 
   const status =
     totalMetasPossiveis > 0 &&
@@ -1229,9 +1234,9 @@ function calcularApuracaoResponsavel(
     cargo: responsavel.cargo || "Analista de Compras",
     politica: responsavel.politica || "analista",
     limites: POLITICA,
-    bonusCobertura: 0,
-    coberturaPendente: POLITICA.cobertura.pendente,
-    statusCobertura: POLITICA.cobertura.pendente ? "Pendente: aguardando planilha e metas" : "Não prevista nesta competência",
+    bonusCobertura,
+    coberturaPendente: POLITICA.cobertura.bonusMaximo>0&&detalhesUnidades.some(c=>c.coberturaAtual==null),
+    statusCobertura: POLITICA.cobertura.bonusMaximo===0 ? "Não prevista nesta competência" : detalhesUnidades.some(c=>c.coberturaAtual==null)?"Pendente: faltam dados de cobertura":"Apurada · meta ≤ 4",
     competencia,
     competenciaAnterior:
       anteriorCompetencia,
@@ -1361,7 +1366,7 @@ function aplicarAjusteApuracao(
       bonusA +
       bonusB +
       bonusObsolescencia +
-      bonusOs,
+      bonusOs + Number(apuracao.bonusCobertura||0),
     status:
       ajuste.status ||
       "AJUSTADO",
@@ -2602,6 +2607,7 @@ function processarImportacao() {
   importacao.registros = [];
   importacao.erros = [];
   importacao.avisos = [];
+  if(importacao.formatoEspecial==='cobertura_estoque'){const dados=lerCoberturaEstoque(importacao.matrizCobertura,importacao.competencia);Object.assign(importacao,dados,{tipo:"cobertura"});renderizarImportacao();return;}
   if(importacao.competenciaImagens && importacao.competenciaImagens !== importacao.competencia){
     importacao.erros.push("A competência dos prints mudou. Abra Conferir prints do conjunto e confirme novamente o mês.");
     renderizarImportacao();return;
@@ -3000,6 +3006,8 @@ function carregarAbaImportacao(
       }
     );
 
+  if(ehPlanilhaCobertura(matriz)){importacao.formatoEspecial="cobertura_estoque";importacao.matrizCobertura=matriz;importacao.headers=matriz[1]||[];importacao.rows=matriz;importacao.tipo="cobertura";$("#comprasImportTipo").value="cobertura";processarImportacao();return;}
+  importacao.matrizCobertura=null;
   importacao.formatoEspecial =
     detectarFormatoEspecial(
       matriz
@@ -3980,7 +3988,7 @@ function htmlPaginas() {
           <button type="button" class="cmp-import-indicator" data-cmp-import-tipo="disponibilidade" aria-pressed="false"><span class="cmp-import-icon" aria-hidden="true">A/B</span><span><strong>Disponibilidade A/B</strong><small>Planilha ou prints das casas</small><span class="cmp-import-state" data-cmp-import-estado>Pendente</span></span></button>
           <button type="button" class="cmp-import-indicator" data-cmp-import-tipo="obsolescencia" aria-pressed="false"><span class="cmp-import-icon" aria-hidden="true">365</span><span><strong>Obsolescência</strong><small>Percentual da coluna I · comparação mensal</small><span class="cmp-import-state" data-cmp-import-estado>Pendente</span></span></button>
           <button type="button" class="cmp-import-indicator" data-cmp-import-tipo="os" aria-pressed="false"><span class="cmp-import-icon" aria-hidden="true">O.S.</span><span><strong>O.S. aguardando Compras</strong><small>Filial na coluna A · motivo na J</small><span class="cmp-import-state" data-cmp-import-estado>Pendente</span></span></button>
-        </div>
+        <button type="button" class="cmp-import-indicator" data-cmp-import-tipo="cobertura" aria-pressed="false"><span class="cmp-import-icon" aria-hidden="true">≤4</span><span><strong>Cobertura de estoque</strong><small>Mês atual e anterior · meta ≤ 4</small><span class="cmp-import-state" data-cmp-import-estado>Pendente</span></span></button></div>
         <p class="cmp-import-detection" data-cmp-import-deteccao role="status">Identificação automática ativada.</p>
       </section>
       <section class="compras-panel cmp-import-upload">
@@ -3994,7 +4002,7 @@ function htmlPaginas() {
         </label>
         <p id="comprasLeituraStatus" role="status" aria-live="polite"></p>
         <button type="button" id="comprasReverPrints" class="compras-btn compras-btn-light" hidden>Conferir prints do conjunto</button>
-        <details class="cmp-import-options"><summary>Configurações do arquivo e modelo</summary><div class="cmp-import-options-grid"><label class="compras-field"><span>Identificação do indicador</span><select id="comprasImportTipo"><option value="auto">Identificar automaticamente</option><option value="consolidado">Arquivo consolidado</option><option value="disponibilidade">Disponibilidade A/B</option><option value="obsolescencia">Obsolescência</option><option value="os">Controle de O.S.</option></select></label><label class="compras-field"><span>Aba da planilha</span><select id="comprasImportAba"><option>Aguardando arquivo</option></select></label><button type="button" id="btnModeloCompras" class="compras-btn compras-btn-light">Baixar modelo</button></div></details>
+        <details class="cmp-import-options"><summary>Configurações do arquivo e modelo</summary><div class="cmp-import-options-grid"><label class="compras-field"><span>Identificação do indicador</span><select id="comprasImportTipo"><option value="auto">Identificar automaticamente</option><option value="consolidado">Arquivo consolidado</option><option value="disponibilidade">Disponibilidade A/B</option><option value="obsolescencia">Obsolescência</option><option value="os">Controle de O.S.</option><option value="cobertura">Cobertura de estoque</option></select></label><label class="compras-field"><span>Aba da planilha</span><select id="comprasImportAba"><option>Aguardando arquivo</option></select></label><button type="button" id="btnModeloCompras" class="compras-btn compras-btn-light">Baixar modelo</button></div></details>
       </section>
       <section class="compras-panel cmp-import-review" data-cmp-import-review hidden>
         <header class="cmp-import-section-head"><div><span class="cmp-import-step">03</span><h2>Confira antes de salvar</h2></div><span class="cmp-import-unsaved" data-cmp-import-status>Nada foi salvo ainda</span></header>
@@ -4129,17 +4137,17 @@ function htmlTopbar(
 }
 
 function htmlConteudoPoliticas(){
- const a=politicaCompras({politica:'analista'},state.competencia),b=politicaCompras({politica:'assistente'},state.competencia),nova=a.cobertura.pendente;
+ const a=politicaCompras({politica:'analista'},state.competencia),b=politicaCompras({politica:'assistente'},state.competencia),nova=a.cobertura.bonusMaximo>0;
  const total=p=>p.disponibilidadeA.bonus+p.disponibilidadeB.bonus+p.obsolescencia.bonusMaximo+p.controleOs.bonus+p.cobertura.bonusMaximo;
  return `<p class="cmp-policy-intro">Regras de ${competenciaBr(state.competencia)}. ${nova?'Nova distribuição vigente desde outubro/2026.':'Política anterior a outubro/2026 preservada.'}</p>
- <section class="cmp-policy-benefit"><div><span class="cmp-policy-eyebrow">ANALISTAS E ASSISTENTES · CAMPANHA MENSAL</span><h2>Bonificação conforme a atuação</h2><p>${nova?'Quatro indicadores: disponibilidade A/B, O.S., obsolescência e redução de cobertura.':'Disponibilidade A e B, obsolescência e O.S.'}</p>${nova?'<p><strong>Cobertura: R$ 300 por pessoa reservados na política, ainda sem bonificação. Aguardando planilha e metas.</strong></p>':''}</div><div class="cmp-policy-ceiling"><span>Potencial mensal · Analista</span><strong>${moeda(total(a))}</strong><span>Potencial mensal · Assistente</span><strong>${moeda(total(b))}</strong><small>${nova?'Até R$ 900 por pessoa nos indicadores já definidos + R$ 300 de cobertura pendentes. Orçamento máximo dos sete: R$ 8.400.':'Ao atingir todas as condições da política.'}</small></div></section>
+ <section class="cmp-policy-benefit"><div><span class="cmp-policy-eyebrow">ANALISTAS E ASSISTENTES · CAMPANHA MENSAL</span><h2>Bonificação conforme a atuação</h2><p>${nova?'Quatro indicadores: disponibilidade A/B, O.S., obsolescência e redução de cobertura.':'Disponibilidade A e B, obsolescência e O.S.'}</p>${nova?'<p><strong>Cobertura atual de 4 ou menos bonifica a casa. R$ 300 por pessoa divididos entre todas as casas.</strong></p>':''}</div><div class="cmp-policy-ceiling"><span>Potencial mensal · Analista</span><strong>${moeda(total(a))}</strong><span>Potencial mensal · Assistente</span><strong>${moeda(total(b))}</strong><small>${nova?'Até R$ 1.200 por pessoa ao atingir todas as metas. Orçamento máximo dos sete: R$ 8.400.':'Ao atingir todas as condições da política.'}</small></div></section>
  <div class="cmp-policy-section-title"><h2>Como conquistar cada bônus</h2><p>Valores máximos por colaborador. Disponibilidade A e B têm verbas separadas.</p></div><div class="cmp-policy-cards">${htmlPoliticas()}</div>
- ${nova?'<aside class="cmp-policy-warning"><span class="cmp-policy-warning-icon" aria-hidden="true">!</span><div><h2>Redução de cobertura · R$ 300 por colaborador</h2><p>Pendente de definição. Meta, forma de cálculo, fonte e eventual rateio ainda serão informados. O sistema não presume resultado nem concede esse bônus. A cobertura não é a cobertura de filiais do relatório de O.S.</p></div></aside>':''}
+ ${nova?'<aside class="cmp-policy-warning"><span class="cmp-policy-warning-icon" aria-hidden="true">!</span><div><h2>Redução de cobertura · R$ 300 por colaborador</h2><p>Meta: cobertura atual ≤ 4, usando o índice completo, sem arredondar. R$ 300 divididos entre todas as casas cadastradas. Acima de 4 ou sem dado atual, a casa não recebe sua parcela. O mês anterior serve para acompanhar a evolução; uma redução que continue acima de 4 não bonifica. Este indicador é distinto da cobertura de filiais de O.S.</p></div></aside>':''}
  <aside class="cmp-policy-warning"><span class="cmp-policy-warning-icon" aria-hidden="true">!</span><div><h2>Penalidades e bloqueios de bonificação</h2><p>Não cumprir uma condição impede somente a parcela ou o bônus do respectivo indicador.</p><ul><li><strong>A/B:</strong> casa abaixo de 95% em A ou 90% em B, ou sem percentual, não recebe a parcela correspondente. Não há redistribuição.</li><li><strong>Obsolescência:</strong> percentual igual, maior ou sem comparação válida com o mês imediatamente anterior não bonifica a casa.</li><li><strong>O.S.:</strong> média acima de 10% ou qualquer casa sem dados impede o bônus do cargo: analista ${moeda(a.controleOs.bonus)}; assistente ${moeda(b.controleOs.bonus)}.</li></ul></div></aside>
  <section class="cmp-policy-reference"><h2>Exemplos e critérios de conferência</h2><p>Abra os detalhes para conferir o rateio e as fontes.</p>
  <details class="cmp-analysis"><summary>Exemplos de rateio e metas</summary><div class="cmp-policy-detail"><dl class="cmp-policy-examples"><div><dt>Disponibilidade A/B</dt><dd>Analista: ${moeda(a.disponibilidadeA.bonus)} para A + ${moeda(a.disponibilidadeB.bonus)} para B. Assistente: ${moeda(b.disponibilidadeA.bonus)} para A + ${moeda(b.disponibilidadeB.bonus)} para B. Cada verba é dividida entre todas as casas cadastradas; A e B são conquistadas independentemente.</dd></div><div><dt>Exemplo · seis casas</dt><dd>Uma casa de assistente que atinge A recebe ${moeda(parcelaCasa(b.disponibilidadeA.bonus,6,0))}. Com todas atingindo A, recebe ${moeda(b.disponibilidadeA.bonus)}. Na obsolescência, cada casa que reduz recebe ${moeda(parcelaCasa(b.obsolescencia.bonusMaximo,6,0))}.</dd></div><div><dt>O.S. aguardando Compras</dt><dd>Média simples de todas as casas até 10%, com todas informadas, paga ${moeda(a.controleOs.bonus)} para analista ou ${moeda(b.controleOs.bonus)} para assistente, uma única vez.</dd></div></dl></div></details>
  <details class="cmp-analysis"><summary>Casas consideradas e critérios de cálculo</summary><div class="cmp-policy-detail"><ul><li>Somente as casas vinculadas ao colaborador participam. Diesel, Fiat e Jeep RAM são separados mesmo na mesma cidade.</li><li>O rateio considera todas as casas cadastradas. Parcelas não conquistadas não são transferidas. Centavos residuais garantem o fechamento exato da verba do cargo.</li><li>Curva C não é avaliada nem bonifica.</li><li>O.S. usa os percentuais completos, sem arredondar para decidir. Justificativa vazia participa do total como não informada.</li></ul></div></details>
- <details class="cmp-analysis"><summary>De onde vêm os dados importados</summary><div class="cmp-policy-detail"><dl class="cmp-policy-examples"><div><dt>Disponibilidade</dt><dd>Planilha ou prints de Disponibilidade por Curva ABC, percentuais A e B por casa.</dd></div><div><dt>Obsolescência</dt><dd>Estoque por Classificação de Dias Último Movimento, coluna I (maior que 365 dias), contra a mesma casa no mês imediatamente anterior.</dd></div><div><dt>O.S.</dt><dd>ANÁLISE DE O.S.: filial na coluna A, justificativa na J. Percentual da filial = aguardando Compras ÷ total de O.S. abertas × 100. Depois, média simples das casas do colaborador.</dd></div>${nova?'<div><dt>Redução de cobertura</dt><dd>Planilha e metas ainda não fornecidas. Importação e cálculo aguardam definição.</dd></div>':''}</dl></div></details></section>`;
+ <details class="cmp-analysis"><summary>De onde vêm os dados importados</summary><div class="cmp-policy-detail"><dl class="cmp-policy-examples"><div><dt>Disponibilidade</dt><dd>Planilha ou prints de Disponibilidade por Curva ABC, percentuais A e B por casa.</dd></div><div><dt>Obsolescência</dt><dd>Estoque por Classificação de Dias Último Movimento, coluna I (maior que 365 dias), contra a mesma casa no mês imediatamente anterior.</dd></div><div><dt>O.S.</dt><dd>ANÁLISE DE O.S.: filial na coluna A, justificativa na J. Percentual da filial = aguardando Compras ÷ total de O.S. abertas × 100. Depois, média simples das casas do colaborador.</dd></div>${nova?'<div><dt>Redução de cobertura</dt><dd>COBERTURA DE ESTOQUE: coluna Empresa e coluna Cobertura do mês selecionado. Em outubro/2026: AD (atual) e AA (setembro). Totais dos núcleos não são importados. As colunas são identificadas pelos cabeçalhos do arquivo.</dd></div>':''}</dl></div></details></section>`;
 }
 function htmlPoliticas(){
  const a=politicaCompras({politica:'analista'},state.competencia),b=politicaCompras({politica:'assistente'},state.competencia);
@@ -4976,7 +4984,7 @@ function renderizarDashboard() {
   $("#comprasDashboardKpis").innerHTML = `
     <article class="compras-kpi cmp-overview-total"><span>Bonificação total apurada</span><strong>${moeda(totalInvestido)}</strong><small>${competenciaBr(state.competencia)} · valores calculados até agora</small></article>
     <article class="compras-kpi"><span>Colaboradores com bônus</span><strong>${comBonus}<small> / ${state.apuracao.length}</small></strong><small>Com valor apurado maior que zero</small></article>
-    <article class="compras-kpi"><span>Com dados pendentes</span><strong>${pendentes}</strong><small>Histórico, filiais de O.S. ou definição de redução de cobertura.</small></article>`;
+    <article class="compras-kpi"><span>Com dados pendentes</span><strong>${pendentes}</strong><small>Histórico, filiais de O.S. ou dados de cobertura.</small></article>`;
 
   const totalA = somar(state.apuracao.map(item => item.casasAtingiramA));
   const totalB = somar(state.apuracao.map(item => item.casasAtingiramB));
@@ -4999,7 +5007,7 @@ function renderizarDashboard() {
   $("#comprasResumoIndicadores").innerHTML = `
     <article class="cmp-overview-metric"><span class="cmp-overview-symbol" aria-hidden="true">A/B</span><h3>Disponibilidade</h3><strong>${moeda(somar(state.apuracao.map(item=>item.bonusA+item.bonusB)))}</strong><p>Curva A ≥ 95% · Curva B ≥ 90%</p><dl><div><dt>Curva A</dt><dd>${totalA} avaliações · ${moeda(somar(state.apuracao.map(item=>item.bonusA)))}</dd></div><div><dt>Curva B</dt><dd>${totalB} avaliações · ${moeda(somar(state.apuracao.map(item=>item.bonusB)))}</dd></div></dl><small>Analista: ${moeda(politicaCompras({politica:"analista"},state.competencia).disponibilidadeA.bonus)} por curva. Assistente: ${moeda(politicaCompras({politica:"assistente"},state.competencia).disponibilidadeA.bonus)} por curva. Valores divididos entre as casas de cada responsável.</small></article>
     <article class="cmp-overview-metric"><span class="cmp-overview-symbol" aria-hidden="true">365</span><h3>Obsolescência</h3><strong>${moeda(somar(state.apuracao.map(item=>item.bonusObsolescencia)))}</strong><p>${totalObs} avaliações com redução em relação ao mês anterior</p><small>${moeda(politicaCompras({politica:"analista"},state.competencia).obsolescencia.bonusMaximo)} para analista e ${moeda(politicaCompras({politica:"assistente"},state.competencia).obsolescencia.bonusMaximo)} para assistente, divididos entre as casas. Sem histórico do mês anterior, não há bonificação.</small></article>
-    <article class="cmp-overview-metric"><span class="cmp-overview-symbol" aria-hidden="true">O.S.</span><h3>Aguardando Compras</h3><strong>${moeda(somar(state.apuracao.map(item=>item.bonusOs)))}</strong><p>${totalOs} colaboradores atingiram a meta</p><small>Analista: ${moeda(politicaCompras({politica:"analista"},state.competencia).controleOs.bonus)}. Assistente: ${moeda(politicaCompras({politica:"assistente"},state.competencia).controleOs.bonus)}, quando a média das casas é de até 10%, com todas as casas informadas.</small></article>${state.competencia>='2026-10'?'<article class="cmp-overview-metric"><span class="cmp-overview-symbol" aria-hidden="true">04</span><h3>Redução de cobertura</h3><strong>R$ 0,00</strong><p>Pendente de definição</p><small>R$ 300 por colaborador previstos. Aguardando planilha e metas; sem bônus por enquanto.</small></article>':''}`;
+    <article class="cmp-overview-metric"><span class="cmp-overview-symbol" aria-hidden="true">O.S.</span><h3>Aguardando Compras</h3><strong>${moeda(somar(state.apuracao.map(item=>item.bonusOs)))}</strong><p>${totalOs} colaboradores atingiram a meta</p><small>Analista: ${moeda(politicaCompras({politica:"analista"},state.competencia).controleOs.bonus)}. Assistente: ${moeda(politicaCompras({politica:"assistente"},state.competencia).controleOs.bonus)}, quando a média das casas é de até 10%, com todas as casas informadas.</small></article>${state.competencia>='2026-10'?`<article class="cmp-overview-metric"><span class="cmp-overview-symbol" aria-hidden="true">04</span><h3>Redução de cobertura</h3><strong>${moeda(somar(state.apuracao.map(p=>p.bonusCobertura)))}</strong><p>Meta: cobertura atual ≤ 4</p><small>R$ 300 por pessoa divididos entre as casas. Comparação mensal para acompanhar a evolução.</small></article>`:''}`;
 
   const ranking =
     [...state.apuracao]
@@ -5020,7 +5028,7 @@ function renderizarDashboard() {
               <tr>
                 <th>#</th>
                 <th>Colaborador</th>
-                <th>Disponibilidade A/B</th><th>Obsolescência</th><th>O.S.</th><th>Total</th>
+                <th>Disponibilidade A/B</th><th>Obsolescência</th><th>O.S.</th><th>Cobertura</th><th>Total</th>
               </tr>
             </thead>
 
@@ -5031,7 +5039,7 @@ function renderizarDashboard() {
                     <tr>
                       <td>${indice + 1}</td>
                       <td><strong>${escapar(item.nome)}</strong></td>
-                      <td data-label="Disponibilidade A/B">${moeda(item.bonusA+item.bonusB)}</td><td data-label="Obsolescência">${moeda(item.bonusObsolescencia)}</td><td data-label="O.S.">${moeda(item.bonusOs)}</td><td data-label="Total"><strong class="cmp-overview-earned">${moeda(item.bonusTotal)}</strong>${item.ajusteManual ? '<small>Inclui ajuste de apuração</small>' : ''}</td>
+                      <td data-label="Disponibilidade A/B">${moeda(item.bonusA+item.bonusB)}</td><td data-label="Obsolescência">${moeda(item.bonusObsolescencia)}</td><td data-label="O.S.">${moeda(item.bonusOs)}</td><td data-label="Cobertura">${moeda(item.bonusCobertura)}</td><td data-label="Total"><strong class="cmp-overview-earned">${moeda(item.bonusTotal)}</strong>${item.ajusteManual ? '<small>Inclui ajuste de apuração</small>' : ''}</td>
                     </tr>
                   `)
                   .join("")
@@ -5488,9 +5496,10 @@ function renderizarStatusNuvemCompras() {
 function renderizarPreviaResponsaveisCompras(){
  const alvo=$('#comprasImportPorResponsavel'),imp=state.importacao,tipo=imp.registros[0]?.tipoImportacao;
  if(!alvo)return;
- alvo.hidden=!['disponibilidade','obsolescencia','os'].includes(tipo)||imp.erros.length>0;
+ alvo.hidden=!['disponibilidade','obsolescencia','os','cobertura'].includes(tipo)||imp.erros.length>0;
  if(alvo.hidden){alvo.replaceChildren();return;}
  const pessoas=(state.responsaveis.length?state.responsaveis:EQUIPE_COMPRAS).filter(p=>p.ativo!==false);
+ if(tipo==='cobertura'){const calculos=pessoas.map(p=>({p,r:calcularApuracaoResponsavel(p,imp.competencia,imp.registros)}));alvo.innerHTML='<h3>Prévia da cobertura · meta ≤ 4</h3><p>R$ 300 divididos entre todas as casas. A evolução mensal é informativa; o pagamento depende do índice atual ≤ 4.</p><div class="compras-table-wrap"><table class="compras-table"><thead><tr><th>Colaborador</th><th>Casas na meta</th><th>Bônus de cobertura</th></tr></thead><tbody>'+calculos.map(({p,r})=>`<tr><td>${escapar(p.nome)}</td><td>${r.detalhesUnidades.filter(c=>c.atingiuCobertura).length} / ${p.unidades.length}</td><td>${moeda(r.bonusCobertura)}</td></tr>`).join('')+'</tbody></table></div>';return;}
  const anteriores=tipo==='obsolescencia'?state.indicadores.filter(r=>r.competencia===competenciaAnterior(imp.competencia)):[];
  const calculos=pessoas.map(p=>({p,r:calcularApuracaoResponsavel(p,imp.competencia,[...anteriores,...imp.registros])}));
  const titulos={disponibilidade:'Prévia da disponibilidade A/B',obsolescencia:'Prévia da redução dos obsoletos',os:'Prévia de O.S. por colaborador'};
@@ -5500,7 +5509,7 @@ function renderizarPreviaResponsaveisCompras(){
 
 function atualizarImportacaoVisual(){
  const imp=state.importacao,carregado=!!imp.arquivo,ocupado=!!imp.processando||lendoImagensABC;
- const nomes={auto:'Identificação automática',consolidado:'Arquivo consolidado',disponibilidade:'Disponibilidade A/B',obsolescencia:'Obsolescência',os:'O.S. aguardando Compras'};
+ const nomes={auto:'Identificação automática',consolidado:'Arquivo consolidado',disponibilidade:'Disponibilidade A/B',obsolescencia:'Obsolescência',os:'O.S. aguardando Compras',cobertura:'Cobertura de estoque'};
  $('[data-cmp-import-review]').hidden=!carregado;
  $('[data-cmp-import-os]').hidden=!(carregado&&imp.registros.some(r=>r.tipoImportacao==='os'));
  $('#comprasImportArquivo').disabled=ocupado;
@@ -5559,8 +5568,8 @@ function renderizarImportacao() {
       importacao.avisos.length;
 
   const tipo=importacao.registros[0]?.tipoImportacao||importacao.tipo;
-  const campos=tipo==='disponibilidade'?['unidade','responsaveisVinculados','disponibilidadeA','disponibilidadeB']:tipo==='obsolescencia'?['unidade','indiceObsolescencia','valorObsoleto365']:tipo==='os'?['unidade','totalOs','aguardandoCompras','controleOs']:['unidade','responsaveisVinculados','disponibilidadeA','disponibilidadeB','indiceObsolescencia','controleOs'];
-  const titulos={unidade:'Casa / filial',responsaveisVinculados:'Colaboradores vinculados',disponibilidadeA:'Curva A',disponibilidadeB:'Curva B',indiceObsolescencia:'Obsoletos > 365 dias',valorObsoleto365:'Valor obsoleto',totalOs:'O.S. abertas',aguardandoCompras:'Aguardando Compras',controleOs:'% aguardando Compras'};
+  const campos=tipo==='disponibilidade'?['unidade','responsaveisVinculados','disponibilidadeA','disponibilidadeB']:tipo==='obsolescencia'?['unidade','indiceObsolescencia','valorObsoleto365']:tipo==='cobertura'?['unidade','coberturaAnteriorFonte','coberturaEstoque','origemCobertura']:tipo==='os'?['unidade','totalOs','aguardandoCompras','controleOs']:['unidade','responsaveisVinculados','disponibilidadeA','disponibilidadeB','indiceObsolescencia','controleOs'];
+  const titulos={coberturaAnteriorFonte:'Cobertura mês anterior',coberturaEstoque:'Cobertura mês atual',origemCobertura:'Origem / colunas',unidade:'Casa / filial',responsaveisVinculados:'Colaboradores vinculados',disponibilidadeA:'Curva A',disponibilidadeB:'Curva B',indiceObsolescencia:'Obsoletos > 365 dias',valorObsoleto365:'Valor obsoleto',totalOs:'O.S. abertas',aguardandoCompras:'Aguardando Compras',controleOs:'% aguardando Compras'};
 
   $("#comprasImportPreview")
     .innerHTML =
@@ -5593,7 +5602,7 @@ function renderizarImportacao() {
                                 "controleOs"
                               ].includes(campo)
                                 ? percentual(item[campo])
-                                : campo==='valorObsoleto365'?moeda(item[campo]):escapar(item[campo])
+                                : campo==='valorObsoleto365'?moeda(item[campo]):['coberturaEstoque','coberturaAnteriorFonte'].includes(campo)?formatarCobertura(item[campo]):escapar(item[campo])
                             }
                           </td>
                         `).join("")
@@ -6434,6 +6443,8 @@ function exportarApuracaoExcel() {
     XLSX.utils.book_append_sheet(livro,XLSX.utils.json_to_sheet(dadosOs.map(r=>({Filial:r.unidade,OS_Abertas:r.totalOs,Aguardando_Compras:r.aguardandoCompras,Percentual:r.controleOs}))),'OS POR FILIAL');
   }
 
+  const coberturaPorCasa=apuracao.flatMap(p=>p.detalhesUnidades.map(c=>({Competencia:p.competencia,Colaborador:p.nome,Casa:c.unidade,Cobertura_Anterior:c.coberturaAnterior,Cobertura_Atual:c.coberturaAtual,Variacao:c.variacaoCobertura,Meta:4,Parcela:c.parcelaCobertura,Bonus:c.bonusCobertura,Status:c.statusCobertura,Origem:c.origemCobertura})));
+  if(coberturaPorCasa.length)XLSX.utils.book_append_sheet(livro,XLSX.utils.json_to_sheet(coberturaPorCasa),'COBERTURA POR CASA');
   const obsPorCasa=apuracao.flatMap(item=>item.detalhesUnidades.map(casa=>({Competencia:item.competencia,Mes_Anterior:item.competenciaAnterior,Colaborador:item.nome,Casa:casa.unidade,Percentual_Anterior:casa.obsolescenciaAnterior,Percentual_Atual:casa.obsolescenciaAtual,Reducao_PP:casa.reducaoObsolescencia,Parcela:casa.parcelaObsolescencia,Bonus:casa.bonusObsolescencia,Status:casa.statusObsolescencia})));
   if(obsPorCasa.length)XLSX.utils.book_append_sheet(livro,XLSX.utils.json_to_sheet(obsPorCasa),'OBSOLESCENCIA POR CASA');
 
@@ -6921,7 +6932,7 @@ function exportarApuracaoPdf() {
         <table><thead><tr><th>Colaborador</th><th>Casa</th><th>Mês anterior</th><th>Atual</th><th>Parcela</th><th>Bônus</th><th>Situação</th></tr></thead><tbody>
         ${apuracao.flatMap(item=>item.detalhesUnidades.map(casa=>`<tr><td>${escapar(item.nome)}</td><td>${escapar(casa.unidade)}</td><td>${percentual(casa.obsolescenciaAnterior)}</td><td>${percentual(casa.obsolescenciaAtual)}</td><td>${moeda(casa.parcelaObsolescencia)}</td><td>${moeda(casa.bonusObsolescencia)}</td><td>${escapar(casa.statusObsolescencia)}</td></tr>`)).join('')}
         </tbody></table></section>
-        ${state.competencia>='2026-10'?'<section class="print-section"><h2>Redução de cobertura</h2><p>R$ 300 por colaborador previstos na política; meta e fonte pendentes. Bônus de cobertura: R$ 0,00. Os totais atuais não incluem esta verba.</p></section>':''}<section class="print-section"><h2>O.S. aguardando Central de Compras</h2><p>Média simples das filiais cadastradas, até 10% paga o bônus do cargo e competência. Filiais ausentes deixam a bonificação pendente.</p><table><thead><tr><th>Colaborador</th><th>Filial</th><th>O.S. abertas</th><th>Aguardando Compras</th><th>% da filial</th></tr></thead><tbody>${apuracao.flatMap(p=>p.detalhesUnidades.map(c=>`<tr><td>${escapar(p.nome)}</td><td>${escapar(c.unidade)}</td><td>${c.totalOs??'—'}</td><td>${c.aguardandoCompras??'—'}</td><td>${percentual(c.controleOs)}</td></tr>`)).join('')}</tbody></table><h3>Ranking das justificativas</h3><table><thead><tr><th>Posição</th><th>Motivo</th><th>Quantidade</th><th>%</th></tr></thead><tbody>${rankingMotivosOs(state.indicadores.filter(r=>r.competencia===state.competencia&&Array.isArray(r.osRankingJustificativas)&&apuracao.some(p=>{const responsavel=state.responsaveis.find(x=>x.id===p.responsavelId);return responsavel&&unidadeCorresponde(responsavel,r);}))).map(r=>`<tr><td>${r.posicao}</td><td>${escapar(r.motivo)}</td><td>${r.quantidade}</td><td>${percentual(r.percentual)}</td></tr>`).join('')}</tbody></table></section>
+        ${state.competencia>='2026-10'?`<section class="print-section"><h2>Redução de cobertura</h2><p>Meta: cobertura atual ≤ 4. R$ 300 divididos entre todas as casas de cada colaborador. Acima de 4 ou sem dados, não recebe a parcela. Comparação com o mês anterior para acompanhamento.</p><table><thead><tr><th>Colaborador</th><th>Casa</th><th>Anterior</th><th>Atual</th><th>Ganho</th></tr></thead><tbody>${apuracao.flatMap(p=>p.detalhesUnidades.map(c=>`<tr><td>${escapar(p.nome)}</td><td>${escapar(c.unidade)}</td><td>${formatarCobertura(c.coberturaAnterior)}</td><td>${formatarCobertura(c.coberturaAtual)}</td><td>${moeda(c.bonusCobertura)}</td></tr>`)).join('')}</tbody></table></section>`:''}<section class="print-section"><h2>O.S. aguardando Central de Compras</h2><p>Média simples das filiais cadastradas, até 10% paga o bônus do cargo e competência. Filiais ausentes deixam a bonificação pendente.</p><table><thead><tr><th>Colaborador</th><th>Filial</th><th>O.S. abertas</th><th>Aguardando Compras</th><th>% da filial</th></tr></thead><tbody>${apuracao.flatMap(p=>p.detalhesUnidades.map(c=>`<tr><td>${escapar(p.nome)}</td><td>${escapar(c.unidade)}</td><td>${c.totalOs??'—'}</td><td>${c.aguardandoCompras??'—'}</td><td>${percentual(c.controleOs)}</td></tr>`)).join('')}</tbody></table><h3>Ranking das justificativas</h3><table><thead><tr><th>Posição</th><th>Motivo</th><th>Quantidade</th><th>%</th></tr></thead><tbody>${rankingMotivosOs(state.indicadores.filter(r=>r.competencia===state.competencia&&Array.isArray(r.osRankingJustificativas)&&apuracao.some(p=>{const responsavel=state.responsaveis.find(x=>x.id===p.responsavelId);return responsavel&&unidadeCorresponde(responsavel,r);}))).map(r=>`<tr><td>${r.posicao}</td><td>${escapar(r.motivo)}</td><td>${r.quantidade}</td><td>${percentual(r.percentual)}</td></tr>`).join('')}</tbody></table></section>
         ${htmlEvidenciasParaImpressao()}
       </body>
     </html>

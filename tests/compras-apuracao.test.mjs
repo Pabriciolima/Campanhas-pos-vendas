@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
+import {calcularCoberturaCasa} from '../compras-cobertura.js';
 import {politicaCompras} from '../compras-politicas.js';
 import {calcularDisponibilidadeCasa,parcelaCasa} from '../compras-apuracao.js';
 import {calcularObsolescenciaCasa,consolidarMetricasCasas} from '../compras-obsolescencia.js';
@@ -16,7 +17,7 @@ test('cada casa ganha A e B de forma independente e exige o percentual exato',()
 const source=readFileSync(new URL('../compras-module.js',import.meta.url),'utf8');
 const start=source.indexOf('function calcularApuracaoResponsavel('),end=source.indexOf('\nfunction chaveAjusteApuracao(',start);
 const calc=vm.runInNewContext(source.slice(start,end)+';calcularApuracaoResponsavel',{
- POLITICA,politicaCompras,calcularOsResponsavel,calcularDisponibilidadeCasa,parcelaCasa,calcularObsolescenciaCasa,consolidarMetricasCasas,casaEquipeCompras:()=>null,competenciaAnterior:cp=>{const d=new Date(cp+'-01T12:00:00Z');d.setUTCMonth(d.getUTCMonth()-1);return d.toISOString().slice(0,7);},
+ POLITICA,calcularCoberturaCasa,politicaCompras,calcularOsResponsavel,calcularDisponibilidadeCasa,parcelaCasa,calcularObsolescenciaCasa,consolidarMetricasCasas,casaEquipeCompras:()=>null,competenciaAnterior:cp=>{const d=new Date(cp+'-01T12:00:00Z');d.setUTCMonth(d.getUTCMonth()-1);return d.toISOString().slice(0,7);},
  indicadorEhGlobal:r=>r.aplicacaoGlobal===true,indicadorInvalidoParaApuracao:()=>false,
  unidadeCorresponde:(p,r)=>p.unidades.includes(r.unidade),normalizar:s=>String(s).toUpperCase(),
  calcularBonusObsolescencia:()=>({bonus:0,reducao:null,reducaoBonificada:0,status:'SEM HISTÓRICO',possuiHistorico:false}),
@@ -55,3 +56,5 @@ test('assistente não bonifica abaixo da meta ou sem histórico e sem cobertura 
 test('pesos de outubro: A/B, OS e obsolescência somam 900 e cobertura permanece pendente',()=>{for(const politica of ['analista','assistente'])for(const n of [3,6,7,9]){const p={id:'p',nome:'Teste',politica,unidades:Array.from({length:n},(_,i)=>'Casa '+i)};const dados=p.unidades.flatMap(unidade=>[casa(unidade,95,90,{competencia:'2026-10',indiceObsolescencia:45,controleOs:10}),casa(unidade,null,null,{competencia:'2026-09',indiceObsolescencia:48})]);const v=calc(p,'2026-10',dados);assert.equal(v.bonusA,politica==='analista'?200:112.5);assert.equal(v.bonusB,politica==='analista'?200:112.5);assert.equal(v.bonusOs,politica==='analista'?200:375);assert.equal(v.bonusObsolescencia,300);assert.equal(v.bonusTotal,900);assert.equal(v.bonusCobertura,0);assert.equal(v.coberturaPendente,true);assert.equal(v.status,'PARCIAL');}});
 test('setembro preserva política anterior e outubro/novembro usam os novos pesos',()=>{for(const politica of ['analista','assistente']){const p={politica};assert.equal(politicaCompras(p,'2026-09').disponibilidadeA.bonus,politica==='analista'?300:250);for(const cp of ['2026-10','2026-11']){const r=politicaCompras(p,cp);assert.equal(r.disponibilidadeA.bonus,politica==='analista'?200:112.5);assert.equal(r.obsolescencia.bonusMaximo,300);assert.equal(r.cobertura.bonusMaximo,300);}}});
 test('outubro não paga curva abaixo da meta nem OS com filiais ausentes',()=>{const r=calc({...pessoa,politica:'assistente'},'2026-10',[casa('Casa 1',94.999,89.999,{competencia:'2026-10',controleOs:5})]);assert.equal(r.bonusTotal,0);assert.equal(r.bonusOs,0);assert.equal(r.bonusCobertura,0);});
+
+test('cobertura paga por casa com índice atual <=4, sem exigir queda, e fecha campanha em 1200',()=>{for(const politica of ['analista','assistente']){const p={...pessoa,politica};const dados=p.unidades.flatMap(unidade=>[casa(unidade,95,90,{competencia:'2026-10',indiceObsolescencia:45,controleOs:10,coberturaEstoque:4,coberturaAnteriorFonte:3,competenciaAnteriorFonte:'2026-09'}),casa(unidade,null,null,{competencia:'2026-09',indiceObsolescencia:48})]);const r=calc(p,'2026-10',dados);assert.equal(r.bonusCobertura,300);assert.equal(r.bonusTotal,1200);assert.equal(r.status,'COMPLETO');assert.equal(r.coberturaPendente,false);assert.equal(r.detalhesUnidades[0].variacaoCobertura,-1);}});

@@ -1,5 +1,5 @@
-// Outubro/2026: pesos aprovados por atuação. A cobertura ainda não tem meta/fonte.
-const criar=(a,b,obs,os,cobertura=0)=>({disponibilidadeA:{meta:95,bonus:a},disponibilidadeB:{meta:90,bonus:b},obsolescencia:{bonusMaximo:obs},controleOs:{meta:10,bonus:os},cobertura:{bonusMaximo:cobertura,pendente:cobertura>0}});
+// Outubro/2026: pesos aprovados por atuação. Cobertura atual menor ou igual a 4.
+const criar=(a,b,obs,os,cobertura=0)=>({disponibilidadeA:{meta:95,bonus:a},disponibilidadeB:{meta:90,bonus:b},obsolescencia:{bonusMaximo:obs},controleOs:{meta:10,bonus:os},cobertura:{bonusMaximo:cobertura,pendente:false,meta:4}});
 const LEGADO_ANALISTA=criar(300,300,300,300),LEGADO_ASSISTENTE=criar(250,250,250,250);
 export const POLITICA_ANALISTA=criar(200,200,300,200,300);
 export const POLITICA_ASSISTENTE=criar(112.50,112.50,300,375,300);
