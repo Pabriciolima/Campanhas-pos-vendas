@@ -4031,161 +4031,40 @@ function htmlPaginas() {
       </section>
     </section>
 
-    <section
-      id="compras-importacao"
-      class="compras-page"
-      data-compras-view="importacao"
-    >
-      ${htmlTopbar("Importação de indicadores")}
-
-      <section class="compras-panel">
-        <header class="compras-panel-header">
-          <div>
-            <small>IMPORTAÇÃO OPCIONAL</small>
-            <h3>Alimentar campanha por planilhas ou prints</h3>
-          </div>
-
-          <button
-            type="button"
-            id="btnModeloCompras"
-            class="compras-btn compras-btn-light"
-          >
-            Baixar modelo
-          </button>
-        </header>
-
-        <div class="compras-form-grid">
-          <label class="compras-field">
-            <span>Competência</span>
-            <input
-              type="month"
-              id="comprasImportCompetencia"
-            >
-          </label>
-
-          <label class="compras-field">
-            <span>Tipo de arquivo</span>
-            <select id="comprasImportTipo">
-              <option value="auto">
-                Identificar automaticamente
-              </option>
-              <option value="consolidado">
-                Arquivo consolidado
-              </option>
-              <option value="disponibilidade">
-                Disponibilidade A/B
-              </option>
-              <option value="obsolescencia">
-                Obsolescência
-              </option>
-              <option value="os">
-                Controle de O.S.
-              </option>
-            </select>
-          </label>
-
-          <label class="compras-field">
-            <span>Aba do arquivo</span>
-            <select id="comprasImportAba">
-              <option>Aguardando arquivo</option>
-            </select>
-          </label>
-
-          <div class="compras-field">
-            <span>Histórico</span>
-            <button
-              type="button"
-              id="btnVerApuracaoCompras"
-              class="compras-btn compras-btn-dark"
-            >
-              Ver apuração mensal
-            </button>
-          </div>
+    <section id="compras-importacao" class="compras-page" data-compras-view="importacao">
+      ${htmlTopbar("Importar indicadores")}
+      <p class="cmp-import-intro">Envie os arquivos da campanha e confira a leitura antes de salvar. As informações são organizadas por casa e colaborador.</p>
+      <section class="compras-panel cmp-import-setup">
+        <header class="cmp-import-section-head"><div><span class="cmp-import-step">01</span><h2>Qual indicador você vai atualizar?</h2></div><label class="compras-field"><span>Mês dos dados</span><input type="month" id="comprasImportCompetencia" aria-describedby="cmpImportMesAjuda"></label></header>
+        <p id="cmpImportMesAjuda" class="cmp-import-help">Confira a competência: o arquivo será aplicado somente ao mês selecionado.</p>
+        <div class="cmp-import-indicators" role="group" aria-label="Indicador para importar">
+          <button type="button" class="cmp-import-indicator" data-cmp-import-tipo="disponibilidade" aria-pressed="false"><span class="cmp-import-icon" aria-hidden="true">A/B</span><span><strong>Disponibilidade A/B</strong><small>Planilha ou prints das casas</small><span class="cmp-import-state" data-cmp-import-estado>Pendente</span></span></button>
+          <button type="button" class="cmp-import-indicator" data-cmp-import-tipo="obsolescencia" aria-pressed="false"><span class="cmp-import-icon" aria-hidden="true">365</span><span><strong>Obsolescência</strong><small>Percentual da coluna I · comparação mensal</small><span class="cmp-import-state" data-cmp-import-estado>Pendente</span></span></button>
+          <button type="button" class="cmp-import-indicator" data-cmp-import-tipo="os" aria-pressed="false"><span class="cmp-import-icon" aria-hidden="true">O.S.</span><span><strong>O.S. aguardando Compras</strong><small>Filial na coluna A · motivo na J</small><span class="cmp-import-state" data-cmp-import-estado>Pendente</span></span></button>
         </div>
-
-        <label class="compras-import-drop">
-          <strong>
-            Selecionar planilha ou vários prints ABC
-          </strong>
-
-          <small>
-            Planilhas: XLSX, XLS ou CSV. Disponibilidade A/B: selecione até 8 prints PNG, JPG ou WebP, confira os percentuais e reúna as regiões antes de confirmar.
-          </small>
-
-          <input
-            type="file"
-            id="comprasImportArquivo"
-            accept=".xlsx,.xls,.csv,.png,.jpg,.jpeg,.webp" multiple
-            hidden
-          >
+        <p class="cmp-import-detection" data-cmp-import-deteccao role="status">Identificação automática ativada.</p>
+      </section>
+      <section class="compras-panel cmp-import-upload">
+        <header class="cmp-import-section-head"><div><span class="cmp-import-step">02</span><h2>Envie o arquivo</h2></div><button type="button" id="btnVerApuracaoCompras" class="compras-btn compras-btn-light">Ver apuração</button></header>
+        <label class="compras-import-drop cmp-import-drop" role="button" tabindex="0" aria-label="Selecionar arquivo dos indicadores" aria-describedby="cmpImportFormatos">
+          <svg class="cmp-upload-icon" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 16V3m-4 4 4-4 4 4M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/></svg>
+          <strong data-cmp-import-chamada>Arraste sua planilha ou clique para selecionar</strong>
+          <small id="cmpImportFormatos">XLSX, XLS ou CSV. Para disponibilidade A/B, selecione até 8 prints PNG, JPG ou WebP por conjunto.</small>
+          <span class="cmp-import-file-action">Selecionar arquivo</span>
+          <input type="file" id="comprasImportArquivo" accept=".xlsx,.xls,.csv,.png,.jpg,.jpeg,.webp" multiple hidden>
         </label>
-
         <p id="comprasLeituraStatus" role="status" aria-live="polite"></p>
-        <button type="button" id="comprasReverPrints" class="compras-btn compras-btn-light">Conferir prints do conjunto</button>
-        <div class="compras-import-summary">
-          <article>
-            <span>Arquivo</span>
-            <strong id="comprasImportNome">
-              Nenhum
-            </strong>
-          </article>
-
-          <article>
-            <span>Registros válidos</span>
-            <strong id="comprasImportValidos">
-              0
-            </strong>
-          </article>
-
-          <article>
-            <span>Erros</span>
-            <strong id="comprasImportErros">
-              0
-            </strong>
-          </article>
-
-          <article>
-            <span>Avisos</span>
-            <strong id="comprasImportAvisos">
-              0
-            </strong>
-          </article>
-        </div>
-
-        <div
-          id="comprasImportPreview"
-          class="compras-table-wrap"
-          style="margin-top:12px"
-        ></div>
-
+        <button type="button" id="comprasReverPrints" class="compras-btn compras-btn-light" hidden>Conferir prints do conjunto</button>
+        <details class="cmp-import-options"><summary>Configurações do arquivo e modelo</summary><div class="cmp-import-options-grid"><label class="compras-field"><span>Identificação do indicador</span><select id="comprasImportTipo"><option value="auto">Identificar automaticamente</option><option value="consolidado">Arquivo consolidado</option><option value="disponibilidade">Disponibilidade A/B</option><option value="obsolescencia">Obsolescência</option><option value="os">Controle de O.S.</option></select></label><label class="compras-field"><span>Aba da planilha</span><select id="comprasImportAba"><option>Aguardando arquivo</option></select></label><button type="button" id="btnModeloCompras" class="compras-btn compras-btn-light">Baixar modelo</button></div></details>
+      </section>
+      <section class="compras-panel cmp-import-review" data-cmp-import-review hidden>
+        <header class="cmp-import-section-head"><div><span class="cmp-import-step">03</span><h2>Confira antes de salvar</h2></div><span class="cmp-import-unsaved" data-cmp-import-status>Nada foi salvo ainda</span></header>
+        <div class="cmp-import-file-summary"><div><span>Arquivo selecionado</span><strong id="comprasImportNome">Nenhum</strong><small data-cmp-import-contexto></small></div><div><strong id="comprasImportValidos">0</strong><span>registros válidos</span></div><div><strong id="comprasImportErros">0</strong><span>erros</span></div><div><strong id="comprasImportAvisos">0</strong><span>avisos</span></div></div>
+        <div id="comprasImportValidacao" class="compras-validation" aria-live="polite"></div>
         <section id="comprasImportPorResponsavel" hidden></section>
-        ${htmlRankingOsCompras(true)}
-        <div
-          id="comprasImportValidacao"
-          class="compras-validation"
-        ></div>
-
-        <div
-          class="compras-actions"
-          style="justify-content:flex-end;margin-top:13px"
-        >
-          <button
-            type="button"
-            id="btnLimparImportacaoCompras"
-            class="compras-btn compras-btn-light"
-          >
-            Limpar
-          </button>
-
-          <button
-            type="button"
-            id="btnConfirmarImportacaoCompras"
-            class="compras-btn compras-btn-primary"
-            disabled
-          >
-            Confirmar importação
-          </button>
-        </div>
+        <details class="cmp-import-os-panel" data-cmp-import-os hidden><summary>Conferir ranking dos motivos das O.S.</summary>${htmlRankingOsCompras(true)}</details>
+        <details class="cmp-import-preview"><summary>Conferir todos os registros por casa</summary><div id="comprasImportPreview" class="compras-table-wrap"></div></details>
+        <footer class="cmp-import-actions"><p data-cmp-import-confirmacao>Confira os dados. A confirmação salva no banco e atualiza a apuração.</p><button type="button" id="btnLimparImportacaoCompras" class="compras-btn compras-btn-light">Descartar seleção</button><button type="button" id="btnConfirmarImportacaoCompras" class="compras-btn compras-btn-primary" disabled>Salvar e atualizar apuração</button></footer>
       </section>
     </section>
 
@@ -5792,14 +5671,48 @@ function renderizarStatusNuvemCompras() {
   });
 }
 
-function renderizarPreviaResponsaveisCompras() {
-  const alvo=$('#comprasImportPorResponsavel'),imp=state.importacao;
-  if(!alvo)return;
-  alvo.hidden=!imp.registros.some(r=>r.tipoImportacao==='disponibilidade')||imp.erros.length>0;
-  if(alvo.hidden){alvo.replaceChildren();return;}
-  const pessoas=state.responsaveis.length?state.responsaveis:EQUIPE_COMPRAS;
-  const calculos=pessoas.filter(p=>p.ativo!==false).map(p=>({p,r:calcularApuracaoResponsavel(p,imp.competencia,imp.registros)}));
-  alvo.innerHTML=`<h3>Prévia dos bônus por casa e colaborador</h3><p>Cada casa recebe uma parcela dos R$ 300,00 de cada curva, divididos por todas as suas casas cadastradas. Calculada somente com este arquivo, antes de salvar. ${state.responsaveis.length?'Vínculos da base carregada.':'O banco está indisponível; esta prévia usa a base de analistas aprovada em 28/10/2026.'} Não inclui outros indicadores da campanha.</p><div class="compras-table-wrap"><table class="compras-table"><thead><tr><th>Colaborador</th><th>Casas encontradas / cadastradas</th><th>Parcela por casa (cada curva)</th><th>Curva A</th><th>Curva B</th><th>Bônus A/B</th></tr></thead><tbody>${calculos.map(({p,r})=>`<tr><td><strong>${escapar(p.nome)}</strong></td><td>${r.quantidadeUnidades} / ${p.unidades.length}</td><td>${moeda(POLITICA.disponibilidadeA.bonus/r.quantidadeCasasRateio || 0)}</td><td>${moeda(r.bonusA)}</td><td>${moeda(r.bonusB)}</td><td><strong>${moeda(r.bonusA+r.bonusB)}</strong></td></tr>`).join('')}</tbody></table></div>`;
+function renderizarPreviaResponsaveisCompras(){
+ const alvo=$('#comprasImportPorResponsavel'),imp=state.importacao,tipo=imp.registros[0]?.tipoImportacao;
+ if(!alvo)return;
+ alvo.hidden=!['disponibilidade','obsolescencia','os'].includes(tipo)||imp.erros.length>0;
+ if(alvo.hidden){alvo.replaceChildren();return;}
+ const pessoas=(state.responsaveis.length?state.responsaveis:EQUIPE_COMPRAS).filter(p=>p.ativo!==false);
+ const anteriores=tipo==='obsolescencia'?state.indicadores.filter(r=>r.competencia===competenciaAnterior(imp.competencia)):[];
+ const calculos=pessoas.map(p=>({p,r:calcularApuracaoResponsavel(p,imp.competencia,[...anteriores,...imp.registros])}));
+ const titulos={disponibilidade:'Prévia da disponibilidade A/B',obsolescencia:'Prévia da redução dos obsoletos',os:'Prévia de O.S. por colaborador'};
+ const cab=tipo==='disponibilidade'?['Colaborador','Casas encontradas / cadastradas','Curva A','Curva B','Bônus A/B']:tipo==='obsolescencia'?['Colaborador','Casas com comparação','Casas que reduziram','Bônus de obsolescência']:['Colaborador','Filiais informadas','Média aguardando Compras','Bônus de O.S.'];
+ alvo.innerHTML=`<h3>${titulos[tipo]}</h3><p>Conferência do arquivo para ${escapar(competenciaBr(imp.competencia))}. Valores previstos, ainda não salvos.${state.responsaveis.length?'':' Base online não carregada: esta prévia usa a base padrão aprovada; confira os vínculos antes de salvar.'}${tipo==='obsolescencia'?' Usa o histórico do mês anterior; sem comparação, não bonifica.':''}${tipo==='os'?' A falta de filiais deixa o bônus pendente.':''}</p><div class="compras-table-wrap"><table class="compras-table"><thead><tr>${cab.map(c=>`<th scope="col">${c}</th>`).join('')}</tr></thead><tbody>${calculos.map(({p,r})=>`<tr><td><strong>${escapar(p.nome)}</strong></td>${tipo==='disponibilidade'?`<td>${r.quantidadeUnidades} / ${p.unidades.length}</td><td>${moeda(r.bonusA)}</td><td>${moeda(r.bonusB)}</td><td><strong>${moeda(r.bonusA+r.bonusB)}</strong></td>`:tipo==='obsolescencia'?`<td>${r.detalhesUnidades.filter(c=>c.obsolescenciaAtual!=null&&c.obsolescenciaAnterior!=null).length} / ${p.unidades.length}</td><td>${r.detalhesUnidades.filter(c=>c.reducaoObsolescencia>0).length}</td><td><strong>${moeda(r.bonusObsolescencia)}</strong></td>`:`<td>${r.osFiliaisInformadas} / ${r.osFiliaisEsperadas}${r.osCompleto?'':' · pendente'}</td><td>${percentual(r.controleOs)}</td><td><strong>${moeda(r.bonusOs)}</strong></td>`}</tr>`).join('')}</tbody></table></div>`;
+}
+
+function atualizarImportacaoVisual(){
+ const imp=state.importacao,carregado=!!imp.arquivo,ocupado=!!imp.processando||lendoImagensABC;
+ const nomes={auto:'Identificação automática',consolidado:'Arquivo consolidado',disponibilidade:'Disponibilidade A/B',obsolescencia:'Obsolescência',os:'O.S. aguardando Compras'};
+ $('[data-cmp-import-review]').hidden=!carregado;
+ $('[data-cmp-import-os]').hidden=!(carregado&&imp.registros.some(r=>r.tipoImportacao==='os'));
+ $('#comprasImportArquivo').disabled=ocupado;
+ $$('[data-cmp-import-tipo]').forEach(botao=>{
+  const tipo=botao.dataset.cmpImportTipo,ativo=imp.tipo===tipo;
+  botao.setAttribute('aria-pressed',String(ativo));botao.disabled=carregado||ocupado;
+  const lancado=state.importacoes.some(x=>x.competencia===imp.competencia&&(x.tipoEfetivo||x.tipo)===tipo);
+  const selo=botao.querySelector('[data-cmp-import-estado]');selo.textContent=lancado?'Já lançado neste mês':'Pendente de envio';selo.classList.toggle('cmp-import-state-done',lancado);
+ });
+ $('[data-cmp-import-deteccao]').textContent=carregado?`${nomes[imp.tipo]||'Indicador'} reconhecido. Para trocar de indicador, descarte a seleção atual.`:imp.tipo==='auto'?'Identificação automática ativada: escolha um indicador ou envie o arquivo diretamente.':`${nomes[imp.tipo]} selecionado. A estrutura do arquivo também será conferida.`;
+ $('[data-cmp-import-contexto]').textContent=`${nomes[imp.tipo]||'Indicador'} · ${competenciaBr(imp.competencia)}${imp.aba?' · Aba '+imp.aba:''}`;
+ $('[data-cmp-import-status]').textContent=ocupado?'Salvando no banco…':imp.erros.length?'Corrija os erros para continuar':'Prévia · ainda não salva';
+ $('[data-cmp-import-chamada]').textContent=carregado?'Selecionar outro arquivo':'Arraste sua planilha ou clique para selecionar';
+ $('[data-cmp-import-confirmacao]').textContent=imp.erros.length?'A importação está bloqueada até corrigir os erros.':`Ao confirmar, ${imp.registros.length} registros serão aplicados a ${competenciaBr(imp.competencia)}. O mesmo indicador deste mês será substituído.`;
+ $('#btnLimparImportacaoCompras').disabled=ocupado;
+ $('#comprasImportCompetencia').disabled=ocupado;
+ $('#comprasImportTipo').disabled=ocupado;
+ $('#comprasImportAba').disabled=ocupado||!imp.workbook;
+}
+function configurarImportacaoVisual(){
+ $$('[data-cmp-import-tipo]').forEach(botao=>botao.onclick=()=>{state.importacao.tipo=botao.dataset.cmpImportTipo;$('#comprasImportTipo').value=state.importacao.tipo;renderizarImportacao();});
+ const zona=$('#compras-importacao .cmp-import-drop'),input=$('#comprasImportArquivo');
+ zona.onkeydown=evento=>{if((evento.key==='Enter'||evento.key===' ')&&!input.disabled&&!state.importacao.processando){evento.preventDefault();input.click();}};
+ zona.ondragover=evento=>{evento.preventDefault();if(!input.disabled&&!state.importacao.processando)zona.classList.add('cmp-drag-over');};
+ zona.ondragleave=()=>zona.classList.remove('cmp-drag-over');
+ zona.ondrop=evento=>{evento.preventDefault();zona.classList.remove('cmp-drag-over');if(input.disabled||state.importacao.processando)return;const arquivos=evento.dataTransfer?.files;if(arquivos?.length){input.files=arquivos;input.dispatchEvent(new Event('change',{bubbles:true}));}};
 }
 
 function renderizarImportacao() {
@@ -5811,6 +5724,7 @@ function renderizarImportacao() {
     $("#comprasImportNome");
 
   if (!nome) return;
+  atualizarImportacaoVisual();
   $("#comprasReverPrints").hidden = !imagensABC.length;
   $("#comprasReverPrints").onclick = conferirImagensABC;
 
@@ -5830,19 +5744,9 @@ function renderizarImportacao() {
     .textContent =
       importacao.avisos.length;
 
-  const campos = [
-    "competencia",
-    "unidade",
-    "nucleo",
-    "responsaveisVinculados",
-    "regiao",
-    "disponibilidadeA",
-    "disponibilidadeB",
-    "indiceObsolescencia",
-    "controleOs",
-    "totalOs",
-    "aguardandoCompras"
-  ];
+  const tipo=importacao.registros[0]?.tipoImportacao||importacao.tipo;
+  const campos=tipo==='disponibilidade'?['unidade','responsaveisVinculados','disponibilidadeA','disponibilidadeB']:tipo==='obsolescencia'?['unidade','indiceObsolescencia','valorObsoleto365']:tipo==='os'?['unidade','totalOs','aguardandoCompras','controleOs']:['unidade','responsaveisVinculados','disponibilidadeA','disponibilidadeB','indiceObsolescencia','controleOs'];
+  const titulos={unidade:'Casa / filial',responsaveisVinculados:'Colaboradores vinculados',disponibilidadeA:'Curva A',disponibilidadeB:'Curva B',indiceObsolescencia:'Obsoletos > 365 dias',valorObsoleto365:'Valor obsoleto',totalOs:'O.S. abertas',aguardandoCompras:'Aguardando Compras',controleOs:'% aguardando Compras'};
 
   $("#comprasImportPreview")
     .innerHTML =
@@ -5853,7 +5757,7 @@ function renderizarImportacao() {
               <tr>
                 ${
                   campos.map(campo =>
-                    `<th>${escapar(campo)}</th>`
+                    `<th scope="col">${escapar(titulos[campo]||campo)}</th>`
                   ).join("")
                 }
               </tr>
@@ -5862,7 +5766,6 @@ function renderizarImportacao() {
             <tbody>
               ${
                 importacao.registros
-                  .slice(0, 12)
                   .map(item => `
                     <tr>
                       ${
@@ -5876,7 +5779,7 @@ function renderizarImportacao() {
                                 "controleOs"
                               ].includes(campo)
                                 ? percentual(item[campo])
-                                : escapar(item[campo])
+                                : campo==='valorObsoleto365'?moeda(item[campo]):escapar(item[campo])
                             }
                           </td>
                         `).join("")
@@ -5896,30 +5799,9 @@ function renderizarImportacao() {
 
   renderizarPreviaResponsaveisCompras();
 
-  const mensagens = [
-    ...importacao.erros.map(mensagem => ({
-      tipo: "error",
-      mensagem
-    })),
-    ...importacao.avisos.map(mensagem => ({
-      tipo: "alert",
-      mensagem
-    }))
-  ];
-
-  $("#comprasImportValidacao")
-    .innerHTML =
-      mensagens.length
-        ? mensagens.map(item => `
-            <div class="compras-${item.tipo}">
-              ${escapar(item.mensagem)}
-            </div>
-          `).join("")
-        : `
-          <div class="compras-ok">
-            Nenhum erro encontrado.
-          </div>
-        `;
+  const erros=importacao.erros,avisos=importacao.avisos;
+  $('#comprasImportValidacao').innerHTML=erros.length?`<div class="compras-error" role="alert"><strong>Precisamos corrigir ${erros.length} ${erros.length===1?'problema':'problemas'} antes de salvar</strong><ul>${erros.map(x=>`<li>${escapar(x)}</li>`).join('')}</ul></div>`:importacao.arquivo&&importacao.registros.length?'<p class="cmp-import-ready">Leitura concluída. Confira os dados antes de confirmar.</p>':'';
+  if(avisos.length)$('#comprasImportValidacao').innerHTML+=`<details class="cmp-import-notes"><summary>Orientações e avisos da leitura (${avisos.length})</summary><ul>${avisos.map(x=>`<li>${escapar(x)}</li>`).join('')}</ul></details>`;
 
   const confirmar =
     $("#btnConfirmarImportacaoCompras");
@@ -5932,7 +5814,7 @@ function renderizarImportacao() {
   confirmar.textContent =
     importacao.processando
       ? "Importando..."
-      : "Confirmar importação";
+      : "Salvar e atualizar apuração";
 }
 
 function renderizarCompetencias() {
@@ -7337,6 +7219,8 @@ function configurarEventosPaginas() {
           );
         }
       };
+
+  configurarImportacaoVisual();
 
   $("#btnLimparImportacaoCompras")
     .onclick =
