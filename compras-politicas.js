@@ -1,4 +1,4 @@
-// Outubro/2026: pesos aprovados por atuação. Cobertura atual menor ou igual a 4 para todos os colaboradores.
+// Outubro/2026: pesos aprovados por atuação. Cobertura por casa: Fiat <=5; Diesel <=4; Jeep RAM mantém <=4.
 const criar=(a,b,obs,os,cobertura=0)=>({disponibilidadeA:{meta:95,bonus:a},disponibilidadeB:{meta:90,bonus:b},obsolescencia:{bonusMaximo:obs},controleOs:{meta:10,bonus:os},cobertura:{bonusMaximo:cobertura,pendente:false,meta:4}});
 const LEGADO_ANALISTA=criar(300,300,300,300),LEGADO_ASSISTENTE=criar(250,250,250,250);
 export const POLITICA_ANALISTA=criar(200,200,300,200,300);

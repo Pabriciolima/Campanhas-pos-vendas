@@ -1,10 +1,12 @@
+import {casaEquipeCompras} from './compras-equipe.js?v=20261030-fiat-os';
+export function metaCoberturaCasa(casa){return casaEquipeCompras(casa)?.categoria==='fiat'?5:4;}
 // Cobertura é um índice (não percentual). A meta usa a precisão original.
 const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
 export const formatarCobertura=v=>typeof v==='number'&&Number.isFinite(v)?v.toLocaleString('pt-BR',{maximumFractionDigits:8}):'Sem dados';
 export function calcularCoberturaCasa(anterior,atual,parcela,politica={meta:4,pendente:false}){
  const valido=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0;
  const temAtual=valido(atual),temAnterior=valido(anterior),atingiu=!politica.pendente&&temAtual&&atual<=politica.meta;
- return {atual:temAtual?atual:null,anterior:temAnterior?anterior:null,variacao:temAtual&&temAnterior?anterior-atual:null,atingiu,bonus:atingiu?parcela:0,status:politica.pendente?'REGRA PENDENTE PARA ANALISTAS':!temAtual?'SEM DADOS DO MÊS':atingiu?'ATINGIU · COBERTURA ≤ 4':'ACIMA DA META 4'};
+ return {atual:temAtual?atual:null,anterior:temAnterior?anterior:null,variacao:temAtual&&temAnterior?anterior-atual:null,atingiu,bonus:atingiu?parcela:0,status:politica.pendente?'REGRA PENDENTE PARA ANALISTAS':!temAtual?'SEM DADOS DO MÊS':atingiu?`ATINGIU · COBERTURA ≤ ${politica.meta}`:`ACIMA DA META ${politica.meta}`};
 }
 const meses=['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
 function mes(v){if(v instanceof Date&&!Number.isNaN(+v))return v.toISOString().slice(0,7);const t=norm(v),m=t.match(/^(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)[A-Z]*[ /-](\d{4})$/);if(m)return m[2]+'-'+String(meses.indexOf(m[1])+1).padStart(2,'0');return /^\d{4}-\d{2}$/.test(t)?t:null;}
@@ -19,7 +21,7 @@ export function lerCoberturaEstoque(matriz,competencia){
  const data=new Date(competencia+'-01T12:00:00Z');if(Number.isNaN(+data))erros.push('Competência inválida.');else data.setUTCMonth(data.getUTCMonth()-1);const anterior=Number.isNaN(+data)?'':data.toISOString().slice(0,7);
  if(!mapa.has(competencia))erros.push('A planilha não possui Cobertura de '+competencia+'. Selecione um mês presente no arquivo.');
  if(erros.length)return {erros,avisos,registros};
- const atualCol=mapa.get(competencia),antCol=mapa.get(anterior);if(antCol==null)avisos.push('Mês anterior ausente no arquivo. A evolução ficará sem comparação; a bonificação depende da cobertura atual ≤ 4.');
+ const atualCol=mapa.get(competencia),antCol=mapa.get(anterior);if(antCol==null)avisos.push('Mês anterior ausente no arquivo. A evolução ficará sem comparação; a bonificação depende da meta da casa (Fiat ≤ 5; Diesel ≤ 4).');
  let grupo='';const vistos=new Map();
  for(let i=h+1;i<matriz.length;i++){
   const row=matriz[i];if(nucleo>=0&&row[nucleo])grupo=String(row[nucleo]);const nome=String(row[empresa]||'').trim();if(!nome||norm(nome)==='TOTAL'||/^FILTROS/.test(norm(nome)))continue;

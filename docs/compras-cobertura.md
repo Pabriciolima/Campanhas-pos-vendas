@@ -1,6 +1,9 @@
-# Cobertura de estoque — meta aprovada <= 4
+# Correção vigente — metas por marca
 
-Vigência: outubro/2026 em diante. Correção final de escopo confirmada pelo usuário: o limite 4 vale para todos os sete colaboradores. Analistas e assistentes têm R$ 300 por pessoa, divididos entre todas as suas casas cadastradas. Cada casa recebe sua parcela quando a cobertura atual é menor ou igual a 4. A evolução mensal é informativa; não há condição adicional de queda. Estar reduzindo, mas continuar acima de 4, não gera bônus. Índice atual ausente não vira zero e não bonifica. A meta considera a precisão original, sem arredondamento. Não é percentual.
+Fiat: índice atual ≤ 5,0. Diesel: índice atual ≤ 4,0. Jeep RAM mantém o limite anterior de 4,0, pois não foi incluída na alteração solicitada. Aplica-se a analistas e assistentes, por casa, sem arredondar o índice para decidir. R$ 300 rateados entre todas as casas continuam preservados. A comparação mensal é informativa. Os dados armazenados não são substituídos: a apuração e a média da liderança são recalculadas pelas novas metas.
+
+60 testes aprovados. Navegador: importação da planilha de cobertura, meta por casa, ganhos, média de Bruno/Ricardo, sincronização e exportações verificados com banco simulado.
+
 
 ## Importação
 
@@ -16,4 +19,4 @@ Visão geral e apuração somam o bônus real de cobertura no total. Aba Cobertu
 
 ## Verificação
 
-54 testes aprovados, incluindo a proporção aprovada: A/B R$ 400 para analistas e R$ 225 para assistentes; O.S. R$ 200/R$ 375; obsolescência e cobertura R$ 300 para cada pessoa. Orçamento potencial de R$ 2.100 por indicador e R$ 8.400 no total, R$ 1.200 por pessoa. Incluem meta 4, valor imediatamente acima, ausências, aumento ainda dentro da meta, redução ainda acima da meta, preservação dos outros indicadores e fechamento em R$ 1.200. Teste em navegador com a planilha real e banco simulado: 22 linhas, AA/AD, três casas na meta; bônus de R$ 85,71 para Jéssica e Rone, R$ 50 para Gabriel e João, conforme as casas que atingem a meta no cenário de teste. Mês ausente bloqueia, gravação única, prévia, aba individual, Excel e sincronização em segundo contexto verificados. Não foram inseridos dados de teste na produção.
+60 testes aprovados: limites exatos 5/4, precisão original, casas Fiat/Diesel na mesma cidade, Jeep preservado, centavos e orçamento. Teste no navegador com a planilha real em banco simulado: importação, metas por casa, bônus, liderança, Excel/PDF, sincronização e responsividade. Nenhum dado de teste foi inserido na produção.

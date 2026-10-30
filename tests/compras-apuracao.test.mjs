@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-import {calcularCoberturaCasa} from '../compras-cobertura.js';
+import {calcularCoberturaCasa,metaCoberturaCasa} from '../compras-cobertura.js';
 import {politicaCompras} from '../compras-politicas.js';
 import {calcularDisponibilidadeCasa,parcelaCasa} from '../compras-apuracao.js';
 import {calcularObsolescenciaCasa,consolidarMetricasCasas} from '../compras-obsolescencia.js';
@@ -17,7 +17,7 @@ test('cada casa ganha A e B de forma independente e exige o percentual exato',()
 const source=readFileSync(new URL('../compras-module.js',import.meta.url),'utf8');
 const start=source.indexOf('function calcularApuracaoResponsavel('),end=source.indexOf('\nfunction chaveAjusteApuracao(',start);
 const calc=vm.runInNewContext(source.slice(start,end)+';calcularApuracaoResponsavel',{
- POLITICA,calcularCoberturaCasa,politicaCompras,calcularOsResponsavel,calcularDisponibilidadeCasa,parcelaCasa,calcularObsolescenciaCasa,consolidarMetricasCasas,casaEquipeCompras:()=>null,competenciaAnterior:cp=>{const d=new Date(cp+'-01T12:00:00Z');d.setUTCMonth(d.getUTCMonth()-1);return d.toISOString().slice(0,7);},
+ POLITICA,calcularCoberturaCasa,metaCoberturaCasa,politicaCompras,calcularOsResponsavel,calcularDisponibilidadeCasa,parcelaCasa,calcularObsolescenciaCasa,consolidarMetricasCasas,casaEquipeCompras:()=>null,competenciaAnterior:cp=>{const d=new Date(cp+'-01T12:00:00Z');d.setUTCMonth(d.getUTCMonth()-1);return d.toISOString().slice(0,7);},
  indicadorEhGlobal:r=>r.aplicacaoGlobal===true,indicadorInvalidoParaApuracao:()=>false,
  unidadeCorresponde:(p,r)=>p.unidades.includes(r.unidade),normalizar:s=>String(s).toUpperCase(),
  calcularBonusObsolescencia:()=>({bonus:0,reducao:null,reducaoBonificada:0,status:'SEM HISTÓRICO',possuiHistorico:false}),
