@@ -1831,7 +1831,8 @@ function atualizarBotoesPixEvidencia() {
         }
       );
 
-      ultima.appendChild(botao);
+      const barra = ultima.querySelector(".pix-apuracao-action-bar") || ultima;
+      barra.appendChild(botao);
     }
   );
 }
