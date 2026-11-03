@@ -1,3 +1,5 @@
+import {auditarPix} from "./pix-auditoria-core.js?v=20261103";
+import {instalarConferenciaPixFonte,coletarConferenciaPixFonte,preencherConferenciaPixFonte,renderizarPainelAuditoriaPix} from "./pix-auditoria-fonte.js?v=20261103";
 import { escaparHtml as protegerHtml } from "./security/seguranca.js";
 /*
  * AUDITORIA ESTRUTURAL — 2026.08.26 — ETAPA 04 SUPABASE
@@ -3206,6 +3208,7 @@ function renderCofrinhoNpsPix() {
 function renderApuracaoPix() {
   const resultados =
     resultadosPixFiltrados("apuracao");
+  renderizarPainelAuditoriaPix(resultados);
 
   const total =
     resultados.reduce(
@@ -4326,6 +4329,7 @@ function coletarLancamentoPix() {
 
   const anterior = estadoPix.lancamentos.find(item => String(item.id) === String($("#pixLancamentoId")?.value)) || {};
   return {
+    auditoriaFonte: coletarConferenciaPixFonte(),
     id:
       $("#pixLancamentoId").value ||
       "",
@@ -4671,6 +4675,7 @@ function abrirLancamentoPix() {
   }
 
   $("#formPixPresidente").reset();
+  preencherConferenciaPixFonte();
   $("#pixLancamentoId").value = "";
   $("#pixLancamentoCompetencia").value =
     pixMesAtual();
@@ -4725,6 +4730,7 @@ function editarLancamentoPix(id) {
   renderCamposLancamentoPix(
     lancamento
   );
+  preencherConferenciaPixFonte(lancamento.auditoriaFonte);
 
   $("#modalPixPresidente").showModal();
   atualizarHistoricoModalPix();
@@ -4749,6 +4755,9 @@ async function salvarLancamentoPix(evento) {
       return;
     }
     const item = coletarLancamentoPix();
+    const achadosFonte=auditarPix([calcularPix(item)]);
+    const divergenciasFonte=achadosFonte.filter(a=>a.nivel.startsWith("DIVERG")||a.codigo==="NUCLEO_NAO_VALIDADO");
+    if(divergenciasFonte.length){pixAlert("Conferência da fonte: corrija as divergências antes de salvar.\n"+divergenciasFonte.map(a=>a.ponto+" "+a.correcao).join("\n"));return;}
 
     const duplicado =
       estadoPix.lancamentos.find(
@@ -4858,6 +4867,7 @@ async function excluirLancamentoPix(id) {
 }
 
 function configurarEventosPix() {
+  instalarConferenciaPixFonte();
   /*
    * Proteção contra botão sem listener:
    * captura cliques e submissões mesmo quando o HTML
@@ -5282,3 +5292,5 @@ window.obterContextoAssistentePix = (incluirResultados = true) => ({
  participantes: participantesPix().map(({id,nome,filial,cargo}) => ({id,nome,filial,cargo})),
  resultados: incluirResultados ? window.obterResultadosPix() : []
 });
+
+window.auditarRascunhoPix=()=>auditarPix([calcularPix(coletarLancamentoPix())]);

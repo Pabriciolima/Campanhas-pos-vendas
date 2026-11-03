@@ -1,3 +1,4 @@
+import {combinarPixParaAuditoria,adicionarPaginaAuditoriaPix,auditarPix} from "./pix-auditoria-core.js?v=20261103";
 /*
  * VERSÃO: 2026.08.26-SUPABASE-ETAPA-06
  * Evidências do Pix oficiais no Supabase Storage.
@@ -2520,6 +2521,7 @@ function dadosPixParaExportar() {
     .filter(Boolean);
 
   resultados = window.CampanhasSelecaoExportacao?.filtrar(resultados, "pix") || resultados;
+  resultados = combinarPixParaAuditoria(resultados,window.obterResultadosPix?.()||[]);
 
   console.info(
     `[PIX EXPORTAÇÃO] ${resultados.length} resultado(s) preparado(s).`,
@@ -3002,8 +3004,11 @@ async function exportarPdfPixIndependente() {
       )
     ).size;
 
+  documento.setTextColor(155,35,35);documento.setFontSize(7);
+  documento.text("Status da campanha não equivale à validação da evidência. Consulte a auditoria comparativa anexada.",12,38);
+  documento.setTextColor(20,42,58);
   documento.autoTable({
-    startY: 40,
+    startY: 44,
     margin: {
       left: 10,
       right: 10
@@ -3110,6 +3115,8 @@ async function exportarPdfPixIndependente() {
         }
       }
   });
+
+  adicionarPaginaAuditoriaPix(documento,resultados);
 
   const evidencias =
     (
@@ -3535,6 +3542,10 @@ async function exportarExcelPixIndependente() {
       9
   };
 
+  const abaAuditoria=workbook.addWorksheet("Conferência da fonte");
+  abaAuditoria.addRow(["Local","Situação","Ponto identificado","Correção necessária","Fonte"]);
+  for(const a of auditarPix(resultados))abaAuditoria.addRow([a.local,a.nivel,a.ponto,a.correcao,a.fonte]);
+  abaAuditoria.columns.forEach((c,i)=>{c.width=[42,22,85,90,55][i]||25;});
   const evidencias =
     (
       await buscarEvidenciasPixCompetencia(

@@ -1,6 +1,8 @@
 
 (() => {
   "use strict";
+  const combinarPixParaAuditoria=(...args)=>{if(!window.PixAuditoriaFonte)throw Error("A auditoria da fonte ainda não foi carregada. Atualize a página antes de imprimir.");return window.PixAuditoriaFonte.combinarPixParaAuditoria(...args);};
+  const adicionarPaginaAuditoriaPix=(...args)=>window.PixAuditoriaFonte.adicionarPaginaAuditoriaPix(...args);
 
   const C = {
     dashboard: "#pix-dashboard",
@@ -153,12 +155,12 @@
         if (
           dados.length &&
           dados.every(x => !x.origem || x.origem === competencia)
-        ) return dados;
+        ) return combinarPixParaAuditoria(dados,window.obterResultadosPix?.()||[]);
 
         await esperar(120);
       }
 
-      return lerTabela();
+      return combinarPixParaAuditoria(lerTabela(),window.obterResultadosPix?.()||[]);
     } finally {
       await aplicarFiltros(original);
     }
@@ -508,6 +510,7 @@
         }
       });
 
+      adicionarPaginaAuditoriaPix(doc,todos);
       doc.save(`pix-${E.pagamento}-com-atrasados-${E.origem}.pdf`);
     } catch (erro) {
       console.error(erro);
