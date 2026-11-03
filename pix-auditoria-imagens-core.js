@@ -87,6 +87,7 @@ export function extrairImagemPix(data,contexto) {
  }
  return {...contexto,filiaisDeclaradas,semanas:[...new Set(semanas)],competencias:[...new Set(competencias)],registros};
 }
+const fonteResumo=fontes=>fontes.map(f=>f.nomeOriginal||f.nome||f.caminho||'Imagem').join('; ').slice(0,500);
 export function compararImagensPix(linhas,imagens) {
  const divergencias=[],revisoes=[],checagens=[];let comparacoes=0;
  const revisao=(r,motivo,fonte='')=>revisoes.push({nome:r.nome||r.colaborador,filial:r.filial,competencia:r.competencia||r.origem,semana:semana(r.semana),motivo,fonte});
@@ -100,7 +101,7 @@ export function compararImagensPix(linhas,imagens) {
   for(const casa of [...new Set(casas)]) {
    const fontes=imagens.filter(i=>i.competencia===cp&&semana(i.semana)===sw&&filialOcrPix(i.filial)===casa);
    const candidatos=[];
-   if(!fontes.length)revisao(r,`Sem evidência disponível para ${casa} neste período.`);
+   if(!fontes.length){revisao(r,`Sem evidência disponível para ${casa} neste período.`);add(r,'evidencia',0,0,'Sem arquivo anexado',`CORRIGIR PENDÊNCIA: a filial ${casa} não anexou evidência para ${cp}, semana S${sw}. Pagamento bloqueado até anexar e validar a evidência.`);}
    for(const img of fontes){
     const fonte=img.nomeOriginal||img.nome||img.caminho||'Imagem';
     if(img.erro){revisao(r,img.erro,fonte);continue;}
@@ -113,6 +114,7 @@ export function compararImagensPix(linhas,imagens) {
     if(matches.length!==1){revisao(r,individual?'Linha individual não identificada com segurança (nome completo e colunas).':'Total da unidade ausente ou ambíguo. Não foram somadas linhas individuais.',fonte);continue;}
     candidatos.push({...matches[0],fonte:`${fonte} · linha ${matches[0].linha}`,casa});
    }
+   if(fontes.length&&!candidatos.length)add(r,'identidade',0,0,fonteResumo(fontes),`CORRIGIR PENDÊNCIA: não foi possível validar ${individual?'a evidência no nome do colaborador':'o total da unidade'} em ${casa}, S${sw}. Anexe uma evidência legível e correspondente.`);
    porCasa.push(candidatos);
   }
   const camposComparados=new Set();
@@ -137,7 +139,7 @@ export function compararImagensPix(linhas,imagens) {
   }
   const obrigatorios=['metaSemanal','realizadoSemanal'];if(/TICKET/.test(normalizarOcrPix(r.politica?.metrica))||Number(r.ticketMedio)>0)obrigatorios.push('ticketMedio');
   checagens.push({nome:r.nome||r.colaborador,competencia:cp,semana:sw,filial:r.filial,campos:[...camposComparados],periodoValidado:camposComparados.size>0});
-  const faltam=obrigatorios.filter(c=>!camposComparados.has(c));if(faltam.length)revisao(r,`Leitura incompleta: ${faltam.map(c=>campos[c].rotulo).join(', ')}. Não significa que os valores conferem.`);
+  const faltam=obrigatorios.filter(c=>!camposComparados.has(c));if(faltam.length){revisao(r,`Leitura incompleta: ${faltam.map(c=>campos[c].rotulo).join(', ')}. Não significa que os valores conferem.`);add(r,'cobertura',0,0,'Conferência de evidências',`CORRIGIR PENDÊNCIA: não foi possível validar ${faltam.map(c=>campos[c].rotulo).join(', ')} nas evidências do colaborador e período. Bonificação retida até conferência completa.`);}
  }
  const unicos=arr=>[...new Map(arr.map(a=>[JSON.stringify(a),a])).values()];
  return {divergencias:unicos(divergencias),revisoes:unicos(revisoes),comparacoes,checagens,imagens:imagens.length,geradoEm:new Date().toISOString()};
