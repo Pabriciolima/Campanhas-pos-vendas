@@ -1263,3 +1263,17 @@ html[data-theme="dark"] body .pix-day-card input.pix-realizado-dia::placeholder 
   -webkit-text-fill-color: #536a7b !important;
   opacity: 1 !important;
 }
+
+/* PIX: linhas uniformes na apuração, sem faixas alternadas no modo escuro. */
+html[data-theme="dark"] body #pix-apuracao .pix-table-apuracao tbody tr,
+html[data-theme="dark"] body #pix-apuracao .pix-table-apuracao tbody tr:nth-child(even),
+html[data-theme="dark"] body #pix-apuracao .pix-table-apuracao tbody tr:nth-child(odd),
+body.dark-mode #pix-apuracao .pix-table-apuracao tbody tr,
+body.dark-mode #pix-apuracao .pix-table-apuracao tbody tr:nth-child(even),
+body.dark-mode #pix-apuracao .pix-table-apuracao tbody tr:nth-child(odd) {
+  background: #0c1725 !important;
+}
+html[data-theme="dark"] body #pix-apuracao .pix-table-apuracao tbody tr:hover,
+body.dark-mode #pix-apuracao .pix-table-apuracao tbody tr:hover {
+  background: #14283a !important;
+}
