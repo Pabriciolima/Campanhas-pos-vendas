@@ -72,7 +72,7 @@ export function extrairImagemPix(data,contexto) {
  const semanas=[...text.matchAll(/\b(?:SEMANA(?:L)?\s*|S\s*)0?([1-4])\b/gi)].map(m=>Number(m[1]));
  const competencias=[...text.matchAll(/\b(0[1-9]|1[0-2])[\/\-](20\d{2})\b/g)].map(m=>`${m[2]}-${m[1]}`);
  const cidades=['ANANINDEUA','SAO LUIS','BACABAL','MACAPA','TERESINA','URUCUI','RONDONOPOLIS','SINOP','CUIABA','PORTO VELHO','JI PARANA','VILHENA','AGUA BOA'];
- const textoNormal=normalizarOcrPix(text);const filiaisDeclaradas=cidades.filter(c=>textoNormal.includes('FILIAL '+c)||textoNormal.includes('UNIDADE '+c));
+ const textoNormal=normalizarOcrPix(text);const filiaisDeclaradas=cidades.filter(c=>new RegExp('(?:^|\\b)(?:FILIAL|UNIDADE) '+c+'(?:\\b|$)').test(textoNormal));
  const registros=[];let secao='';
  for(const row of rows){const label=normalizarOcrPix(row.texto);if(/[O0] S FATURADAS/.test(label))secao='faturadas';if(/[O0] S ABERTAS/.test(label))secao='abertas';const header=headers.filter(h=>h.y<row.y).at(-1);if(!header)continue;const {valores,baixa}=lerValores(row,header);if(!Object.keys(valores).length&&!baixa.length)continue;
   const nomeWords=row.words.filter(w=>w.bbox.x1<header.nameRight-3);
@@ -105,7 +105,7 @@ export function compararImagensPix(linhas,imagens) {
    for(const img of fontes){
     const fonte=img.nomeOriginal||img.nome||img.caminho||'Imagem';
     if(img.erro){revisao(r,img.erro,fonte);continue;}
-    if(img.filiaisDeclaradas?.length===1&&img.filiaisDeclaradas[0]!==casa){add(r,'filial',0,0,fonte,`A imagem identifica a filial ${img.filiaisDeclaradas[0]}, mas está anexada à base ${casa}.`);continue;}
+    if(img.filiaisDeclaradas?.length===1&&img.filiaisDeclaradas[0]!==casa){revisao(r,`O documento menciona ${img.filiaisDeclaradas[0]}, mas foi anexado em ${casa}. Conferir a filial antes de considerar divergência.`,fonte);continue;}
     if(img.competencias.some(c=>c!==cp)){revisao(r,'A imagem contém competência diferente da pasta selecionada.',fonte);continue;}
     if(!img.semanas.length&&!/(?:semana-[1-4]|\/S[1-4]\/|\/s[1-4]\/|\/[1-4]\/)/.test(img.caminho||'')){revisao(r,'Imagem histórica sem semana identificável no texto ou no caminho; confirme o período.',fonte);continue;}
     if(img.semanas.some(s=>s!==sw)){add(r,'semana',sw,img.semanas.find(s=>s!==sw),fonte,`A evidência indica ${img.semanas.map(s=>'S'+s).join(' / ')}, mas o lançamento é S${sw}.`);continue;}
@@ -114,7 +114,7 @@ export function compararImagensPix(linhas,imagens) {
     if(matches.length!==1){revisao(r,individual?'Linha individual não identificada com segurança (nome completo e colunas).':'Total da unidade ausente ou ambíguo. Não foram somadas linhas individuais.',fonte);continue;}
     candidatos.push({...matches[0],fonte:`${fonte} · linha ${matches[0].linha}`,casa});
    }
-   if(fontes.length&&!candidatos.length)add(r,'identidade',0,0,fonteResumo(fontes),`CORRIGIR PENDÊNCIA: não foi possível validar ${individual?'a evidência no nome do colaborador':'o total da unidade'} em ${casa}, S${sw}. Anexe uma evidência legível e correspondente.`);
+   if(fontes.length&&!candidatos.length)revisao(r,`Evidência já anexada em ${casa}, S${sw}, mas a leitura automática não confirmou ${individual?'o nome e a linha individual':'o total da unidade'}. Revisar o arquivo existente antes de solicitar outro.`,fonteResumo(fontes));
    porCasa.push(candidatos);
   }
   const camposComparados=new Set();
@@ -139,7 +139,7 @@ export function compararImagensPix(linhas,imagens) {
   }
   const obrigatorios=['metaSemanal','realizadoSemanal'];if(/TICKET/.test(normalizarOcrPix(r.politica?.metrica))||Number(r.ticketMedio)>0)obrigatorios.push('ticketMedio');
   checagens.push({nome:r.nome||r.colaborador,competencia:cp,semana:sw,filial:r.filial,campos:[...camposComparados],periodoValidado:camposComparados.size>0});
-  const faltam=obrigatorios.filter(c=>!camposComparados.has(c));if(faltam.length){revisao(r,`Leitura incompleta: ${faltam.map(c=>campos[c].rotulo).join(', ')}. Não significa que os valores conferem.`);add(r,'cobertura',0,0,'Conferência de evidências',`CORRIGIR PENDÊNCIA: não foi possível validar ${faltam.map(c=>campos[c].rotulo).join(', ')} nas evidências do colaborador e período. Bonificação retida até conferência completa.`);}
+  const faltam=obrigatorios.filter(c=>!camposComparados.has(c));if(faltam.length)revisao(r,`Leitura incompleta: ${faltam.map(c=>campos[c].rotulo).join(', ')}. Confira os arquivos existentes; a leitura não prova ausência de evidência.`);
  }
  const unicos=arr=>[...new Map(arr.map(a=>[JSON.stringify(a),a])).values()];
  return {divergencias:unicos(divergencias),revisoes:unicos(revisoes),comparacoes,checagens,imagens:imagens.length,geradoEm:new Date().toISOString()};
