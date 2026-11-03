@@ -1278,26 +1278,22 @@ body.dark-mode #pix-apuracao .pix-table-apuracao tbody tr:hover {
   background: #14283a !important;
 }
 
-/* PIX - tabela de lançamentos compacta, ganhos sempre visíveis em telas de notebook. */
-#pixTabelaLancamentos tr > td:nth-child(7),
-#pixTabelaLancamentos tr > td:nth-child(8),
-#pixTabelaLancamentos tr > td:nth-child(9),
-#pixTabelaLancamentos tr > td:nth-child(10),
-#pixTabelaLancamentos tr > td:nth-child(11) { white-space:nowrap; font-variant-numeric:tabular-nums; }
-#pixTabelaLancamentos tr > td:nth-child(11) strong { color:#48ddb1; font-size:12px; font-weight:800; }
-#pixTabelaLancamentos tr > td:nth-child(12) { min-width:105px; max-width:175px; }
+/* PIX: ações em barra única, com contraste premium e sem sobreposição. */
+#pixTabelaLancamentos > tr > td:last-child { width:132px !important; min-width:132px !important; max-width:132px !important; padding:8px 7px !important; overflow:visible !important; }
+#pixTabelaLancamentos > tr > td:last-child .actions { display:inline-flex !important; align-items:center !important; justify-content:center !important; flex-wrap:nowrap !important; gap:0 !important; width:114px !important; min-width:114px !important; height:38px !important; padding:3px !important; border:1px solid #30465b !important; border-radius:11px !important; background:#152637 !important; box-sizing:border-box !important; }
+html[data-theme="dark"] #pixTabelaLancamentos .actions button.pix-action-icon,
+#pixTabelaLancamentos .actions button.pix-action-icon { position:relative !important; flex:0 0 35px !important; width:35px !important; min-width:35px !important; max-width:35px !important; height:30px !important; min-height:30px !important; max-height:30px !important; display:inline-flex !important; align-items:center !important; justify-content:center !important; padding:0 !important; margin:0 !important; border:0 !important; border-radius:7px !important; background:transparent !important; box-shadow:none !important; color:#c5d8e8 !important; -webkit-text-fill-color:#c5d8e8 !important; font-size:17px !important; font-weight:600 !important; line-height:1 !important; white-space:nowrap !important; overflow:hidden !important; transition:background .15s ease,color .15s ease !important; }
+#pixTabelaLancamentos .actions button.pix-action-icon::before,
+#pixTabelaLancamentos .actions button.pix-action-icon::after { content:none !important; display:none !important; }
+html[data-theme="dark"] #pixTabelaLancamentos .actions button.pix-action-icon:hover,
+#pixTabelaLancamentos .actions button.pix-action-icon:hover { background:#28455b !important; color:#fff !important; -webkit-text-fill-color:#fff !important; transform:none !important; filter:none !important; }
+html[data-theme="dark"] #pixTabelaLancamentos .actions button.pix-action-delete,
+#pixTabelaLancamentos .actions button.pix-action-delete { color:#fb9c9c !important; -webkit-text-fill-color:#fb9c9c !important; }
+html[data-theme="dark"] #pixTabelaLancamentos .actions button.pix-action-delete:hover,
+#pixTabelaLancamentos .actions button.pix-action-delete:hover { background:#502b36 !important; color:#fff !important; -webkit-text-fill-color:#fff !important; }
+#pixTabelaLancamentos .actions button.pix-action-icon:focus-visible { outline:2px solid #2dd4bf !important; outline-offset:2px !important; }
+#pixTabelaLancamentos > tr > td:nth-child(n+7):nth-child(-n+11) { white-space:nowrap !important; font-variant-numeric:tabular-nums; }
+#pixTabelaLancamentos > tr > td:nth-child(11) strong { font-weight:800; color:#55ddb6; }
 #pixTabelaLancamentos .pix-status-com-motivo { min-width:0 !important; }
-#pixTabelaLancamentos .pix-motivo-nao-habilitado { max-width:150px !important; font-size:9px !important; }
-#pixTabelaLancamentos tr > td:last-child { width:122px; min-width:122px; padding-inline:5px !important; }
-#pixTabelaLancamentos .actions { display:flex !important; flex-wrap:nowrap !important; gap:5px !important; align-items:center; justify-content:flex-start; }
-#pixTabelaLancamentos .pix-action-icon { display:inline-flex !important; justify-content:center; align-items:center; width:34px !important; min-width:34px !important; height:34px !important; padding:0 !important; border-radius:9px !important; font-size:16px !important; line-height:1 !important; cursor:pointer; transition:background .16s ease,transform .16s ease; }
-#pixTabelaLancamentos .pix-action-icon:hover { transform:translateY(-2px); filter:brightness(1.12); }
-#pixTabelaLancamentos .pix-action-icon:focus-visible { outline:2px solid #2dd4bf; outline-offset:2px; }
-#pixTabelaLancamentos .pix-action-delete { font-size:22px !important; }
-#pixTabelaLancamentos .pix-evidence-row-button { font-size:15px !important; }
-@media(max-width:1450px){
- #pixTabelaLancamentos tr > td:nth-child(4) { max-width:160px; overflow-wrap:anywhere; }
- #pixTabelaLancamentos tr > td:nth-child(5) { max-width:120px; overflow-wrap:anywhere; }
- #pixTabelaLancamentos tr > td:nth-child(6) { min-width:170px; }
- #pixTabelaLancamentos tr > td:nth-child(12) { max-width:125px; }
-}
+#pixTabelaLancamentos .pix-motivo-nao-habilitado { max-width:145px !important; font-size:9px !important; }
+@media(max-width:1450px){#pixTabelaLancamentos > tr > td:nth-child(4){max-width:155px;overflow-wrap:anywhere;}#pixTabelaLancamentos > tr > td:nth-child(5){max-width:120px;overflow-wrap:anywhere;}}
