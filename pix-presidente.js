@@ -1,5 +1,5 @@
 import {auditarPix} from "./pix-auditoria-core.js?v=20261103";
-import {instalarConferenciaPixFonte,coletarConferenciaPixFonte,preencherConferenciaPixFonte,renderizarPainelAuditoriaPix} from "./pix-auditoria-fonte.js?v=20261103";
+import {instalarConferenciaPixFonte,coletarConferenciaPixFonte,preencherConferenciaPixFonte,renderizarPainelAuditoriaPix} from "./pix-auditoria-fonte.js?v=20261103-ocr1";
 import { escaparHtml as protegerHtml } from "./security/seguranca.js";
 /*
  * AUDITORIA ESTRUTURAL — 2026.08.26 — ETAPA 04 SUPABASE

@@ -1,4 +1,6 @@
-import {combinarPixParaAuditoria,adicionarPaginaAuditoriaPix,auditarPix} from "./pix-auditoria-core.js?v=20261103";
+import {auditarImagensPix} from './pix-auditoria-imagens.js?v=20261103-ocr1';
+import {adicionarPaginaImagensPix} from './pix-auditoria-imagens-core.js?v=20261103-ocr1';
+import {combinarPixParaAuditoria} from "./pix-auditoria-core.js?v=20261103";
 /*
  * VERSÃO: 2026.08.26-SUPABASE-ETAPA-06
  * Evidências do Pix oficiais no Supabase Storage.
@@ -1197,6 +1199,8 @@ async function enviarPixEvidencias(
     );
 
     atualizarBotoesPixEvidencia();
+    const paraConferir=(window.obterResultadosPix?.()||[]).filter(r=>r.competencia===contexto.competencia && numeroSemanaPixEvidencia(r.semana)===numeroSemanaPixEvidencia(contexto.semana) && normalizarPixEv(r.filial)===normalizarPixEv(contexto.filial));
+    if(paraConferir.length)conferirImagensPixNaTela(paraConferir).catch(console.warn);
   } catch (erro) {
     console.error(
       "[PIX EVIDÊNCIAS] Erro no envio:",
@@ -2888,6 +2892,24 @@ function imagemRemotaParaDataPix(url) {
    PDF EXCLUSIVO DO PIX
 ========================================================= */
 
+async function buscarGruposAuditoriaImagensPix(resultados) {
+  const grupos=new Map();
+  for(const linha of resultados){const r={...linha,...(linha.auditoriaDados||{})};
+    const unidades=/GERENTE/i.test(r.cargo||'') ? (/URU[ÇC]U[IÍ]|TERESINA/i.test(r.filial||'') ? ['Teresina','Uruçuí'] : (r.auditoriaFonte?.unidades||[]).map(u=>u.filial)) : [r.filial];
+    for(const filial of unidades){const cp=r.competencia||r.origem,sw=r.semana,key=[cp,sw,filial].join('|');if(grupos.has(key))continue;
+      const contexto=construirContextoPix(cp,sw,filial,r.dn||'');
+      if(!contexto)continue;
+      try{const imagens=await listarEvidenciasContextoPix(contexto);grupos.set(key,{competencia:cp,semana:sw,filial,imagens});}
+      catch{grupos.set(key,{competencia:cp,semana:sw,filial,imagens:[{nome:'Evidências indisponíveis',url:''}]});}
+    }
+  }
+  return [...grupos.values()];
+}
+async function conferirImagensPixNaTela(resultados=dadosPixParaExportar()) {
+ if(!resultados.length){alert('Não há lançamentos no período e filtro selecionados.');return;}
+ return auditarImagensPix(resultados,await buscarGruposAuditoriaImagensPix(resultados));
+}
+
 async function exportarPdfPixIndependente() {
   if (window.recarregarNpsFilialPix) await window.recarregarNpsFilialPix();
   const resultados =
@@ -3005,7 +3027,7 @@ async function exportarPdfPixIndependente() {
     ).size;
 
   documento.setTextColor(155,35,35);documento.setFontSize(7);
-  documento.text("Status da campanha não equivale à validação da evidência. Consulte a auditoria comparativa anexada.",12,38);
+  documento.text("Consulte as divergências lidas nas imagens e eventuais leituras que precisam de revisão na página adicional.",12,38);
   documento.setTextColor(20,42,58);
   documento.autoTable({
     startY: 44,
@@ -3116,17 +3138,12 @@ async function exportarPdfPixIndependente() {
       }
   });
 
-  adicionarPaginaAuditoriaPix(documento,resultados);
+  const gruposAuditoria = await buscarGruposAuditoriaImagensPix(resultados);
+  const auditoriaImagens = await auditarImagensPix(resultados, gruposAuditoria);
+  adicionarPaginaImagensPix(documento, auditoriaImagens);
 
-  const evidencias =
-    (
-      await buscarEvidenciasPixCompetencia(
-        competencia,
-        filtroExportacao.semana
-      )
-    ).filter(
-      grupoEvidenciaPertenceFilialPix
-    );
+  // Anexa exatamente as fontes lidas, inclusive unidades do núcleo e pastas históricas.
+  const evidencias = gruposAuditoria.map(g=>({...g,numeroSemana:numeroSemanaPixEvidencia(g.semana),dn:resolverDnPixPorFilial(g.filial),imagens:g.imagens.filter(i=>i.url)}));
 
   for (const grupo of evidencias) {
     documento.addPage();
@@ -3544,7 +3561,11 @@ async function exportarExcelPixIndependente() {
 
   const abaAuditoria=workbook.addWorksheet("Conferência da fonte");
   abaAuditoria.addRow(["Local","Situação","Ponto identificado","Correção necessária","Fonte"]);
-  for(const a of auditarPix(resultados))abaAuditoria.addRow([a.local,a.nivel,a.ponto,a.correcao,a.fonte]);
+  const auditoriaExcel = await auditarImagensPix(resultados, await buscarGruposAuditoriaImagensPix(resultados));
+  for(const a of auditoriaExcel.divergencias)abaAuditoria.addRow([a.local,a.nivel,a.ponto,a.correcao,a.fonte]);
+  const leiturasExcel=workbook.addWorksheet("Leituras a revisar");
+  leiturasExcel.addRow(["Colaborador","Filial","Motivo","Evidência"]);
+  for(const a of auditoriaExcel.revisoes)leiturasExcel.addRow([a.nome,a.filial,a.motivo,a.fonte]);
   abaAuditoria.columns.forEach((c,i)=>{c.width=[42,22,85,90,55][i]||25;});
   const evidencias =
     (
@@ -3992,6 +4013,7 @@ new MutationObserver(
 );
 
 window.evidenciasPix = {
+  conferirImagens: conferirImagensPixNaTela,
   carregar:
     carregarPixEvidencias,
   abrir:

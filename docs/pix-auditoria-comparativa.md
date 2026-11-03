@@ -1,39 +1,29 @@
-# Pix — auditoria comparativa da fonte
+# Pix — comparação dos lançamentos com as imagens
 
-## Escopo
+## Fluxo atual
 
-Auditoria documental e aritmética independente da elegibilidade da campanha. Preserva os cálculos financeiros vigentes, os lançamentos existentes, as evidências originais, as políticas históricas de outubro e a vigência da regra diária em novembro.
+No PDF regular, as imagens anexadas à competência, semana e filial dos colaboradores selecionados são lidas automaticamente antes da geração da página de divergências. A tabela contém somente campos diferentes: colaborador, período, valor lançado, valor lido, diferença, arquivo e linha da leitura. Não imprime linhas coincidentes, referências fixas da diretoria ou a lista de todos os colaboradores. A contagem de leituras inconclusivas aparece separadamente; os motivos detalhados ficam recolhidos em “Leituras a revisar” na tela. Excel: divergências e leituras inconclusivas em abas separadas.
 
-Apuração: painel recolhido com alertas do mesmo filtro de colaboradores/filial/semana. PDF regular: página adicional com local, situação, ponto identificado, correção e fonte, antes dos anexos de evidências. Excel: aba Conferência da fonte. Impressão legada com atrasados: mesma página comparativa, preservando as competências de origem e sem ampliar os participantes do relatório.
+Na apuração, “Ler evidências e comparar” executa a mesma comparação com os filtros atuais. Após upload de uma evidência, os lançamentos da mesma filial/competência/semana são conferidos em segundo plano, quando disponíveis na tela. O upload permanece salvo mesmo se a leitura falhar.
 
-## Fonte estruturada
+## Leitura das imagens
 
-O formulário de lançamento possui seção Conferência da fonte. Registra referência do relatório/arquivo/página, identidade da linha individual, competência, semana, base individual/unidade/núcleo, meta, realizado, ticket e quantidade de O.S. opcional. Cabeçalho e coluna têm semanas independentes para detectar S3/S2. Confirmação de leitura é explícita; não é inferida da existência de uma imagem.
+Tesseract.js 6.0.1 com modelo português/inglês, executado no navegador, sem serviço pago ou chave de IA. Bibliotecas e modelos são carregados sob demanda. A imagem é lida localmente; não é enviada a um serviço externo de reconhecimento. Cache em memória por SHA-256 do conteúdo, limitado a 30 imagens: exclusão ou substituição não reaproveita uma leitura antiga de outro arquivo. A lista de anexos é consultada novamente em cada conferência. Não cria tabela nem altera permissões, dados financeiros ou evidências no Supabase.
 
-Gerentes: fonte por núcleo, com linhas separadas dos totais de cada unidade no mesmo período. Para o núcleo Piauí, exige Teresina e Uruçuí, sem duplicar unidades ou somar colaboradores como totais de unidade. Meta e realizado do gerente são comparados com as somas da fonte. Ticket consolidado é conferido separadamente, não calculado por média simples de tickets.
+O leitor reconstrói linhas pela posição dos textos, identifica colunas e associa valores ao nome individual ou total da unidade. Números de baixa confiança, nomes ambíguos, arquivos conflitantes e valores ausentes não viram divergências confirmadas nem coincidências. Não corrige letras para fabricar números. Datas incompatíveis e semanas divergentes são tratadas separadamente. Imagens mensais legadas sem semana identificável exigem revisão.
 
-A conferência fica no objeto auditoriaFonte dentro do JSON dados de pix_lancamentos, seguindo o fluxo de gravação existente, sem nova tabela ou credencial. Não grava automaticamente os valores financeiros de referência nos campos de pagamento.
+Relatórios Apollo: usa Vlr. Total e Ticket Médio da seção O.S. Faturadas, excluindo a tabela O.S. Abertas do faturamento. Reconhece cortes no começo do nome somente com sufixo longo de três ou mais palavras e associação única entre os participantes selecionados. Totais sem rótulo só são reconhecidos se o valor impresso coincide com a soma das linhas da mesma tabela; a comparação usa o valor do total impresso, sem inventar um total inexistente.
 
-## Regras e bloqueios
+Gerência Piauí: exige totais de Teresina e Uruçuí no mesmo período para comparar metas e realizados consolidados. Outros núcleos usam as unidades configuradas na conferência de fonte. Ticket do núcleo só pode ser calculado com faturamento e quantidade de O.S. válidos de todas as unidades; não usa média simples de tickets.
 
-- Consultor/orçamentista: base individual e nome da linha compatível.
-- Gerente: núcleo; demais cargos: total de unidade.
-- Competência e semana da referência precisam coincidir com o lançamento.
-- Meta, realizado e ticket são comparados em centavos; atingimento é conferido por realizado/meta × 100.
-- Se a quantidade de O.S. for informada, confere ticket contra realizado/quantidade.
-- Divergências comprovadas e núcleo de gerente não validado interrompem o salvamento antes do upsert. Pendências de fonte nos demais cargos permanecem explícitas no formulário, apuração e relatório.
-- CONFERIDO significa somente que os campos estruturados coincidem; não é liberação de pagamento nem validação automática de imagem.
+## Limites
 
-## Apontamentos da diretoria
+OCR é probabilístico. Prints pequenos, escuros, cortados, cabeçalhos desconhecidos ou campos sem evidência podem exigir revisão. Ausência de divergência não certifica os campos que não foram lidos. Não há alteração automática de lançamentos, elegibilidade ou valores a pagar. A seção manual “Conferência da fonte” permanece disponível para registros estruturados e validações de salvamento da implementação anterior; o novo relatório de imagens não usa essas referências fixas como substituto da evidência.
 
-As referências recebidas para outubro/2026 S3 são restritas ao mesmo período, filial e colaborador: Kharolaynne/Uruçuí (R$ 58.146,36; ticket R$ 4.845,53; referência 109,68%), Kevyn/Uruçuí (evidência total R$ 66.150,46), Danilo/Rondonópolis (meta da fonte R$ 85.706,25), gerência Piauí por Teresina+Uruçuí. O rótulo S3/S2 de Rondonópolis aparece como apontamento sobre a evidência original, até registrar a conferência dos dois rótulos corrigidos. Prêmios de R$ 600/R$ 1.100 não são aprovados ou alterados automaticamente por esses apontamentos.
+A impressão legada com atrasados mantém seu fluxo anterior de fonte estruturada. A leitura automática descrita aqui está integrada aos botões regulares PDF/Excel do Pix e à apuração.
 
-## Limitação deliberada
+## Verificação
 
-Os prints existentes não têm leitura estruturada validada. Este recurso não faz OCR automático e não afirma que uma imagem foi lida quando isso não ocorreu. Sem fonte conferida, o relatório registra PENDENTE em vez de declarar ausência de inconsistências. Novas comparações numéricas exigem registrar e conferir os dados da referência no formulário. Documentos de origem com rótulo errado precisam ser corrigidos e reanexados; a auditoria não altera pixels dos anexos.
+Testes de identidade, colunas, centavos, confiança, conflitos entre imagens, isolamento de mês/semana/filial, núcleo e relatório somente de divergências, além das regressões históricas de outubro, novembro e NPS.
 
-## Validação
-
-22 testes aprovados, incluindo casos da diretoria, escopo, identidade, semanas, núcleo, diferença de centavos, ausência de fonte, junção dos filtros, página extra e bloqueio antes de gravar. Regressões confirmam outubro histórico, novembro diário e NPS. Três testes opcionais foram pulados por depender de fixture de dados reais ou DOM externo.
-
-Navegador: formulário, confirmação da fonte, divergência R$ 78,16, semana de coluna errada, painel na apuração, claro/escuro e larguras 390/768/1366 sem transbordamento. PDF real criado com jsPDF/AutoTable; página de auditoria renderizada e inspecionada, textos e diferenças R$ 78,16/R$ 13,67, fontes e núcleo Piauí conferidos. Nenhuma gravação em dados reais foi usada nos testes.
+OCR real no navegador com uma imagem já anexada de outubro/S3/Uruçuí: extraiu realizado individual 58.146,36 e ticket 4.845,53, separadamente do total 66.150,46 e ticket 4.725,03 da unidade. A meta não presente nessa imagem foi sinalizada como leitura incompleta. Nenhuma gravação em dados reais foi feita para testar.
