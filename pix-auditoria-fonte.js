@@ -1,4 +1,3 @@
-let ultimaConferenciaAutomatica='',timerConferencia;
 import {auditarPix} from './pix-auditoria-core.js?v=20261103';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const input=(id,label,type='text')=>`<label>${label}<input id="paf-${id}" type="${type}" ${type==='number'?'min="0" step="0.01"':''}></label>`;
@@ -21,8 +20,7 @@ export function renderizarPainelAuditoriaPix(resultados){
 
  const cards=document.querySelector('#pixApuracaoCards');if(!cards)return;let painel=document.querySelector('#pixAuditoriaComparativa');if(!painel){painel=document.createElement('details');painel.id='pixAuditoriaComparativa';painel.style.cssText='margin:16px 0;padding:14px;border:1px solid var(--monaco-line,#cad6de);border-radius:12px;max-width:100%;min-width:0';cards.after(painel);}
  painel.dataset.ocrGeracao=String(Date.now())+Math.random();
- painel.innerHTML='<summary style="cursor:pointer;font-weight:700">Comparar lançamentos com as imagens das evidências</summary><p style="font-size:12px">A impressão faz esta leitura automaticamente. A comparação mostra apenas diferenças; imagens ilegíveis ficam separadas para revisão. Nenhum valor é alterado pela leitura.</p><button type="button" id="pixOcrComparar">Ler evidências e comparar</button><p id="pixOcrProgresso" role="status" aria-live="polite"></p><div id="pixOcrResultado"></div>';
- const assinatura=JSON.stringify(resultados.map(r=>[r.competencia,r.semana,r.nome,r.filial,r.metaSemanal,r.realizadoSemanal,r.ticketMedio,r.margem,r.realizadoNps,r.metaNps,r.osAbertaPercentual]));
- if((document.body.classList.contains('modulo-pix-ativo')||document.querySelector('#pixPresidente.active'))&&resultados.length&&assinatura!==ultimaConferenciaAutomatica){clearTimeout(timerConferencia);timerConferencia=setTimeout(async()=>{if(!window.evidenciasPix?.conferirImagens)return;ultimaConferenciaAutomatica=assinatura;try{await window.evidenciasPix.conferirImagens(resultados);}catch{ultimaConferenciaAutomatica='';}},700);}
+ painel.innerHTML='<summary style="cursor:pointer;font-weight:700">Comparar lançamentos com as imagens das evidências</summary><p style="font-size:12px">A leitura é executada ao imprimir ou clicar no botão abaixo, sem processamento automático durante a navegação. A comparação mostra apenas diferenças; imagens ilegíveis ficam separadas para revisão. Nenhum valor é alterado pela leitura.</p><button type="button" id="pixOcrComparar">Ler evidências e comparar</button><p id="pixOcrProgresso" role="status" aria-live="polite"></p><div id="pixOcrResultado"></div>';
  const botao=painel.querySelector('#pixOcrComparar');botao.onclick=async()=>{botao.disabled=true;const progresso=painel.querySelector('#pixOcrProgresso');progresso.textContent='Buscando imagens do período e dos colaboradores selecionados…';try{if(!window.evidenciasPix?.conferirImagens)throw new Error('Atualize a página para carregar o leitor de imagens.');await window.evidenciasPix.conferirImagens(resultados);}catch(e){progresso.textContent=e.message||'Não foi possível concluir a leitura. Tente novamente.';}finally{botao.disabled=false;}};
 }
+

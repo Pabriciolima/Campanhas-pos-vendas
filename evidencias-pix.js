@@ -1,6 +1,7 @@
-import {aplicarStatusAuditoriaPix} from './pix-auditoria-status.js?v=20261103-status2';
-import {auditarImagensPix} from './pix-auditoria-imagens.js?v=20261103-status2';
-import {adicionarPaginaImagensPix} from './pix-auditoria-imagens-core.js?v=20261103-status2';
+import {mapearLimitadoPix,criarExecucaoUnicaPix,carregarBlobPix,cancelarSeNecessario,cederTelaPix,limparCacheImagensPix} from './pix-exportacao-utils.js?v=20261103-perf1';
+import {aplicarStatusAuditoriaPix} from './pix-auditoria-status.js?v=20261103-perf1';
+import {auditarImagensPix} from './pix-auditoria-imagens.js?v=20261103-perf1';
+import {adicionarPaginaImagensPix} from './pix-auditoria-imagens-core.js?v=20261103-perf1';
 import {combinarPixParaAuditoria} from "./pix-auditoria-core.js?v=20261103";
 /*
  * VERSÃO: 2026.08.26-SUPABASE-ETAPA-06
@@ -22,6 +23,27 @@ import {combinarPixParaAuditoria} from "./pix-auditoria-core.js?v=20261103";
 import {
   supabase
 } from "./supabase-config.js";
+
+const executarUmaExportacaoPix=criarExecucaoUnicaPix();
+let trabalhoExportacaoPix=null;
+function informarExportacaoPix(texto){trabalhoExportacaoPix?.informar(texto);}
+function listarStorageExportacaoPix(pasta,opcoes){
+ const job=trabalhoExportacaoPix;const key=JSON.stringify([pasta,opcoes]);if(job?.listagens.has(key))return job.listagens.get(key);
+ const timeout=AbortSignal.timeout(20000);const signal=job?AbortSignal.any([job.controller.signal,timeout]):timeout;
+ const promessa=supabase.storage.from(SUPABASE_BUCKET).list(pasta,opcoes,{signal});job?.listagens.set(key,promessa);return promessa;
+}
+function executarExportacaoPix(tipo){return executarUmaExportacaoPix(async()=>{
+ document.querySelector('#pixProgressoExportacao')?.remove();
+ const controller=new AbortController(),box=document.createElement('section');box.id='pixProgressoExportacao';box.style.cssText='position:fixed;right:18px;top:90px;max-width:min(390px,calc(100vw - 36px));z-index:10020;padding:16px;border-radius:14px;background:var(--monaco-secondary,#142a3d);color:var(--monaco-text,#eef5ff);box-shadow:0 8px 30px #0005;border:1px solid #6a8b9d';box.innerHTML='<strong>Preparando documento do Pix</strong><p role="status" aria-live="polite" style="font-size:13px;line-height:1.5;margin:8px 0">Consultando evidências selecionadas…</p><button type="button">Cancelar exportação</button>';document.body.append(box);
+ const mensagem=box.querySelector('p'),cancelar=box.querySelector('button');cancelar.onclick=()=>{controller.abort();cancelar.disabled=true;mensagem.textContent='Cancelando exportação…';};
+ const botoes=[...document.querySelectorAll('#btnExportarPdf,#btnExportarExcel')].map(b=>[b,b.disabled]);botoes.forEach(([b])=>{b.disabled=true;b.setAttribute('aria-busy','true');});
+ trabalhoExportacaoPix={controller,assets:new Map(),listagens:new Map(),informar:t=>{mensagem.textContent=t;}};
+ try{await (tipo==='pdf'?gerarPdfPixIndependente():gerarExcelPixIndependente());mensagem.textContent='Documento pronto.';}
+ catch(e){if(e.name==='AbortError')mensagem.textContent='Exportação cancelada.';else{mensagem.textContent=e.message||'Falha ao preparar documento.';throw e;}}
+ finally{trabalhoExportacaoPix=null;botoes.forEach(([b,disabled])=>{b.disabled=disabled;b.removeAttribute('aria-busy');});cancelar.remove();setTimeout(()=>box.remove(),4000);}
+ });}
+function exportarPdfPixIndependente(){return executarExportacaoPix('pdf');}
+function exportarExcelPixIndependente(){return executarExportacaoPix('excel');}
 
 const SUPABASE_BUCKET =
   "evidencias-produtivos";
@@ -445,9 +467,7 @@ async function listarEvidenciasContextoPix(contexto) {
   }
 
   const listarArquivos = async pasta => {
-    const { data, error } = await supabase.storage
-      .from(SUPABASE_BUCKET)
-      .list(pasta, {
+    const { data, error } = await listarStorageExportacaoPix(pasta, {
         limit: CONFIG_PIX_EVIDENCIAS.limiteArquivos,
         sortBy: {
           column: "created_at",
@@ -463,6 +483,7 @@ async function listarEvidenciasContextoPix(contexto) {
         const caminho = `${pasta}/${item.name}`;
         return {
           nome: item.name,
+          id:item.id,updated_at:item.updated_at||'',etag:item.metadata?.eTag||item.metadata?.etag||'',tamanho:item.metadata?.size||0,
           nomeOriginal: item.metadata?.nome_original || item.name,
           caminho,
           url: urlPublicaPix(caminho)
@@ -498,9 +519,7 @@ async function listarEvidenciasContextoPix(contexto) {
   for (const raiz of raizesUnicas) {
     if (arquivosSemana.length) break;
 
-    const { data: pastas, error } = await supabase.storage
-      .from(SUPABASE_BUCKET)
-      .list(raiz, { limit: 200 });
+    const { data: pastas, error } = await listarStorageExportacaoPix(raiz, { limit: 200 });
 
     if (error) continue;
 
@@ -534,9 +553,7 @@ async function listarEvidenciasContextoPix(contexto) {
 
   let arquivosLegados = [];
   const { data: pastasCompetencia, error: erroCompetencia } =
-    await supabase.storage
-      .from(SUPABASE_BUCKET)
-      .list(raizCompetencia, { limit: 200 });
+    await listarStorageExportacaoPix(raizCompetencia, { limit: 200 });
 
   if (!erroCompetencia) {
     const pastasLegadas = (pastasCompetencia || [])
@@ -1192,6 +1209,7 @@ async function enviarPixEvidencias(
       }
     }
 
+    limparCacheImagensPix();
     await carregarPixEvidencias();
 
     mensagemPixEvidencia(
@@ -1341,6 +1359,7 @@ async function excluirPixEvidencia(
       throw error;
     }
 
+    limparCacheImagensPix();
     await carregarPixEvidencias();
 
     atualizarBotoesPixEvidencia();
@@ -2831,88 +2850,24 @@ async function buscarEvidenciasPixCompetencia(
   );
 }
 
-function imagemRemotaParaDataPix(url) {
-  return new Promise(
-    (resolve, reject) => {
-      const imagem =
-        new Image();
-
-      imagem.crossOrigin =
-        "anonymous";
-
-      imagem.onload = () => {
-        const canvas =
-          document.createElement(
-            "canvas"
-          );
-
-        canvas.width =
-          imagem.naturalWidth;
-
-        canvas.height =
-          imagem.naturalHeight;
-
-        canvas
-          .getContext("2d")
-          .drawImage(
-            imagem,
-            0,
-            0
-          );
-
-        const dataUrl =
-          canvas.toDataURL(
-            "image/jpeg",
-            0.88
-          );
-
-        resolve({
-          dataUrl,
-          base64:
-            dataUrl.split(",")[1],
-          largura:
-            imagem.naturalWidth,
-          altura:
-            imagem.naturalHeight
-        });
-      };
-
-      imagem.onerror =
-        () =>
-          reject(
-            new Error(
-              "Não foi possível carregar uma evidência."
-            )
-          );
-
-      imagem.src = url;
-    }
-  );
+async function imagemRemotaParaDataPix(url,arquivo={}) {
+ const signal=trabalhoExportacaoPix?.controller.signal;cancelarSeNecessario(signal);
+ const blob=await carregarBlobPix({...arquivo,url},{signal,assets:trabalhoExportacaoPix?.assets});const imagem=await createImageBitmap(blob);
+ try{const escala=Math.min(1,2200/imagem.width,2200/imagem.height),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(imagem.width*escala));canvas.height=Math.max(1,Math.round(imagem.height*escala));const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(imagem,0,0,canvas.width,canvas.height);const dataUrl=canvas.toDataURL('image/jpeg',.82);const saida={dataUrl,base64:dataUrl.split(',')[1],largura:canvas.width,altura:canvas.height};canvas.width=canvas.height=1;return saida;}finally{imagem.close();await cederTelaPix();}
 }
 
-/* =========================================================
-   PDF EXCLUSIVO DO PIX
-========================================================= */
-
 async function buscarGruposAuditoriaImagensPix(resultados) {
-  const grupos=new Map();
-  for(const linha of resultados){const r={...linha,...(linha.auditoriaDados||{})};
-    const unidades=/GERENTE/i.test(r.cargo||'') ? (/URU[ÇC]U[IÍ]|TERESINA/i.test(r.filial||'') ? ['Teresina','Uruçuí'] : (r.auditoriaFonte?.unidades||[]).map(u=>u.filial)) : [r.filial];
-    for(const filial of unidades){const cp=r.competencia||r.origem,sw=r.semana,key=[cp,sw,filial].join('|');if(grupos.has(key))continue;
-      const contexto=construirContextoPix(cp,sw,filial,r.dn||'');
-      if(!contexto)continue;
-      try{const imagens=await listarEvidenciasContextoPix(contexto);grupos.set(key,{competencia:cp,semana:sw,filial,imagens});}
-      catch{grupos.set(key,{competencia:cp,semana:sw,filial,imagens:[{nome:'Evidências indisponíveis',url:''}]});}
-    }
-  }
-  return [...grupos.values()];
+ const signal=trabalhoExportacaoPix?.controller.signal;cancelarSeNecessario(signal);const contextos=new Map();
+ for(const linha of resultados){const r={...linha,...(linha.auditoriaDados||{})};const unidades=/GERENTE/i.test(r.cargo||'')?(/URU[ÇC]U[IÍ]|TERESINA/i.test(r.filial||'')?['Teresina','Uruçuí']:(r.auditoriaFonte?.unidades||[]).map(u=>u.filial)):[r.filial];
+ for(const filial of unidades){const cp=r.competencia||r.origem,sw=r.semana,key=[cp,numeroSemanaPixEvidencia(sw),normalizarPixEv(filial)].join('|');if(contextos.has(key))continue;const contexto=construirContextoPix(cp,sw,filial,r.dn||'');if(contexto)contextos.set(key,{contexto,competencia:cp,semana:sw,filial});}}
+ return mapearLimitadoPix([...contextos.values()],3,async(g,i)=>{cancelarSeNecessario(signal);informarExportacaoPix(`Buscando evidências ${i+1}/${contextos.size} · ${g.filial}`);try{const imagens=await listarEvidenciasContextoPix(g.contexto);cancelarSeNecessario(signal);return {...g,imagens};}catch(e){if(e.name==='AbortError')throw e;return {...g,imagens:[{nome:'Evidências indisponíveis',url:''}]};}});
 }
 async function conferirImagensPixNaTela(resultados=dadosPixParaExportar()) {
  if(!resultados.length){alert('Não há lançamentos no período e filtro selecionados.');return;}
  return auditarImagensPix(resultados,await buscarGruposAuditoriaImagensPix(resultados));
 }
 
-async function exportarPdfPixIndependente() {
+async function gerarPdfPixIndependente() {
   if (window.recarregarNpsFilialPix) await window.recarregarNpsFilialPix();
   let resultados =
     dadosPixParaExportar();
@@ -2939,7 +2894,7 @@ async function exportarPdfPixIndependente() {
   const filtroExportacao =
     tipoExportacaoPixAtual();
   const gruposAuditoria = await buscarGruposAuditoriaImagensPix(resultados);
-  const auditoriaAtual = await auditarImagensPix(resultados, gruposAuditoria);
+  const auditoriaAtual = await auditarImagensPix(resultados, gruposAuditoria,{signal:trabalhoExportacaoPix?.controller.signal,assets:trabalhoExportacaoPix?.assets,aoProgresso:informarExportacaoPix,prioridade:'impressao'});
   resultados = resultados.map(item=>{const bruto=aplicarStatusAuditoriaPix(item.auditoriaDados||item);return bruto.auditoriaPendente?{...item,status:bruto.status,total:0,auditoriaDados:bruto}:item;});
   if(filtroExportacao.somenteHabilitados)resultados=resultados.filter(item=>item.status==='HABILITADO');
 
@@ -3148,7 +3103,7 @@ async function exportarPdfPixIndependente() {
   adicionarPaginaImagensPix(documento, auditoriaAtual);
 
   // Anexa exatamente as fontes lidas, inclusive unidades do núcleo e pastas históricas.
-  const evidencias = gruposAuditoria.map(g=>({...g,numeroSemana:numeroSemanaPixEvidencia(g.semana),dn:resolverDnPixPorFilial(g.filial),imagens:g.imagens.filter(i=>i.url)}));
+  const evidencias = gruposAuditoria.map(g=>({...g,numeroSemana:numeroSemanaPixEvidencia(g.semana),dn:resolverDnPixPorFilial(g.filial),imagens:g.imagens.filter(i=>i.url)})).filter(g=>g.imagens.length);
 
   for (const grupo of evidencias) {
     documento.addPage();
@@ -3193,9 +3148,10 @@ async function exportarPdfPixIndependente() {
     let y = 41;
 
     for (const item of grupo.imagens) {
+      informarExportacaoPix(`Montando anexo · ${grupo.filial} · ${item.nomeOriginal||item.nome}`);
       const imagem =
         await imagemRemotaParaDataPix(
-          item.url
+          item.url,item
         );
 
       const proporcao =
@@ -3258,6 +3214,9 @@ async function exportarPdfPixIndependente() {
     }
   }
 
+  informarExportacaoPix('Finalizando PDF…');
+  await cederTelaPix();
+  cancelarSeNecessario(trabalhoExportacaoPix?.controller.signal);
   documento.save(
     nomeRelatorioPix("pdf")
   );
@@ -3267,7 +3226,7 @@ async function exportarPdfPixIndependente() {
    EXCEL EXCLUSIVO DO PIX
 ========================================================= */
 
-async function exportarExcelPixIndependente() {
+async function gerarExcelPixIndependente() {
   if (window.recarregarNpsFilialPix) await window.recarregarNpsFilialPix();
   let resultados =
     dadosPixParaExportar();
@@ -3292,7 +3251,7 @@ async function exportarExcelPixIndependente() {
   const filtroExportacao =
     tipoExportacaoPixAtual();
   const gruposAuditoria = await buscarGruposAuditoriaImagensPix(resultados);
-  const auditoriaAtual = await auditarImagensPix(resultados, gruposAuditoria);
+  const auditoriaAtual = await auditarImagensPix(resultados, gruposAuditoria,{signal:trabalhoExportacaoPix?.controller.signal,assets:trabalhoExportacaoPix?.assets,aoProgresso:informarExportacaoPix,prioridade:'impressao'});
   resultados = resultados.map(item=>{const bruto=aplicarStatusAuditoriaPix(item.auditoriaDados||item);return bruto.auditoriaPendente?{...item,status:bruto.status,total:0,auditoriaDados:bruto}:item;});
   if(filtroExportacao.somenteHabilitados)resultados=resultados.filter(item=>item.status==='HABILITADO');
 
@@ -3577,15 +3536,7 @@ async function exportarExcelPixIndependente() {
   leiturasExcel.addRow(["Colaborador","Filial","Motivo","Evidência"]);
   for(const a of auditoriaExcel.revisoes)leiturasExcel.addRow([a.nome,a.filial,a.motivo,a.fonte]);
   abaAuditoria.columns.forEach((c,i)=>{c.width=[42,22,85,90,55][i]||25;});
-  const evidencias =
-    (
-      await buscarEvidenciasPixCompetencia(
-        competencia,
-        filtroExportacao.semana
-      )
-    ).filter(
-      grupoEvidenciaPertenceFilialPix
-    );
+  const evidencias=gruposAuditoria.map(g=>({...g,numeroSemana:numeroSemanaPixEvidencia(g.semana),imagens:g.imagens.filter(i=>i.url)})).filter(g=>g.imagens.length);
 
   const planilhaEvidencias =
     workbook.addWorksheet(
@@ -3708,9 +3659,10 @@ async function exportarExcelPixIndependente() {
         linhaAtual += 11;
       }
 
+      informarExportacaoPix(`Montando anexo Excel · ${grupo.filial} · ${item.nomeOriginal||item.nome}`);
       const imagem =
         await imagemRemotaParaDataPix(
-          item.url
+          item.url,item
         );
 
       const imagemId =
@@ -3774,8 +3726,12 @@ async function exportarExcelPixIndependente() {
     linhaAtual += 13;
   }
 
+  informarExportacaoPix('Finalizando Excel…');
+  await cederTelaPix();
+  cancelarSeNecessario(trabalhoExportacaoPix?.controller.signal);
   const buffer =
     await workbook.xlsx.writeBuffer();
+  cancelarSeNecessario(trabalhoExportacaoPix?.controller.signal);
 
   const blob =
     new Blob(
@@ -4443,3 +4399,4 @@ if (
 } else {
   iniciarBarraHorizontalSuperiorPix();
 }
+

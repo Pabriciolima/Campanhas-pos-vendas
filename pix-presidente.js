@@ -1,6 +1,6 @@
-import {aplicarStatusAuditoriaPix,registrarAuditoriaStatusPix} from './pix-auditoria-status.js?v=20261103-status2';
+import {aplicarStatusAuditoriaPix,registrarAuditoriaStatusPix} from './pix-auditoria-status.js?v=20261103-perf1';
 import {auditarPix} from "./pix-auditoria-core.js?v=20261103";
-import {instalarConferenciaPixFonte,coletarConferenciaPixFonte,preencherConferenciaPixFonte,renderizarPainelAuditoriaPix} from "./pix-auditoria-fonte.js?v=20261103-status2";
+import {instalarConferenciaPixFonte,coletarConferenciaPixFonte,preencherConferenciaPixFonte,renderizarPainelAuditoriaPix} from "./pix-auditoria-fonte.js?v=20261103-perf1";
 import { escaparHtml as protegerHtml } from "./security/seguranca.js";
 /*
  * AUDITORIA ESTRUTURAL — 2026.08.26 — ETAPA 04 SUPABASE
@@ -5301,3 +5301,4 @@ window.aplicarResultadoAuditoriaPix = (linhas, auditoria) => {
  if(mudou){renderDashboardPix();renderLancamentosPix();renderApuracaoPix();}
  return mudou;
 };
+
