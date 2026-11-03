@@ -3075,6 +3075,7 @@ function montarTabelaResultadosPix(
                   }
                 </div>
               </td>
+              ${!comAcoes ? '<td class="pix-apuracao-acoes"><div class="actions pix-apuracao-action-bar"></div></td>' : ''}
               ${
                 comAcoes
                   ? `
