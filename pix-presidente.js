@@ -3086,19 +3086,14 @@ function montarTabelaResultadosPix(
                           title="Editar lançamento"
                           aria-label="Editar lançamento"
                           data-pix-edit="${protegerHtml(resultado.id)}"
-                        >
-                          ✎
-                        </button>
+                        ><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L9 17l-4 1 1-4Z"/></svg></button>
 
                         <button
                           type="button"
                           class="mini-btn delete pix-action-icon pix-action-delete"
                           title="Excluir lançamento"
                           aria-label="Excluir lançamento"
-                          data-pix-delete="${protegerHtml(resultado.id)}"
-                        >
-                          ×
-                        </button>
+                          data-pix-delete="${protegerHtml(resultado.id)}"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m5 4v7m4-7v7"/></svg></button>
                       </div>
                     </td>
                   `
