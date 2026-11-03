@@ -1716,10 +1716,13 @@ function adicionarBotaoPixNaLinha(linha) {
     "button";
 
   botao.className =
-    "mini-btn pix-evidence-row-button";
+    "mini-btn pix-evidence-row-button pix-action-icon";
 
   botao.innerHTML =
-    `📷 Evidência ${normalizarSemanaPixEvidencia(dados.semana)}`;
+    `📷`;
+
+  botao.title = `Ver evidências da ${normalizarSemanaPixEvidencia(dados.semana)}`;
+  botao.setAttribute("aria-label", botao.title);
 
   botao.addEventListener(
     "click",
@@ -1806,10 +1809,13 @@ function atualizarBotoesPixEvidencia() {
         "button";
 
       botao.className =
-        "mini-btn pix-evidence-row-button";
+        "mini-btn pix-evidence-row-button pix-action-icon";
 
       botao.innerHTML =
-        "📷 Evidência";
+        "📷";
+
+      botao.title = `Ver evidências da ${normalizarSemanaPixEvidencia(dados.semana)}`;
+      botao.setAttribute("aria-label", botao.title);
 
       botao.addEventListener(
         "click",
