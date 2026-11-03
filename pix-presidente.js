@@ -3082,18 +3082,22 @@ function montarTabelaResultadosPix(
                       <div class="actions">
                         <button
                           type="button"
-                          class="mini-btn"
+                          class="mini-btn pix-action-icon pix-action-edit"
+                          title="Editar lançamento"
+                          aria-label="Editar lançamento"
                           data-pix-edit="${protegerHtml(resultado.id)}"
                         >
-                          Editar
+                          ✎
                         </button>
 
                         <button
                           type="button"
-                          class="mini-btn delete"
+                          class="mini-btn delete pix-action-icon pix-action-delete"
+                          title="Excluir lançamento"
+                          aria-label="Excluir lançamento"
                           data-pix-delete="${protegerHtml(resultado.id)}"
                         >
-                          Excluir
+                          ×
                         </button>
                       </div>
                     </td>
