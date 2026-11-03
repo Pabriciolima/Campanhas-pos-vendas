@@ -1297,3 +1297,23 @@ html[data-theme="dark"] #pixTabelaLancamentos .actions button.pix-action-delete:
 #pixTabelaLancamentos .pix-status-com-motivo { min-width:0 !important; }
 #pixTabelaLancamentos .pix-motivo-nao-habilitado { max-width:145px !important; font-size:9px !important; }
 @media(max-width:1450px){#pixTabelaLancamentos > tr > td:nth-child(4){max-width:155px;overflow-wrap:anywhere;}#pixTabelaLancamentos > tr > td:nth-child(5){max-width:120px;overflow-wrap:anywhere;}}
+
+/* PIX: fundo uniforme para todas as células, incluindo status e ações. */
+html[data-theme="dark"] body #pix-lancamentos #pixTabelaLancamentos > tr > td,
+html[data-theme="dark"] body #pix-apuracao #pixTabelaApuracao > tr > td,
+html[data-theme="dark"] body #pix-lancamentos #pixTabelaLancamentos > tr:nth-child(even) > td,
+html[data-theme="dark"] body #pix-apuracao #pixTabelaApuracao > tr:nth-child(even) > td,
+body.dark-mode #pixTabelaLancamentos > tr > td,
+body.dark-mode #pixTabelaApuracao > tr > td { background:#0c1725 !important; }
+html[data-theme="dark"] body #pix-lancamentos #pixTabelaLancamentos > tr:hover > td,
+html[data-theme="dark"] body #pix-apuracao #pixTabelaApuracao > tr:hover > td { background:#14283a !important; }
+/* Evita o efeito de painel preto separado nas últimas colunas. */
+#pixTabelaLancamentos > tr > td:nth-last-child(-n+2),
+#pixTabelaApuracao > tr > td:nth-last-child(-n+2) { box-shadow:none !important; }
+/* Apuração: barra de ações com o mesmo padrão SVG dos lançamentos. */
+#pixTabelaApuracao > tr > td.pix-apuracao-acoes { width:74px !important; min-width:74px !important; max-width:74px !important; padding:8px !important; text-align:center; }
+#pixTabelaApuracao .pix-apuracao-action-bar { display:inline-flex !important; align-items:center !important; justify-content:center !important; width:46px !important; height:38px !important; padding:3px !important; border:1px solid #30465b !important; border-radius:11px !important; background:#152637 !important; box-sizing:border-box !important; }
+html[data-theme="dark"] #pixTabelaApuracao .pix-apuracao-action-bar button.pix-action-icon,
+#pixTabelaApuracao .pix-apuracao-action-bar button.pix-action-icon { display:inline-flex !important; align-items:center !important; justify-content:center !important; width:34px !important; min-width:34px !important; height:30px !important; padding:0 !important; margin:0 !important; border:0 !important; border-radius:7px !important; background:transparent !important; box-shadow:none !important; color:#c5d8e8 !important; -webkit-text-fill-color:#c5d8e8 !important; }
+#pixTabelaApuracao .pix-apuracao-action-bar button.pix-action-icon:hover { background:#28455b !important; color:white !important; }
+#pixTabelaApuracao .pix-apuracao-action-bar button.pix-action-icon:focus-visible { outline:2px solid #2dd4bf !important; outline-offset:2px !important; }
