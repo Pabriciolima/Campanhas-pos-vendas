@@ -1277,3 +1277,27 @@ html[data-theme="dark"] body #pix-apuracao .pix-table-apuracao tbody tr:hover,
 body.dark-mode #pix-apuracao .pix-table-apuracao tbody tr:hover {
   background: #14283a !important;
 }
+
+/* PIX - tabela de lançamentos compacta, ganhos sempre visíveis em telas de notebook. */
+#pixTabelaLancamentos tr > td:nth-child(7),
+#pixTabelaLancamentos tr > td:nth-child(8),
+#pixTabelaLancamentos tr > td:nth-child(9),
+#pixTabelaLancamentos tr > td:nth-child(10),
+#pixTabelaLancamentos tr > td:nth-child(11) { white-space:nowrap; font-variant-numeric:tabular-nums; }
+#pixTabelaLancamentos tr > td:nth-child(11) strong { color:#48ddb1; font-size:12px; font-weight:800; }
+#pixTabelaLancamentos tr > td:nth-child(12) { min-width:105px; max-width:175px; }
+#pixTabelaLancamentos .pix-status-com-motivo { min-width:0 !important; }
+#pixTabelaLancamentos .pix-motivo-nao-habilitado { max-width:150px !important; font-size:9px !important; }
+#pixTabelaLancamentos tr > td:last-child { width:122px; min-width:122px; padding-inline:5px !important; }
+#pixTabelaLancamentos .actions { display:flex !important; flex-wrap:nowrap !important; gap:5px !important; align-items:center; justify-content:flex-start; }
+#pixTabelaLancamentos .pix-action-icon { display:inline-flex !important; justify-content:center; align-items:center; width:34px !important; min-width:34px !important; height:34px !important; padding:0 !important; border-radius:9px !important; font-size:16px !important; line-height:1 !important; cursor:pointer; transition:background .16s ease,transform .16s ease; }
+#pixTabelaLancamentos .pix-action-icon:hover { transform:translateY(-2px); filter:brightness(1.12); }
+#pixTabelaLancamentos .pix-action-icon:focus-visible { outline:2px solid #2dd4bf; outline-offset:2px; }
+#pixTabelaLancamentos .pix-action-delete { font-size:22px !important; }
+#pixTabelaLancamentos .pix-evidence-row-button { font-size:15px !important; }
+@media(max-width:1450px){
+ #pixTabelaLancamentos tr > td:nth-child(4) { max-width:160px; overflow-wrap:anywhere; }
+ #pixTabelaLancamentos tr > td:nth-child(5) { max-width:120px; overflow-wrap:anywhere; }
+ #pixTabelaLancamentos tr > td:nth-child(6) { min-width:170px; }
+ #pixTabelaLancamentos tr > td:nth-child(12) { max-width:125px; }
+}
