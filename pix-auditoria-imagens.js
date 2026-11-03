@@ -1,5 +1,5 @@
 import {carregarBlobPix,versaoArquivoPix,cancelarSeNecessario,compactarOcrPix,aguardarCancelavelPix} from './pix-exportacao-utils.js?v=20261103-perf1';
-import {extrairImagemPix,compararImagensPix,filialOcrPix} from './pix-auditoria-imagens-core.js?v=20261103-ocrfix3';
+import {extrairImagemPix,compararImagensPix,filialOcrPix} from './pix-auditoria-imagens-core.js?v=20261103-values4';
 const VERSION='6.0.1',cache=new Map();const emAndamento=new Map();let fila=Promise.resolve(),biblioteca,execucaoAtual;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function carregarOcr(){
@@ -40,6 +40,8 @@ export function auditarImagensPix(linhas,grupos,opcoes={}){
 }
 export function mostrarResultadoPixImagens(resultado){
  const painel=document.querySelector('#pixAuditoriaComparativa');if(!painel)return;let alvo=painel.querySelector('#pixOcrResultado');if(!alvo){alvo=document.createElement('div');alvo.id='pixOcrResultado';painel.append(alvo);}painel.open=true;
- alvo.innerHTML=`<p><strong>${resultado.divergencias.length} divergência(s)</strong> · ${resultado.comparacoes} campo(s) comparado(s) nas imagens.</p>${resultado.divergencias.length?`<div style="overflow:auto;max-width:100%"><table style="min-width:580px;width:100%;font-size:12px"><thead><tr><th>Colaborador / período</th><th>Diferença</th><th>Fonte</th></tr></thead><tbody>${resultado.divergencias.map(a=>`<tr><td>${esc(a.local)}</td><td style="color:var(--paf-alert-color,#b42332);padding:10px">${esc(a.ponto)}</td><td>${esc(a.fonte)}</td></tr>`).join('')}</tbody></table></div>`:'<p>Nenhuma divergência detectada nos campos que puderam ser lidos.</p>'}${resultado.revisoes.length?`<details><summary>${resultado.revisoes.length} leitura(s) a revisar</summary><p>Falhas de leitura não significam que os valores conferem.</p><ul>${resultado.revisoes.map(a=>`<li>${esc(a.nome)} / ${esc(a.filial)}: ${esc(a.motivo)} ${esc(a.fonte)}</li>`).join('')}</ul></details>`:''}`;
+ const confirmadas=resultado.divergencias.filter(a=>['metaSemanal','realizadoSemanal','ticketMedio','percentualMeta','realizadoNps','metaNps','margem','quantidadeOs'].includes(a.campo));
+ alvo.innerHTML=`<p><strong>${confirmadas.length} divergência(s) de valores</strong> · ${resultado.comparacoes} campo(s) comparado(s). Leitura inconclusiva não é erro de lançamento.</p>${confirmadas.length?`<div style="overflow:auto;max-width:100%"><table style="min-width:580px;width:100%;font-size:12px"><thead><tr><th>Colaborador / período</th><th>Diferença</th><th>Fonte</th></tr></thead><tbody>${confirmadas.map(a=>`<tr><td>${esc(a.local)}</td><td style="color:var(--paf-alert-color,#b42332);padding:10px">${esc(a.ponto)}</td><td>${esc(a.fonte)}</td></tr>`).join('')}</tbody></table></div>`:'<p>Nenhuma diferença numérica comprovada nos campos que puderam ser comparados.</p>'}`;
+
 }
 
