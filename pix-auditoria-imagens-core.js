@@ -11,7 +11,6 @@ const campos = {
  realizadoNps: {rotulo:'NPS (%)', aliases:[/^NPS$/, /^REALIZADO NPS$/]},
  metaNps: {rotulo:'Meta NPS (%)', aliases:[/^META NPS$/]},
  margem: {rotulo:'Margem (%)', aliases:[/^MARGEM$/]},
- osAbertaPercentual: {rotulo:'O.S. em aberto (%)', aliases:[/^OS ABERTAS$/, /^OS ABERTO$/]},
  quantidadeOs: {rotulo:'Quantidade de O.S.', aliases:[/^QTD OS$/, /^QUANTIDADE OS$/]}
 };
 export function numeroOcrPix(texto) {
@@ -47,7 +46,7 @@ function cabecalhos(rows) {
    }
   }
   if(cols.length>=2){
-   const anchors=row.words.filter(w=>/^(V[IL]R[.,]?|QTD\.?|DIF\.?|OBJETIVO|META|REALIZADO|TICKET|FATURAMENTO|NPS|MARGEM|OS|ATINGIMENTO)(?:$|[.,])/i.test(w.text)||/^OBJETIVO/i.test(w.text)).map(w=>w.bbox.x0);
+   const anchors=row.words.filter(w=>/^(V[IL]R[.,]?|QTD\.?|DIF\.?|OBJETIVO|META|REALIZADO|TICKET|FATURAMENTO)(?:$|[.,])/i.test(w.text)||/^OBJETIVO/i.test(w.text)).map(w=>w.bbox.x0);
    const sorted=cols.sort((a,b)=>a.x-b.x);
    for(const c of sorted){const a=anchors.filter(x=>x<=c.x).at(-1);c.left=a??(c.x-80);c.right=anchors.find(x=>x>c.x)??(c.x+140);}
    headers.push({y:row.y,nameRight:anchors.length?Math.min(...anchors):sorted[0].x-40,cols:sorted});
@@ -86,10 +85,10 @@ export function extrairImagemPix(data,contexto) {
   const anteriores=registros.filter(r=>r.cabecalhoY===reg.cabecalhoY&&r.linha<reg.linha&&r.identidade&&!r.total&&Number.isFinite(r.valores.realizadoSemanal));
   if(anteriores.length&&Math.abs(anteriores.reduce((s,r)=>s+r.valores.realizadoSemanal,0)-reg.valores.realizadoSemanal)<.015){reg.total=true;reg.identidadeConfiavel=true;}
  }
- return {...contexto,textoIdentificacao:rows.map(r=>r.words.filter(w=>w.confidence>=75).map(w=>w.text).join(" ")).join("\n"),filiaisDeclaradas,semanas:[...new Set(semanas)],competencias:[...new Set(competencias)],registros};
+ return {...contexto,filiaisDeclaradas,semanas:[...new Set(semanas)],competencias:[...new Set(competencias)],registros};
 }
 export function compararImagensPix(linhas,imagens) {
- const divergencias=[],revisoes=[],checagens=[],pendenciasPagamento=[];let comparacoes=0;
+ const divergencias=[],revisoes=[],checagens=[];let comparacoes=0;
  const revisao=(r,motivo,fonte='')=>revisoes.push({nome:r.nome||r.colaborador,filial:r.filial,competencia:r.competencia||r.origem,semana:semana(r.semana),motivo,fonte});
  const add=(r,campo,lancado,lido,fonte,extra='')=>divergencias.push({nome:r.nome||r.colaborador,competencia:r.competencia||r.origem,semana:semana(r.semana),filial:r.filial,local:`${r.competencia||r.origem} · S${semana(r.semana)} · ${r.nome||r.colaborador} / ${r.filial}`,nivel:'DIVERGÊNCIA',campo,fonte,ponto:extra||`${campos[campo]?.rotulo||campo}: lançado ${dinheiro(lancado)}; evidência ${dinheiro(lido)}; diferença ${dinheiro(Math.abs(lancado-lido))}.`,correcao:'Conferir a linha indicada na evidência, corrigir o lançamento ou substituir a evidência e recalcular a apuração.'});
  for(const linha of linhas) {
@@ -97,11 +96,10 @@ export function compararImagensPix(linhas,imagens) {
   const gerente=/GERENTE/.test(normalizarOcrPix(r.cargo)),individual=/CONSULTOR|BALCAO|ORCAMENTISTA/.test(normalizarOcrPix(r.cargo));
   const casas=gerente ? (['URUCUI','TERESINA'].includes(filial)?['URUCUI','TERESINA']:(r.auditoriaFonte?.unidades||[]).map(u=>filialOcrPix(u.filial))) : [filial];
   if(!casas.length){revisao(r,'Informe as unidades do núcleo para comparar os totais das evidências.');continue;}
-  const porCasa=[];let identidadeVerificada=true;
+  const porCasa=[];
   for(const casa of [...new Set(casas)]) {
    const fontes=imagens.filter(i=>i.competencia===cp&&semana(i.semana)===sw&&filialOcrPix(i.filial)===casa);
    const candidatos=[];
-   if(!fontes.length)identidadeVerificada=false;
    if(!fontes.length)revisao(r,`Sem evidência disponível para ${casa} neste período.`);
    for(const img of fontes){
     const fonte=img.nomeOriginal||img.nome||img.caminho||'Imagem';
@@ -110,21 +108,17 @@ export function compararImagensPix(linhas,imagens) {
     if(img.competencias.some(c=>c!==cp)){revisao(r,'A imagem contém competência diferente da pasta selecionada.',fonte);continue;}
     if(!img.semanas.length&&!/(?:semana-[1-4]|\/S[1-4]\/|\/s[1-4]\/|\/[1-4]\/)/.test(img.caminho||'')){revisao(r,'Imagem histórica sem semana identificável no texto ou no caminho; confirme o período.',fonte);continue;}
     if(img.semanas.some(s=>s!==sw)){add(r,'semana',sw,img.semanas.find(s=>s!==sw),fonte,`A evidência indica ${img.semanas.map(s=>'S'+s).join(' / ')}, mas o lançamento é S${sw}.`);continue;}
-    const identidadeNoDocumento=(' '+normalizarOcrPix(img.textoIdentificacao||'')+' ').includes(' '+nome+' ')&&nome.split(' ').length>=2;
-    if(!identidadeNoDocumento){revisao(r,'A evidência não identifica com segurança o nome completo deste colaborador. Anexar evidência nominal; nome do arquivo e total da filial não comprovam identidade.',fonte);continue;}
-
-    const matches=img.registros.filter(x=>x.secao!=='abertas'&&x.identidadeConfiavel && (individual ? (x.identidade===nome||(x.identidade.split(" ").length>=3&&x.identidade.length>=18&&nome.endsWith(x.identidade)&&linhas.filter(l=>normalizarOcrPix((l.auditoriaDados||l).nome||l.colaborador).endsWith(x.identidade)).length===1)) : x.total));
+    const nomes=linhas.map(l=>normalizarOcrPix((l.auditoriaDados||l).nome||l.colaborador));
+    const matches=img.registros.filter(x=>x.secao!=='abertas'&&x.identidadeConfiavel && (individual ? (x.identidade===nome||(x.identidade.split(' ').length>=3&&x.identidade.length>=18&&nome.endsWith(x.identidade)&&nomes.filter(n=>n.endsWith(x.identidade)).length===1)) : x.total));
     if(matches.length!==1){revisao(r,individual?'Linha individual não identificada com segurança (nome completo e colunas).':'Total da unidade ausente ou ambíguo. Não foram somadas linhas individuais.',fonte);continue;}
-    const pessoa=img.registros.filter(x=>x.identidadeConfiavel&&x.identidade===nome&&x.secao!=='abertas');const adicionais={};if(gerente&&pessoa.length===1)for(const c of ['realizadoNps','metaNps','margem','osAbertaPercentual'])if(Number.isFinite(pessoa[0].valores[c]))adicionais[c]=pessoa[0].valores[c];
-    candidatos.push({...matches[0],valores:{...matches[0].valores,...adicionais},fonte:`${fonte} · linha ${matches[0].linha}`,casa});
+    candidatos.push({...matches[0],fonte:`${fonte} · linha ${matches[0].linha}`,casa});
    }
-   if(!candidatos.length)identidadeVerificada=false;
    porCasa.push(candidatos);
   }
   const camposComparados=new Set();
   for(const campo of Object.keys(campos)){
    // Total do núcleo exige cobertura de todas as unidades. Ticket exige total de O.S.
-   
+   if(gerente&&!['metaSemanal','realizadoSemanal','ticketMedio'].includes(campo))continue;
    const encontrados=porCasa.map(cs=>{
     const validos=cs.filter(c=>Number.isFinite(c.valores[campo]));
     const valores=[...new Set(validos.map(c=>Math.round(c.valores[campo]*100)))];
@@ -136,25 +130,23 @@ export function compararImagensPix(linhas,imagens) {
    if(gerente&&campo==='ticketMedio') {
     if(!encontrados.every(c=>Number.isFinite(c.valores.quantidadeOs)&&c.valores.quantidadeOs>0&&Number.isFinite(c.valores.realizadoSemanal)))continue;
     valor=encontrados.reduce((s,c)=>s+c.valores.realizadoSemanal,0)/encontrados.reduce((s,c)=>s+c.valores.quantidadeOs,0);
-   } else if(gerente&&!['metaSemanal','realizadoSemanal'].includes(campo)){if(new Set(encontrados.map(c=>c.valores[campo])).size!==1){revisao(r,'Indicador consolidado do núcleo não pode ser deduzido pela soma de percentuais.',campo);continue;}valor=encontrados[0].valores[campo];}else valor=encontrados.reduce((s,c)=>s+c.valores[campo],0);
+   } else valor=encontrados.reduce((s,c)=>s+c.valores[campo],0);
    const atual=r[campo];if(atual===null||atual===undefined||String(atual).trim()===''||!Number.isFinite(Number(atual)))continue;
    comparacoes++;camposComparados.add(campo);
    if(Math.round(Number(atual)*100)!==Math.round(valor*100))add(r,campo,Number(atual),valor,encontrados.map(c=>c.fonte).join('; '));
   }
-  const obrigatorios=['metaSemanal','realizadoSemanal'];if(r.politica?.metrica==='margem')obrigatorios.push('margem');if(Number(r.semana)===4&&r.usaNps)obrigatorios.push('realizadoNps','metaNps');if(Number(r.semana)===4&&r.usaOs)obrigatorios.push('osAbertaPercentual');if(/TICKET/.test(normalizarOcrPix(r.politica?.metrica))||Number(r.ticketMedio)>0)obrigatorios.push('ticketMedio');
-  checagens.push({nome:r.nome||r.colaborador,competencia:cp,semana:sw,filial:r.filial,campos:[...camposComparados],periodoValidado:camposComparados.size>0,evidenciaNominalValidada:identidadeVerificada&&obrigatorios.every(c=>camposComparados.has(c))});
-  const faltam=obrigatorios.filter(c=>!camposComparados.has(c));if(!identidadeVerificada||faltam.length)pendenciasPagamento.push({nome:r.nome||r.colaborador,competencia:cp,semana:sw,filial:r.filial,local:`${cp} · S${sw} · ${r.nome||r.colaborador} / ${r.filial}`,ponto:!identidadeVerificada?'Pendente de pagamento: falta evidência com o nome completo do colaborador e período correspondente.':'Pendente de pagamento: a evidência nominal não comprova todos os indicadores necessários.',correcao:'Anexar evidência nominal legível e conferir os indicadores antes de pagar.',fonte:''});if(faltam.length)revisao(r,`Leitura incompleta: ${faltam.map(c=>campos[c].rotulo).join(', ')}. Não significa que os valores conferem.`);
+  const obrigatorios=['metaSemanal','realizadoSemanal'];if(/TICKET/.test(normalizarOcrPix(r.politica?.metrica))||Number(r.ticketMedio)>0)obrigatorios.push('ticketMedio');
+  checagens.push({nome:r.nome||r.colaborador,competencia:cp,semana:sw,filial:r.filial,campos:[...camposComparados],periodoValidado:camposComparados.size>0});
+  const faltam=obrigatorios.filter(c=>!camposComparados.has(c));if(faltam.length)revisao(r,`Leitura incompleta: ${faltam.map(c=>campos[c].rotulo).join(', ')}. Não significa que os valores conferem.`);
  }
  const unicos=arr=>[...new Map(arr.map(a=>[JSON.stringify(a),a])).values()];
- return {divergencias:unicos(divergencias),revisoes:unicos(revisoes),comparacoes,checagens,pendenciasPagamento,imagens:imagens.length,geradoEm:new Date().toISOString()};
+ return {divergencias:unicos(divergencias),revisoes:unicos(revisoes),comparacoes,checagens,imagens:imagens.length,geradoEm:new Date().toISOString()};
 }
 export function adicionarPaginaImagensPix(doc,resultado) {
- const pendencias=resultado.pendenciasPagamento||[];const problemas=[...resultado.divergencias,...pendencias];
- doc.addPage();doc.setCharSpace?.(0);doc.setFont('helvetica','bold');doc.setFontSize(16);doc.setTextColor(20,42,58);doc.text('DIVERGÊNCIAS E PENDÊNCIAS — PIX',12,16);doc.setFont('helvetica','normal');doc.setFontSize(8);
- doc.text(`${resultado.imagens} imagem(ns) · ${resultado.comparacoes} comparação(ões) · ${resultado.divergencias.length} divergência(s) · ${pendencias.length} pendência(s) de pagamento · ${resultado.revisoes.length} leitura(s) a revisar`,12,23);
+ doc.addPage();doc.setCharSpace?.(0);doc.setFont('helvetica','bold');doc.setFontSize(16);doc.setTextColor(20,42,58);doc.text('DIVERGÊNCIAS NAS EVIDÊNCIAS — PIX',12,16);doc.setFont('helvetica','normal');doc.setFontSize(8);
+ doc.text(`${resultado.imagens} imagem(ns) · ${resultado.comparacoes} comparação(ões) · ${resultado.divergencias.length} divergência(s) · ${resultado.revisoes.length} leitura(s) a revisar`,12,23);
  if(resultado.revisoes.length)doc.text('Há campos sem leitura conclusiva. Eles não foram considerados coincidentes. Veja Leituras a revisar na tela.',12,29);
- if(problemas.length)doc.autoTable({startY:36,head:[['Colaborador / período','Divergência encontrada','Evidência / correção']],body:problemas.map(a=>[a.local,a.ponto,a.fonte+'\n'+a.correcao]),styles:{fontSize:8,cellPadding:3,overflow:'linebreak'},headStyles:{fillColor:[90,30,40]},bodyStyles:{textColor:[155,35,35]},columnStyles:{0:{cellWidth:65},1:{cellWidth:100},2:{cellWidth:105}},margin:{left:12,right:12,top:16,bottom:12}});
- else doc.text('Nenhuma divergência ou pendência de evidência nominal encontrada nesta conferência.',12,39);
+ if(resultado.divergencias.length)doc.autoTable({startY:36,head:[['Colaborador / período','Divergência encontrada','Evidência / correção']],body:resultado.divergencias.map(a=>[a.local,a.ponto,a.fonte+'\n'+a.correcao]),styles:{fontSize:8,cellPadding:3,overflow:'linebreak'},headStyles:{fillColor:[90,30,40]},bodyStyles:{textColor:[155,35,35]},columnStyles:{0:{cellWidth:65},1:{cellWidth:100},2:{cellWidth:105}},margin:{left:12,right:12,top:16,bottom:12}});
+ else doc.text('Nenhuma divergência detectada nos campos que puderam ser lidos.',12,39);
  return resultado;
 }
-

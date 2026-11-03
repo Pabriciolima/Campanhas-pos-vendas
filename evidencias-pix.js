@@ -1,6 +1,6 @@
-import {aplicarStatusAuditoriaPix} from './pix-auditoria-status.js?v=20261103-evidencia3';
-import {auditarImagensPix} from './pix-auditoria-imagens.js?v=20261103-evidencia3';
-import {adicionarPaginaImagensPix} from './pix-auditoria-imagens-core.js?v=20261103-evidencia3';
+import {aplicarStatusAuditoriaPix} from './pix-auditoria-status.js?v=20261103-status2';
+import {auditarImagensPix} from './pix-auditoria-imagens.js?v=20261103-status2';
+import {adicionarPaginaImagensPix} from './pix-auditoria-imagens-core.js?v=20261103-status2';
 import {combinarPixParaAuditoria} from "./pix-auditoria-core.js?v=20261103";
 /*
  * VERSÃO: 2026.08.26-SUPABASE-ETAPA-06
@@ -1192,7 +1192,6 @@ async function enviarPixEvidencias(
       }
     }
 
-    window.invalidarEvidenciasPagamentoPix?.(contexto);
     await carregarPixEvidencias();
 
     mensagemPixEvidencia(
@@ -1342,10 +1341,8 @@ async function excluirPixEvidencia(
       throw error;
     }
 
-    window.invalidarEvidenciasPagamentoPix?.(estadoPixEvidencias.contexto||{});
     await carregarPixEvidencias();
-    const contextoAtual=estadoPixEvidencias.contexto;
-    if(contextoAtual){const linhas=(window.obterResultadosPix?.()||[]).filter(r=>r.competencia===contextoAtual.competencia&&numeroSemanaPixEvidencia(r.semana)===numeroSemanaPixEvidencia(contextoAtual.semana));if(linhas.length)conferirImagensPixNaTela(linhas).catch(console.warn);}
+
     atualizarBotoesPixEvidencia();
   } catch (erro) {
     estadoPixEvidencias.arquivos =
@@ -2238,7 +2235,6 @@ function limparStatusPixExportacao(valor) {
    *
    * Para o relatório, mantemos somente o status real.
    */
-  if(texto.includes("PENDENTE DE PAGAMENTO"))return "PENDENTE DE PAGAMENTO";
   if(texto.includes("CORRIGIR PENDENCIA"))return "CORRIGIR PENDÊNCIA";
   if (
     texto.includes("NAO HABILITADO") ||
@@ -2340,14 +2336,6 @@ function resolverDnPixPorFilial(
 }
 
 function dadosPixParaExportar() {
- const brutos=window.obterCandidatosAuditoriaPix?.()||window.obterResultadosPix?.();
- if(Array.isArray(brutos)){
-  const competencia=normalizarCompetenciaPixExportacao(competenciaPixAtiva()),filtro=tipoExportacaoPixAtual(),filial=filialExportacaoPixNormalizada();
-  let candidatos=brutos.filter(r=>(!competencia||r.competencia===competencia)&&(!filial||normalizarPixEv(r.filial)===filial)&&(!filtro.semana||normalizarSemanaPixExportacao(r.semana)===filtro.semana)&&(!filtro.somenteHabilitados||(r.statusAntesAuditoria||r.status)==='HABILITADO')&&(filtro.chave!=='nao-habilitados'||r.status!=='HABILITADO')).map(r=>({competencia:r.competencia,semana:normalizarSemanaPixExportacao(r.semana),filial:r.filial,colaborador:r.nome,cargo:r.cargo,indicadores:window.indicadoresTextoAuditoriaPix?.(r)||'',bonusFaturamento:r.bonusBase||0,bonusTicket:r.bonusFaixa||0,nps:r.bonusNps||0,penalidade:r.penalidade||0,total:r.bonusFinal||0,status:r.status,auditoriaDados:r}));
-  candidatos=window.CampanhasSelecaoExportacao?.filtrar(candidatos,'pix')||candidatos;
-  return candidatos.sort((a,b)=>String(a.filial||'').localeCompare(String(b.filial||''),'pt-BR')||String(a.cargo||'').localeCompare(String(b.cargo||''),'pt-BR')||String(a.colaborador||'').localeCompare(String(b.colaborador||''),'pt-BR'));
- }
-
   const tabela =
     tabelaPixComResultados();
 
@@ -2952,7 +2940,7 @@ async function exportarPdfPixIndependente() {
     tipoExportacaoPixAtual();
   const gruposAuditoria = await buscarGruposAuditoriaImagensPix(resultados);
   const auditoriaAtual = await auditarImagensPix(resultados, gruposAuditoria);
-  resultados = resultados.map(item=>{const bruto=aplicarStatusAuditoriaPix(item.auditoriaDados||item);return {...item,status:bruto.status,total:bruto.bonusFinal??item.total,indicadores:(window.indicadoresTextoAuditoriaPix?.(bruto)||item.indicadores)+(bruto.auditoriaPendente?' | '+bruto.observacao:''),auditoriaDados:bruto};});
+  resultados = resultados.map(item=>{const bruto=aplicarStatusAuditoriaPix(item.auditoriaDados||item);return bruto.auditoriaPendente?{...item,status:bruto.status,total:0,auditoriaDados:bruto}:item;});
   if(filtroExportacao.somenteHabilitados)resultados=resultados.filter(item=>item.status==='HABILITADO');
 
 
@@ -3160,7 +3148,7 @@ async function exportarPdfPixIndependente() {
   adicionarPaginaImagensPix(documento, auditoriaAtual);
 
   // Anexa exatamente as fontes lidas, inclusive unidades do núcleo e pastas históricas.
-  const evidencias = gruposAuditoria.map(g=>({...g,numeroSemana:numeroSemanaPixEvidencia(g.semana),dn:resolverDnPixPorFilial(g.filial),imagens:g.imagens.filter(i=>i.url)})).filter(g=>g.imagens.length);
+  const evidencias = gruposAuditoria.map(g=>({...g,numeroSemana:numeroSemanaPixEvidencia(g.semana),dn:resolverDnPixPorFilial(g.filial),imagens:g.imagens.filter(i=>i.url)}));
 
   for (const grupo of evidencias) {
     documento.addPage();
@@ -3305,7 +3293,7 @@ async function exportarExcelPixIndependente() {
     tipoExportacaoPixAtual();
   const gruposAuditoria = await buscarGruposAuditoriaImagensPix(resultados);
   const auditoriaAtual = await auditarImagensPix(resultados, gruposAuditoria);
-  resultados = resultados.map(item=>{const bruto=aplicarStatusAuditoriaPix(item.auditoriaDados||item);return {...item,status:bruto.status,total:bruto.bonusFinal??item.total,indicadores:(window.indicadoresTextoAuditoriaPix?.(bruto)||item.indicadores)+(bruto.auditoriaPendente?' | '+bruto.observacao:''),auditoriaDados:bruto};});
+  resultados = resultados.map(item=>{const bruto=aplicarStatusAuditoriaPix(item.auditoriaDados||item);return bruto.auditoriaPendente?{...item,status:bruto.status,total:0,auditoriaDados:bruto}:item;});
   if(filtroExportacao.somenteHabilitados)resultados=resultados.filter(item=>item.status==='HABILITADO');
 
 
@@ -4455,4 +4443,3 @@ if (
 } else {
   iniciarBarraHorizontalSuperiorPix();
 }
-

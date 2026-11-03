@@ -23,7 +23,7 @@ function motor() {
   const estados=new Map();
   const doc={querySelector:()=>null,addEventListener(){}};
   const window={addEventListener(){},setTimeout,clearTimeout};
-  const ctx={aplicarStatusAuditoriaPix:r=>r,registrarAuditoriaStatusPix,document:doc,window,console:{info(){},warn(){},error(){}},firestore:{},supabase:{},collection:()=>({}),localStorage:{getItem:()=>null,setItem(){}},setTimeout,clearTimeout,mensagemNpsUnidade,
+  const ctx={aplicarStatusAuditoriaPix,registrarAuditoriaStatusPix,document:doc,window,console:{info(){},warn(){},error(){}},firestore:{},supabase:{},collection:()=>({}),localStorage:{getItem:()=>null,setItem(){}},setTimeout,clearTimeout,mensagemNpsUnidade,
     criarNpsUnidadePix:()=>({avaliar:(f,c)=>avaliarNpsUnidade(estados.get(chaveNpsUnidade(f,c))),atualizarResumo(){},carregar:async()=>{},iniciar:async()=>{}})};
   vm.createContext(ctx);
   const source=fs.readFileSync(new URL('../pix-presidente.js',import.meta.url),'utf8').replace(/^import\s[\s\S]*?;\n/gm,'');
@@ -73,4 +73,3 @@ test('relatório histórico usa as quatro semanas fornecidas e restaura o estado
  assert.equal(avaliarNpsUnidade({realizado:95}).status,'PENDENTE');
  assert.equal(m.calcularPix(lancamento('A',4,'BELEM',{metaNps:85,realizadoNps:84})).bonusNps,0);
  });
-
