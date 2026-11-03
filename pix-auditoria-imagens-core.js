@@ -101,7 +101,7 @@ export function compararImagensPix(linhas,imagens) {
   for(const casa of [...new Set(casas)]) {
    const fontes=imagens.filter(i=>i.competencia===cp&&semana(i.semana)===sw&&filialOcrPix(i.filial)===casa);
    const candidatos=[];
-   if(!fontes.length){revisao(r,`Sem evidência disponível para ${casa} neste período.`);add(r,'evidencia',0,0,'Sem arquivo anexado',`CORRIGIR PENDÊNCIA: a filial ${casa} não anexou evidência para ${cp}, semana S${sw}. Pagamento bloqueado até anexar e validar a evidência.`);}
+   if(!fontes.length)revisao(r,`Sem evidência disponível para ${casa} neste período.`);
    for(const img of fontes){
     const fonte=img.nomeOriginal||img.nome||img.caminho||'Imagem';
     if(img.erro){revisao(r,img.erro,fonte);continue;}
@@ -149,15 +149,11 @@ export function adicionarPaginaImagensPix(doc,resultado) {
  const revisoes=Array.isArray(resultado?.revisoes)?resultado.revisoes:[];
  const local=a=>[a.competencia||'',a.semana?'S'+a.semana:'',a.nome||'Colaborador',a.filial||''].filter(Boolean).join(' · ');
  const chave=a=>[a.competencia||'',a.semana||'',normalizarOcrPix(a.nome),filialOcrPix(a.filial)].join('|');
- const pendentes=new Set(divergencias.map(chave));
- const linhas=[
-  ...divergencias.map(a=>[a.local||local(a),a.campo==='evidencia'?'SEM EVIDÊNCIA':a.campo==='cobertura'||a.campo==='identidade'?'CORRIGIR PENDÊNCIA':'DIVERGÊNCIA',a.ponto||'Divergência identificada',[(a.fonte||''),a.correcao||'Corrigir o lançamento ou a evidência e repetir a conferência.'].filter(Boolean).join('\n')]),
-  ...revisoes.filter(a=>!pendentes.has(chave(a))).map(a=>[local(a),'REVISÃO PENDENTE',a.motivo||'Evidência não validada',[(a.fonte||''),'Anexar ou corrigir a evidência da filial, semana e colaborador; repetir a conferência antes de liberar o pagamento.'].filter(Boolean).join('\n')])
- ];
- doc.addPage();doc.setCharSpace?.(0);doc.setFont('helvetica','bold');doc.setFontSize(15);doc.setTextColor(20,42,58);doc.text('PENDÊNCIAS E DIVERGÊNCIAS — EVIDÊNCIAS PIX',12,16);
+ const linhas=divergencias.filter(a=>Object.hasOwn(campos,a.campo)).map(a=>[a.local||local(a),'DIVERGÊNCIA',a.ponto||'Valores diferentes',[(a.fonte||''),a.correcao||'Conferir e corrigir o lançamento.'].filter(Boolean).join('\\n')]);
+ doc.addPage();doc.setCharSpace?.(0);doc.setFont('helvetica','bold');doc.setFontSize(15);doc.setTextColor(20,42,58);doc.text('DIVERGÊNCIAS CONFIRMADAS — EVIDÊNCIAS PIX',12,16);
  doc.setFont('helvetica','normal');doc.setFontSize(8);
  doc.text(`${resultado.imagens||0} imagem(ns) · ${resultado.comparacoes||0} comparação(ões) · ${divergencias.length} divergência(s) · ${revisoes.length} leitura(s) a revisar`,12,23);
- doc.text('Situações pendentes exigem correção e nova conferência; ausência de divergência não comprova validação.',12,29);
+ doc.text('Somente diferenças numéricas comparáveis; leitura inconclusiva não é divergência.',12,29);
  if(linhas.length){
   const largura=doc.internal.pageSize.getWidth()-24;
   const pesos=[.24,.15,.30,.31];
@@ -167,6 +163,6 @@ export function adicionarPaginaImagensPix(doc,resultado) {
    margin:{left:12,right:12,top:16,bottom:14},
    didParseCell(data){if(data.section==='body'){data.cell.styles.textColor=[155,35,35];if(data.column.index===1)data.cell.styles.fontStyle='bold';}}
   });
- }else doc.text('Nenhuma pendência ou divergência identificada nos dados efetivamente conferidos.',12,39);
+ }else doc.text('Nenhuma divergência numérica identificada nos campos efetivamente comparados.',12,39);
  return resultado;
 }
