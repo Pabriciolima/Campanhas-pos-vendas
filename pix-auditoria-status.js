@@ -8,8 +8,9 @@ export function registrarAuditoriaStatusPix(linhas,resultado,atuais=linhas){let 
  for(const r of linhas){const key=chaveAuditoriaStatusPix(r),atual=atuais.find(a=>chaveAuditoriaStatusPix(a)===key);if(!atual||assinatura(r)!==assinatura(atual))continue;
   const achados=resultado.divergencias.filter(a=>chaveAuditoriaStatusPix(a)===key),anterior=pendencias.get(key)||[];
   const check=resultado.checagens?.find(c=>chaveAuditoriaStatusPix(c)===key);
-  const restantes=anterior.filter(a=>!check||!(check.campos.includes(a.campo)||(['semana','filial'].includes(a.campo)&&check.periodoValidado)));
-  const porCampo=new Map(restantes.map(a=>[a.campo,a]));for(const a of achados)porCampo.set(a.campo,a);
+  // Auditoria consultiva: somente diferenças numéricas confirmadas geram alerta.
+  // A nova conferência substitui os alertas anteriores e limpa pendências antigas do OCR.
+  const porCampo=new Map();for(const achado of achados){if(['metaSemanal','realizadoSemanal','ticketMedio','percentualMeta','realizadoNps','metaNps','margem','quantidadeOs'].includes(achado.campo)&&/lançado|lançado|sistema/i.test(achado.ponto||''))porCampo.set(achado.campo,achado);}
   const proximas=[...porCampo.values()];
   if(JSON.stringify(anterior)!==JSON.stringify(proximas)){if(proximas.length)pendencias.set(key,proximas);else pendencias.delete(key);mudou=true;}
 
