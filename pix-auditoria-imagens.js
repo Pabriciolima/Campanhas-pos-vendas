@@ -1,4 +1,4 @@
-import {extrairImagemPix,compararImagensPix,filialOcrPix} from './pix-auditoria-imagens-core.js?v=20261103-ocr1';
+import {extrairImagemPix,compararImagensPix,filialOcrPix} from './pix-auditoria-imagens-core.js?v=20261103-status2';
 const VERSION='6.0.1',cache=new Map();let fila=Promise.resolve(),biblioteca;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function carregarOcr(){
@@ -26,7 +26,7 @@ async function executar(linhas,grupos,geracao){
    }catch{if(worker){await worker.terminate().catch(()=>{});worker=null;}imagens.push({...contexto,erro:'Não foi possível ler esta imagem com segurança. Reenvie uma imagem nítida e confira a conexão.',registros:[],semanas:[],competencias:[]});}
   }
  }finally{if(worker)await worker.terminate();}
- const resultado=compararImagensPix(linhas,imagens);if(document.querySelector('#pixAuditoriaComparativa')?.dataset.ocrGeracao===geracao)mostrarResultadoPixImagens(resultado);progresso('Leitura concluída. Somente diferenças identificadas aparecem na comparação.');return resultado;
+ const resultado=compararImagensPix(linhas,imagens);const mesmaTela=document.querySelector('#pixAuditoriaComparativa')?.dataset.ocrGeracao===geracao;const atualizou=window.aplicarResultadoAuditoriaPix?.(linhas,resultado);if(atualizou&&mesmaTela)geracao=document.querySelector('#pixAuditoriaComparativa')?.dataset.ocrGeracao;if(document.querySelector('#pixAuditoriaComparativa')?.dataset.ocrGeracao===geracao)mostrarResultadoPixImagens(resultado);progresso('Leitura concluída. Somente diferenças identificadas aparecem na comparação.');return resultado;
 }
 export function auditarImagensPix(linhas,grupos){const geracao=document.querySelector('#pixAuditoriaComparativa')?.dataset.ocrGeracao;const tarefa=fila.then(()=>executar(linhas,grupos,geracao));fila=tarefa.catch(()=>{});return tarefa;}
 export function mostrarResultadoPixImagens(resultado){

@@ -1,5 +1,6 @@
+import {aplicarStatusAuditoriaPix,registrarAuditoriaStatusPix} from './pix-auditoria-status.js?v=20261103-status2';
 import {auditarPix} from "./pix-auditoria-core.js?v=20261103";
-import {instalarConferenciaPixFonte,coletarConferenciaPixFonte,preencherConferenciaPixFonte,renderizarPainelAuditoriaPix} from "./pix-auditoria-fonte.js?v=20261103-ocr1";
+import {instalarConferenciaPixFonte,coletarConferenciaPixFonte,preencherConferenciaPixFonte,renderizarPainelAuditoriaPix} from "./pix-auditoria-fonte.js?v=20261103-status2";
 import { escaparHtml as protegerHtml } from "./security/seguranca.js";
 /*
  * AUDITORIA ESTRUTURAL — 2026.08.26 — ETAPA 04 SUPABASE
@@ -1879,7 +1880,7 @@ function calcularPix(lancamento) {
       ` Penalidade de 50% por O.S. em aberto acima de ${LIMITE_OS_ABERTA}%.`;
   }
 
-  return {
+  return aplicarStatusAuditoriaPix({
     ...lancamento,
     nome:
       funcionario?.nome ||
@@ -1927,7 +1928,7 @@ function calcularPix(lancamento) {
         ? "HABILITADO"
         : "NÃO HABILITADO",
     observacao
-  };
+  });
 }
 
 window.calcularPagamentoPixHistorico = function(lancamento, todosLancamentos = []) {
@@ -2376,8 +2377,7 @@ function resultadosPixFiltrados(tipo) {
             ) &&
             (
               !status ||
-              statusResultado ===
-                status
+              (status === "NAO HABILITADO" ? statusResultado !== "HABILITADO" : statusResultado === status)
             )
           );
         }
@@ -3015,7 +3015,7 @@ function montarTabelaResultadosPix(
     resultados.length
       ? resultados.map(
           resultado => `
-            <tr>
+            <tr class="${resultado.auditoriaPendente ? 'pix-divergencia-evidencia' : ''}">
               <td>${resultado.competencia}</td>
               <td>S${resultado.semana}</td>
               <td>${protegerHtml(resultado.filial)}</td>
@@ -5294,3 +5294,10 @@ window.obterContextoAssistentePix = (incluirResultados = true) => ({
 });
 
 window.auditarRascunhoPix=()=>auditarPix([calcularPix(coletarLancamentoPix())]);
+
+window.aplicarResultadoAuditoriaPix = (linhas, auditoria) => {
+ const atuais=estadoPix.lancamentos.map(calcularPix);
+ const mudou=registrarAuditoriaStatusPix(linhas,auditoria,atuais);
+ if(mudou){renderDashboardPix();renderLancamentosPix();renderApuracaoPix();}
+ return mudou;
+};

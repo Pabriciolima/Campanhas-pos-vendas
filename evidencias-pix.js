@@ -1,5 +1,6 @@
-import {auditarImagensPix} from './pix-auditoria-imagens.js?v=20261103-ocr1';
-import {adicionarPaginaImagensPix} from './pix-auditoria-imagens-core.js?v=20261103-ocr1';
+import {aplicarStatusAuditoriaPix} from './pix-auditoria-status.js?v=20261103-status2';
+import {auditarImagensPix} from './pix-auditoria-imagens.js?v=20261103-status2';
+import {adicionarPaginaImagensPix} from './pix-auditoria-imagens-core.js?v=20261103-status2';
 import {combinarPixParaAuditoria} from "./pix-auditoria-core.js?v=20261103";
 /*
  * VERSÃO: 2026.08.26-SUPABASE-ETAPA-06
@@ -2234,6 +2235,7 @@ function limparStatusPixExportacao(valor) {
    *
    * Para o relatório, mantemos somente o status real.
    */
+  if(texto.includes("CORRIGIR PENDENCIA"))return "CORRIGIR PENDÊNCIA";
   if (
     texto.includes("NAO HABILITADO") ||
     texto.includes("NÃO HABILITADO")
@@ -2488,7 +2490,7 @@ function dadosPixParaExportar() {
         item.semana =
           semanaNormalizada;
 
-        if (filtro.chave === "nao-habilitados" && normalizarPixEv(item.status) !== "NAO HABILITADO") return null;
+        if (filtro.chave === "nao-habilitados" && normalizarPixEv(item.status) === "HABILITADO") return null;
 
         if (
           filtro.somenteHabilitados &&
@@ -2912,7 +2914,7 @@ async function conferirImagensPixNaTela(resultados=dadosPixParaExportar()) {
 
 async function exportarPdfPixIndependente() {
   if (window.recarregarNpsFilialPix) await window.recarregarNpsFilialPix();
-  const resultados =
+  let resultados =
     dadosPixParaExportar();
 
   if (!resultados.length) {
@@ -2936,6 +2938,11 @@ async function exportarPdfPixIndependente() {
 
   const filtroExportacao =
     tipoExportacaoPixAtual();
+  const gruposAuditoria = await buscarGruposAuditoriaImagensPix(resultados);
+  const auditoriaAtual = await auditarImagensPix(resultados, gruposAuditoria);
+  resultados = resultados.map(item=>{const bruto=aplicarStatusAuditoriaPix(item.auditoriaDados||item);return bruto.auditoriaPendente?{...item,status:bruto.status,total:0,auditoriaDados:bruto}:item;});
+  if(filtroExportacao.somenteHabilitados)resultados=resultados.filter(item=>item.status==='HABILITADO');
+
 
   const tipo =
     rotuloTipoExportacaoPix(
@@ -3138,9 +3145,7 @@ async function exportarPdfPixIndependente() {
       }
   });
 
-  const gruposAuditoria = await buscarGruposAuditoriaImagensPix(resultados);
-  const auditoriaImagens = await auditarImagensPix(resultados, gruposAuditoria);
-  adicionarPaginaImagensPix(documento, auditoriaImagens);
+  adicionarPaginaImagensPix(documento, auditoriaAtual);
 
   // Anexa exatamente as fontes lidas, inclusive unidades do núcleo e pastas históricas.
   const evidencias = gruposAuditoria.map(g=>({...g,numeroSemana:numeroSemanaPixEvidencia(g.semana),dn:resolverDnPixPorFilial(g.filial),imagens:g.imagens.filter(i=>i.url)}));
@@ -3264,7 +3269,7 @@ async function exportarPdfPixIndependente() {
 
 async function exportarExcelPixIndependente() {
   if (window.recarregarNpsFilialPix) await window.recarregarNpsFilialPix();
-  const resultados =
+  let resultados =
     dadosPixParaExportar();
 
   if (!resultados.length) {
@@ -3286,6 +3291,11 @@ async function exportarExcelPixIndependente() {
 
   const filtroExportacao =
     tipoExportacaoPixAtual();
+  const gruposAuditoria = await buscarGruposAuditoriaImagensPix(resultados);
+  const auditoriaAtual = await auditarImagensPix(resultados, gruposAuditoria);
+  resultados = resultados.map(item=>{const bruto=aplicarStatusAuditoriaPix(item.auditoriaDados||item);return bruto.auditoriaPendente?{...item,status:bruto.status,total:0,auditoriaDados:bruto}:item;});
+  if(filtroExportacao.somenteHabilitados)resultados=resultados.filter(item=>item.status==='HABILITADO');
+
 
   const workbook =
     new ExcelJS.Workbook();
@@ -3561,7 +3571,7 @@ async function exportarExcelPixIndependente() {
 
   const abaAuditoria=workbook.addWorksheet("Conferência da fonte");
   abaAuditoria.addRow(["Local","Situação","Ponto identificado","Correção necessária","Fonte"]);
-  const auditoriaExcel = await auditarImagensPix(resultados, await buscarGruposAuditoriaImagensPix(resultados));
+  const auditoriaExcel = auditoriaAtual;
   for(const a of auditoriaExcel.divergencias)abaAuditoria.addRow([a.local,a.nivel,a.ponto,a.correcao,a.fonte]);
   const leiturasExcel=workbook.addWorksheet("Leituras a revisar");
   leiturasExcel.addRow(["Colaborador","Filial","Motivo","Evidência"]);

@@ -27,3 +27,9 @@ A impressão legada com atrasados mantém seu fluxo anterior de fonte estruturad
 Testes de identidade, colunas, centavos, confiança, conflitos entre imagens, isolamento de mês/semana/filial, núcleo e relatório somente de divergências, além das regressões históricas de outubro, novembro e NPS.
 
 OCR real no navegador com uma imagem já anexada de outubro/S3/Uruçuí: extraiu realizado individual 58.146,36 e ticket 4.845,53, separadamente do total 66.150,46 e ticket 4.725,03 da unidade. A meta não presente nessa imagem foi sinalizada como leitura incompleta. Nenhuma gravação em dados reais foi feita para testar.
+
+## Pendências na apuração
+
+Divergências confirmadas pela leitura passam a bloquear a habilitação do colaborador naquele mês, semana e filial. A linha, o nome e o status ficam vermelhos, com a mensagem **CORRIGIR PENDÊNCIA** e o motivo. O total disponível é retido (zero) enquanto a divergência persistir; o valor calculado pela política é preservado em `bonusFinalAntesAuditoria`, sem mudar os dados gravados. Cartões e filtros usam o mesmo status: não entra nos habilitados; entra nos não habilitados.
+
+A comparação é agendada ao renderizar a apuração ativa. A impressão também confere as fontes antes de montar totais e linhas; divergentes não entram na lista financeira de “Somente habilitados”. A página comparativa ainda mostra as diferenças encontradas na conferência dessa exportação. Campos bloqueados só são liberados quando uma nova leitura conclusiva os compara sem diferença. Falha de rede, imagem ilegível ou correção apenas parcial não apaga as outras pendências. Leituras iniciadas antes de uma edição não sobrescrevem o resultado atual. O estado é derivado no navegador e recalculado pelas evidências ao abrir a apuração; não cria nova tabela nem grava sobre os lançamentos.

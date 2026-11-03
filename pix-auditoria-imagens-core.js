@@ -88,9 +88,9 @@ export function extrairImagemPix(data,contexto) {
  return {...contexto,filiaisDeclaradas,semanas:[...new Set(semanas)],competencias:[...new Set(competencias)],registros};
 }
 export function compararImagensPix(linhas,imagens) {
- const divergencias=[],revisoes=[];let comparacoes=0;
+ const divergencias=[],revisoes=[],checagens=[];let comparacoes=0;
  const revisao=(r,motivo,fonte='')=>revisoes.push({nome:r.nome||r.colaborador,filial:r.filial,competencia:r.competencia||r.origem,semana:semana(r.semana),motivo,fonte});
- const add=(r,campo,lancado,lido,fonte,extra='')=>divergencias.push({local:`${r.competencia||r.origem} · S${semana(r.semana)} · ${r.nome||r.colaborador} / ${r.filial}`,nivel:'DIVERGÊNCIA',campo,fonte,ponto:extra||`${campos[campo]?.rotulo||campo}: lançado ${dinheiro(lancado)}; evidência ${dinheiro(lido)}; diferença ${dinheiro(Math.abs(lancado-lido))}.`,correcao:'Conferir a linha indicada na evidência, corrigir o lançamento ou substituir a evidência e recalcular a apuração.'});
+ const add=(r,campo,lancado,lido,fonte,extra='')=>divergencias.push({nome:r.nome||r.colaborador,competencia:r.competencia||r.origem,semana:semana(r.semana),filial:r.filial,local:`${r.competencia||r.origem} · S${semana(r.semana)} · ${r.nome||r.colaborador} / ${r.filial}`,nivel:'DIVERGÊNCIA',campo,fonte,ponto:extra||`${campos[campo]?.rotulo||campo}: lançado ${dinheiro(lancado)}; evidência ${dinheiro(lido)}; diferença ${dinheiro(Math.abs(lancado-lido))}.`,correcao:'Conferir a linha indicada na evidência, corrigir o lançamento ou substituir a evidência e recalcular a apuração.'});
  for(const linha of linhas) {
   const r={...linha,...(linha.auditoriaDados||{})},cp=r.competencia||r.origem,sw=semana(r.semana),nome=normalizarOcrPix(r.nome||r.colaborador),filial=filialOcrPix(r.filial);
   const gerente=/GERENTE/.test(normalizarOcrPix(r.cargo)),individual=/CONSULTOR|BALCAO|ORCAMENTISTA/.test(normalizarOcrPix(r.cargo));
@@ -136,10 +136,11 @@ export function compararImagensPix(linhas,imagens) {
    if(Math.round(Number(atual)*100)!==Math.round(valor*100))add(r,campo,Number(atual),valor,encontrados.map(c=>c.fonte).join('; '));
   }
   const obrigatorios=['metaSemanal','realizadoSemanal'];if(/TICKET/.test(normalizarOcrPix(r.politica?.metrica))||Number(r.ticketMedio)>0)obrigatorios.push('ticketMedio');
+  checagens.push({nome:r.nome||r.colaborador,competencia:cp,semana:sw,filial:r.filial,campos:[...camposComparados],periodoValidado:camposComparados.size>0});
   const faltam=obrigatorios.filter(c=>!camposComparados.has(c));if(faltam.length)revisao(r,`Leitura incompleta: ${faltam.map(c=>campos[c].rotulo).join(', ')}. Não significa que os valores conferem.`);
  }
  const unicos=arr=>[...new Map(arr.map(a=>[JSON.stringify(a),a])).values()];
- return {divergencias:unicos(divergencias),revisoes:unicos(revisoes),comparacoes,imagens:imagens.length,geradoEm:new Date().toISOString()};
+ return {divergencias:unicos(divergencias),revisoes:unicos(revisoes),comparacoes,checagens,imagens:imagens.length,geradoEm:new Date().toISOString()};
 }
 export function adicionarPaginaImagensPix(doc,resultado) {
  doc.addPage();doc.setCharSpace?.(0);doc.setFont('helvetica','bold');doc.setFontSize(16);doc.setTextColor(20,42,58);doc.text('DIVERGÊNCIAS NAS EVIDÊNCIAS — PIX',12,16);doc.setFont('helvetica','normal');doc.setFontSize(8);
