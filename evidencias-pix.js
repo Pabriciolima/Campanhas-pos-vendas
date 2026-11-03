@@ -1,7 +1,7 @@
 import {mapearLimitadoPix,criarExecucaoUnicaPix,carregarBlobPix,cancelarSeNecessario,cederTelaPix,limparCacheImagensPix} from './pix-exportacao-utils.js?v=20261103-perf1';
 import {aplicarStatusAuditoriaPix} from './pix-auditoria-status.js?v=20261103-perf1';
-import {auditarImagensPix} from './pix-auditoria-imagens.js?v=20261103-pdf2';
-import {adicionarPaginaImagensPix} from './pix-auditoria-imagens-core.js?v=20261103-pdf2';
+import {auditarImagensPix} from './pix-auditoria-imagens.js?v=20261103-ocrfix3';
+import {adicionarPaginaImagensPix} from './pix-auditoria-imagens-core.js?v=20261103-ocrfix3';
 import {combinarPixParaAuditoria} from "./pix-auditoria-core.js?v=20261103";
 /*
  * VERSÃO: 2026.08.26-SUPABASE-ETAPA-06
