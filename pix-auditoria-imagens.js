@@ -1,5 +1,5 @@
 import {carregarBlobPix,versaoArquivoPix,cancelarSeNecessario,compactarOcrPix,aguardarCancelavelPix} from './pix-exportacao-utils.js?v=20261103-perf1';
-import {extrairImagemPix,compararImagensPix,filialOcrPix} from './pix-auditoria-imagens-core.js?v=20261103-missing1';
+import {extrairImagemPix,compararImagensPix,filialOcrPix} from './pix-auditoria-imagens-core.js?v=20261103-pdf2';
 const VERSION='6.0.1',cache=new Map();const emAndamento=new Map();let fila=Promise.resolve(),biblioteca,execucaoAtual;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function carregarOcr(){
