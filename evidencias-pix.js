@@ -1719,7 +1719,7 @@ function adicionarBotaoPixNaLinha(linha) {
     "mini-btn pix-evidence-row-button pix-action-icon";
 
   botao.innerHTML =
-    `📷`;
+    `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h-4l-2 3H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-4Z"/><circle cx="12" cy="13" r="3.5"/></svg>`;
 
   botao.title = `Ver evidências da ${normalizarSemanaPixEvidencia(dados.semana)}`;
   botao.setAttribute("aria-label", botao.title);
@@ -1812,7 +1812,7 @@ function atualizarBotoesPixEvidencia() {
         "mini-btn pix-evidence-row-button pix-action-icon";
 
       botao.innerHTML =
-        "📷";
+        `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h-4l-2 3H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-4Z"/><circle cx="12" cy="13" r="3.5"/></svg>`;
 
       botao.title = `Ver evidências da ${normalizarSemanaPixEvidencia(dados.semana)}`;
       botao.setAttribute("aria-label", botao.title);
