@@ -1353,3 +1353,30 @@ html[data-theme="dark"] #pixTabelaApuracao .pix-apuracao-action-bar button.pix-a
   #pix-lancamentos .pix-table tbody tr > td:nth-child(12),
   #pix-lancamentos .pix-table tbody tr > td:nth-child(13) { grid-column:span 1; }
 }
+
+/* PIX animated Lucide-style SVG interactions (vanilla JS-compatible adaptation).
+   No extra icons, no React/Motion runtime and no continuous animation. */
+@media (prefers-reduced-motion: no-preference) {
+ #pix-lancamentos .pix-action-icon svg,
+ #pix-apuracao .pix-action-icon svg {
+   display:block; transform-origin:center; transition:transform .26s cubic-bezier(.2,.8,.2,1),stroke .2s ease;
+ }
+ #pix-lancamentos .pix-action-icon:hover svg,
+ #pix-apuracao .pix-action-icon:hover svg { transform:translateY(-2px) scale(1.08); }
+ #pix-lancamentos .pix-action-edit:hover svg,
+ #pix-apuracao .pix-action-edit:hover svg { transform:rotate(-12deg) translate(1px,-1px); }
+ #pix-lancamentos .pix-action-delete:hover svg,
+ #pix-apuracao .pix-action-delete:hover svg { animation:pix-lucide-delete .38s ease-in-out; }
+ #pix-lancamentos .pix-evidence-row-button:hover svg,
+ #pix-apuracao .pix-evidence-row-button:hover svg { animation:pix-lucide-camera .46s ease-in-out; }
+ @keyframes pix-lucide-camera {0%,100%{transform:scale(1)}40%{transform:scale(.87)}70%{transform:scale(1.13)}}
+ @keyframes pix-lucide-delete {0%,100%{transform:rotate(0)}30%{transform:rotate(-11deg)}65%{transform:rotate(8deg)}}
+ #pix-lancamentos button svg:not(.pix-no-motion),
+ #pix-apuracao button svg:not(.pix-no-motion) {transition:transform .22s ease;transform-origin:center;}
+ #pix-lancamentos button:hover svg:not(.pix-no-motion),
+ #pix-apuracao button:hover svg:not(.pix-no-motion) {transform:translateY(-2px);}
+}
+@media (prefers-reduced-motion: reduce) {
+ #pix-lancamentos .pix-action-icon svg,
+ #pix-apuracao .pix-action-icon svg {animation:none !important;transition:none !important;transform:none !important;}
+}
