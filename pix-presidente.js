@@ -1,6 +1,6 @@
-import {aplicarStatusAuditoriaPix,registrarAuditoriaStatusPix} from './pix-auditoria-status.js?v=20261103-status2';
+import {aplicarStatusAuditoriaPix,registrarAuditoriaStatusPix,invalidarEvidenciasStatusPix} from './pix-auditoria-status.js?v=20261103-evidencia3';
 import {auditarPix} from "./pix-auditoria-core.js?v=20261103";
-import {instalarConferenciaPixFonte,coletarConferenciaPixFonte,preencherConferenciaPixFonte,renderizarPainelAuditoriaPix} from "./pix-auditoria-fonte.js?v=20261103-status2";
+import {instalarConferenciaPixFonte,coletarConferenciaPixFonte,preencherConferenciaPixFonte,renderizarPainelAuditoriaPix} from "./pix-auditoria-fonte.js?v=20261103-evidencia3";
 import { escaparHtml as protegerHtml } from "./security/seguranca.js";
 /*
  * AUDITORIA ESTRUTURAL — 2026.08.26 — ETAPA 04 SUPABASE
@@ -2271,7 +2271,7 @@ function normalizarSemanaPix(
   return numeroSemana || "";
 }
 
-function resultadosPixFiltrados(tipo) {
+function resultadosPixFiltrados(tipo, ignorarStatus=false) {
   const prefixo =
     tipo === "apuracao"
       ? "Apuracao"
@@ -2376,7 +2376,7 @@ function resultadosPixFiltrados(tipo) {
                 semana
             ) &&
             (
-              !status ||
+              ignorarStatus || !status ||
               (status === "NAO HABILITADO" ? statusResultado !== "HABILITADO" : statusResultado === status)
             )
           );
@@ -3208,7 +3208,7 @@ function renderCofrinhoNpsPix() {
 function renderApuracaoPix() {
   const resultados =
     resultadosPixFiltrados("apuracao");
-  renderizarPainelAuditoriaPix(resultados);
+  renderizarPainelAuditoriaPix(resultadosPixFiltrados("apuracao",true));
 
   const total =
     resultados.reduce(
@@ -5301,3 +5301,8 @@ window.aplicarResultadoAuditoriaPix = (linhas, auditoria) => {
  if(mudou){renderDashboardPix();renderLancamentosPix();renderApuracaoPix();}
  return mudou;
 };
+
+
+window.obterCandidatosAuditoriaPix=()=>resultadosPixFiltrados("apuracao",true);
+window.indicadoresTextoAuditoriaPix=r=>{const el=document.createElement('div');el.innerHTML=indicadorPixTexto(r);return el.textContent.replace(/\s+/g,' ').trim();};
+window.invalidarEvidenciasPagamentoPix=contexto=>{if(invalidarEvidenciasStatusPix(contexto)){renderDashboardPix();renderLancamentosPix();renderApuracaoPix();}};
