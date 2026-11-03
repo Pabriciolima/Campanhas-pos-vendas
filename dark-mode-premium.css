@@ -1380,3 +1380,31 @@ html[data-theme="dark"] #pixTabelaApuracao .pix-apuracao-action-bar button.pix-a
  #pix-lancamentos .pix-action-icon svg,
  #pix-apuracao .pix-action-icon svg {animation:none !important;transition:none !important;transform:none !important;}
 }
+
+/* Oficina: contraste correto da prévia financeira no modo noturno. */
+html[data-theme="dark"] #resultadoPreview,
+body.dark-mode #resultadoPreview {
+  background:#102438 !important;
+  border:1px solid #31546a !important;
+  color:#e6f2fa !important;
+  -webkit-text-fill-color:initial;
+}
+html[data-theme="dark"] #resultadoPreview .preview-metricas > div,
+body.dark-mode #resultadoPreview .preview-metricas > div {
+  background:#182e43 !important;
+  border-color:#38586d !important;
+}
+html[data-theme="dark"] #resultadoPreview .preview-metricas span,
+html[data-theme="dark"] #resultadoPreview .preview-metricas small,
+html[data-theme="dark"] #resultadoPreview .preview-motivo,
+body.dark-mode #resultadoPreview .preview-metricas span,
+body.dark-mode #resultadoPreview .preview-metricas small,
+body.dark-mode #resultadoPreview .preview-motivo { color:#b7ccda !important; -webkit-text-fill-color:#b7ccda !important; }
+html[data-theme="dark"] #resultadoPreview .preview-metricas strong,
+body.dark-mode #resultadoPreview .preview-metricas strong { color:#f4fbff !important; -webkit-text-fill-color:#f4fbff !important; }
+html[data-theme="dark"] #resultadoPreview .preview-resultado,
+html[data-theme="dark"] #resultadoPreview .preview-resultado span,
+body.dark-mode #resultadoPreview .preview-resultado,
+body.dark-mode #resultadoPreview .preview-resultado span { color:#e8f5fc !important; -webkit-text-fill-color:#e8f5fc !important; }
+html[data-theme="dark"] #resultadoPreview .preview-resultado strong,
+body.dark-mode #resultadoPreview .preview-resultado strong { color:#6ee7c1 !important; -webkit-text-fill-color:#6ee7c1 !important; }
