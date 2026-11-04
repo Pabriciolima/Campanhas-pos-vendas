@@ -1949,8 +1949,16 @@ function calcularPixIndividual(lancamento) {
       ` Penalidade de 50% por O.S. em aberto acima de ${LIMITE_OS_ABERTA}%.`;
   }
 
+  const pendenciasFonte = Array.isArray(lancamento.pendenciasAuditoriaFonte)
+    ? lancamento.pendenciasAuditoriaFonte : [];
+  const temDivergenciaFonte = pendenciasFonte.length > 0;
   return aplicarStatusAuditoriaPix({
     ...lancamento,
+    ...(temDivergenciaFonte ? {
+      auditoriaPendente: true,
+      statusPagamento: "PENDENTE DE CORREÇÃO",
+      motivoPendenciaAuditoria: pendenciasFonte.map(p => p.ponto + " " + p.correcao).join(" | ")
+    } : {}),
     nome:
       funcionario?.nome ||
       lancamento.nome ||
