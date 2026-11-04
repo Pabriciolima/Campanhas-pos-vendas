@@ -1408,3 +1408,78 @@ body.dark-mode #resultadoPreview .preview-resultado,
 body.dark-mode #resultadoPreview .preview-resultado span { color:#e8f5fc !important; -webkit-text-fill-color:#e8f5fc !important; }
 html[data-theme="dark"] #resultadoPreview .preview-resultado strong,
 body.dark-mode #resultadoPreview .preview-resultado strong { color:#6ee7c1 !important; -webkit-text-fill-color:#6ee7c1 !important; }
+
+
+/* PIX responsive light theme — 2026-11-04.
+   A versão anterior aplicava cartão escuro incondicionalmente em <=1500px. */
+@media (max-width:1500px) {
+  html:not([data-theme="dark"]) body:not(.dark-mode) #pix-lancamentos .pix-table tbody tr {
+    background:#ffffff !important;
+    border:1px solid #dce5ed !important;
+    box-shadow:0 5px 18px rgba(24,48,69,.055) !important;
+    color:#243746 !important;
+    -webkit-text-fill-color:#243746 !important;
+  }
+  html:not([data-theme="dark"]) body:not(.dark-mode) #pix-lancamentos .pix-table tbody tr:hover {
+    background:#f5fafc !important;
+    border-color:#a6cfc8 !important;
+  }
+  html:not([data-theme="dark"]) body:not(.dark-mode) #pix-lancamentos .pix-table tbody tr > td,
+  html:not([data-theme="dark"]) body:not(.dark-mode) #pix-lancamentos #pixTabelaLancamentos > tr > td {
+    background:transparent !important;
+    color:#243746 !important;
+    -webkit-text-fill-color:#243746 !important;
+    opacity:1 !important;
+    text-shadow:none !important;
+    max-width:none !important;
+    min-width:0 !important;
+    white-space:normal !important;
+    overflow-wrap:anywhere !important;
+  }
+  html:not([data-theme="dark"]) body:not(.dark-mode) #pix-lancamentos .pix-table tbody tr > td::before {
+    color:#617588 !important;
+    -webkit-text-fill-color:#617588 !important;
+  }
+  html:not([data-theme="dark"]) body:not(.dark-mode) #pix-lancamentos .pix-table tbody tr > td :is(strong,span,b,small,.pix-indicator-detail) {
+    color:inherit;
+    -webkit-text-fill-color:currentColor;
+    opacity:1 !important;
+  }
+  html:not([data-theme="dark"]) body:not(.dark-mode) #pix-lancamentos .pix-table tbody tr > td:nth-child(11),
+  html:not([data-theme="dark"]) body:not(.dark-mode) #pix-lancamentos .pix-table tbody tr > td:nth-child(11) strong {
+    color:#087c64 !important;
+    -webkit-text-fill-color:#087c64 !important;
+  }
+  html:not([data-theme="dark"]) body:not(.dark-mode) #pix-lancamentos .pix-table tbody tr > td.pix-penalty {
+    color:#bc2737 !important;
+    -webkit-text-fill-color:#bc2737 !important;
+  }
+  html:not([data-theme="dark"]) body:not(.dark-mode) #pix-lancamentos .pix-table tbody tr > td.pix-penalty * {
+    color:#bc2737 !important;
+    -webkit-text-fill-color:#bc2737 !important;
+  }
+  #pix-lancamentos .pix-table tbody tr > td:nth-child(13),
+  #pix-lancamentos #pixTabelaLancamentos > tr > td:last-child {
+    width:auto !important;
+    min-width:0 !important;
+    max-width:none !important;
+    overflow:visible !important;
+  }
+  #pix-lancamentos .pix-table tbody tr > td:nth-child(13) .actions {
+    max-width:100% !important;
+  }
+}
+@media (max-width:1100px) {
+  #pix-lancamentos .pix-table tbody tr {grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+  #pix-lancamentos .pix-table tbody tr > td:nth-child(4),
+  #pix-lancamentos .pix-table tbody tr > td:nth-child(6) {grid-column:1/-1 !important;}
+  #pix-lancamentos .pix-table tbody tr > td:nth-child(12),
+  #pix-lancamentos .pix-table tbody tr > td:nth-child(13) {grid-column:span 1 !important;}
+}
+@media (max-width:460px) {
+  #pix-lancamentos .pix-table tbody {padding:4px !important;}
+  #pix-lancamentos .pix-table tbody tr {gap:10px !important;padding:12px !important;}
+  #pix-lancamentos .pix-table tbody tr > td:nth-child(6),
+  #pix-lancamentos .pix-table tbody tr > td:nth-child(12),
+  #pix-lancamentos .pix-table tbody tr > td:nth-child(13) {grid-column:1/-1 !important;}
+}
