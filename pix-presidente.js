@@ -1552,7 +1552,91 @@ function realizadoSemanalLegadoPix(lancamento = {}) {
     .reduce((soma, dia) => soma + pixNumero(dia.realizado), 0);
 }
 
+/* Núcleos gerenciais com uma bonificação semanal, vigentes a partir de novembro/2026.
+ * O vínculo usa o nome completo normalizado e a filial do lançamento.
+ * Nenhum registro original é apagado ou transferido.
+ */
+const PIX_NUCLEOS_GESTORES = [
+  { nome:"THIAGO TOME GOMES", filiais:["ANANINDEUA","MACAPA"] },
+  { nome:"ONEISE NUNES DA SILVA COSTA BRAZAO", filiais:["TERESINA","URUCUI"] },
+  { nome:"MARCELO LOMBA", filiais:["SAO LUIS","BACABAL"] },
+  { nome:"ALLAN BERTUCCI BRILHANTE", filiais:["AGUA BOA","RONDONOPOLIS"] }
+];
+function pixFilialNucleoNormalizada(filial) {
+  return normalizarTextoPix(filial).replace(/[^A-Z0-9]/g,"");
+}
+function pixIdentidadeGestor(lancamento) {
+  return normalizarTextoPix(pixFuncionarioPorId(lancamento.funcionarioId)?.nome || lancamento.nome);
+}
+function pixNucleoGestor(lancamento) {
+  if (!usaRegraPixDiaria(lancamento.competencia)) return null;
+  const nome = pixIdentidadeGestor(lancamento);
+  const filial = pixFilialNucleoNormalizada(lancamento.filial || pixFuncionarioPorId(lancamento.funcionarioId)?.filial);
+  return PIX_NUCLEOS_GESTORES.find(n => normalizarTextoPix(n.nome) === nome &&
+    n.filiais.some(f => pixFilialNucleoNormalizada(f) === filial)) || null;
+}
+function pixRegistrosGestor(lancamento,nucleo) {
+  return estadoPix.lancamentos.filter(r =>
+    pixIdentidadeGestor(r) === normalizarTextoPix(nucleo.nome) &&
+    normalizarCompetenciaPix(r.competencia) === normalizarCompetenciaPix(lancamento.competencia) &&
+    Number(normalizarSemanaPix(r.semana)) === Number(normalizarSemanaPix(lancamento.semana)) &&
+    nucleo.filiais.some(f=>pixFilialNucleoNormalizada(f)===pixFilialNucleoNormalizada(r.filial || pixFuncionarioPorId(r.funcionarioId)?.filial))
+  );
+}
 function calcularPix(lancamento) {
+  const nucleo = pixNucleoGestor(lancamento);
+  if (!nucleo) return calcularPixIndividual(lancamento);
+  const registros = pixRegistrosGestor(lancamento,nucleo);
+  // Rascunho ainda não salvo: usa a versão em edição sem duplicá-la.
+  if (!registros.some(r=>String(r.id)===String(lancamento.id))) registros.push(lancamento);
+  const porFilial = new Map();
+  for (const filial of nucleo.filiais) {
+    const correspondentes = registros.filter(r=>pixFilialNucleoNormalizada(r.filial || pixFuncionarioPorId(r.funcionarioId)?.filial)===pixFilialNucleoNormalizada(filial));
+    if (correspondentes.length) porFilial.set(filial,correspondentes.find(r=>String(r.id)===String(lancamento.id)) || correspondentes[0]);
+  }
+  const lista = [...porFilial.values()];
+  const principal = lista[0];
+  const ePrincipal = String(principal?.id)===String(lancamento.id);
+  const metaConsolidada = lista.reduce((s,r)=>s+pixNumero(r.metaSemanal),0);
+  const realizadoConsolidado = lista.reduce((s,r)=>s+realizadoSemanalLegadoPix(r),0);
+  const completo = porFilial.size===nucleo.filiais.length;
+  if (!completo) {
+    const parcial = calcularPixIndividual(lancamento);
+    return { ...parcial, nucleoFiliais:nucleo.filiais, metaConsolidada, realizadoConsolidado,
+      bonusBase:0,bonusFaixa:0,bonusNps:0,penalidade:0,bonusFinal:0,
+      status:"NÃO HABILITADO",
+      observacao:"NÚCLEO PENDENTE: é obrigatório lançar metas, realizados e evidências das duas filiais ("+nucleo.filiais.join(" + ")+")." };
+  }
+  // Dias idênticos em filiais distintas são somados; nunca contam como dois dias.
+  const dias = new Map();
+  for (const registro of lista) {
+    for (const d of normalizarDiasPix(registro)) {
+      const chave=d.data || d.chave;
+      const anterior=dias.get(chave)||{realizado:0,informado:true,data:d.data};
+      anterior.realizado+=pixNumero(d.realizado);
+      anterior.informado=anterior.informado && d.informado;
+      dias.set(chave,anterior);
+    }
+  }
+  const datasAvaliadas=[...dias.keys()].filter(k=>/^\\d{4}-\\d{2}-\\d{2}$/.test(k)).sort();
+  const consolidado={...principal,metaSemanal:metaConsolidada,realizadoSemanal:realizadoConsolidado,
+    datasAvaliadas,
+    diasCalendario:Object.fromEntries(datasAvaliadas.map(d=>[d,{realizado:dias.get(d).informado?dias.get(d).realizado:null}]))};
+  const apurado=calcularPixIndividual(consolidado);
+  const divergente=lista.some(r=>calcularPixIndividual(r).auditoriaPendente);
+  const percentual=metaConsolidada>0?realizadoConsolidado/metaConsolidada*100:0;
+  const resumo="Núcleo "+nucleo.filiais.join(" + ")+": meta "+pixMoeda(metaConsolidada)+
+    "; realizado "+pixMoeda(realizadoConsolidado)+"; atingimento "+pixPct(percentual)+". ";
+  if (!ePrincipal) return {...calcularPixIndividual(lancamento),nucleoFiliais:nucleo.filiais,
+    metaConsolidada,realizadoConsolidado,percentualMeta:percentual,
+    bonusBase:0,bonusFaixa:0,bonusNps:0,penalidade:0,bonusFinal:0,
+    status:"NÚCLEO CONSOLIDADO",observacao:resumo+"Bonificação única contabilizada no registro principal."};
+  return {...apurado,id:principal.id,filial:principal.filial,nucleoFiliais:nucleo.filiais,
+    metaConsolidada,realizadoConsolidado,percentualMeta:percentual,
+    ...(divergente?{auditoriaPendente:true,status:"NÃO HABILITADO",bonusFinal:0}:{}),
+    observacao:resumo+apurado.observacao};
+}
+function calcularPixIndividual(lancamento) {
   const funcionario =
     pixFuncionarioPorId(lancamento.funcionarioId);
 
