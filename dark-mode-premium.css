@@ -1530,3 +1530,22 @@ html[data-theme="dark"] #modalPixPresidente .pix-nucleo-nps p,body.dark-mode #mo
 html[data-theme="dark"] #modalPixPresidente .pix-nucleo-nps-filial,body.dark-mode #modalPixPresidente .pix-nucleo-nps-filial {background:#182c36;border-color:#36545d}
 html[data-theme="dark"] #modalPixPresidente .pix-nucleo-nps-filial label,body.dark-mode #modalPixPresidente .pix-nucleo-nps-filial label {color:#d3eae4}
 @media(max-width:620px){#modalPixPresidente .pix-nucleo-nps-grid{grid-template-columns:1fr}}
+
+
+/* NPS do núcleo: formulário único, duas linhas por filial, sem cartões separados. */
+#modalPixPresidente .pix-nucleo-nps-unificado{display:grid;gap:0;overflow:hidden;border:1px solid #c5dfd7;border-radius:14px;background:#fff}
+#modalPixPresidente .pix-nucleo-nps-colunas,#modalPixPresidente .pix-nucleo-nps-linha{display:grid;grid-template-columns:minmax(145px,1fr) repeat(2,minmax(0,1fr));gap:14px;align-items:center;padding:13px 16px}
+#modalPixPresidente .pix-nucleo-nps-colunas{background:#e3f3ee;color:#27665a;font-size:11px;font-weight:800;letter-spacing:.045em;text-transform:uppercase}
+#modalPixPresidente .pix-nucleo-nps-linha+.pix-nucleo-nps-linha{border-top:1px solid #e1eae6}
+#modalPixPresidente .pix-nucleo-nps-identidade{display:grid;gap:5px}
+#modalPixPresidente .pix-nucleo-nps-identidade strong{color:#087b68;font-size:14px}
+#modalPixPresidente .pix-nucleo-nps-ordem{font-size:10px;font-weight:800;letter-spacing:.08em;color:#73857f}
+#modalPixPresidente .pix-nucleo-nps-linha label{min-width:0;display:grid;gap:6px}
+#modalPixPresidente .pix-nucleo-nps-linha label>span{display:none}
+#modalPixPresidente .pix-nucleo-nps-linha input{width:100%;min-width:0;box-sizing:border-box}
+#modalPixPresidente .pix-nucleo-nps-rodape{padding:12px 16px;background:#f2faf6;border-top:1px solid #dcece5;color:#32665b;font-size:12px}
+html[data-theme="dark"] #modalPixPresidente .pix-nucleo-nps-unificado,body.dark-mode #modalPixPresidente .pix-nucleo-nps-unificado{background:#182c36;border-color:#385760}
+html[data-theme="dark"] #modalPixPresidente .pix-nucleo-nps-colunas,body.dark-mode #modalPixPresidente .pix-nucleo-nps-colunas{background:#203e43;color:#b5e4d5}
+html[data-theme="dark"] #modalPixPresidente .pix-nucleo-nps-linha+.pix-nucleo-nps-linha,body.dark-mode #modalPixPresidente .pix-nucleo-nps-linha+.pix-nucleo-nps-linha{border-color:#35535a}
+html[data-theme="dark"] #modalPixPresidente .pix-nucleo-nps-rodape,body.dark-mode #modalPixPresidente .pix-nucleo-nps-rodape{background:#203b3f;border-color:#35535a;color:#c6e5dc}
+@media(max-width:650px){#modalPixPresidente .pix-nucleo-nps-colunas{display:none}#modalPixPresidente .pix-nucleo-nps-linha{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}#modalPixPresidente .pix-nucleo-nps-identidade{grid-column:1/-1}#modalPixPresidente .pix-nucleo-nps-linha label>span{display:block;font-size:11px;font-weight:700}}
