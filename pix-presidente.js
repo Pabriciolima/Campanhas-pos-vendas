@@ -4866,9 +4866,14 @@ async function salvarLancamentoPix(evento) {
       item.metaConsolidada = true;
       item.realizadoConsolidado = true;
     }
-    const achadosFonte=auditarPix([calcularPix(item)]);
-    const divergenciasFonte=achadosFonte.filter(a=>a.nivel.startsWith("DIVERG")||a.codigo==="NUCLEO_NAO_VALIDADO");
-    if(divergenciasFonte.length){pixAlert("Conferência da fonte: corrija as divergências antes de salvar.\n"+divergenciasFonte.map(a=>a.ponto+" "+a.correcao).join("\n"));return;}
+    // Divergências de auditoria não impedem salvar o lançamento.
+    // O pagamento permanece pendente até a correção da divergência.
+    const achadosFonte = auditarPix([calcularPix(item)]);
+    const divergenciasFonte = achadosFonte.filter(a => a.nivel === "DIVERGÊNCIA");
+    item.pendenciasAuditoriaFonte = divergenciasFonte.map(a => ({
+      codigo: a.codigo, ponto: a.ponto, correcao: a.correcao
+    }));
+
 
     const duplicado = estadoPix.lancamentos.find(lancamento =>
       lancamento.id !== item.id &&
