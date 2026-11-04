@@ -1921,19 +1921,19 @@ window.produtivosLancamentos = {
     "2026.08.05-FILTRO-DASHBOARD-PRODUTIVOS-06"
 };
 
-const OFICINA_NOVA_VIGENCIA = "2026-10";
+const OFICINA_NOVA_VIGENCIA = "2026-12";
 const OFICINA_META_FATURAMENTO = 69900;
 const OFICINA_GATILHO_FATURAMENTO = 48930;
 
 function versaoRegraOficina(competencia) {
   const valor = String(competencia || "").slice(0, 7);
   return valor >= OFICINA_NOVA_VIGENCIA
-    ? "2026.10"
+    ? "2026.12"
     : "LEGADO";
 }
 
-function usaRegraOficina202610(competencia) {
-  return versaoRegraOficina(competencia) === "2026.10";
+function usaRegraOficina202612(competencia) {
+  return versaoRegraOficina(competencia) === "2026.12";
 }
 
 function bonusMecanicoProdutividade(
@@ -2403,7 +2403,7 @@ function calcularLancamento(
       ),
 
     nomeCampanha:
-      usaRegraOficina202610(
+      usaRegraOficina202612(
         lancamento.competencia
       )
         ? "Campanha da Oficina"
@@ -2450,7 +2450,7 @@ function calcularLancamento(
         0.7;
 
     const regraOficinaNova =
-      usaRegraOficina202610(
+      usaRegraOficina202612(
         base.competencia
       );
 
@@ -2467,8 +2467,8 @@ function calcularLancamento(
 
     /*
      * REGRA DE VIGÊNCIA:
-     * - até 2026-09: preserva integralmente a regra histórica;
-     * - a partir de 2026-10: Campanha da Oficina exige também
+     * - até 2026-11: preserva integralmente a regra histórica;
+     * - a partir de 2026-12: Campanha da Oficina exige também
      *   faturamento mínimo de R$ 48.930,00.
      * A meta cheia de R$ 69.900,00 é mantida como referência
      * gerencial, sem substituir o gatilho de habilitação.
