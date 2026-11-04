@@ -5713,7 +5713,7 @@ function atualizarPreview() {
       ${metricasHtml}
 
       <div class="preview-resultado">
-        <strong>${protegerHtml(resultado.status)}</strong>
+        <strong class="preview-status-oficina ${normalizarFilialExportacaoProdutivos(resultado.status) === "NAO HABILITADO" ? "preview-status-negativo" : "preview-status-positivo"}">${protegerHtml(resultado.status)}</strong>
 
         <span>
           Bônus bruto:
