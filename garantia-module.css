@@ -261,3 +261,71 @@ html[data-theme="dark"] .g-workspace .g-matrix tbody td :is(strong,small,span),
 body.dark-mode .g-workspace .g-matrix tbody td :is(strong,small,span) {
   opacity:1!important;
 }
+
+
+/* GARANTIA | contraste noturno: sem degradês nem superfícies claras com texto claro */
+html[data-theme="dark"] #garantia-lancamentos .g-imports,
+body.dark-mode #garantia-lancamentos .g-imports,
+html[data-theme="dark"] #garantia-lancamentos .g-import-master,
+body.dark-mode #garantia-lancamentos .g-import-master{
+ background:#142231!important;background-image:none!important;border-color:#385064!important;color:#e7f0f8!important;
+}
+html[data-theme="dark"] #garantia-lancamentos .g-imports>summary,
+body.dark-mode #garantia-lancamentos .g-imports>summary,
+html[data-theme="dark"] #garantia-lancamentos .g-import-master>summary,
+body.dark-mode #garantia-lancamentos .g-import-master>summary{
+ background:#203449!important;background-image:none!important;color:#f1f7fd!important;
+ border:1px solid #476075!important;border-radius:10px;padding:12px 15px;
+}
+html[data-theme="dark"] #garantia-lancamentos .g-import-steps,
+body.dark-mode #garantia-lancamentos .g-import-steps,
+html[data-theme="dark"] #garantia-lancamentos .g-import-status,
+body.dark-mode #garantia-lancamentos .g-import-status,
+html[data-theme="dark"] #garantia-lancamentos .g-import-master small,
+body.dark-mode #garantia-lancamentos .g-import-master small{
+ color:#c2d2e1!important;-webkit-text-fill-color:#c2d2e1!important;opacity:1!important;
+}
+html[data-theme="dark"] #garantia-lancamentos .g-imports .stat-card,
+body.dark-mode #garantia-lancamentos .g-imports .stat-card{
+ background:#17293a!important;background-image:none!important;color:#eef6fd!important;border-color:#476275!important;
+}
+html[data-theme="dark"] #garantia-lancamentos .g-imports .stat-card h3,
+body.dark-mode #garantia-lancamentos .g-imports .stat-card h3,
+html[data-theme="dark"] #garantia-lancamentos .g-imports .stat-card strong,
+body.dark-mode #garantia-lancamentos .g-imports .stat-card strong{
+ color:#f3f8fc!important;-webkit-text-fill-color:#f3f8fc!important;opacity:1!important;
+}
+html[data-theme="dark"] #garantia-lancamentos .g-imports .g-launched-badge,
+body.dark-mode #garantia-lancamentos .g-imports .g-launched-badge{
+ background:#155b47!important;color:#d8ffed!important;-webkit-text-fill-color:#d8ffed!important;
+}
+html[data-theme="dark"] #garantia-lancamentos .g-imports .g-waiting-badge,
+body.dark-mode #garantia-lancamentos .g-imports .g-waiting-badge{
+ background:#35475b!important;color:#e0eaf5!important;-webkit-text-fill-color:#e0eaf5!important;
+}
+html[data-theme="dark"] #garantia-lancamentos .g-imports input[type=file],
+body.dark-mode #garantia-lancamentos .g-imports input[type=file]{
+ background:#0d1b2a!important;color:#e5eef8!important;border-color:#4a6175!important;
+}
+html[data-theme="dark"] #garantia-lancamentos .g-imports .stat-card>button:last-child,
+body.dark-mode #garantia-lancamentos .g-imports .stat-card>button:last-child{
+ color:#d3e5f5!important;-webkit-text-fill-color:#d3e5f5!important;
+}
+/* Tabela: chips numéricos com contraste real, inclusive os que não têm classe de status */
+html[data-theme="dark"] .g-workspace .g-matrix tbody td .g-cell,
+body.dark-mode .g-workspace .g-matrix tbody td .g-cell{
+ background:#294256!important;color:#f4f9ff!important;-webkit-text-fill-color:#f4f9ff!important;
+ opacity:1!important;
+}
+html[data-theme="dark"] .g-workspace .g-matrix tbody td .g-good,
+body.dark-mode .g-workspace .g-matrix tbody td .g-good{
+ background:#125540!important;color:#e1fff0!important;-webkit-text-fill-color:#e1fff0!important;
+}
+html[data-theme="dark"] .g-workspace .g-matrix tbody td .g-low,
+body.dark-mode .g-workspace .g-matrix tbody td .g-low{
+ background:#68431d!important;color:#ffe7b3!important;-webkit-text-fill-color:#ffe7b3!important;
+}
+html[data-theme="dark"] .g-workspace .g-matrix tbody td :is(span,strong,small),
+body.dark-mode .g-workspace .g-matrix tbody td :is(span,strong,small){
+ text-shadow:none!important;opacity:1!important;
+}
