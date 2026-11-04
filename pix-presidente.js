@@ -1560,7 +1560,7 @@ const PIX_NUCLEOS_GESTORES = [
   { nome:"THIAGO TOME GOMES", filiais:["ANANINDEUA","MACAPA"] },
   { nome:"ONEISE NUNES DA SILVA COSTA BRAZAO", filiais:["TERESINA","URUCUI"] },
   { nome:"MARCELO LOMBA", filiais:["SAO LUIS","BACABAL"] },
-  { nome:"ALLAN BERTUCCI BRILHANTE", filiais:["AGUA BOA","RONDONOPOLIS"] }
+  { nome:"ALLAN BERTUCCI BRILHANTE", filiais:["RONDONOPOLIS","AGUA BOA"] }
 ];
 function pixFilialNucleoNormalizada(valor) {
   return normalizarTextoPix(valor).replace(/[^A-Z0-9]/g,"");
@@ -1582,6 +1582,21 @@ function pixNucleoGestor(lancamento) {
   return PIX_NUCLEOS_GESTORES.find(n=>normalizarTextoPix(n.nome)===nome &&
     n.filiais.some(f=>pixFilialNucleoNormalizada(f)===
       pixFilialNucleoNormalizada(lancamento.filial || pixFuncionarioPorId(lancamento.funcionarioId)?.filial))) || null;
+}
+function pixNpsNucleo(lancamento) {
+  const nucleo = pixNucleoGestor(lancamento);
+  if (!nucleo) return null;
+  const valores = lancamento.npsFiliais || {};
+  const resultados = nucleo.filiais.map(f => {
+    const chave = pixFilialNucleoNormalizada(f);
+    const v = valores[chave] || {};
+    const meta = pixNumero(v.meta);
+    const realizado = pixNumero(v.realizado);
+    const informado = v.meta !== "" && v.meta != null && v.realizado !== "" && v.realizado != null && meta > 0;
+    return { filial:f,meta,realizado,informado,atingiu:informado && realizado >= meta };
+  });
+  return { resultados, atingiu:resultados.every(v=>v.atingiu),
+    informado:resultados.every(v=>v.informado) };
 }
 function pixChaveNucleo(lancamento) {
   const n=pixNucleoGestor(lancamento);
@@ -1763,6 +1778,7 @@ function calcularPixIndividual(lancamento) {
       cargo
     );
 
+  const npsNucleo = pixNpsNucleo(lancamento);
   const metaNps =
     usaNps
       ? pixNumero(
@@ -1784,11 +1800,11 @@ function calcularPixIndividual(lancamento) {
 
   const atingiuNps =
     usaNps &&
-    metaNps > 0 &&
-    realizadoNps >= metaNps;
+    (npsNucleo ? npsNucleo.atingiu : (metaNps > 0 && realizadoNps >= metaNps));
 
-  const npsInformado =
-    campoPixRealmenteInformado(lancamento, "realizadoNps", "realizadoNpsInformado");
+  const npsInformado = npsNucleo
+    ? npsNucleo.informado
+    : campoPixRealmenteInformado(lancamento, "realizadoNps", "realizadoNpsInformado");
 
   /*
    * COFRINHO NPS — vigência novembro/2026+:
@@ -1801,12 +1817,16 @@ function calcularPixIndividual(lancamento) {
   const valorNpsSemanal = pixNumero(politica.bonusNpsSemanal || 250);
   const semanasNpsAtingidas = regraDiaria && usaNps
     ? estadoPix.lancamentos.filter(item =>
-        String(item.funcionarioId) === String(lancamento.funcionarioId) &&
+        (pixNucleoGestor(lancamento)
+          ? pixChaveNucleo(item)?.split("|").slice(0,2).join("|") === pixChaveNucleo(lancamento)?.split("|").slice(0,2).join("|")
+          : String(item.funcionarioId) === String(lancamento.funcionarioId)) &&
         String(item.competencia) === String(lancamento.competencia) &&
         Number(item.semana) >= 1 && Number(item.semana) <= 3 &&
-        campoPixRealmenteInformado(item, "realizadoNps", "realizadoNpsInformado") &&
-        pixNumero(item.metaNps) > 0 &&
-        pixNumero(item.realizadoNps) >= pixNumero(item.metaNps)
+        (pixNpsNucleo(item)
+          ? pixNpsNucleo(item).atingiu
+          : campoPixRealmenteInformado(item, "realizadoNps", "realizadoNpsInformado") &&
+            pixNumero(item.metaNps) > 0 &&
+            pixNumero(item.realizadoNps) >= pixNumero(item.metaNps))
       ).reduce((mapa, item) => {
         mapa.add(Number(item.semana));
         return mapa;
@@ -1818,7 +1838,10 @@ function calcularPixIndividual(lancamento) {
   // Condição adicional compartilhada. Nunca usa o NPS individual como NPS da filial.
   const exigeNpsUnidade = regraDiaria && usaNps && semanaNps === 4;
   const npsUnidade = regraDiaria && usaNps
-    ? npsUnidadePix.avaliar(lancamento.filial || funcionario?.filial, lancamento.competencia)
+    ? (npsNucleo
+      ? { atingiu: npsNucleo.atingiu && pixNucleoGestor(lancamento).filiais.every(f => npsUnidadePix.avaliar(f,lancamento.competencia).atingiu),
+          status: "NUCLEO", meta:null,realizado:null }
+      : npsUnidadePix.avaliar(lancamento.filial || funcionario?.filial, lancamento.competencia))
     : { status: "NAO_APLICAVEL", atingiu: true, meta: null, realizado: null };
   const bonusNps = regraDiaria
     ? (usaNps && semanaNps === 4 && npsSemanalElegivel && npsUnidade.atingiu
