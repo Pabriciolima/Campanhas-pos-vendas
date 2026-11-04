@@ -216,3 +216,48 @@ html[data-theme="dark"] .garantia-dialog>button.g-dialog-close:hover{background:
 .g-cloud-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;padding:14px 18px;border:1px solid var(--line,#d8e5e5);border-radius:14px;background:var(--panel,#f0faf7);font-size:12px}.g-cloud-bar strong{flex:1;min-width:180px}.g-cloud-bar button{font-size:11px;padding:8px 12px}html[data-theme="dark"] .g-cloud-bar{background:#132b2d}@media(max-width:600px){.g-cloud-bar{align-items:stretch;flex-direction:column}}
 
 .g-launch-details{margin-top:20px;border:1px solid var(--line,#dce5ed);border-radius:14px;background:var(--panel,#fff)}.g-launch-details>summary{padding:18px 20px;cursor:pointer;font-weight:700;color:var(--text,#17334a)}.g-launch-details[open]>summary{border-bottom:1px solid var(--line,#dce5ed)}.g-launch-details-body{padding:18px;display:grid;gap:18px}.g-launch-details-body .panel{margin:0}.g-launch-details-body p{line-height:1.6}.g-launch-details-body .garantia-table-wrap td{white-space:normal;line-height:1.5}html[data-theme="dark"] .g-launch-details{background:#111f2d}html[data-theme="dark"] .g-launch-details>summary{color:#e3eef7}@media(max-width:600px){.g-launch-details-body{padding:10px}}
+
+
+/* Garantia: grade de indicadores legível no tema escuro.
+   Substitui fundos claros fixos e restaura contraste de números importados. */
+html[data-theme="dark"] .g-workspace .g-matrix,
+body.dark-mode .g-workspace .g-matrix {
+  background:#101e2b!important;border-color:#30485a!important;
+}
+html[data-theme="dark"] .g-workspace .g-matrix tbody td,
+body.dark-mode .g-workspace .g-matrix tbody td {
+  background:#142534!important;color:#e8f2f9!important;
+  -webkit-text-fill-color:#e8f2f9!important;border-color:#304458!important;
+}
+html[data-theme="dark"] .g-workspace .g-matrix tbody tr:nth-child(even) td,
+body.dark-mode .g-workspace .g-matrix tbody tr:nth-child(even) td {
+  background:#1b3042!important;
+}
+html[data-theme="dark"] .g-workspace .g-matrix tbody tr:hover td,
+body.dark-mode .g-workspace .g-matrix tbody tr:hover td {
+  background:#254459!important;
+}
+html[data-theme="dark"] .g-workspace .g-matrix tbody td:first-child,
+body.dark-mode .g-workspace .g-matrix tbody td:first-child {
+  color:#f0f8ff!important;-webkit-text-fill-color:#f0f8ff!important;
+}
+html[data-theme="dark"] .g-workspace .g-matrix tbody .g-cell,
+body.dark-mode .g-workspace .g-matrix tbody .g-cell {
+  color:#e8f2f9!important;-webkit-text-fill-color:#e8f2f9!important;
+}
+html[data-theme="dark"] .g-workspace .g-matrix tbody .g-good,
+body.dark-mode .g-workspace .g-matrix tbody .g-good {
+  background:#134e40!important;color:#c5fbe5!important;-webkit-text-fill-color:#c5fbe5!important;
+}
+html[data-theme="dark"] .g-workspace .g-matrix tbody .g-low,
+body.dark-mode .g-workspace .g-matrix tbody .g-low {
+  background:#5b3b18!important;color:#ffe1a2!important;-webkit-text-fill-color:#ffe1a2!important;
+}
+html[data-theme="dark"] .g-workspace .g-matrix tbody .g-missing,
+body.dark-mode .g-workspace .g-matrix tbody .g-missing {
+  color:#b1c4d3!important;-webkit-text-fill-color:#b1c4d3!important;
+}
+html[data-theme="dark"] .g-workspace .g-matrix tbody td :is(strong,small,span),
+body.dark-mode .g-workspace .g-matrix tbody td :is(strong,small,span) {
+  opacity:1!important;
+}
