@@ -1623,7 +1623,9 @@ function calcularPix(lancamento) {
     nucleoFiliais:nucleo.filiais,bonusBase:0,bonusFaixa:0,bonusNps:0,
     penalidade:0,bonusFinal:0,status:"NÚCLEO CONSOLIDADO",
     observacao:"Registro histórico duplicado: bonificação contabilizada apenas no lançamento principal."};
-  return {...apurado,nucleoFiliais:nucleo.filiais,observacao};
+  return {...apurado,nucleoFiliais:nucleo.filiais,
+    nomeFiliaisImpressao:nucleo.filiais.join(" / "),
+    observacao};
 }
 function pixResultadosComReplicas(resultados) {
   const saida=[];
@@ -4161,11 +4163,16 @@ function renderCamposLancamentoPix(dados = {}) {
     competencia:competenciaLancamento,semana
   });
   const nucleoAtivo = !!nucleoGerente && usaRegraPixDiaria(competenciaLancamento);
+  const filialPrincipalNucleo = nucleoGerente?.filiais[0];
+  const filialSelecionadaNucleo = $("#pixLancamentoFilial")?.value || funcionario.filial;
+  const secundariaSelecionada = nucleoAtivo && pixFilialNucleoNormalizada(filialSelecionadaNucleo) !== pixFilialNucleoNormalizada(filialPrincipalNucleo);
   const cabecalhoNucleo = nucleoGerente ? `
     <section class="pix-manager-nucleus" aria-label="Lançamento consolidado do núcleo">
       <div class="pix-manager-nucleus-top">
         <span class="pix-manager-kicker">GESTÃO MULTIFILIAL</span>
         <strong>Um lançamento. Duas filiais.</strong>
+        <p><b>Principal: ${protegerHtml(nucleoGerente.filiais[0])}</b> · Secundária: ${protegerHtml(nucleoGerente.filiais[1])}</p>
+        ${secundariaSelecionada ? '<p class="pix-nucleo-warning">⚠️ Para lançar ou editar, selecione a filial principal. Esta unidade é apenas espelho.</p>' : ''}
         <p>${nucleoAtivo
           ? "Informe a <b>soma das metas</b> e a <b>soma dos realizados</b> de ambas as unidades. Não faça um segundo lançamento."
           : "Gestor vinculado a duas filiais. <b>Outubro mantém a política antiga</b>; o lançamento único consolidado passa a valer a partir de novembro/2026."}</p>
@@ -4911,6 +4918,16 @@ async function salvarLancamentoPix(evento) {
     const item = coletarLancamentoPix();
     const nucleo = pixNucleoGestor(item);
     if (nucleo) {
+      if (pixFilialNucleoNormalizada(item.filial) !== pixFilialNucleoNormalizada(nucleo.filiais[0])) {
+        pixAlert("Este gestor deve lançar somente na filial PRINCIPAL: " + nucleo.filiais[0] +
+          ". A filial " + nucleo.filiais[1] + " receberá automaticamente o espelho somente leitura.");
+        return;
+      }
+      const nps = pixNpsNucleo(item);
+      if (cargoUsaNpsPix(item.cargo) && (!nps || !nps.informado)) {
+        pixAlert("Informe a meta e o NPS realizado de ambas as filiais do núcleo antes de salvar.");
+        return;
+      }
       const registroExistente = pixRegistrosNucleo(item).find(r=>String(r.id)!==String(item.id));
       if (registroExistente) {
         pixAlert("Este gestor já tem lançamento único do núcleo nesta semana. Abra o lançamento original para editar; não é permitido lançar novamente pela outra filial.");
