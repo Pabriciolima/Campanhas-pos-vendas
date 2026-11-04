@@ -1599,7 +1599,7 @@ function pixNpsNucleo(lancamento) {
     const informado = v.meta !== "" && v.meta != null && v.realizado !== "" && v.realizado != null && meta > 0;
     return { filial:f,meta,realizado,informado,atingiu:informado && realizado >= meta };
   });
-  return { resultados, atingiu:resultados.every(v=>v.atingiu),
+  return { resultados, atingiu:resultados.some(v=>v.atingiu),
     informado:resultados.every(v=>v.informado) };
 }
 function pixChaveNucleo(lancamento) {
@@ -1845,7 +1845,8 @@ function calcularPixIndividual(lancamento) {
   const exigeNpsUnidade = regraDiaria && usaNps && semanaNps === 4;
   const npsUnidade = regraDiaria && usaNps
     ? (npsNucleo
-      ? { atingiu: npsNucleo.atingiu && pixNucleoGestor(lancamento).filiais.every(f => npsUnidadePix.avaliar(f,lancamento.competencia).atingiu),
+      ? { atingiu: npsNucleo.resultados.some(v => v.atingiu &&
+            npsUnidadePix.avaliar(v.filial,lancamento.competencia).atingiu),
           status: "NUCLEO", meta:null,realizado:null }
       : npsUnidadePix.avaliar(lancamento.filial || funcionario?.filial, lancamento.competencia))
     : { status: "NAO_APLICAVEL", atingiu: true, meta: null, realizado: null };
@@ -4299,7 +4300,7 @@ function renderCamposLancamentoPix(dados = {}) {
         ? nucleoAtivo ? `
           <section class="pix-nucleo-nps">
             <div class="pix-nucleo-nps-title">NPS por filial · ${protegerHtml(funcionario.nome)}</div>
-            <p>Informe separadamente o NPS de cada unidade. O prêmio de NPS do gestor só será liberado se <b>as duas filiais</b> atingirem suas metas, incluindo o NPS geral de cada unidade na S4.</p>
+            <p>Informe separadamente o NPS de cada unidade. Basta <b>uma das duas filiais</b> atingir sua meta para habilitar o bônus de NPS do gestor. Se ambas atingirem, o bônus continua <b>único</b>, sem duplicação. A conferência do NPS geral da filial também é considerada quando aplicável.</p>
             <div class="pix-nucleo-nps-grid">
               ${nucleoGerente.filiais.map(f=>{
                 const chave=pixFilialNucleoNormalizada(f);
@@ -4929,7 +4930,7 @@ async function salvarLancamentoPix(evento) {
       }
       const nps = pixNpsNucleo(item);
       if (cargoUsaNpsPix(item.cargo) && (!nps || !nps.informado)) {
-        pixAlert("Informe a meta e o NPS realizado de ambas as filiais do núcleo antes de salvar.");
+        pixAlert("Informe a meta e o NPS realizado de ambas as filiais do núcleo antes de salvar. Apenas uma precisa atingir a meta para o bônus único.");
         return;
       }
       const registroExistente = pixRegistrosNucleo(item).find(r=>String(r.id)!==String(item.id));
