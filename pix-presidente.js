@@ -1590,17 +1590,13 @@ function pixNucleoGestor(lancamento) {
 function pixNpsNucleo(lancamento) {
   const nucleo = pixNucleoGestor(lancamento);
   if (!nucleo) return null;
-  const valores = lancamento.npsFiliais || {};
-  const resultados = nucleo.filiais.map(f => {
-    const chave = pixFilialNucleoNormalizada(f);
-    const v = valores[chave] || {};
-    const meta = pixNumero(v.meta);
-    const realizado = pixNumero(v.realizado);
-    const informado = v.meta !== "" && v.meta != null && v.realizado !== "" && v.realizado != null && meta > 0;
-    return { filial:f,meta,realizado,informado,atingiu:informado && realizado >= meta };
-  });
-  return { resultados, atingiu:resultados.some(v=>v.atingiu),
-    informado:resultados.every(v=>v.informado) };
+  // Um NPS consolidado informado para todo o núcleo, sem somar percentuais.
+  const meta = pixNumero(lancamento.metaNps);
+  const realizado = pixNumero(lancamento.realizadoNps);
+  const informado = campoPixRealmenteInformado(lancamento,"metaNps","metaNpsInformada") &&
+    campoPixRealmenteInformado(lancamento,"realizadoNps","realizadoNpsInformado") && meta > 0;
+  return { meta, realizado, informado, atingiu: informado && realizado >= meta,
+    filiais: [...nucleo.filiais] };
 }
 function pixChaveNucleo(lancamento) {
   const n=pixNucleoGestor(lancamento);
@@ -1845,9 +1841,8 @@ function calcularPixIndividual(lancamento) {
   const exigeNpsUnidade = regraDiaria && usaNps && semanaNps === 4;
   const npsUnidade = regraDiaria && usaNps
     ? (npsNucleo
-      ? { atingiu: npsNucleo.resultados.some(v => v.atingiu &&
-            npsUnidadePix.avaliar(v.filial,lancamento.competencia).atingiu),
-          status: "NUCLEO", meta:null,realizado:null }
+      ? { atingiu: npsNucleo.atingiu,
+          status: "NUCLEO", meta:npsNucleo.meta,realizado:npsNucleo.realizado }
       : npsUnidadePix.avaliar(lancamento.filial || funcionario?.filial, lancamento.competencia))
     : { status: "NAO_APLICAVEL", atingiu: true, meta: null, realizado: null };
   const bonusNps = regraDiaria
@@ -4299,29 +4294,15 @@ function renderCamposLancamentoPix(dados = {}) {
       )
         ? nucleoAtivo ? `
           <section class="pix-nucleo-nps">
-            <div class="pix-nucleo-nps-title">NPS por filial · ${protegerHtml(funcionario.nome)}</div>
-            <p>Informe separadamente o NPS de cada unidade. Basta <b>uma das duas filiais</b> atingir sua meta para habilitar o bônus de NPS do gestor. Se ambas atingirem, o bônus continua <b>único</b>, sem duplicação. A conferência do NPS geral da filial também é considerada quando aplicável.</p>
-            <div class="pix-nucleo-nps-unificado">
-              <div class="pix-nucleo-nps-colunas" aria-hidden="true">
-                <span>Filial do núcleo</span><span>Meta de NPS</span><span>NPS realizado</span>
-              </div>
-              ${nucleoGerente.filiais.map((f,indice)=>{
-                const chave=pixFilialNucleoNormalizada(f);
-                const salvo=dados.npsFiliais?.[chave] || {};
-                return `<div class="pix-nucleo-nps-linha">
-                  <div class="pix-nucleo-nps-identidade">
-                    <span class="pix-nucleo-nps-ordem">${indice===0?"PRINCIPAL":"SECUNDÁRIA"}</span>
-                    <strong>📍 ${protegerHtml(f)}</strong>
-                  </div>
-                  <label><span>Meta de NPS</span>
-                    <input type="number" min="0" max="100" step="0.01" data-pix-nps-filial="${chave}" data-pix-nps-tipo="meta" value="${salvo.meta ?? ""}" placeholder="Meta" required>
-                  </label>
-                  <label><span>NPS realizado</span>
-                    <input type="number" min="0" max="100" step="0.01" data-pix-nps-filial="${chave}" data-pix-nps-tipo="realizado" value="${salvo.realizado ?? ""}" placeholder="Realizado" required>
-                  </label>
-                </div>`;
-              }).join("")}
-              <div class="pix-nucleo-nps-rodape">Um formulário para as duas filiais · <b>uma única bonificação de NPS</b> se pelo menos uma atingir a meta.</div>
+            <div class="pix-nucleo-nps-title">NPS consolidado do núcleo · ${protegerHtml(funcionario.nome)}</div>
+            <p>Uma única meta e um único NPS realizado para <b>${nucleoGerente.filiais.map(protegerHtml).join(" / ")}</b>. Informe o resultado consolidado já apurado para o núcleo, sem somar percentuais de NPS. O gestor recebe somente uma bonificação.</p>
+            <div class="pix-nucleo-nps-grid">
+              <label>Meta de NPS do núcleo
+                <input type="number" min="0" max="100" step="0.01" id="pixMetaNps" value="${dados.metaNps ?? ""}" placeholder="Meta geral do núcleo" required>
+              </label>
+              <label>NPS realizado do núcleo
+                <input type="number" min="0" max="100" step="0.01" id="pixRealizadoNps" value="${dados.realizadoNps ?? ""}" placeholder="Resultado consolidado do núcleo" required>
+              </label>
             </div>
           </section>
         ` : `
@@ -4499,7 +4480,7 @@ function coletarLancamentoPix() {
     npsFiliais[chave][campo.dataset.pixNpsTipo] = campo.value.trim() === "" ? "" : pixNumero(campo.value);
   });
   return {
-    npsFiliais: Object.keys(npsFiliais).length ? npsFiliais : (anterior.npsFiliais || {}),
+    npsFiliais: Object.keys(npsFiliais).length ? npsFiliais : {},
     auditoriaFonte: coletarConferenciaPixFonte(),
     id:
       $("#pixLancamentoId").value ||
@@ -4938,7 +4919,7 @@ async function salvarLancamentoPix(evento) {
       }
       const nps = pixNpsNucleo(item);
       if (cargoUsaNpsPix(item.cargo) && (!nps || !nps.informado)) {
-        pixAlert("Informe a meta e o NPS realizado de ambas as filiais do núcleo antes de salvar. Apenas uma precisa atingir a meta para o bônus único.");
+        pixAlert("Informe a meta e o NPS realizado consolidados do núcleo antes de salvar.");
         return;
       }
       const registroExistente = pixRegistrosNucleo(item).find(r=>String(r.id)!==String(item.id));
