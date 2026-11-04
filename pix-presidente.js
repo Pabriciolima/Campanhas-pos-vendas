@@ -4106,10 +4106,32 @@ function renderCamposLancamentoPix(dados = {}) {
   }
   const semana =
     Number($("#pixLancamentoSemana")?.value || 1);
+  const nucleoGerente = pixNucleoGestor({
+    funcionarioId:funcionario.id,nome:funcionario.nome,
+    filial:$("#pixLancamentoFilial")?.value || funcionario.filial,
+    competencia:competenciaLancamento,semana
+  });
+  const cabecalhoNucleo = nucleoGerente ? `
+    <section class="pix-manager-nucleus" aria-label="Lançamento consolidado do núcleo">
+      <div class="pix-manager-nucleus-top">
+        <span class="pix-manager-kicker">GESTÃO MULTIFILIAL</span>
+        <strong>Um lançamento. Duas filiais.</strong>
+        <p>Informe a <b>soma das metas</b> e a <b>soma dos realizados</b> de ambas as unidades. Não faça um segundo lançamento.</p>
+      </div>
+      <div class="pix-manager-branches">
+        ${nucleoGerente.filiais.map(f=>`<span class="pix-manager-branch">📍 ${protegerHtml(f)}</span>`).join("")}
+      </div>
+      <div class="pix-manager-example">
+        <span><b>Meta geral</b> = metas das duas filiais</span>
+        <span><b>Realizado geral</b> = resultados das duas filiais</span>
+      </div>
+      <small>O lançamento ficará visível nas duas filiais, mas só poderá ser editado no registro original.</small>
+    </section>
+  ` : "";
 
-  area.innerHTML = `
+  area.innerHTML = `${cabecalhoNucleo}
     <label>
-      Meta semanal
+      ${nucleoGerente ? "Meta geral do núcleo (duas filiais)" : "Meta semanal"}
       <input
         type="text"
         inputmode="decimal"
@@ -4131,8 +4153,8 @@ function renderCamposLancamentoPix(dados = {}) {
           <div class="pix-daily-block">
             <div class="pix-daily-head">
               <div>
-                <strong>Calendário real da apuração</strong>
-                <small>Selecione os dias que pertencem a esta semana/ciclo. Domingos ficam bloqueados.</small>
+                <strong>${nucleoGerente ? "Realizado diário consolidado das duas filiais" : "Calendário real da apuração"}</strong>
+                <small>${nucleoGerente ? "Em cada dia, lance a soma do realizado das duas filiais. Selecione os dias da semana; domingos ficam bloqueados." : "Selecione os dias que pertencem a esta semana/ciclo. Domingos ficam bloqueados."}</small>
               </div>
               <span id="pixResumoDias"></span>
             </div>
@@ -4154,7 +4176,7 @@ function renderCamposLancamentoPix(dados = {}) {
         `
         : `
           <label>
-            Realizado semanal
+            ${nucleoGerente ? "Realizado geral do núcleo (duas filiais)" : "Realizado semanal"}
             <input type="text" inputmode="decimal" id="pixRealizadoSemanal"
               placeholder="R$ 0,00"
               value="${(dados.realizadoSemanal !== null && dados.realizadoSemanal !== undefined && String(dados.realizadoSemanal).trim() !== "") || normalizarDiasPix(dados).some(dia => dia.informado) ? pixMoeda(realizadoSemanalLegadoPix(dados)) : ""}"
