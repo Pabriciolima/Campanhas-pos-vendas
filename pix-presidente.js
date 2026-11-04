@@ -3960,11 +3960,12 @@ function atualizarFuncionariosLancamentoPix(
     participantesPix()
       .filter(
         funcionario => {
+          const nucleo = PIX_NUCLEOS_GESTORES.find(n =>
+            normalizarTextoPix(n.nome) === normalizarTextoPix(funcionario.nome));
           const mesmaFilial =
-            normalizarTextoPix(
-              funcionario.filial
-            ) ===
-            filialSelecionada;
+            normalizarTextoPix(funcionario.filial) === filialSelecionada ||
+            (nucleo && nucleo.filiais.some(f =>
+              pixFilialNucleoNormalizada(f) === pixFilialNucleoNormalizada(filialSelecionada)));
 
           return (
             mesmaFilial &&
@@ -4832,21 +4833,29 @@ async function salvarLancamentoPix(evento) {
       return;
     }
     const item = coletarLancamentoPix();
+    const nucleo = pixNucleoGestor(item);
+    if (nucleo) {
+      const registroExistente = pixRegistrosNucleo(item).find(r=>String(r.id)!==String(item.id));
+      if (registroExistente) {
+        pixAlert("Este gestor já tem lançamento único do núcleo nesta semana. Abra o lançamento original para editar; não é permitido lançar novamente pela outra filial.");
+        return;
+      }
+      item.nucleoFiliais = [...nucleo.filiais];
+      item.metaConsolidada = true;
+      item.realizadoConsolidado = true;
+    }
     const achadosFonte=auditarPix([calcularPix(item)]);
     const divergenciasFonte=achadosFonte.filter(a=>a.nivel.startsWith("DIVERG")||a.codigo==="NUCLEO_NAO_VALIDADO");
     if(divergenciasFonte.length){pixAlert("Conferência da fonte: corrija as divergências antes de salvar.\n"+divergenciasFonte.map(a=>a.ponto+" "+a.correcao).join("\n"));return;}
 
-    const duplicado =
-      estadoPix.lancamentos.find(
-        lancamento =>
-          lancamento.funcionarioId ===
-            item.funcionarioId &&
-          lancamento.competencia ===
-            item.competencia &&
-          Number(lancamento.semana) ===
-            Number(item.semana) &&
-          lancamento.id !== item.id
-      );
+    const duplicado = estadoPix.lancamentos.find(lancamento =>
+      lancamento.id !== item.id &&
+      (pixChaveNucleo(item)
+        ? pixChaveNucleo(lancamento) === pixChaveNucleo(item)
+        : lancamento.funcionarioId === item.funcionarioId &&
+          lancamento.competencia === item.competencia &&
+          Number(lancamento.semana) === Number(item.semana))
+    );
 
     if (usaRegraPixDiaria(item.competencia)) {
       const ocupadas = pixContextoSemanasAnteriores(item).datasOcupadas;
@@ -4860,7 +4869,7 @@ async function salvarLancamentoPix(evento) {
 
     if (duplicado) {
       pixAlert(
-        "Este participante já possui lançamento nesta competência e semana."
+        "Este gestor/participante já possui lançamento nesta competência e semana. Para gestores de duas filiais, edite o lançamento único existente; informe a meta e o realizado consolidados das duas unidades."
       );
       return;
     }
