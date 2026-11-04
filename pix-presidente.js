@@ -1957,8 +1957,8 @@ function calcularPixIndividual(lancamento) {
       "Colaborador não localizado",
     cargo,
     filial:
-      funcionario?.filial ||
-      lancamento.filial,
+      pixNucleoGestor(lancamento) ? lancamento.filial :
+      (funcionario?.filial || lancamento.filial),
     dn:
       funcionario?.dn ||
       lancamento.dn,
@@ -4421,7 +4421,10 @@ function coletarLancamentoPix() {
       funcionario.nome,
 
     filial:
-      funcionario.filial,
+      PIX_NUCLEOS_GESTORES.some(n => normalizarTextoPix(n.nome) === normalizarTextoPix(funcionario.nome)) &&
+      usaRegraPixDiaria($("#pixLancamentoCompetencia")?.value)
+        ? ($("#pixLancamentoFilial")?.value || funcionario.filial)
+        : funcionario.filial,
 
     dn:
       funcionario.dn,
