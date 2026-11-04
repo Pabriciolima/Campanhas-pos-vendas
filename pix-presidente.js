@@ -4285,40 +4285,35 @@ function renderCamposLancamentoPix(dados = {}) {
         funcionario?.cargo ||
         dados.cargo
       )
-        ? `
+        ? nucleoAtivo ? `
+          <section class="pix-nucleo-nps">
+            <div class="pix-nucleo-nps-title">NPS por filial · ${protegerHtml(funcionario.nome)}</div>
+            <p>Informe separadamente o NPS de cada unidade. O prêmio de NPS do gestor só será liberado se <b>as duas filiais</b> atingirem suas metas, incluindo o NPS geral de cada unidade na S4.</p>
+            <div class="pix-nucleo-nps-grid">
+              ${nucleoGerente.filiais.map(f=>{
+                const chave=pixFilialNucleoNormalizada(f);
+                const salvo=dados.npsFiliais?.[chave] || {};
+                return `<div class="pix-nucleo-nps-filial"><strong>📍 NPS ${protegerHtml(f)}</strong>
+                  <label>Meta de NPS ${protegerHtml(f)}
+                    <input type="number" min="0" max="100" step="0.01" data-pix-nps-filial="${chave}" data-pix-nps-tipo="meta" value="${salvo.meta ?? ""}" placeholder="Meta da unidade" required>
+                  </label>
+                  <label>NPS realizado ${protegerHtml(f)}
+                    <input type="number" min="0" max="100" step="0.01" data-pix-nps-filial="${chave}" data-pix-nps-tipo="realizado" value="${salvo.realizado ?? ""}" placeholder="Resultado da unidade" required>
+                  </label>
+                </div>`;
+              }).join("")}
+            </div>
+          </section>
+        ` : `
           <label>
             Meta de NPS
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              id="pixMetaNps"
-              value="${dados.metaNps ?? ""}"
-              placeholder="Informe a meta deste mês"
-              required
-            />
-
-            <small>
-              ${usaRegraPixDiaria(competenciaLancamento) ? "Meta informada para a filial e competência" : politica.objetivoNps} ·
-              prêmio de ${pixMoeda(usaRegraPixDiaria(competenciaLancamento) ? (politica.bonusNpsSemanal || 250) : politica.bonusNps)}.
-            </small>
+            <input type="number" step="0.01" min="0" id="pixMetaNps" value="${dados.metaNps ?? ""}" placeholder="Informe a meta deste mês" required />
+            <small>${usaRegraPixDiaria(competenciaLancamento) ? "Meta informada para a filial e competência" : politica.objetivoNps} · prêmio de ${pixMoeda(usaRegraPixDiaria(competenciaLancamento) ? (politica.bonusNpsSemanal || 250) : politica.bonusNps)}.</small>
           </label>
-
           <label>
             NPS realizado
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              id="pixRealizadoNps"
-              value="${dados.realizadoNps ?? ""}"
-              placeholder="Ex.: 92"
-              required
-            />
-
-            <small>
-              Cada semana com NPS atingido reserva R$ 250,00 no cofrinho.\n              O saldo só é pago na semana 4 se o NPS individual da própria semana 4 E o NPS geral da filial atingirem suas metas. O resultado geral é cadastrado uma única vez no bloco “NPS geral da filial”, logo abaixo, e vale para todos os colaboradores da unidade.
-            </small>
+            <input type="number" step="0.01" min="0" id="pixRealizadoNps" value="${dados.realizadoNps ?? ""}" placeholder="Ex.: 92" required />
+            <small>O cofrinho é liberado na S4 conforme as metas individuais e o NPS geral da filial.</small>
           </label>
         `
         : ""
@@ -4477,7 +4472,14 @@ function coletarLancamentoPix() {
     );
 
   const anterior = estadoPix.lancamentos.find(item => String(item.id) === String($("#pixLancamentoId")?.value)) || {};
+  const npsFiliais = {};
+  document.querySelectorAll("#pixCamposDinamicos [data-pix-nps-filial]").forEach(campo => {
+    const chave=campo.dataset.pixNpsFilial;
+    if (!npsFiliais[chave]) npsFiliais[chave]={};
+    npsFiliais[chave][campo.dataset.pixNpsTipo] = campo.value.trim() === "" ? "" : pixNumero(campo.value);
+  });
   return {
+    npsFiliais: Object.keys(npsFiliais).length ? npsFiliais : (anterior.npsFiliais || {}),
     auditoriaFonte: coletarConferenciaPixFonte(),
     id:
       $("#pixLancamentoId").value ||
