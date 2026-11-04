@@ -1483,3 +1483,34 @@ body.dark-mode #resultadoPreview .preview-resultado strong { color:#6ee7c1 !impo
   #pix-lancamentos .pix-table tbody tr > td:nth-child(12),
   #pix-lancamentos .pix-table tbody tr > td:nth-child(13) {grid-column:1/-1 !important;}
 }
+
+
+/* PIX — experiência exclusiva de lançamento de gestores de duas filiais. */
+#modalPixPresidente .pix-manager-nucleus {
+  grid-column:1/-1;display:grid;gap:14px;padding:20px 22px;margin:0 0 8px;
+  border:1px solid #a9d8ce;border-radius:18px;
+  background:linear-gradient(125deg,#effbf6 0%,#f8fcff 100%);
+  color:#163d38;box-shadow:0 8px 24px rgba(15,95,78,.07);
+}
+#modalPixPresidente .pix-manager-nucleus-top {display:grid;gap:6px}
+#modalPixPresidente .pix-manager-kicker {font-size:11px;font-weight:850;letter-spacing:.1em;color:#087b68}
+#modalPixPresidente .pix-manager-nucleus-top strong {font-size:clamp(19px,2vw,25px);font-weight:850;line-height:1.2;color:#143e37}
+#modalPixPresidente .pix-manager-nucleus p {margin:0;color:#3c605c;line-height:1.55}
+#modalPixPresidente .pix-manager-branches {display:flex;gap:10px;flex-wrap:wrap}
+#modalPixPresidente .pix-manager-branch {display:inline-flex;align-items:center;padding:9px 14px;border-radius:10px;background:#fff;border:1px solid #c6e4dc;color:#086b5c;font-weight:800;font-size:13px}
+#modalPixPresidente .pix-manager-example {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#modalPixPresidente .pix-manager-example span {padding:11px 13px;border-radius:10px;background:#e3f4ee;color:#255b50;font-size:12px;line-height:1.5}
+#modalPixPresidente .pix-manager-nucleus>small {color:#607d78;line-height:1.5}
+html[data-theme="dark"] #modalPixPresidente .pix-manager-nucleus,
+body.dark-mode #modalPixPresidente .pix-manager-nucleus {background:linear-gradient(130deg,#0f2e32,#152638);border-color:#315c62;color:#e9f7f5}
+html[data-theme="dark"] #modalPixPresidente .pix-manager-nucleus-top strong,
+body.dark-mode #modalPixPresidente .pix-manager-nucleus-top strong {color:#e9faf5}
+html[data-theme="dark"] #modalPixPresidente .pix-manager-nucleus p,
+body.dark-mode #modalPixPresidente .pix-manager-nucleus p {color:#b8d3cf}
+html[data-theme="dark"] #modalPixPresidente .pix-manager-branch,
+body.dark-mode #modalPixPresidente .pix-manager-branch {background:#183d40;border-color:#36686a;color:#a9f4dc}
+html[data-theme="dark"] #modalPixPresidente .pix-manager-example span,
+body.dark-mode #modalPixPresidente .pix-manager-example span {background:#1a3c3e;color:#d4f3e9}
+html[data-theme="dark"] #modalPixPresidente .pix-manager-nucleus>small,
+body.dark-mode #modalPixPresidente .pix-manager-nucleus>small {color:#a7c7c1}
+@media(max-width:700px){#modalPixPresidente .pix-manager-nucleus{padding:16px;gap:12px}#modalPixPresidente .pix-manager-example{grid-template-columns:1fr}}
