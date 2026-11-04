@@ -2392,10 +2392,7 @@ function resultadosPixFiltrados(tipo) {
    * - pequenas diferenças de acentuação no cargo.
    */
   const resultados =
-    estadoPix.lancamentos
-      .map(
-        calcularPix
-      )
+    pixResultadosComReplicas(estadoPix.lancamentos.map(calcularPix))
       .filter(
         resultado => {
           const competenciaResultado =
@@ -3087,7 +3084,7 @@ function montarTabelaResultadosPix(
             <tr class="${resultado.auditoriaPendente ? 'pix-divergencia-evidencia' : ''}">
               <td>${resultado.competencia}</td>
               <td>S${resultado.semana}</td>
-              <td>${protegerHtml(resultado.filial)}</td>
+              <td>${protegerHtml(resultado.filial)}${resultado.replicaNucleo ? ' <small style="color:#64748b;font-weight:700">• ESPELHO</small>' : ''}</td>
               <td><strong>${protegerHtml(resultado.nome)}</strong></td>
               <td>${protegerHtml(resultado.cargo)}</td>
               <td>${indicadorPixTexto(resultado)}</td>
@@ -3147,7 +3144,7 @@ function montarTabelaResultadosPix(
               ${!comAcoes ? '<td class="pix-apuracao-acoes"><div class="actions pix-apuracao-action-bar"></div></td>' : ''}
               ${
                 comAcoes
-                  ? `
+                  ? resultado.replicaNucleo ? '<td><small style="color:#64748b;font-weight:700">Somente leitura • lançamento do núcleo</small></td>' : `
                     <td>
                       <div class="actions">
                         <button
