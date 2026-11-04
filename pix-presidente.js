@@ -4955,6 +4955,25 @@ async function salvarLancamentoPix(evento) {
     await carregarLancamentosPixUmaVez();
 
     $("#modalPixPresidente").close();
+    const pendenciasSalvas = Array.isArray(dados.pendenciasAuditoriaFonte)
+      ? dados.pendenciasAuditoriaFonte : [];
+    const nomeSalvo = pixFuncionarioPorId(item.funcionarioId)?.nome || item.nome || "Colaborador";
+    const tituloSalvo = item.id ? "Lançamento atualizado com sucesso!" : "Lançamento realizado com sucesso!";
+    if (pendenciasSalvas.length) {
+      await pixAlert(
+        tituloSalvo + "\\n" +
+        nomeSalvo + " · Semana " + item.semana + "\\n" +
+        "O lançamento foi salvo, mas o pagamento está PENDENTE DE CORREÇÃO.\\n" +
+        pendenciasSalvas.map(p => "• " + p.ponto).join("\\n"),
+        { titulo: "Lançamento salvo — pagamento pendente", tipo: "warning" }
+      );
+    } else {
+      await pixAlert(
+        tituloSalvo + "\\n" + nomeSalvo + " · Semana " + item.semana +
+        "\\nOs dados foram registrados. A liberação do pagamento depende da apuração e da conferência das evidências.",
+        { titulo: "Lançamento salvo", tipo: "success" }
+      );
+    }
   } catch (erro) {
     console.error("Erro ao salvar lançamento Pix:", erro);
     pixAlert(
