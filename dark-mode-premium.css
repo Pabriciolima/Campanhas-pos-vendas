@@ -1549,3 +1549,16 @@ html[data-theme="dark"] #modalPixPresidente .pix-nucleo-nps-colunas,body.dark-mo
 html[data-theme="dark"] #modalPixPresidente .pix-nucleo-nps-linha+.pix-nucleo-nps-linha,body.dark-mode #modalPixPresidente .pix-nucleo-nps-linha+.pix-nucleo-nps-linha{border-color:#35535a}
 html[data-theme="dark"] #modalPixPresidente .pix-nucleo-nps-rodape,body.dark-mode #modalPixPresidente .pix-nucleo-nps-rodape{background:#203b3f;border-color:#35535a;color:#c6e5dc}
 @media(max-width:650px){#modalPixPresidente .pix-nucleo-nps-colunas{display:none}#modalPixPresidente .pix-nucleo-nps-linha{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}#modalPixPresidente .pix-nucleo-nps-identidade{grid-column:1/-1}#modalPixPresidente .pix-nucleo-nps-linha label>span{display:block;font-size:11px;font-weight:700}}
+
+
+/* Oficina: status de habilitação com semântica visual consistente em ambos os temas. */
+#resultadoPreview .preview-resultado strong.preview-status-negativo,
+html[data-theme="dark"] #resultadoPreview .preview-resultado strong.preview-status-negativo,
+body.dark-mode #resultadoPreview .preview-resultado strong.preview-status-negativo {
+  color:#ef4444 !important;-webkit-text-fill-color:#ef4444 !important;
+}
+#resultadoPreview .preview-resultado strong.preview-status-positivo,
+html[data-theme="dark"] #resultadoPreview .preview-resultado strong.preview-status-positivo,
+body.dark-mode #resultadoPreview .preview-resultado strong.preview-status-positivo {
+  color:#34d399 !important;-webkit-text-fill-color:#34d399 !important;
+}
