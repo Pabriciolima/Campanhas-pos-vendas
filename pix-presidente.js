@@ -1576,8 +1576,12 @@ function pixNucleoGestorVisual(lancamento) {
     n.filiais.some(f => pixFilialNucleoNormalizada(f) === filial)
   ) || null;
 }
+function pixVigenciaNucleoGestor(competencia, semana) {
+  const mes = normalizarCompetenciaPix(competencia);
+  return mes > "2026-10" || (mes === "2026-10" && Number(normalizarSemanaPix(semana)) === 4);
+}
 function pixNucleoGestor(lancamento) {
-  if (!usaRegraPixDiaria(lancamento.competencia)) return null;
+  if (!pixVigenciaNucleoGestor(lancamento.competencia, lancamento.semana)) return null;
   const nome=pixIdentidadeGestor(lancamento);
   return PIX_NUCLEOS_GESTORES.find(n=>normalizarTextoPix(n.nome)===nome &&
     n.filiais.some(f=>pixFilialNucleoNormalizada(f)===
@@ -4162,7 +4166,7 @@ function renderCamposLancamentoPix(dados = {}) {
     filial:$("#pixLancamentoFilial")?.value || funcionario.filial,
     competencia:competenciaLancamento,semana
   });
-  const nucleoAtivo = !!nucleoGerente && usaRegraPixDiaria(competenciaLancamento);
+  const nucleoAtivo = !!nucleoGerente && pixVigenciaNucleoGestor(competenciaLancamento, semana);
   const filialPrincipalNucleo = nucleoGerente?.filiais[0];
   const filialSelecionadaNucleo = $("#pixLancamentoFilial")?.value || funcionario.filial;
   const secundariaSelecionada = nucleoAtivo && pixFilialNucleoNormalizada(filialSelecionadaNucleo) !== pixFilialNucleoNormalizada(filialPrincipalNucleo);
@@ -4175,7 +4179,7 @@ function renderCamposLancamentoPix(dados = {}) {
         ${secundariaSelecionada ? '<p class="pix-nucleo-warning">⚠️ Para lançar ou editar, selecione a filial principal. Esta unidade é apenas espelho.</p>' : ''}
         <p>${nucleoAtivo
           ? "Informe a <b>soma das metas</b> e a <b>soma dos realizados</b> de ambas as unidades. Não faça um segundo lançamento."
-          : "Gestor vinculado a duas filiais. <b>Outubro mantém a política antiga</b>; o lançamento único consolidado passa a valer a partir de novembro/2026."}</p>
+          : "Gestor vinculado a duas filiais. O lançamento consolidado começa na S4 de outubro/2026; as semanas anteriores mantêm a regra antiga."}</p>
       </div>
       <div class="pix-manager-branches">
         ${nucleoGerente.filiais.map(f=>`<span class="pix-manager-branch">📍 ${protegerHtml(f)}</span>`).join("")}
@@ -4184,7 +4188,7 @@ function renderCamposLancamentoPix(dados = {}) {
         <span><b>Meta geral</b> = metas das duas filiais</span>
         <span><b>Realizado geral</b> = resultados das duas filiais</span>
       </div>
-      <small>${nucleoAtivo ? "O lançamento ficará visível nas duas filiais, mas só poderá ser editado no registro original." : "Selecione novembro/2026 ou posterior para ativar a meta geral e o realizado consolidado do núcleo."}</small>
+      <small>${nucleoAtivo ? "O lançamento ficará visível nas duas filiais, mas só poderá ser editado no registro original." : "Selecione a S4 de outubro/2026 ou uma competência posterior para ativar o lançamento consolidado."}</small>
     </section>
   ` : "";
 
@@ -4505,7 +4509,7 @@ function coletarLancamentoPix() {
 
     filial:
       PIX_NUCLEOS_GESTORES.some(n => normalizarTextoPix(n.nome) === normalizarTextoPix(funcionario.nome)) &&
-      usaRegraPixDiaria($("#pixLancamentoCompetencia")?.value)
+      pixVigenciaNucleoGestor($("#pixLancamentoCompetencia")?.value, semana)
         ? ($("#pixLancamentoFilial")?.value || funcionario.filial)
         : funcionario.filial,
 
