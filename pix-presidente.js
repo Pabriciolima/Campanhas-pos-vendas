@@ -1952,7 +1952,7 @@ function calcularPixIndividual(lancamento) {
   const pendenciasFonte = Array.isArray(lancamento.pendenciasAuditoriaFonte)
     ? lancamento.pendenciasAuditoriaFonte : [];
   const temDivergenciaFonte = pendenciasFonte.length > 0;
-  return aplicarStatusAuditoriaPix({
+  const resultadoAuditado = aplicarStatusAuditoriaPix({
     ...lancamento,
     ...(temDivergenciaFonte ? {
       auditoriaPendente: true,
@@ -2006,6 +2006,16 @@ function calcularPixIndividual(lancamento) {
         : "NÃO HABILITADO",
     observacao
   });
+  if (!temDivergenciaFonte) return resultadoAuditado;
+  return {
+    ...resultadoAuditado,
+    auditoriaPendente: true,
+    bonusFinal: 0,
+    status: "CORRIGIR PENDÊNCIA",
+    statusPagamento: "PENDENTE DE CORREÇÃO",
+    observacao: "Pagamento retido por divergência entre evidência e lançamento: " +
+      pendenciasFonte.map(p => p.ponto + " " + p.correcao).join(" | ")
+  };
 }
 
 window.calcularPagamentoPixHistorico = function(lancamento, todosLancamentos = []) {
