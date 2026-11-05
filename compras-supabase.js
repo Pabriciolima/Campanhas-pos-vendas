@@ -2,7 +2,7 @@
 import {COLECOES_COMPRAS} from './compras-persistencia.js?v=20261028-supabase';
 export function criarBancoCompras(fetcher=(...args)=>fetch(...args)){
  let base,revision,loading,queue=Promise.resolve(),ocupado=0;
- async function request(options={}){const captured=revision;const r=await fetcher('/api/compras'+(options.method?'':revision?'?revision='+encodeURIComponent(revision):''),{cache:'no-store',...options});const data=await r.json();if(!r.ok){const e=Error(data.error||'Não foi possível acessar o Supabase de Compras.');e.status=r.status;throw e;}if(data.base){if(!options.method&&revision!==captured)return {unchanged:true,revision};base=data.base;revision=data.revision;}return data;}
+ async function request(options={}){const captured=revision;const r=await fetcher('/api/compras'+(options.method?'':revision?'?revision='+encodeURIComponent(revision):''),{cache:'no-store',...options});const raw=await r.text();let data;try{data=JSON.parse(raw)}catch{const e=Error('A API de Compras ainda não está conectada ao Supabase. Nenhum lançamento foi alterado.');e.status=r.status;throw e;}if(!r.ok){const e=Error(data.error||'Não foi possível acessar o Supabase de Compras.');e.status=r.status;throw e;}if(data.base){if(!options.method&&revision!==captured)return {unchanged:true,revision};base=data.base;revision=data.revision;}return data;}
  async function sincronizar(){if(loading)return loading;loading=request().finally(()=>loading=null);return loading;}
  function ref(c,id){if(!COLECOES_COMPRAS.includes(c))throw Error('Coleção de Compras inválida.');return {colecao:c,id};}
  async function ler(c){if(!base)await sincronizar();return {docs:Object.entries(base.colecoes[c]).map(([id,d])=>({id,data:()=>structuredClone(d)}))};}
