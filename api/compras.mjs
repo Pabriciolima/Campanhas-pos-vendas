@@ -32,4 +32,5 @@ export function criarHandlerCompras({fetcher=(...args)=>fetch(...args),env=proce
   return res.status(200).json({base,revision:rows[0].updated_at});
  }catch(e){console.error('[COMPRAS SUPABASE]',e.message);return res.status(502).json({error:'Não foi possível acessar o Supabase de Compras. Formulário e prévia preservados.'});}
 };}
-export default criarHandlerCompras();
+// Vercel continua chamando o handler padrão; inicialização tardia evita acessar process.env no import do Worker.
+export default function handler(req,res){return criarHandlerCompras()(req,res);}

@@ -1,0 +1,12 @@
+# Código de backend e arquivos internos não devem virar assets públicos.
+api/*
+tests/*
+docs/*
+supabase/*
+.vscode/*
+.gitignore
+.assetsignore
+cloudflare-worker.mjs
+wrangler.jsonc
+vercel.json
+README.md
