@@ -86,3 +86,26 @@ html body .mc-access-footer{display:flex;align-items:center;justify-content:cent
 @media(max-width:480px){html body .mc-access-form{padding:23px!important;}html body .mc-access #mc-access-title{font-size:25px!important;}html body .mc-access-actions{flex-direction:column-reverse;}html body .mc-access-actions button{width:100%!important;}}
 @media(prefers-reduced-motion:no-preference){html body dialog.mc-access[open]{animation:mc-access-enter .2s ease-out;}@keyframes mc-access-enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}}
 `;
+
+/* Proteção de navegação: cancelar a senha não abre a área restrita. */
+const liberados=new Set();
+let repetindo=false;
+if(typeof document!=='undefined'){
+ document.addEventListener('click',async event=>{
+  if(repetindo||!event.isTrusted)return;
+  const target=event.target.closest('[data-module-group="garantia"] button, [data-module-group="compras"] button');
+  if(!target)return;
+  const group=target.closest('[data-module-group]'),modulo=group?.dataset.moduleGroup;
+  if(!['garantia','compras'].includes(modulo)||liberados.has(modulo))return;
+  event.preventDefault();event.stopImmediatePropagation();
+  try{
+   await autenticarModulo(modulo,{interativo:true});
+   // Validar a sessão no servidor antes de revelar a navegação.
+   await chamarModulo(modulo,{acao:'ler'});
+   liberados.add(modulo);
+   repetindo=true;try{target.click();}finally{repetindo=false;}
+  }catch(err){
+   if(err?.message!=='Acesso cancelado.')console.warn('Acesso ao módulo negado:',err?.message);
+  }
+ },true);
+}
