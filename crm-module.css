@@ -2781,3 +2781,21 @@
     .crm-supabase-status[data-status="erro"]::before {
       color: #ff6c6c !important;
     }
+
+
+/* CRM — contraste acessível no modo escuro (lançamentos/importação) */
+html[data-theme="dark"] body #crmModuleWrapper .crm-import-card,
+html[data-theme="dark"] body .crm-import-card{
+ background:#172536!important;border:1px solid #33465b!important;
+ box-shadow:0 8px 26px rgba(0,0,0,.18)!important;color:#e9f1fa!important;
+}
+html[data-theme="dark"] body .crm-import-copy h4{color:#f5f8ff!important;font-size:13px!important;font-weight:750!important;line-height:1.4!important;}
+html[data-theme="dark"] body .crm-import-copy p{color:#c1cfdf!important;font-size:11px!important;line-height:1.55!important;}
+html[data-theme="dark"] body .crm-import-copy small{color:#a7bbd0!important;font-size:10px!important;line-height:1.45!important;}
+html[data-theme="dark"] body .crm-import-icon{background:#28324e!important;color:#c5b4ff!important;border:1px solid #485178!important;font-size:12px!important;}
+html[data-theme="dark"] body .crm-import-button{background:#302654!important;border:1px solid #8066d9!important;color:#f1eaff!important;font-size:11px!important;font-weight:750!important;transition:background .2s,border-color .2s,transform .2s!important;}
+html[data-theme="dark"] body .crm-import-button:hover{background:#49377f!important;border-color:#b19cff!important;transform:translateY(-2px)!important;}
+html[data-theme="dark"] body .crm-import-guide,
+html[data-theme="dark"] body .crm-policy-note{background:#18293a!important;color:#c4d2e1!important;border:1px solid #35495d!important;font-size:11px!important;line-height:1.6!important;}
+html[data-theme="dark"] body .crm-import-card:hover{border-color:#647a9a!important;background:#1c2d41!important;}
+@media(max-width:650px){html[data-theme="dark"] body .crm-import-card{grid-template-columns:44px minmax(0,1fr)!important;}html[data-theme="dark"] body .crm-import-card .crm-import-button{grid-column:2!important;justify-self:start!important;}}
