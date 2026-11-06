@@ -1310,10 +1310,10 @@ function calcularBaseDiariaPix(lancamento, politica) {
     realizadoSemanal + saldoInicial >= metaSemanal - 0.000001;
   const baseIntegral = pixNumero(politica?.bonusBase);
   // Sem atingir o acumulado semanal, nenhum dia gera bônus-base.
-  // 100% exige todos os dias; 50% vale para acumulado atingido com falhas diárias.
+  // 100% exige todos os dias; 70% do bônus-base quando a meta semanal é atingida com falhas diárias (penalidade de 30%).
   const bonusBase = !atingiuAcumulado ? 0
     : todosDiasAtingidos ? baseIntegral
-    : baseIntegral * 0.5;
+    : baseIntegral * 0.7;
   return {
     dias: avaliados, quantidadeDias, metaDiaria, valorDiario, realizadoSemanal, saldoInicial,
     diasAtingidos, todosDiasInformados, todosDiasAtingidos, atingiuAcumulado,
@@ -1921,7 +1921,7 @@ function calcularPixIndividual(lancamento) {
     if (apuracaoDiaria.todosDiasAtingidos) {
       partes.push("Todos os dias selecionados atingidos: 100% do bônus-base semanal");
     } else if (apuracaoDiaria.atingiuAcumulado) {
-      partes.push("Meta semanal acumulada atingida, mas nem todos os dias cumpridos: bônus-base limitado a 50%");
+      partes.push("Meta semanal acumulada atingida, mas nem todos os dias cumpridos: bônus-base de 70% (penalidade de 30%)");
     } else {
       partes.push("Meta semanal acumulada não atingida: bônus-base e bônus de ticket/margem R$ 0,00, mesmo com dias individuais cumpridos");
     }
@@ -3463,7 +3463,7 @@ function renderPoliticasPix() {
               ${novaRegra ? "<span>Base conforme os dias e o resultado semanal</span>" : "<span>Regulamento histórico da competência</span>"}
               ${novaRegra ? `<div class="pix-policy-payout">
                 <div><b class="pix-rule-ok">100%</b><span>Meta semanal + todos os dias atingidos</span><strong>${pixMoeda(grupo.base)}</strong></div>
-                <div><b class="pix-rule-half">50%</b><span>Meta semanal atingida, mas algum dia não</span><strong>${pixMoeda(grupo.base / 2)}</strong></div>
+                <div><b class="pix-rule-half">70%</b><span>Meta semanal atingida, mas algum dia não</span><strong>${pixMoeda(grupo.base * 0.7)}</strong></div>
                 <div><b class="pix-rule-zero">0%</b><span>Meta semanal não atingida, mesmo com dias cumpridos</span><strong>R$ 0,00</strong></div>
               </div>` : ""}
             </section>
