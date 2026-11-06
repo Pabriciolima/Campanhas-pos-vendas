@@ -2799,3 +2799,19 @@ html[data-theme="dark"] body .crm-import-guide,
 html[data-theme="dark"] body .crm-policy-note{background:#18293a!important;color:#c4d2e1!important;border:1px solid #35495d!important;font-size:11px!important;line-height:1.6!important;}
 html[data-theme="dark"] body .crm-import-card:hover{border-color:#647a9a!important;background:#1c2d41!important;}
 @media(max-width:650px){html[data-theme="dark"] body .crm-import-card{grid-template-columns:44px minmax(0,1fr)!important;}html[data-theme="dark"] body .crm-import-card .crm-import-button{grid-column:2!important;justify-self:start!important;}}
+
+
+/* CRM — correção de contraste: KPIs, níveis, percentuais e coroas do pódio */
+html[data-theme="dark"] body .crm-dashboard-cards article{background:#19283b!important;border:1px solid #3c526a!important;color:#edf4ff!important;box-shadow:0 8px 24px rgba(0,0,0,.17)!important;}
+html[data-theme="dark"] body .crm-dashboard-cards article span{color:#b8cce0!important;font-size:11px!important;font-weight:700!important;}
+html[data-theme="dark"] body .crm-dashboard-cards article strong{color:#fff!important;-webkit-text-fill-color:#fff!important;text-shadow:none!important;font-weight:800!important;opacity:1!important;}
+html[data-theme="dark"] body .crm-dashboard-cards article small{color:#b6c9dd!important;font-size:10px!important;}
+html[data-theme="dark"] body .crm-level-chip{background:#322d55!important;color:#eee5ff!important;border:1px solid #7867b2!important;font-size:10px!important;font-weight:750!important;}
+html[data-theme="dark"] body .crm-status-chip{font-weight:750!important;}
+html[data-theme="dark"] body .crm-podium-crown{background:linear-gradient(145deg,#243447,#172435)!important;border:2px solid #75889e!important;box-shadow:0 10px 30px rgba(0,0,0,.28)!important;}
+html[data-theme="dark"] body .crm-podium-card.ouro .crm-podium-crown{border-color:#d7aa45!important;background:linear-gradient(145deg,#5b461f,#2a2b31)!important;}
+html[data-theme="dark"] body .crm-podium-card.prata .crm-podium-crown{border-color:#b9c7d7!important;}
+html[data-theme="dark"] body .crm-podium-card.bronze .crm-podium-crown{border-color:#d49b73!important;}
+html[data-theme="dark"] body .crm-crown-symbol{color:#f4d278!important;-webkit-text-fill-color:#f4d278!important;filter:drop-shadow(0 2px 3px rgba(0,0,0,.3))!important;opacity:1!important;}
+html[data-theme="dark"] body .crm-podium-card.prata .crm-crown-symbol{color:#e2ebf4!important;-webkit-text-fill-color:#e2ebf4!important;}
+html[data-theme="dark"] body .crm-podium-card.bronze .crm-crown-symbol{color:#f3b48b!important;-webkit-text-fill-color:#f3b48b!important;}
