@@ -5,9 +5,10 @@ export async function chamarModulo(modulo,p,fetcher=fetch){
  const r=await fetcher(endpoint,{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({...p,modulo,token})});
  const data=await r.json();if(!r.ok){if(r.status===401){sessions.delete(modulo);globalThis.sessionStorage?.removeItem('modulo-v2-'+modulo);}const e=Error(data.error||'Falha na conexão.');Object.assign(e,{status:r.status,trocaObrigatoria:data.trocaObrigatoria});throw e;}return data;
 }
-export async function autenticarModulo(modulo){
+export async function autenticarModulo(modulo,{interativo=false}={}){
  if(sessions.has(modulo)||globalThis.sessionStorage?.getItem('modulo-v2-'+modulo))return;
  if(logins.has(modulo))return logins.get(modulo);
+ if(!interativo){const e=Error('Entre com a senha do módulo.');e.status=401;throw e;}
  const work=(async()=>{
  const senha=await pedirSenha('Senha de '+modulo);let data;
  try{data=await chamarModulo(modulo,{acao:'login',senha});}catch(e){if(!e.trocaObrigatoria)throw e;const novaSenha=await pedirSenha('Crie a senha de '+modulo+' (12 a 72 caracteres). A master será invalidada.');const confirmacao=await pedirSenha('Confirme a nova senha');if(novaSenha!==confirmacao)throw Error('As senhas não coincidem.');data=await chamarModulo(modulo,{acao:'login',senha,novaSenha});}
