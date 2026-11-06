@@ -1,7 +1,8 @@
+// Sessões explícitas no corpo, sem cookies: CORS permite hospedagem estática Cloudflare.
 import {createClient} from 'npm:@supabase/supabase-js@2.118.0';
 const db=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,{auth:{persistSession:false}});
 Deno.serve(async req=>{
- const headers={'Content-Type':'application/json','Cache-Control':'no-store','Access-Control-Allow-Origin':'https://campanhas-pos-vendas.vercel.app','Access-Control-Allow-Headers':'content-type,apikey,authorization','Access-Control-Allow-Methods':'POST,OPTIONS','Vary':'Origin'};
+ const headers={'Content-Type':'application/json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'content-type,apikey,authorization','Access-Control-Allow-Methods':'POST,OPTIONS','Vary':'Origin'};
  if(req.method==='OPTIONS')return new Response(null,{headers});
  const reply=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers});
  if(req.method!=='POST')return reply({error:'Método inválido.'},405);
