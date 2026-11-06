@@ -16,7 +16,7 @@ function abrirAcesso(modulo){return new Promise((resolve,reject)=>{
  const nome=modulo==='garantia'?'Garantia':'Compras';
  const d=document.createElement('dialog');d.className='mc-access';d.setAttribute('aria-labelledby','mc-access-title');d.setAttribute('aria-describedby','mc-access-description');
  d.innerHTML=`<form class="mc-access-form">
- <div class="mc-access-top"><span class="mc-access-brand">MÔNACO <span>·</span> CAMPANHAS</span><button class="mc-access-close" type="button" aria-label="Fechar acesso">×</button></div>
+ <div class="mc-access-top"><span class="mc-access-brand">MÔNACO <span>·</span> CAMPANHAS</span><button class="mc-access-close" type="button" aria-label="Fechar acesso"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
  <div class="mc-access-icon" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10" width="15" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14v3"/></svg></div>
  <p class="mc-access-eyebrow">ACESSO AO MÓDULO</p><h2 id="mc-access-title">Entrar em ${nome}</h2>
  <p id="mc-access-description">Informe a senha do módulo para acessar os dados e continuar seus lançamentos.</p>
