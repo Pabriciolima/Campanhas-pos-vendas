@@ -1,3 +1,4 @@
+import {autenticarModulo} from './modulos-edge.js';
 import {fatorLideranca,calcularLiderancaCompras} from "./compras-lideranca.js?v=20261030";
 import {calcularCoberturaCasa,metaCoberturaCasa,lerCoberturaEstoque,ehPlanilhaCobertura,formatarCobertura} from "./compras-cobertura.js?v=20261030-metas";
 import {POLITICA_ANALISTA, POLITICA_ASSISTENTE, politicaCompras} from "./compras-politicas.js?v=20261030-cobertura-todos";
@@ -4437,6 +4438,7 @@ async function abrirView(view) {
     else botao.removeAttribute("aria-current");
   });
   window.dispatchEvent(new CustomEvent("campanhas:viewready", {detail:{modulo:"compras",pagina:view}}));
+  try{await autenticarModulo('compras',{interativo:true});await carregarDados();}catch(e){state.erroNuvem=e.message;renderizarStatusNuvemCompras();}
   await renderizarTudo();
 }
 
@@ -7197,7 +7199,7 @@ async function iniciar() {
     }, 250);
 
   try {
-    await carregarDados();
+    if($("[data-compras-view].active"))await carregarDados();
   } catch (erro) {
     console.error(
       "[CAMPANHA COMPRAS] Falha não bloqueante ao carregar dados:",
