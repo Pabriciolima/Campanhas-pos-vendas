@@ -7273,6 +7273,16 @@ if (
   iniciar();
 }
 
+if(typeof document!=='undefined'&&!document.getElementById('cmpPolicyExportStyle')){const style=document.createElement('style');style.id='cmpPolicyExportStyle';style.textContent=`
+.cmp-policy-export-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin:14px 0 16px}
+.cmp-policy-export{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 18px;border-radius:11px;border:1px solid transparent;color:#fff;font:700 13px system-ui,sans-serif;cursor:pointer;transition:transform .2s,filter .2s,box-shadow .2s}
+.cmp-policy-export:hover{transform:translateY(-2px);filter:brightness(1.13);box-shadow:0 8px 20px rgba(0,0,0,.2)}
+.cmp-policy-export:focus-visible{outline:3px solid #b5a1ff;outline-offset:3px}
+.cmp-policy-export-excel{background:#087c53;border-color:#22a577}
+.cmp-policy-export-pdf{background:#be3345;border-color:#ef6070}
+@media(max-width:600px){.cmp-policy-export-actions{justify-content:stretch}.cmp-policy-export{flex:1}}
+@media(prefers-reduced-motion:reduce){.cmp-policy-export{transition:none}}
+`;document.head.appendChild(style);}
 /* Exportação executiva da política vigente: utiliza conteúdo já renderizado da competência. */
 if(typeof document!=='undefined'&&!window.__cmpPolicyExportBound){
  window.__cmpPolicyExportBound=true;
