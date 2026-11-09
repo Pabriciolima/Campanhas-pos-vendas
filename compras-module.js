@@ -4021,6 +4021,7 @@ function htmlPaginas() {
       data-compras-view="politicas"
     >
       ${htmlTopbar("Políticas de Compras")}
+      <div class="cmp-policy-export-actions" role="group" aria-label="Exportar políticas de Compras"><button type="button" data-cmp-export-policy="excel" class="cmp-policy-export cmp-policy-export-excel">↓ Exportar Excel</button><button type="button" data-cmp-export-policy="pdf" class="cmp-policy-export cmp-policy-export-pdf">↓ Exportar PDF</button></div>
       <div id="comprasPoliticasConteudo">${htmlConteudoPoliticas()}</div>
     </section>
   `;
@@ -7270,4 +7271,53 @@ if (
   );
 } else {
   iniciar();
+}
+
+/* Exportação executiva da política vigente: utiliza conteúdo já renderizado da competência. */
+if(typeof document!=='undefined'&&!window.__cmpPolicyExportBound){
+ window.__cmpPolicyExportBound=true;
+ document.addEventListener('click',event=>{
+  const btn=event.target.closest('[data-cmp-export-policy]');
+  if(!btn)return;
+  const root=document.getElementById('comprasPoliticasConteudo');
+  if(!root)return;
+  const modo=btn.dataset.cmpExportPolicy;
+  const titulo='Política de Compras — '+(document.querySelector('#compras-politicas .cmp-policy-intro')?.textContent?.match(/Regras de ([^.]+)/)?.[1]||state.competencia);
+  if(modo==='excel'){
+   if(!window.XLSX){alert('Biblioteca Excel indisponível. Atualize a página e tente novamente.');return;}
+   const rows=[[titulo],['Relatório executivo · Campanhas Pós-Vendas'],[],['SEÇÃO','ITEM','DESCRIÇÃO / VALOR']];
+   const add=(sec,item,detail)=>rows.push([sec,item,detail]);
+   root.querySelectorAll('.cmp-policy-benefit,.cmp-policy-budget,.compras-panel,.cmp-policy-cards,.cmp-policy-warning,.cmp-policy-reference').forEach((section,index)=>{
+    const nome=section.querySelector('h2,h3')?.textContent?.trim()||('Seção '+(index+1));
+    const table=section.querySelector('table');
+    if(table){
+     rows.push([], [nome]);
+     for(const tr of table.querySelectorAll('tr'))rows.push(Array.from(tr.querySelectorAll('th,td')).map(c=>c.innerText.trim()));
+    }
+    const details=section.querySelectorAll('h2,h3,h4,p,li,dt,dd,summary');
+    for(const el of details){
+     if(el.closest('table'))continue;
+     const value=el.innerText?.trim();
+     if(value)add(nome,el.tagName.match(/^H[234]$/)?'Tópico':el.tagName==='LI'?'Condição':'Detalhe',value);
+    }
+   });
+   const sheet=XLSX.utils.aoa_to_sheet(rows);
+   sheet['!cols']=[{wch:33},{wch:28},{wch:100},{wch:26}];
+   sheet['!autofilter']={ref:'A4:C4'};
+   const book=XLSX.utils.book_new();
+   XLSX.utils.book_append_sheet(book,sheet,'Política de Compras');
+   XLSX.writeFile(book,'politica-compras-'+state.competencia+'.xlsx');
+  }else if(modo==='pdf'){
+   const printable=root.cloneNode(true);
+   printable.querySelectorAll('details').forEach(el=>el.open=true);
+   const popup=window.open('','_blank');
+   if(!popup){alert('Permita pop-ups para abrir a impressão em PDF.');return;}
+   const styles=`@page{size:A4;margin:16mm}*{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#172336;background:white;font-size:10pt;line-height:1.5}header{border-bottom:3px solid #087e6d;margin-bottom:18px;padding-bottom:12px}header small{color:#087e6d;font-weight:bold;letter-spacing:1px}h1{font-size:22pt;margin:5px 0}h2{font-size:15pt;margin:15px 0 7px}h3{font-size:12pt;margin:12px 0 6px}section,aside,article{break-inside:avoid;margin:12px 0;padding:10px 0;border-bottom:1px solid #dde4eb}p,li,dd{color:#293749}table{border-collapse:collapse;width:100%;font-size:8pt;margin:12px 0}th,td{padding:8px;border:1px solid #cfd9e2;text-align:left}th{background:#e8f3f1}tr:nth-child(even){background:#f5f8fa}.cmp-policy-ceiling{display:flex;gap:14px;flex-wrap:wrap}.cmp-policy-ceiling strong{font-size:14pt;color:#087e6d}.cmp-policy-cards{display:block}.cmp-policy-warning{border-left:3px solid #bf7d19;padding-left:12px}summary{font-weight:bold}details{display:block}button,input{display:none!important}`;
+   popup.document.open();
+   popup.document.write('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>'+titulo.replaceAll('<','&lt;')+'</title><style>'+styles+'</style></head><body><header><small>GRUPO MÔNACO · CAMPANHAS PÓS-VENDAS</small><h1>'+titulo.replaceAll('<','&lt;')+'</h1><p>Relatório de políticas e critérios de bonificação</p></header>'+printable.innerHTML+'</body></html>');
+   popup.document.close();
+   popup.focus();
+   setTimeout(()=>popup.print(),450);
+  }
+ });
 }
