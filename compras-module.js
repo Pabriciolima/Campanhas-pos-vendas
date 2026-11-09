@@ -1,5 +1,5 @@
 import {autenticarModulo} from './modulos-edge.js';
-import {fatorLideranca,calcularLiderancaCompras} from "./compras-lideranca.js?v=20261030";
+import {fatorLideranca,calcularLiderancaCompras} from "./compras-lideranca.js?v=20261109-ricardo-x2";
 import {calcularCoberturaCasa,metaCoberturaCasa,lerCoberturaEstoque,ehPlanilhaCobertura,formatarCobertura} from "./compras-cobertura.js?v=20261030-metas";
 import {POLITICA_ANALISTA, POLITICA_ASSISTENTE, politicaCompras} from "./compras-politicas.js?v=20261030-cobertura-todos";
 /* Campanha Central de Compras — base de analistas aprovada em 28/10/2026.
