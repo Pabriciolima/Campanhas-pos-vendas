@@ -5499,3 +5499,41 @@ window.aplicarResultadoAuditoriaPix = (linhas, auditoria) => {
  return mudou;
 };
 
+
+
+/* Ponte de conferência Linx: pré-preenche somente realizado, preservando NPS e demais campos.
+   A gravação permanece exclusivamente no botão Salvar lançamento do formulário existente. */
+window.pixLinxPrepararRealizado = function({nome,data,valor}) {
+  if(window.bloqueioLancamentos?.bloqueado || document.body.classList.contains("lancamentos-bloqueados"))throw Error("Lançamentos bloqueados.");
+  if(!/^20\d{2}-\d{2}-\d{2}$/.test(String(data)))throw Error("Informe a data do relatório.");
+  const norm=v=>String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+  const matches=estadoPix.funcionarios.filter(f=>funcionarioPixAtivo(f)&&norm(f.nome)===norm(nome));
+  if(matches.length!==1)throw Error(matches.length?"Nome presente em mais de uma filial. Revise o vínculo antes de importar.":"Colaborador não encontrado entre os ativos. Revise o nome.");
+  const f=matches[0],competencia=data.slice(0,7);
+  const existentes=estadoPix.lancamentos.filter(l=>String(l.funcionarioId)===String(f.id)&&l.competencia===competencia);
+  const mesmoDia=existentes.filter(l=>(l.datasAvaliadas||[]).includes(data)||Object.hasOwn(l.diasCalendario||{},data));
+  if(mesmoDia.length>1)throw Error("Data encontrada em múltiplos lançamentos. Revisão manual necessária.");
+  if(!mesmoDia.length&&existentes.length)throw Error("Já existem semanas deste colaborador. Abra o lançamento correto e confira as datas antes de importar.");
+  if(mesmoDia.length)editarLancamentoPix(mesmoDia[0].id);
+  else {
+    abrirLancamentoPix();
+    $("#pixLancamentoCompetencia").value=competencia;
+    atualizarSelectsPix();
+    $("#pixLancamentoFilial").value=f.filial;
+    atualizarFuncionariosLancamentoPix(f.id);
+    $("#pixLancamentoFuncionario").value=f.id;
+    renderCamposLancamentoPix();
+  }
+  const modal=$("#modalPixPresidente");
+  const day=modal?.querySelector('.pix-calendar-day[data-date="'+data+'"]');
+  if(!day){throw Error("Data não disponível no calendário da competência. Revise o período.");}
+  if(!day.classList.contains("is-selected"))day.click();
+  const input=modal.querySelector('.pix-realizado-dia[data-dia="'+data+'"]');
+  if(!input)throw Error("Campo de realizado diário não encontrado.");
+  if(input.value.trim()&&!window.confirm("Já existe realizado para "+data+". Deseja substituí-lo na prévia? Nada será salvo automaticamente."))return;
+  input.value=Number(valor).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+  input.dispatchEvent(new Event("input",{bubbles:true}));
+  input.dispatchEvent(new Event("change",{bubbles:true}));
+  input.scrollIntoView({behavior:"smooth",block:"center"});
+  return {nome:f.nome,filial:f.filial,data,valor};
+};
