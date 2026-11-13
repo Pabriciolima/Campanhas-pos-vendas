@@ -5483,6 +5483,32 @@ window.sincronizarCompetenciaPix =
 // Fonte completa de resultados calculados, independente dos filtros das tabelas.
 window.obterResultadosPix = () => estadoPix.lancamentos.map(calcularPix);
 
+// Consulta completa do mês, sem herdar os filtros ou a paginação da tela.
+window.obterResultadosPixExportacao = async (competencia) => {
+  const registros = [];
+  const tamanho = 500;
+  for (let inicio = 0; ; inicio += tamanho) {
+    const { data, error } = await supabase.from("pix_lancamentos")
+      .select("id,dados").eq("competencia", competencia)
+      .order("id").range(inicio, inicio + tamanho - 1);
+    if (error) throw error;
+    registros.push(...(data || []).map(linha => ({...linha.dados, id: linha.id, competencia})));
+    if ((data || []).length < tamanho) break;
+  }
+  const anteriores = estadoPix.lancamentos;
+  try {
+    estadoPix.lancamentos = registros;
+    return registros.map(calcularPix).map(resultado => {
+      const texto = document.createElement("div");
+      texto.innerHTML = indicadorPixTexto(resultado);
+      return {...resultado, indicadoresExportacao: texto.textContent.replace(/\s+/g, " ").trim()};
+    });
+  } finally {
+    estadoPix.lancamentos = anteriores;
+  }
+};
+
+
 // Apenas dados já carregados; cópias evitam alterações de cadastro pelo assistente.
 window.obterContextoAssistentePix = (incluirResultados = true) => ({
  filiais: FILIAIS_PIX.map(filial => filial.unidade),

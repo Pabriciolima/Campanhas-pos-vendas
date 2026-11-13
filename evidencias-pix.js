@@ -2361,268 +2361,33 @@ function resolverDnPixPorFilial(
   );
 }
 
-function dadosPixParaExportar() {
-  const tabela =
-    tabelaPixComResultados();
-
-  if (!tabela) {
-    console.warn(
-      "[PIX EXPORTAÇÃO] Nenhuma tabela do Pix foi encontrada."
-    );
-
-    return [];
-  }
-
-  const tbody =
-    tabela.querySelector("tbody");
-
-  if (!tbody) {
-    return [];
-  }
-
-  const mapa =
-    mapaCabecalhoPix(tabela);
-
-  const competenciaSelecionada =
-    normalizarCompetenciaPixExportacao(
-      competenciaPixAtiva()
-    );
-
-  const filtro =
-    tipoExportacaoPixAtual();
-
-  let resultados = [
-    ...tbody.querySelectorAll("tr")
-  ]
-    .map(
-      linha => {
-        const celulas =
-          [...linha.children];
-
-        if (celulas.length < 5) {
-          return null;
-        }
-
-        const valor = indice =>
-          indice === undefined
-            ? ""
-            : celulas[indice]
-                ?.textContent
-                ?.replace(/\s+/g, " ")
-                ?.trim() || "";
-
-        /*
-         * As tabelas de Lançamentos e Apuração possuem
-         * cabeçalhos completos. O Histórico mensal possui
-         * outra estrutura; por isso usamos os nomes do
-         * cabeçalho quando disponíveis e índices de apoio.
-         */
-        const competenciaBruta =
-          valor(
-            mapa.competencia ?? 0
-          );
-
-        const statusBruto =
-          valor(
-            mapa.status ??
-            Math.max(
-              0,
-              celulas.length - 2
-            )
-          );
-
-        const item = {
-          competencia:
-            normalizarCompetenciaPixExportacao(
-              competenciaBruta ||
-              competenciaSelecionada
-            ),
-          semana:
-            valor(mapa.semana ?? 1),
-          filial:
-            valor(mapa.filial ?? 2),
-          colaborador:
-            valor(mapa.colaborador ?? 3),
-          cargo:
-            valor(mapa.cargo ?? 4),
-          indicadores:
-            valor(mapa.indicadores ?? 5),
-          bonusFaturamento:
-            numeroPixEv(
-              valor(
-                mapa.bonusFaturamento ?? 6
-              )
-            ),
-          bonusTicket:
-            numeroPixEv(
-              valor(
-                mapa.bonusTicket ?? 7
-              )
-            ),
-          nps:
-            numeroPixEv(
-              valor(mapa.nps ?? 8)
-            ),
-          penalidade:
-            numeroPixEv(
-              valor(
-                mapa.penalidade ?? 9
-              )
-            ),
-          total:
-            numeroPixEv(
-              valor(
-                mapa.total ??
-                Math.max(
-                  0,
-                  celulas.length - 3
-                )
-              )
-            ),
-          status:
-            limparStatusPixExportacao(
-              statusBruto
-            )
-        };
-
-        if (
-          !item.colaborador ||
-          normalizarPixEv(
-            item.colaborador
-          ).includes("NENHUM")
-        ) {
-          return null;
-        }
-
-        if (
-          competenciaSelecionada &&
-          item.competencia &&
-          item.competencia !==
-            competenciaSelecionada
-        ) {
-          return null;
-        }
-
-        const statusNormalizado =
-          limparStatusPixExportacao(
-            item.status
-          );
-
-        const semanaNormalizada =
-          normalizarSemanaPixExportacao(
-            item.semana
-          );
-
-        item.semana =
-          semanaNormalizada;
-
-        if (filtro.chave === "nao-habilitados" && normalizarPixEv(item.status) === "HABILITADO") return null;
-
-        if (
-          filtro.somenteHabilitados &&
-          statusNormalizado !==
-            "HABILITADO"
-        ) {
-          return null;
-        }
-
-        if (
-          filtro.semana &&
-          semanaNormalizada !==
-            filtro.semana
-        ) {
-          return null;
-        }
-
-        const filialSelecionada =
-          filialExportacaoPixNormalizada();
-
-        if (
-          filialSelecionada &&
-          normalizarPixEv(
-            item.filial
-          ) !==
-            filialSelecionada
-        ) {
-          return null;
-        }
-
-        return item;
-      }
-    )
-    .filter(Boolean);
-
+async function dadosPixParaExportar() {
+  const competencia = normalizarCompetenciaPixExportacao(competenciaPixAtiva());
+  if (!competencia) throw new Error("Selecione a competência para exportar o Pix.");
+  if (!window.obterResultadosPixExportacao) throw new Error("Atualize a página para carregar o exportador do Pix.");
+  const filtro = tipoExportacaoPixAtual();
+  const filial = filialExportacaoPixNormalizada();
+  const fonte = await window.obterResultadosPixExportacao(competencia);
+  let resultados = fonte.map(r => ({
+    competencia: r.competencia,
+    semana: normalizarSemanaPixExportacao(r.semana),
+    filial: r.filial, dn: r.dn, colaborador: r.nome, cargo: r.cargo,
+    indicadores: r.indicadoresExportacao || "",
+    bonusFaturamento: r.bonusBase, bonusTicket: r.bonusFaixa,
+    nps: r.bonusNps, penalidade: r.penalidade, total: r.bonusFinal,
+    status: limparStatusPixExportacao(r.status), auditoriaDados: r
+  })).filter(r => (!filial || normalizarPixEv(r.filial) === filial)
+    && (!filtro.semana || r.semana === filtro.semana)
+    && (!filtro.somenteHabilitados || r.status === "HABILITADO")
+    && (filtro.chave !== "nao-habilitados" || r.status !== "HABILITADO"));
   resultados = window.CampanhasSelecaoExportacao?.filtrar(resultados, "pix") || resultados;
-  resultados = combinarPixParaAuditoria(resultados,window.obterResultadosPix?.()||[]);
-
-  console.info(
-    `[PIX EXPORTAÇÃO] ${resultados.length} resultado(s) preparado(s).`,
-    {
-      competencia:
-        competenciaSelecionada,
-      filtro:
-        filtro.chave,
-      filial:
-        filialExportacaoPixAtual() ||
-        "Todas as filiais",
-      tabela:
-        tabela.id || "sem-id"
-    }
-  );
-
-  /*
-   * ORDEM PARA PAGAMENTO DO FINANCEIRO
-   *
-   * A exportação em PDF e Excel passa a seguir:
-   * 1. Filial em ordem alfabética;
-   * 2. Cargo em ordem alfabética;
-   * 3. Colaborador em ordem alfabética.
-   *
-   * A ordenação afeta somente a apresentação dos relatórios.
-   * Nenhum cálculo, filtro, lançamento, evidência ou dado do
-   * Firebase/Supabase é alterado.
-   */
-  resultados.sort(
-    (a, b) => {
-      const comparar =
-        (
-          primeiro,
-          segundo
-        ) =>
-          String(
-            primeiro || ""
-          ).localeCompare(
-            String(
-              segundo || ""
-            ),
-            "pt-BR",
-            {
-              sensitivity:
-                "base",
-              numeric:
-                true
-            }
-          );
-
-      return (
-        comparar(
-          a.filial,
-          b.filial
-        ) ||
-        comparar(
-          a.cargo,
-          b.cargo
-        ) ||
-        comparar(
-          a.colaborador,
-          b.colaborador
-        )
-      );
-    }
-  );
-
+  resultados.sort((a,b) => a.filial.localeCompare(b.filial, "pt-BR")
+    || a.cargo.localeCompare(b.cargo, "pt-BR") || a.colaborador.localeCompare(b.colaborador, "pt-BR"));
+  console.info(`[PIX EXPORTAÇÃO] ${resultados.length} resultado(s) preparado(s).`,
+    {competencia, filtro: filtro.chave, filial, fonte: "pix_lancamentos", consultados: fonte.length});
   return resultados;
 }
+
 function competenciaExibicaoPix(
   competencia
 ) {
@@ -2869,7 +2634,8 @@ async function buscarGruposAuditoriaImagensPix(resultados) {
  for(const filial of unidades){const cp=r.competencia||r.origem,sw=r.semana,key=[cp,numeroSemanaPixEvidencia(sw),normalizarPixEv(filial)].join('|');if(contextos.has(key))continue;const contexto=construirContextoPix(cp,sw,filial,r.dn||'');if(contexto)contextos.set(key,{contexto,competencia:cp,semana:sw,filial});}}
  return mapearLimitadoPix([...contextos.values()],3,async(g,i)=>{cancelarSeNecessario(signal);informarExportacaoPix(`Buscando evidências ${i+1}/${contextos.size} · ${g.filial}`);try{const imagens=await listarEvidenciasContextoPix(g.contexto);cancelarSeNecessario(signal);return {...g,imagens};}catch(e){if(e.name==='AbortError')throw e;return {...g,imagens:[{nome:'Evidências indisponíveis',url:''}]};}});
 }
-async function conferirImagensPixNaTela(resultados=dadosPixParaExportar()) {
+async function conferirImagensPixNaTela(resultados) {
+  resultados ??= await dadosPixParaExportar();
  if(!resultados.length){alert('Não há lançamentos no período e filtro selecionados.');return;}
  return auditarImagensPix(resultados,await buscarGruposAuditoriaImagensPix(resultados));
 }
@@ -2877,7 +2643,7 @@ async function conferirImagensPixNaTela(resultados=dadosPixParaExportar()) {
 async function gerarPdfPixIndependente() {
   if (window.recarregarNpsFilialPix) await window.recarregarNpsFilialPix();
   let resultados =
-    dadosPixParaExportar();
+    await dadosPixParaExportar();
 
   if (!resultados.length) {
     alert(
@@ -3122,7 +2888,7 @@ async function gerarPdfPixIndependente() {
 async function gerarExcelPixIndependente() {
   if (window.recarregarNpsFilialPix) await window.recarregarNpsFilialPix();
   let resultados =
-    dadosPixParaExportar();
+    await dadosPixParaExportar();
 
   if (!resultados.length) {
     alert(
