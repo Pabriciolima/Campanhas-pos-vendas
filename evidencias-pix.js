@@ -34,7 +34,7 @@ function listarStorageExportacaoPix(pasta,opcoes){
 }
 function executarExportacaoPix(tipo){return executarUmaExportacaoPix(async()=>{
  document.querySelector('#pixProgressoExportacao')?.remove();
- const controller=new AbortController(),box=document.createElement('section');box.id='pixProgressoExportacao';box.style.cssText='position:fixed;right:18px;top:90px;max-width:min(390px,calc(100vw - 36px));z-index:10020;padding:16px;border-radius:14px;background:var(--monaco-secondary,#142a3d);color:var(--monaco-text,#eef5ff);box-shadow:0 8px 30px #0005;border:1px solid #6a8b9d';box.innerHTML='<strong>Preparando documento do Pix</strong><p role="status" aria-live="polite" style="font-size:13px;line-height:1.5;margin:8px 0">Consultando evidências selecionadas…</p><button type="button">Cancelar exportação</button>';document.body.append(box);
+ const controller=new AbortController(),box=document.createElement('section');box.id='pixProgressoExportacao';box.style.cssText='position:fixed;right:18px;top:90px;max-width:min(390px,calc(100vw - 36px));z-index:10020;padding:16px;border-radius:14px;background:var(--monaco-secondary,#142a3d);color:var(--monaco-text,#eef5ff);box-shadow:0 8px 30px #0005;border:1px solid #6a8b9d';box.innerHTML='<strong>Preparando documento do Pix</strong><p role="status" aria-live="polite" style="font-size:13px;line-height:1.5;margin:8px 0">Preparando resultados financeiros…</p><button type="button">Cancelar exportação</button>';document.body.append(box);
  const mensagem=box.querySelector('p'),cancelar=box.querySelector('button');cancelar.onclick=()=>{controller.abort();cancelar.disabled=true;mensagem.textContent='Cancelando exportação…';};
  const botoes=[...document.querySelectorAll('#btnExportarPdf,#btnExportarExcel')].map(b=>[b,b.disabled]);botoes.forEach(([b])=>{b.disabled=true;b.setAttribute('aria-busy','true');});
  trabalhoExportacaoPix={controller,assets:new Map(),listagens:new Map(),informar:t=>{mensagem.textContent=t;}};
@@ -1974,7 +1974,7 @@ function tipoExportacaoPixAtual() {
 
   return (
     mapa[valor] ||
-    mapa.habilitados
+    mapa.todos
   );
 }
 
@@ -2004,7 +2004,7 @@ function rotuloTipoExportacaoPix(
 
   return (
     rotulos[filtro.chave] ||
-    "Somente habilitados"
+    "Todas"
   );
 }
 
@@ -2881,7 +2881,7 @@ async function gerarPdfPixIndependente() {
 
   if (!resultados.length) {
     alert(
-      "Não existem resultados do Pix para a competência e o filtro selecionados. Verifique o mês e altere para Todos os resultados, se necessário."
+      "Nenhum lançamento corresponde à competência, semana, filial e situação selecionadas. Selecione TODAS na exportação e confira o mês e a filial."
     );
 
     return;
@@ -2900,10 +2900,8 @@ async function gerarPdfPixIndependente() {
 
   const filtroExportacao =
     tipoExportacaoPixAtual();
-  const gruposAuditoria = await buscarGruposAuditoriaImagensPix(resultados);
-  const auditoriaAtual = await auditarImagensPix(resultados, gruposAuditoria,{signal:trabalhoExportacaoPix?.controller.signal,assets:trabalhoExportacaoPix?.assets,aoProgresso:informarExportacaoPix,prioridade:'impressao'});
-  resultados = resultados.map(item=>{const bruto=aplicarStatusAuditoriaPix(item.auditoriaDados||item);return bruto.auditoriaPendente?{...item,status:bruto.status,total:0,auditoriaDados:bruto}:item;});
-  if(filtroExportacao.somenteHabilitados)resultados=resultados.filter(item=>item.status==='HABILITADO');
+  // Exportação financeira: não consulta, compara ou reclassifica evidências.
+  // O status e o total são os mesmos da apuração já exibida.
 
 
   const tipo =
@@ -3107,119 +3105,7 @@ async function gerarPdfPixIndependente() {
       }
   });
 
-  adicionarPaginaImagensPix(documento, auditoriaAtual);
-
-  // Anexa exatamente as fontes lidas, inclusive unidades do núcleo e pastas históricas.
-  const evidencias = gruposAuditoria.map(g=>({...g,numeroSemana:numeroSemanaPixEvidencia(g.semana),dn:resolverDnPixPorFilial(g.filial),imagens:g.imagens.filter(i=>i.url)})).filter(g=>g.imagens.length);
-
-  for (const grupo of evidencias) {
-    documento.addPage();
-
-    documento.setTextColor(
-      15,
-      35,
-      52
-    );
-
-    documento.setFont(
-      "helvetica",
-      "bold"
-    );
-
-    documento.setFontSize(
-      16
-    );
-
-    documento.text(
-      `EVIDÊNCIAS — PIX DO PRESIDENTE — ${grupo.semana}`,
-      14,
-      17
-    );
-
-    documento.setFontSize(
-      11
-    );
-
-    documento.text(
-      `Semana: ${grupo.semana} | Filial: ${grupo.dn ? `${grupo.dn} - ` : ""}${grupo.filial}`,
-      14,
-      26
-    );
-
-    documento.text(
-      `Competência: ${competenciaExibicaoPix(competencia)}`,
-      14,
-      33
-    );
-
-    let y = 41;
-
-    for (const item of grupo.imagens) {
-      informarExportacaoPix(`Montando anexo · ${grupo.filial} · ${item.nomeOriginal||item.nome}`);
-      const imagem =
-        await imagemRemotaParaDataPix(
-          item.url,item
-        );
-
-      const proporcao =
-        Math.min(
-          255 /
-          imagem.largura,
-          125 /
-          imagem.altura
-        );
-
-      const largura =
-        imagem.largura *
-        proporcao;
-
-      const altura =
-        imagem.altura *
-        proporcao;
-
-      if (
-        y +
-        altura +
-        16 >
-        195
-      ) {
-        documento.addPage();
-        y = 18;
-      }
-
-      const x =
-        (297 - largura) /
-        2;
-
-      documento.addImage(
-        imagem.dataUrl,
-        "JPEG",
-        x,
-        y,
-        largura,
-        altura
-      );
-
-      y += altura + 5;
-
-      documento.setFont(
-        "helvetica",
-        "normal"
-      );
-
-      documento.setFontSize(
-        9
-      );
-
-      documento.text(
-        `${grupo.semana} — ${grupo.dn ? `${grupo.dn} - ` : ""}${grupo.filial}`,
-        14,
-        y
-      );
-
-      y += 12;
-    }
-  }
+  // PDF financeiro sem anexos de evidência; geração rápida.
 
   informarExportacaoPix('Finalizando PDF…');
   await cederTelaPix();
@@ -3240,7 +3126,7 @@ async function gerarExcelPixIndependente() {
 
   if (!resultados.length) {
     alert(
-      "Não existem resultados do Pix para a competência e o filtro selecionados. Verifique o mês e altere para Todos os resultados, se necessário."
+      "Nenhum lançamento corresponde à competência, semana, filial e situação selecionadas. Selecione TODAS na exportação e confira o mês e a filial."
     );
 
     return;
@@ -3257,10 +3143,8 @@ async function gerarExcelPixIndependente() {
 
   const filtroExportacao =
     tipoExportacaoPixAtual();
-  const gruposAuditoria = await buscarGruposAuditoriaImagensPix(resultados);
-  const auditoriaAtual = await auditarImagensPix(resultados, gruposAuditoria,{signal:trabalhoExportacaoPix?.controller.signal,assets:trabalhoExportacaoPix?.assets,aoProgresso:informarExportacaoPix,prioridade:'impressao'});
-  resultados = resultados.map(item=>{const bruto=aplicarStatusAuditoriaPix(item.auditoriaDados||item);return bruto.auditoriaPendente?{...item,status:bruto.status,total:0,auditoriaDados:bruto}:item;});
-  if(filtroExportacao.somenteHabilitados)resultados=resultados.filter(item=>item.status==='HABILITADO');
+  // Exportação financeira: não consulta, compara ou reclassifica evidências.
+  // O status e o total são os mesmos da apuração já exibida.
 
 
   const workbook =
@@ -3535,203 +3419,7 @@ async function gerarExcelPixIndependente() {
       9
   };
 
-  const abaAuditoria=workbook.addWorksheet("Conferência da fonte");
-  abaAuditoria.addRow(["Local","Situação","Ponto identificado","Correção necessária","Fonte"]);
-  const auditoriaExcel = auditoriaAtual;
-  for(const a of auditoriaExcel.divergencias)abaAuditoria.addRow([a.local,a.nivel,a.ponto,a.correcao,a.fonte]);
-  const leiturasExcel=workbook.addWorksheet("Leituras a revisar");
-  leiturasExcel.addRow(["Colaborador","Filial","Motivo","Evidência"]);
-  for(const a of auditoriaExcel.revisoes)leiturasExcel.addRow([a.nome,a.filial,a.motivo,a.fonte]);
-  abaAuditoria.columns.forEach((c,i)=>{c.width=[42,22,85,90,55][i]||25;});
-  const evidencias=gruposAuditoria.map(g=>({...g,numeroSemana:numeroSemanaPixEvidencia(g.semana),imagens:g.imagens.filter(i=>i.url)})).filter(g=>g.imagens.length);
-
-  const planilhaEvidencias =
-    workbook.addWorksheet(
-      "Evidências Pix",
-      {
-        views: [
-          {
-            showGridLines:
-              false
-          }
-        ]
-      }
-    );
-
-  planilhaEvidencias.columns = [
-    { width: 4 },
-    { width: 23 },
-    { width: 23 },
-    { width: 23 },
-    { width: 23 },
-    { width: 4 }
-  ];
-
-  planilhaEvidencias.mergeCells(
-    "A1:F2"
-  );
-
-  const tituloEvidencias =
-    planilhaEvidencias.getCell(
-      "A1"
-    );
-
-  tituloEvidencias.value =
-    "EVIDÊNCIAS — PIX DO PRESIDENTE";
-
-  tituloEvidencias.font = {
-    bold:
-      true,
-    size:
-      18,
-    color: {
-      argb:
-        "FFFFFFFF"
-    }
-  };
-
-  tituloEvidencias.fill = {
-    type:
-      "pattern",
-    pattern:
-      "solid",
-    fgColor: {
-      argb:
-        "FF0B3154"
-    }
-  };
-
-  tituloEvidencias.alignment = {
-    vertical:
-      "middle",
-    horizontal:
-      "left"
-  };
-
-  let linhaAtual = 4;
-
-  if (!evidencias.length) {
-    planilhaEvidencias.mergeCells(
-      `A${linhaAtual}:F${linhaAtual + 1}`
-    );
-
-    planilhaEvidencias.getCell(
-      `A${linhaAtual}`
-    ).value =
-      "Nenhuma evidência cadastrada para a competência e semana selecionadas.";
-  }
-
-  for (const grupo of evidencias) {
-    planilhaEvidencias.mergeCells(
-      `A${linhaAtual}:F${linhaAtual}`
-    );
-
-    const cabecalhoFilial =
-      planilhaEvidencias.getCell(
-        `A${linhaAtual}`
-      );
-
-    cabecalhoFilial.value =
-      `${grupo.semana} — ${grupo.dn ? `${grupo.dn} - ` : ""}${grupo.filial}`;
-
-    cabecalhoFilial.font = {
-      bold:
-        true,
-      size:
-        13,
-      color: {
-        argb:
-          "FFFFFFFF"
-      }
-    };
-
-    cabecalhoFilial.fill = {
-      type:
-        "pattern",
-      pattern:
-        "solid",
-      fgColor: {
-        argb:
-          "FF0B7A53"
-      }
-    };
-
-    linhaAtual += 1;
-
-    let colunaImagem = 1;
-
-    for (const item of grupo.imagens) {
-      if (colunaImagem > 3) {
-        colunaImagem = 1;
-        linhaAtual += 11;
-      }
-
-      informarExportacaoPix(`Montando anexo Excel · ${grupo.filial} · ${item.nomeOriginal||item.nome}`);
-      const imagem =
-        await imagemRemotaParaDataPix(
-          item.url,item
-        );
-
-      const imagemId =
-        workbook.addImage({
-          base64:
-            imagem.base64,
-          extension:
-            "jpeg"
-        });
-
-      const colunaInicial =
-        colunaImagem === 1
-          ? 1
-          : colunaImagem === 2
-            ? 3
-            : 5;
-
-      planilhaEvidencias.addImage(
-        imagemId,
-        {
-          tl: {
-            col:
-              colunaInicial - 1,
-            row:
-              linhaAtual - 1
-          },
-          ext: {
-            width:
-              180,
-            height:
-              120
-          },
-          editAs:
-            "oneCell"
-        }
-      );
-
-      planilhaEvidencias.getRow(
-        linhaAtual
-      ).height = 92;
-
-      planilhaEvidencias.getCell(
-        linhaAtual + 8,
-        colunaInicial
-      ).value =
-        `${grupo.semana} — ${grupo.filial}`;
-
-      planilhaEvidencias.getCell(
-        linhaAtual + 8,
-        colunaInicial
-      ).font = {
-        bold:
-          true,
-        size:
-          9
-      };
-
-      colunaImagem += 1;
-    }
-
-    linhaAtual += 13;
-  }
+  // Excel financeiro: somente dados e indicadores da apuração.
 
   informarExportacaoPix('Finalizando Excel…');
   await cederTelaPix();
