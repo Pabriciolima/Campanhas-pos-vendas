@@ -2169,7 +2169,7 @@ function garantirOpcoesExportacaoPix() {
   select.value =
     valorValido
       ? valorAtual
-      : "habilitados";
+      : "todos";
 }
 
 function tabelasPixDisponiveis() {
