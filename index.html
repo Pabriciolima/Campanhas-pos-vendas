@@ -322,8 +322,7 @@
 <link rel="stylesheet" href="./compras-importacao-layout.css?v=20261030-cobertura" media="screen">
 <link rel="stylesheet" href="./compras-visao-geral.css?v=20261030-pesos" media="screen">
 <link rel="stylesheet" href="./compras-politicas-layout.css?v=20261030-finais" media="screen">
-<link rel="stylesheet" href="./pix-linx-premium.css?v=20261113-premium2" />
-<script defer src="./pix-apollo-regras.js?v=20261113-regras1"></script>\n</head>
+</head>
 
             <body>
 <a class="skip-to-content" href="#conteudoPrincipal">Ir para o conteúdo</a>
@@ -851,21 +850,9 @@
                       <div class="panel-header">
                         <div>
                           <p class="eyebrow">Semanas 1 a 4</p>
-                          <h2>Lançamentos e importação assistida</h2><p style="font-size:12px;opacity:.8;margin-top:5px">Importe o realizado do Linx com conferência individual. NPS e indicadores existentes permanecem preservados.</p>
+                          <h2>Lançamentos</h2>
                         </div>
                         <div class="panel-header-actions" id="pixLancamentosAcoes">
-                          <button type="button" id="btnBaixarModeloRelatorioPix" class="secondary"
-                            onclick="window.baixarModeloPixSeguro(event)">
-                            Baixar modelo
-                          </button>
-
-                          <button type="button" id="btnImportarRelatorioPix" class="secondary"
-                            onclick="window.abrirImportacaoPixSeguro(event)"
-                            style="background:#0b3154;color:#fff;border-color:#0b3154">
-                            Importar relatório
-                          </button>
-
-                          <button type="button" id="btnImportarLinxPix" class="secondary" title="Importar e conferir relatório diário do Apollo/Linx sem alterar NPS" style="background:#dc2626!important;color:#fff!important;border:1px solid #b91c1c!important;border-radius:10px!important;font-weight:700!important;box-shadow:0 3px 12px rgba(220,38,38,.22)!important;padding:10px 16px!important;cursor:pointer">⬆ Importar relatório Apollo/Linx</button>
                           <button type="button" id="btnNovoLancamentoPix" class="primary pix-primary-button">
                             + Novo lançamento
                           </button>
@@ -1194,9 +1181,7 @@
 <script src="./performance-vendors.js?v=20261021-retry-v2"></script>
               <script src="./alerts-premium.js?v=20260716-01"></script>
               <script type="module" src="./script.js?v=20261104-oficina-status-red1"></script>
-              <script type="module" src="./pix-presidente.js?v=20261113-exportacao-fonte2"></script>
-              <script defer src="./pix-modelo-premium.js?v=20261110-oficial"></script>
-              <script defer src="./pix-apollo-central-v2.js?v=20261113-preview1"></script>
+              <script type="module" src="./pix-presidente.js?v=20261116-sem-importacao-pix"></script>
               <script type="module" src="./importacao-funcionarios.js?v=20261022-agua-boa-4774"></script>
               <script src="./pix-historico-individual.js?v=20261021-filtros-historico-v1"></script>
               <script type="module" src="./evidencias-produtivos.js?v=20261022-agua-boa-4774"></script>
@@ -1236,7 +1221,7 @@
                   if (!window.__importadorPromise) {
                     window.__importadorPromise =
                       import(
-                        "./importacao-relatorio-sistema.js?v=20261022-agua-boa-4774"
+                        "./importacao-relatorio-sistema.js?v=20261116-sem-importacao-pix"
                       );
                   }
 
@@ -1289,62 +1274,6 @@
                     throw erro;
                   }
                 };
-
-                window.abrirImportacaoPixSeguro =
-                  async function (evento) {
-                    evento?.preventDefault();
-                    evento?.stopPropagation();
-
-                    const botao =
-                      document.querySelector(
-                        "#btnImportarRelatorioPix"
-                      );
-
-                    const textoOriginal =
-                      botao?.textContent ||
-                      "Importar relatório";
-
-                    if (
-                      window.bloqueioLancamentos?.bloqueado ||
-                      document.body.classList.contains("lancamentos-bloqueados")
-                    ) {
-                      window.bloqueioLancamentos?.exigirLiberado?.();
-                      return false;
-                    }
-
-                    try {
-                      if (botao) {
-                        botao.disabled = true;
-                        botao.textContent =
-                          "Abrindo...";
-                      }
-
-                      const api =
-                        await window.__carregarImportador();
-
-                      return api.abrirPix();
-                    } finally {
-                      if (botao) {
-                        botao.disabled = Boolean(
-                          window.bloqueioLancamentos?.bloqueado ||
-                          document.body.classList.contains("lancamentos-bloqueados")
-                        );
-                        botao.textContent =
-                          textoOriginal;
-                      }
-                    }
-                  };
-
-                window.baixarModeloPixSeguro =
-                  async function (evento) {
-                    evento?.preventDefault();
-                    evento?.stopPropagation();
-
-                    const api =
-                      await window.__carregarImportador();
-
-                    return api.baixarModeloPix();
-                  };
 
                 window.abrirImportacaoProdutivosSeguro =
                   async function (evento) {

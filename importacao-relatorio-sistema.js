@@ -640,7 +640,7 @@ const CARGOS = {
 };
 
 const state = {
-  tipo: "pix",
+  tipo: "produtivos",
   arquivo: null,
   workbook: null,
   aba: "",
@@ -4438,6 +4438,7 @@ function baixarBlob(
 }
 
 function baixarModelo(tipo) {
+  if (tipo !== "produtivos") return false;
   /*
    * PIX DO PRESIDENTE
    *
@@ -5507,6 +5508,7 @@ function exigirImportacaoLiberada() {
 }
 
 function abrir(tipo) {
+  if (tipo !== "produtivos") return false;
   try {
     if (!exigirImportacaoLiberada()) {
       alerta("Os lançamentos estão bloqueados pelo diretor. A importação não pode ser aberta.");
@@ -5744,6 +5746,7 @@ function vincularBotoesFixos(
 }
 
 function inserir(tipo) {
+  if (tipo !== "produtivos") return false;
   /*
   CAMINHO PRINCIPAL E GARANTIDO:
   os botões já existem no index.html e aqui apenas recebem
@@ -5853,7 +5856,6 @@ function observarAreaDeLancamentos() {
 
   const observer =
     new MutationObserver(() => {
-      inserir("pix");
       inserir("produtivos");
     });
 
@@ -5883,16 +5885,6 @@ function configurarCliqueGlobalImportacao() {
   document.addEventListener(
     "click",
     evento => {
-      const botaoPix =
-        evento.target.closest(
-          "#btnImportarRelatorioPix"
-        );
-
-      const modeloPix =
-        evento.target.closest(
-          "#btnBaixarModeloRelatorioPix"
-        );
-
       const botaoProdutivos =
         evento.target.closest(
           "#btnImportarRelatorioProdutivos"
@@ -5902,36 +5894,6 @@ function configurarCliqueGlobalImportacao() {
         evento.target.closest(
           "#btnBaixarModeloRelatorioProdutivos"
         );
-
-      if (botaoPix) {
-        evento.preventDefault();
-        evento.stopPropagation();
-
-        try {
-          garantirCss();
-          garantirModal();
-          abrir("pix");
-        } catch (erro) {
-          console.error(
-            "[IMPORTAÇÃO] Erro no clique do botão Pix:",
-            erro
-          );
-
-          alerta(
-            erro.message ||
-            "Não foi possível abrir a importação do Pix."
-          );
-        }
-
-        return;
-      }
-
-      if (modeloPix) {
-        evento.preventDefault();
-        evento.stopPropagation();
-        baixarModelo("pix");
-        return;
-      }
 
       if (botaoProdutivos) {
         evento.preventDefault();
@@ -5957,11 +5919,6 @@ function iniciar() {
   inicialização secundária falhe.
   */
   window.importacaoRelatorioSistema = {
-    abrirPix() {
-      garantirCss();
-      garantirModal();
-      return abrir("pix");
-    },
 
     abrirProdutivos() {
       garantirCss();
@@ -5969,9 +5926,6 @@ function iniciar() {
       return abrir("produtivos");
     },
 
-    baixarModeloPix() {
-      return baixarModelo("pix");
-    },
 
     baixarModeloProdutivos() {
       return baixarModelo("produtivos");
@@ -5979,7 +5933,6 @@ function iniciar() {
 
     restaurarBotoes() {
       return {
-        pix: inserir("pix"),
         produtivos: inserir("produtivos")
       };
     },
@@ -5992,18 +5945,7 @@ function iniciar() {
       }
     },
 
-    testarModalPix() {
-      garantirCss();
-      garantirModal();
-      return abrir("pix");
-    },
 
-    recuperarPixFirebase() {
-      localStorage.removeItem(
-        "pix_recuperacao_firebase_supabase_20260901_34"
-      );
-      return recuperarLancamentosPixPresosNoFirebase();
-    },
 
     diagnostico() {
       return {
@@ -6050,7 +5992,6 @@ function iniciar() {
   Portanto, mesmo se houver algum problema secundário no modal,
   a área de importação continua visível no sistema.
   */
-  inserir("pix");
   inserir("produtivos");
 
   try {
@@ -6077,14 +6018,11 @@ function iniciar() {
     window.setInterval(() => {
       tentativas += 1;
 
-      const pix =
-        inserir("pix");
-
       const produtivos =
         inserir("produtivos");
 
       if (
-        (pix && produtivos) ||
+        produtivos ||
         tentativas >= 120
       ) {
         window.clearInterval(
@@ -6099,14 +6037,7 @@ function iniciar() {
     `[IMPORTAÇÃO INTELIGENTE] ${VERSAO} carregado`
   );
 
-  window.setTimeout(() => {
-    recuperarLancamentosPixPresosNoFirebase().catch(erro => {
-      console.error(
-        "[PIX/SUPABASE] Falha na recuperação automática:",
-        erro
-      );
-    });
-  }, 1200);
+
 }
 
 if (
