@@ -10,7 +10,8 @@ const aptos=()=>resultado?.linhas.filter(r=>r.completo)||[];
 function status(texto,erro=false){const el=$('#pin-status');el.textContent=texto;el.classList.toggle('pin-error',erro);}
 function atualizarAcoes(){
  const pronto=aptos().length>0;
- $('#pin-confirmar').textContent=salvo?'Importação concluída':`Confirmar importação${pronto?' · '+aptos().length:''}`;
+ $('#pin-confirmar').setAttribute('aria-busy',String(ocupado&&fase==='gravacao'));
+ $('#pin-confirmar').textContent=ocupado&&fase==='gravacao'?'Importando lançamentos…':salvo?'Importação concluída':`Confirmar importação${pronto?' · '+aptos().length:''}`;
  $('#pin-confirmar').disabled=ocupado||salvo||!pronto||!$('#pin-semana').value||!$('#pin-conferido').checked||(npsAtivos().length>0&&!$('#pin-nps-conferido').checked);
  $('#pin-cancelar').textContent=salvo?'Fechar':'Cancelar importação';
  $('#pin-arquivos').disabled=ocupado;$('#pin-semana').disabled=ocupado||salvo;$('#pin-conferido').disabled=ocupado||salvo;$('#pin-atualizar').disabled=ocupado||salvo;$('#pin-limpar').disabled=ocupado;$('#pin-cancelar').disabled=ocupado&&fase==='gravacao';$('#pin-fechar').disabled=ocupado&&fase==='gravacao';
@@ -21,7 +22,7 @@ function atualizarAcoes(){
  $('#pin-pendencias').querySelectorAll('select').forEach(b=>b.disabled=ocupado||salvo);
  $('#pin-removidos').querySelectorAll('button').forEach(b=>b.disabled=ocupado||salvo);
 }
-function abrir(){const panel=$('#pixImportacaoNova');panel.hidden=false;$('#pin-arquivos').focus();panel.scrollIntoView({behavior:'smooth',block:'start'});}
+function abrir(){if(salvo)limpar();const panel=$('#pixImportacaoNova');panel.hidden=false;$('#pin-arquivos').focus();panel.scrollIntoView({behavior:'smooth',block:'start'});}
 function limpar(){
  geracao++;documentos=[];resultado=null;vinculos={};excluidos=new Set();salvo=false;
  npsDocs.forEach(d=>{if(d.preview)URL.revokeObjectURL(d.preview);});npsDocs=[];npsLinks={};npsLidos=[];$('#pin-nps-arquivos').value='';$('#pin-nps-geral-arquivos').value='';$('#pin-nps-conferido').checked=false;$('#pin-nps-previa').replaceChildren();$('#pin-nps-status').textContent='Use a imagem com a meta e o resultado do mês da importação.';
@@ -79,17 +80,38 @@ function recalcular(){
  status(prontos.length?'Revise a lista, remova quem não deve entrar e confirme a importação.':'Nenhum lançamento apto. Confira os vínculos e os relatórios dos setores/filiais pendentes.',!prontos.length);
  atualizarAcoes();
 }
+async function informeImportacao(mensagem,{tipo='success',titulo='Importação realizada com sucesso!'}={}) {
+ if(typeof window.CampanhaUI?.alert==='function')return window.CampanhaUI.alert(mensagem,{tipo,titulo,rotulo:'PIX DO PRESIDENTE',textoConfirmar:'Entendi'});
+ if(typeof window.appAlert==='function')return window.appAlert({mensagem,tipo,titulo,rotulo:'PIX DO PRESIDENTE',textoConfirmar:'Entendi'});
+ return window.alert?.(`${titulo}\n\n${mensagem}`);
+}
 async function confirmar(){
  if(ocupado||salvo)return;
  if(!$('#pin-conferido').checked||!$('#pin-semana').value||!aptos().length||(npsAtivos().length>0&&!$('#pin-nps-conferido').checked)){status('Escolha a semana e marque a conferência da lista e do NPS, se houver imagem.',true);return;}
  if(!window.confirmarImportacaoPix){status('Atualize a página para carregar a confirmação da importação.',true);return;}
- ocupado=true;fase='gravacao';atualizarAcoes();
+ const competencia=resultado.periodo.inicio.slice(0,7),semana=Number($('#pin-semana').value);
+ ocupado=true;fase='gravacao';atualizarAcoes();let r;
  try{
   status('Validando e salvando a importação…');
-  const r=await window.confirmarImportacaoPix(aptos(),Number($('#pin-semana').value),{atualizar:$('#pin-atualizar').checked});
+  r=await window.confirmarImportacaoPix(aptos(),semana,{atualizar:$('#pin-atualizar').checked});
   salvo=true;
-  status(`${r.quantidade} lançamento(s) importado(s): ${r.novos} novo(s), ${r.atualizados} atualizado(s). ${r.aviso||(npsAtivos().length?'NPS da imagem aplicado aos cargos elegíveis; os demais campos foram preservados.':'NPS e demais campos foram preservados. Complete os indicadores que ainda faltam em Lançamentos.')}`);
- }catch(e){status(e.message||'Não foi possível confirmar a importação. A lista foi mantida para revisão.',true);}finally{ocupado=false;fase='';atualizarAcoes();}
+ }catch(e){
+  const mensagem=e.message||'Não foi possível confirmar a importação. A lista foi mantida para revisão.';
+  status(mensagem,true);
+  await informeImportacao(mensagem,{tipo:'error',titulo:'Não foi possível concluir a importação'});
+  return;
+ }finally{ocupado=false;fase='';atualizarAcoes();}
+ const resumo=`${r.quantidade} lançamento(s) importado(s): ${r.novos} novo(s) e ${r.atualizados} atualizado(s).`;
+ status(resumo);$('#pixImportacaoNova').hidden=true;
+ // A navegação ocorre assim que a gravação é confirmada; a atualização da lista não atrasa o aviso.
+ let navegacao=Promise.resolve('');
+ try{
+  if(typeof window.abrirVisaoGeralImportacaoPix==='function')navegacao=Promise.resolve(window.abrirVisaoGeralImportacaoPix(competencia)).then(()=>'',()=> 'Os dados foram salvos, mas a Visão geral não atualizou. Recarregue a página.');
+  else document.querySelector('.pix-menu-btn[data-pix-view="dashboard"]')?.click();
+ }catch{navegacao=Promise.resolve('Os dados foram salvos. Abra a Visão geral pelo menu lateral.');}
+ await informeImportacao(`${resumo}\nCompetência: ${competencia.slice(5)}/${competencia.slice(0,4)} · Semana ${semana}.\n${r.aviso||'Os dados foram salvos. Acompanhe os resultados na Visão geral.'}`);
+ const aviso=await navegacao;
+ if(aviso)await informeImportacao(aviso,{tipo:'warning',titulo:'Importação salva · atualização pendente'});
 }
 async function importarNps(files,geral=false){
  if(geral&&Number($('#pin-semana').value)!==4){status('O painel de NPS geral é exclusivo da Semana 4.',true);return;}

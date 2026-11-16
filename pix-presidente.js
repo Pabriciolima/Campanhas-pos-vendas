@@ -5605,3 +5605,17 @@ window.confirmarImportacaoPix = (...args) => {
 };
 
 window.conferirNpsFilialImportacao = dados => npsUnidadePix.preencherImportacao(dados);
+
+
+window.abrirVisaoGeralImportacaoPix = async competencia => {
+  if (/^\d{4}-(0[1-9]|1[0-2])$/.test(competencia)) {
+    const global = $('#competenciaGlobal');
+    if (global) global.value = competencia;
+    const dashboard = $('#pixDashboardCompetencia');
+    if (dashboard) dashboard.value = competencia;
+  }
+  abrirViewPix('dashboard');
+  document.querySelector('#pix-dashboard')?.scrollIntoView({behavior:'smooth',block:'start'});
+  // Consulta sem o filtro de filial da tela anterior.
+  await carregarLancamentosPixUmaVez();
+};

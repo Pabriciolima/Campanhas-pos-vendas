@@ -10,12 +10,12 @@ function app(){
   setAttribute(){}
   querySelectorAll(){return [];}replaceChildren(){this.html='';}focus(){}scrollIntoView(){}prepend(){}after(){}click(){}addEventListener(n,f){this.events[n]=f;}querySelector(){return new El();}
  }
- const panel=new El();nodes.set('#pix-lancamentos .panel',panel);nodes.set('#pixLancamentosAcoes',new El());let calls=0;let received=[];
- const ctx={document:{readyState:'complete',querySelector:s=>nodes.get(s),createElement:()=>new El(),body:{classList:{contains:()=>false}}},window:{confirmarImportacaoPix:async(rows)=>{calls++;received=rows;return {quantidade:rows.length,novos:rows.length,atualizados:0};}},consolidar,cargoTipo,normalizar,vincularNps,aplicarNpsImportacao,percentualNpsImportacao};
+ const panel=new El();nodes.set('#pix-lancamentos .panel',panel);nodes.set('#pixLancamentosAcoes',new El());let calls=0;let received=[];const avisos=[],navegacoes=[];
+ const ctx={document:{readyState:'complete',querySelector:s=>nodes.get(s),createElement:()=>new El(),body:{classList:{contains:()=>false}}},window:{CampanhaUI:{alert:async(mensagem,opcoes)=>{avisos.push({mensagem,opcoes});return true;}},abrirVisaoGeralImportacaoPix:async mes=>{navegacoes.push(mes);},confirmarImportacaoPix:async(rows)=>{calls++;received=rows;return {quantidade:rows.length,novos:rows.length,atualizados:0};}},consolidar,cargoTipo,normalizar,vincularNps,aplicarNpsImportacao,percentualNpsImportacao};
  vm.createContext(ctx);const src=fs.readFileSync(new URL('../pix-importacao.js',import.meta.url),'utf8').replace(/^import .*?;\n/gm,'');vm.runInContext(src,ctx);
  const p={id:'a',nome:'CONSULTOR A',cargo:'Consultor Técnico',filial:'ANANINDEUA',usaNps:true};const row={nome:p.nome,tipo:'tecnico',meta:100,realizado:80,ticket:20,inicio:'2026-11-09',fim:'2026-11-09'};
  function seed(){ctx.seed={base:{participantes:[p],nucleos:[]},docs:[{inicio:row.inicio,fim:row.fim,linhas:[row]}]};vm.runInContext('base=seed.base;documentos=seed.docs;recalcular();',ctx);}
- return {ctx,nodes,seed,get calls(){return calls;},get received(){return received;}};
+ return {ctx,nodes,seed,avisos,navegacoes,get calls(){return calls;},get received(){return received;}};
 }
 test('remover e restaurar atuam só na prévia; cancelar limpa sem chamar gravação',async()=>{
  const a=app();a.seed();const area=a.nodes.get('#pixImportacaoNova');
@@ -60,4 +60,23 @@ test('campo do painel geral aparece somente na S4 e não alimenta semanas anteri
  for(const n of ['1','2','3']){semana.value=n;area.events.change({target:{id:'pin-semana',dataset:{}}});assert.equal(a.nodes.get('#pin-nps-geral-area').hidden,true);assert.equal(vm.runInContext("resultado.linhas.find(r=>r.funcionarioId==='s').npsImportado",a.ctx),undefined);}
  semana.value='4';area.events.change({target:{id:'pin-semana',dataset:{}}});assert.equal(a.nodes.get('#pin-nps-geral-area').hidden,false);assert.equal(vm.runInContext("resultado.linhas.find(r=>r.funcionarioId==='s').npsImportado.realizado",a.ctx),70.7);
  semana.value='2';area.events.change({target:{id:'pin-semana',dataset:{}}});assert.equal(a.nodes.get('#pin-nps-geral-area').hidden,true);assert.equal(vm.runInContext("resultado.linhas.find(r=>r.funcionarioId==='s').npsImportado",a.ctx),undefined);
+});
+
+test('só exibe sucesso e volta à visão geral após confirmação da gravação',async()=>{
+ const a=app();a.seed();a.nodes.get('#pixImportacaoNova').hidden=false;a.nodes.get('#pin-semana').value='2';a.nodes.get('#pin-conferido').checked=true;
+ let finalizar;a.ctx.window.confirmarImportacaoPix=()=>new Promise(resolve=>finalizar=resolve);
+ const tarefa=a.nodes.get('#pin-confirmar').onclick();
+ assert.equal(a.nodes.get('#pin-confirmar').disabled,true);assert.match(a.nodes.get('#pin-confirmar').textContent,/Importando/);assert.equal(a.avisos.length,0);assert.equal(a.navegacoes.length,0);assert.equal(a.nodes.get('#pixImportacaoNova').hidden,false);
+ finalizar({quantidade:12,novos:8,atualizados:4});await tarefa;
+ assert.equal(a.nodes.get('#pixImportacaoNova').hidden,true);assert.deepEqual(a.navegacoes,['2026-11']);assert.equal(a.avisos[0].opcoes.tipo,'success');assert.match(a.avisos[0].opcoes.titulo,/sucesso/);assert.match(a.avisos[0].mensagem,/12 lançamento/);assert.match(a.avisos[0].mensagem,/8 novo/);assert.match(a.avisos[0].mensagem,/4 atualizado/);assert.match(a.avisos[0].mensagem,/11\/2026.*Semana 2/);assert.equal(a.nodes.get('#pin-confirmar').disabled,true);
+});
+test('erro de gravação mostra alerta, mantém dados para revisão e não navega',async()=>{
+ const a=app();a.seed();a.nodes.get('#pixImportacaoNova').hidden=false;a.nodes.get('#pin-semana').value='2';a.nodes.get('#pin-conferido').checked=true;
+ a.ctx.window.confirmarImportacaoPix=async()=>{throw Error('Registro já existente. Confira a atualização.');};await a.nodes.get('#pin-confirmar').onclick();
+ assert.equal(a.avisos.length,1);assert.equal(a.avisos[0].opcoes.tipo,'error');assert.match(a.avisos[0].mensagem,/já existente/);assert.equal(a.navegacoes.length,0);assert.equal(a.nodes.get('#pixImportacaoNova').hidden,false);assert.equal(vm.runInContext('aptos().length',a.ctx),1);assert.equal(a.nodes.get('#pin-confirmar').disabled,false);
+});
+test('falha ao atualizar a visão geral não transforma gravação concluída em erro de importação',async()=>{
+ const a=app();a.seed();a.nodes.get('#pin-semana').value='2';a.nodes.get('#pin-conferido').checked=true;a.ctx.window.abrirVisaoGeralImportacaoPix=async()=>{throw Error('rede');};
+ await a.nodes.get('#pin-confirmar').onclick();assert.equal(a.calls,1);assert.deepEqual(a.avisos.map(a=>a.opcoes.tipo),['success','warning']);assert.match(a.avisos[1].mensagem,/dados foram salvos/);assert.equal(a.nodes.get('#pixImportacaoNova').hidden,true);
+ await a.nodes.get('#pin-confirmar').onclick();assert.equal(a.calls,1);
 });
