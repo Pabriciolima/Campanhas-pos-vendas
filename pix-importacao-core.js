@@ -49,13 +49,14 @@ export function analisarPaginas(paginas, arquivo='Relatório.pdf') {
  if(!linhas.length)throw Error(`${arquivo}: nenhuma linha de vendedor foi identificada.`);
  return {arquivo,tipo,inicio,fim,linhas};
 }
-export function consolidar(documentos, participantes, nucleos=[], vinculos={}) {
+export function consolidar(documentos, participantes, nucleos=[], vinculos={}, excluidos=new Set()) {
  const periodos=new Set(documentos.map(d=>d.inicio+'|'+d.fim));if(periodos.size>1)throw Error('Importe documentos do mesmo período. Os arquivos atuais têm datas diferentes.');
  const ativos=participantes.filter(p=>p.ativo!==false&&p.ativo!=='false');const individuais=[],pendencias=[],ignorados=[],vistos=new Set();
  documentos.forEach((doc,di)=>doc.linhas.forEach((r,ri)=>{
   const key=`${di}:${ri}`;const candidatos=ativos.filter(p=>normalizar(p.nome)===normalizar(r.nome));
   const manual=vinculos[key];if(manual==='__ignorar__'){ignorados.push({...r,key,motivo:'Fora da campanha, confirmado na conferência.'});return;}const p=manual?ativos.find(p=>String(p.id)===String(manual)):candidatos.length===1?candidatos[0]:null;
   if(!p){pendencias.push({...r,key,motivo:candidatos.length?'Nome presente em mais de uma filial. Selecione o cadastro correto.':'Nome não localizado. Selecione o cadastro ou deixe fora da importação.'});return;}
+  if(excluidos.has(String(p.id))){ignorados.push({...r,key,motivo:'Removido deste lote de importação.'});return;}
   const cargo=cargoTipo(p.cargo);
   if(cargo!==r.tipo){ignorados.push({...r,key,motivo:`Cargo cadastrado: ${p.cargo}. Esta linha não pertence a este setor.`});return;}
   const identidade=[p.id,r.tipo,r.inicio,r.fim].join('|');
@@ -64,6 +65,7 @@ export function consolidar(documentos, participantes, nucleos=[], vinculos={}) {
  }));
  const saida=[...individuais];const filiais=new Set(individuais.map(r=>normalizar(r.filial)));
  for(const p of ativos){
+  if(excluidos.has(String(p.id)))continue;
   const tipo=cargoTipo(p.cargo);if(!['supervisor-tecnico','supervisor-balcao','orcamentista','gerente'].includes(tipo))continue;
   const nucleo=tipo==='gerente'?nucleos.find(n=>normalizar(n.nome)===normalizar(p.nome)):null;
   const unidades=nucleo?.filiais?.length?nucleo.filiais:[p.filial];if(!unidades.some(f=>filiais.has(normalizar(f))))continue;

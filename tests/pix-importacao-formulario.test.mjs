@@ -1,6 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';
 const source=fs.readFileSync(new URL('../pix-presidente.js',import.meta.url),'utf8');
-const codigo=source.slice(source.indexOf('window.preencherImportacaoPix = async'));
+const inicio=source.indexOf('window.preencherImportacaoPix = async');
+const codigo=source.slice(inicio,source.indexOf('window.confirmarImportacaoPix =',inicio));
 function setup(registros=[]){
  const fields=new Map();for(const id of ['#pixLancamentoCompetencia','#pixLancamentoSemana','#pixLancamentoId','#pixLancamentoFilial','#pixLancamentoFuncionario'])fields.set(id,{value:'',options:[{value:'ANANINDEUA'}]});
  const diario={value:''};let dados;const funcionario={id:'t',nome:'Técnico A',filial:'ANANINDEUA',ativo:true};

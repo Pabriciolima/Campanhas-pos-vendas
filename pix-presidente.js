@@ -1,3 +1,4 @@
+import {criarConfirmadorPix} from './pix-importacao-lote.js?v=20261116-confirmar2';
 import {aplicarStatusAuditoriaPix,registrarAuditoriaStatusPix} from './pix-auditoria-status.js?v=20261103-audit10';
 import {auditarPix} from "./pix-auditoria-core.js?v=20261103";
 import {instalarConferenciaPixFonte,coletarConferenciaPixFonte,preencherConferenciaPixFonte,renderizarPainelAuditoriaPix} from "./pix-auditoria-fonte.js?v=20261104-hide-panel1";
@@ -5573,4 +5574,32 @@ window.preencherImportacaoPix = async (linha, semana) => {
     atualizarPreviewPix();
   }
   return true;
+};
+
+
+let confirmarLoteImportacaoPix;
+window.confirmarImportacaoPix = (...args) => {
+  confirmarLoteImportacaoPix ||= criarConfirmadorPix({
+  bloqueado: () => Boolean(window.bloqueioLancamentos?.bloqueado || document.body.classList.contains('lancamentos-bloqueados')),
+  carregar: async linhas => {
+    await carregarParticipantesPixUmaVez();
+    const competencia = linhas[0]?.inicio?.slice(0,7);
+    if (!competencia) throw Error('Selecione os documentos antes de confirmar.');
+    const registros = [];
+    for(let inicio=0;;inicio+=500){
+      const {data,error}=await supabase.from('pix_lancamentos').select('id,dados').eq('competencia',competencia).order('id').range(inicio,inicio+499);
+      if(error)throw error;
+      registros.push(...(data||[]).map(r=>({...r.dados,id:r.id})));
+      if((data||[]).length<500)break;
+    }
+    return {participantes:participantesPix(),registros};
+  },
+  gravar: async lote => {
+    const {data,error}=await supabase.from('pix_lancamentos').upsert(lote,{onConflict:'id'}).select('id');
+    if(error)throw error;
+    return (data||[]).map(r=>r.id);
+  },
+  atualizarTela: async () => {await carregarLancamentosPixUmaVez();renderTudoPix();}
+  });
+  return confirmarLoteImportacaoPix(...args);
 };
