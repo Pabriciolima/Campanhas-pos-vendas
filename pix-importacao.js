@@ -1,7 +1,7 @@
 import {escolherVersoesImportacaoPix} from './pix-importacao-comparacao.js?v=20261116-diaria2';
 import {lerImagemNps,lerImagemNpsGeral} from './pix-importacao-nps-imagem.js?v=20261116-s4geral2';
 import {vincularNps,aplicarNpsImportacao,percentualNpsImportacao} from './pix-importacao-nps-core.js?v=20261116-diaria2';
-import {analisarPaginas,consolidar,cargoTipo,normalizar} from './pix-importacao-core.js?v=20261116-diaria2';
+import {analisarPaginas,consolidar,cargoTipo,normalizar} from './pix-importacao-core.js?v=20261116-media-supervisores1';
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const moeda=n=>n==null?'—':n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
