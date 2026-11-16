@@ -52,3 +52,12 @@ test('imagem exige conferência do NPS e envia valores somente após os dois ace
  a.nodes.get('#pin-nps-conferido').checked=true;vm.runInContext('atualizarAcoes()',a.ctx);assert.equal(a.nodes.get('#pin-confirmar').disabled,false);
  await a.nodes.get('#pin-confirmar').onclick();assert.equal(a.calls,1);assert.equal(a.received[0].npsImportado.meta,91.4);assert.equal(a.received[0].npsImportado.realizado,-20);
 });
+test('campo do painel geral aparece somente na S4 e não alimenta semanas anteriores',()=>{
+ const a=app();a.seed();
+ a.ctx.seed.base.participantes.push({id:'s',nome:'SUPERVISOR',cargo:'Supervisor de Assistência',filial:'ANANINDEUA',usaNps:true});
+ vm.runInContext("base=seed.base;npsDocs=[{tipo:'geral',competencia:'2026-11',linhas:[{nome:'ANANINDEUA (DN 4700)',dn:'4700',meta:91.4,realizado:70.7,competencia:'2026-11',geral:true,origem:'painel-unidade',arquivo:'painel.png'}]}];",a.ctx);
+ const semana=a.nodes.get('#pin-semana'),area=a.nodes.get('#pixImportacaoNova');
+ for(const n of ['1','2','3']){semana.value=n;area.events.change({target:{id:'pin-semana',dataset:{}}});assert.equal(a.nodes.get('#pin-nps-geral-area').hidden,true);assert.equal(vm.runInContext("resultado.linhas.find(r=>r.funcionarioId==='s').npsImportado",a.ctx),undefined);}
+ semana.value='4';area.events.change({target:{id:'pin-semana',dataset:{}}});assert.equal(a.nodes.get('#pin-nps-geral-area').hidden,false);assert.equal(vm.runInContext("resultado.linhas.find(r=>r.funcionarioId==='s').npsImportado.realizado",a.ctx),70.7);
+ semana.value='2';area.events.change({target:{id:'pin-semana',dataset:{}}});assert.equal(a.nodes.get('#pin-nps-geral-area').hidden,true);assert.equal(vm.runInContext("resultado.linhas.find(r=>r.funcionarioId==='s').npsImportado",a.ctx),undefined);
+});

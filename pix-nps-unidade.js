@@ -161,7 +161,8 @@ export function criarNpsUnidadePix({ supabase, aoAtualizar, filiais, competencia
     window.setInterval(() => { if (!document.hidden && document.querySelector('#pixPresidente.active')) void carregar().catch(console.error); }, 30000);
     return carregar();
   }
-  async function preencherImportacao({filial,competencia:mes,meta,realizado}) {
+  async function preencherImportacao({filial,competencia:mes,meta,realizado,semana,origem}) {
+    if(Number(semana)!==4 || origem!=='painel-unidade') throw Error('Importe o NPS geral somente na Semana 4, usando o painel por unidade.');
     if (bloqueado()) throw Error('Os lançamentos estão bloqueados pelo diretor.');
     if (!filiais().includes(filial) || !chaveNpsUnidade(filial,mes) || percentualNpsUnidade(meta) === null || percentualNpsUnidade(realizado) === null) throw Error('Confira a filial, a competência e os percentuais de NPS.');
     await abrir(filial,mes);

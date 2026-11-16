@@ -1,4 +1,4 @@
-import {criarConfirmadorPix} from './pix-importacao-lote.js?v=20261116-nps1';
+import {criarConfirmadorPix} from './pix-importacao-lote.js?v=20261116-s4geral2';
 import {aplicarStatusAuditoriaPix,registrarAuditoriaStatusPix} from './pix-auditoria-status.js?v=20261103-audit10';
 import {auditarPix} from "./pix-auditoria-core.js?v=20261103";
 import {instalarConferenciaPixFonte,coletarConferenciaPixFonte,preencherConferenciaPixFonte,renderizarPainelAuditoriaPix} from "./pix-auditoria-fonte.js?v=20261104-hide-panel1";
@@ -50,7 +50,7 @@ import { escaparHtml as protegerHtml } from "./security/seguranca.js";
 import { firestore } from "./firebase-config.js";
 
 import { supabase } from "./supabase-config.js";
-import { criarNpsUnidadePix } from "./pix-nps-unidade.js?v=20261116-importacao-nps1";
+import { criarNpsUnidadePix } from "./pix-nps-unidade.js?v=20261116-s4geral2";
 import { mensagemNpsUnidade } from "./pix-nps-unidade-core.js?v=20261022-vigencia-novembro";
 
 import {
