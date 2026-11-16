@@ -2628,6 +2628,57 @@ async function imagemRemotaParaDataPix(url,arquivo={}) {
  try{const escala=Math.min(1,2200/imagem.width,2200/imagem.height),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(imagem.width*escala));canvas.height=Math.max(1,Math.round(imagem.height*escala));const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(imagem,0,0,canvas.width,canvas.height);const dataUrl=canvas.toDataURL('image/jpeg',.82);const saida={dataUrl,base64:dataUrl.split(',')[1],largura:canvas.width,altura:canvas.height};canvas.width=canvas.height=1;return saida;}finally{imagem.close();await cederTelaPix();}
 }
 
+// Anexação documental: não executa OCR nem compara indicadores.
+async function anexarEvidenciasPdfPix(documento, resultados) {
+  const signal = trabalhoExportacaoPix?.controller.signal;
+  const contextos = new Map();
+  const filiaisOficiais = window.obterContextoAssistentePix?.(false)?.filiais || [];
+  const filtroFilial = filialExportacaoPixNormalizada();
+  for (const linha of resultados) {
+    const r = linha.auditoriaDados || linha;
+    const filiais = [linha.filial, ...(r.nucleoFiliais || [])];
+    for (const nome of filiais) {
+      if (!nome || (filtroFilial && normalizarPixEv(nome) !== filtroFilial)) continue;
+      const filial = filiaisOficiais.find(f => normalizarPixEv(f) === normalizarPixEv(nome)) || nome;
+      const contexto = construirContextoPix(linha.competencia, linha.semana, filial, resolverDnPixPorFilial(filial));
+      if (contexto) contextos.set([contexto.competencia, contexto.numeroSemana, normalizarPixEv(filial)].join('|'), contexto);
+    }
+  }
+  const grupos = await mapearLimitadoPix([...contextos.values()], 3, async contexto => {
+    cancelarSeNecessario(signal);
+    informarExportacaoPix(`Buscando anexos · ${contexto.filial} · ${contexto.semana}`);
+    return {contexto, arquivos: await listarEvidenciasContextoPix(contexto)};
+  });
+  const anexados = new Set();
+  for (const {contexto, arquivos} of grupos) {
+    for (const item of arquivos) {
+      const chave = item.caminho || item.url;
+      if (!item.url || anexados.has(chave)) continue;
+      cancelarSeNecessario(signal);
+      informarExportacaoPix(`Anexando · ${contexto.filial} · ${item.nomeOriginal || item.nome}`);
+      const imagem = await imagemRemotaParaDataPix(item.url, item);
+      documento.addPage();
+      const larguraPagina = documento.internal.pageSize.getWidth();
+      const alturaPagina = documento.internal.pageSize.getHeight();
+      documento.setTextColor(15, 35, 52);
+      documento.setFont('helvetica', 'bold');
+      documento.setFontSize(14);
+      documento.text('EVIDÊNCIAS — PIX DO PRESIDENTE', 14, 17);
+      documento.setFontSize(10);
+      documento.text(`Filial: ${contexto.dn ? contexto.dn + ' - ' : ''}${contexto.filial} | ${contexto.semana} | ${competenciaExibicaoPix(contexto.competencia)}`, 14, 26);
+      documento.setFont('helvetica', 'normal');
+      documento.setFontSize(9);
+      const nome = documento.splitTextToSize(`Arquivo: ${item.nomeOriginal || item.nome}`, larguraPagina - 28);
+      documento.text(nome, 14, 33);
+      const topo = 38 + nome.length * 4;
+      const escala = Math.min((larguraPagina - 28) / imagem.largura, (alturaPagina - topo - 14) / imagem.altura);
+      const largura = imagem.largura * escala, altura = imagem.altura * escala;
+      documento.addImage(imagem.dataUrl, 'JPEG', (larguraPagina - largura) / 2, topo, largura, altura);
+      anexados.add(chave);
+    }
+  }
+}
+
 async function buscarGruposAuditoriaImagensPix(resultados) {
  const signal=trabalhoExportacaoPix?.controller.signal;cancelarSeNecessario(signal);const contextos=new Map();
  for(const linha of resultados){const r={...linha,...(linha.auditoriaDados||{})};const unidades=/GERENTE/i.test(r.cargo||'')?(/URU[ÇC]U[IÍ]|TERESINA/i.test(r.filial||'')?['Teresina','Uruçuí']:(r.auditoriaFonte?.unidades||[]).map(u=>u.filial)):[r.filial];
@@ -2871,7 +2922,7 @@ async function gerarPdfPixIndependente() {
       }
   });
 
-  // PDF financeiro sem anexos de evidência; geração rápida.
+  await anexarEvidenciasPdfPix(documento, resultados);
 
   informarExportacaoPix('Finalizando PDF…');
   await cederTelaPix();
