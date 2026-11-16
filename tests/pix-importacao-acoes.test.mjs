@@ -31,3 +31,14 @@ test('só confirma após semana e conferência; uma confirmação salva e bloque
  await a.nodes.get('#pin-confirmar').onclick();assert.equal(a.calls,1);
  await a.nodes.get('#pin-cancelar').onclick();assert.equal(a.calls,1);
 });
+test('checkboxes são independentes nas duas ordens; atualização é opcional',()=>{
+ const a=app();a.seed();const area=a.nodes.get('#pixImportacaoNova');const conferido=a.nodes.get('#pin-conferido'),atualizar=a.nodes.get('#pin-atualizar'),semana=a.nodes.get('#pin-semana');
+ const change=id=>area.events.change({target:{id,dataset:{}}});
+ semana.value='2';change('pin-semana');
+ conferido.checked=true;change('pin-conferido');assert.equal(a.nodes.get('#pin-confirmar').disabled,false);
+ atualizar.checked=true;change('pin-atualizar');assert.equal(conferido.checked,true);assert.equal(atualizar.checked,true);assert.equal(a.nodes.get('#pin-confirmar').disabled,false);
+ atualizar.checked=false;change('pin-atualizar');assert.equal(conferido.checked,true);assert.equal(a.nodes.get('#pin-confirmar').disabled,false);
+ conferido.checked=false;change('pin-conferido');assert.equal(a.nodes.get('#pin-confirmar').disabled,true);
+ atualizar.checked=true;change('pin-atualizar');conferido.checked=true;change('pin-conferido');assert.equal(atualizar.checked,true);assert.equal(conferido.checked,true);assert.equal(a.nodes.get('#pin-confirmar').disabled,false);
+ semana.value='3';change('pin-semana');assert.equal(conferido.checked,false);assert.equal(atualizar.checked,true);assert.equal(a.nodes.get('#pin-confirmar').disabled,true);
+});
