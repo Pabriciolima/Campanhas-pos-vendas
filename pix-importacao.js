@@ -1,3 +1,4 @@
+import {criarMiniaturasPix,renderizarCartoesPix} from './pix-importacao-miniaturas.js?v=20261116-miniaturas1';
 import {escolherVersoesImportacaoPix} from './pix-importacao-comparacao.js?v=20261116-diaria2';
 import {lerImagemNps,lerImagemNpsGeral} from './pix-importacao-nps-imagem.js?v=20261116-s4geral2';
 import {vincularNps,aplicarNpsImportacao,percentualNpsImportacao} from './pix-importacao-nps-core.js?v=20261116-diaria2';
@@ -8,6 +9,19 @@ const moeda=n=>n==null?'—':n.toLocaleString('pt-BR',{style:'currency',currency
 let documentos=[],base=null,resultado=null,vinculos={},excluidos=new Set(),ocupado=false,salvo=false,geracao=0,fase='',arquivosImportacao=[],pdfPromise,npsDocs=[],npsLinks={},npsLidos=[];
 const npsAtivos=()=>npsDocs.filter(d=>d.tipo!=='geral'||Number($('#pin-semana').value)===4);
 const aptos=()=>resultado?.linhas.filter(r=>r.completo)||[];
+
+let painelMiniaturas;
+function miniaturasPix(){return painelMiniaturas ||= criarMiniaturasPix({render:itens=>{
+ for(const [grupo,id,contador] of [['pdf','pin-arquivos-lista','pin-pdf-resumo'],['nps','pin-nps-miniaturas','pin-nps-resumo'],['geral','pin-nps-geral-miniaturas','pin-geral-resumo']]){
+  const lista=itens.filter(i=>i.grupo===grupo),el=$('#'+id),resumo=$('#'+contador);
+  if(el)el.innerHTML=renderizarCartoesPix(lista);
+  if(resumo)resumo.textContent=lista.length?lista.length+' arquivo(s) selecionado(s)':grupo==='pdf'?'Adicione os relatórios em PDF':'Adicione uma imagem de NPS';
+ }
+}});}
+async function miniaturaPdfPix(pdf){
+ try{const pagina=await pdf.getPage(1),v=pagina.getViewport({scale:1}),viewport=pagina.getViewport({scale:240/Math.max(v.width,v.height)}),canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);await pagina.render({canvasContext:canvas.getContext('2d'),viewport,background:'#ffffff'}).promise;return canvas.toDataURL('image/jpeg',.78);}catch{return '';}
+}
+
 function status(texto,erro=false){const el=$('#pin-status');el.textContent=texto;el.classList.toggle('pin-error',erro);}
 function atualizarAcoes(){
  const pronto=aptos().length>0;
@@ -25,7 +39,7 @@ function atualizarAcoes(){
 }
 function abrir(){if(salvo)limpar();const panel=$('#pixImportacaoNova');panel.hidden=false;$('#pin-arquivos').focus();panel.scrollIntoView({behavior:'smooth',block:'start'});}
 function limpar(){
- geracao++;arquivosImportacao=[];documentos=[];resultado=null;vinculos={};excluidos=new Set();salvo=false;
+ geracao++;painelMiniaturas?.limpar();arquivosImportacao=[];documentos=[];resultado=null;vinculos={};excluidos=new Set();salvo=false;
  npsDocs.forEach(d=>{if(d.preview)URL.revokeObjectURL(d.preview);});npsDocs=[];npsLinks={};npsLidos=[];$('#pin-nps-arquivos').value='';$('#pin-nps-geral-arquivos').value='';$('#pin-nps-conferido').checked=false;$('#pin-nps-previa').replaceChildren();$('#pin-nps-status').textContent='Use a imagem com a meta e o resultado do mês da importação.';
  $('#pin-arquivos').value='';$('#pin-conferido').checked=false;
  for(const id of ['pin-arquivos-lista','pin-resultados','pin-pendencias','pin-indicadores','pin-removidos'])$('#'+id).replaceChildren();
@@ -41,10 +55,10 @@ async function leitor(){
  if(!pdfPromise)pdfPromise=import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs').then(p=>{p.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs';return p;}).catch(()=>{pdfPromise=null;throw Error('Não foi possível carregar o leitor de PDF. Verifique a conexão e tente novamente.');});
  return pdfPromise;
 }
-async function ler(file){
+async function ler(file,token=geracao){
  if(!/\.pdf$/i.test(file.name)||file.size>15*1024*1024)throw Error('Selecione PDFs de até 15 MB por arquivo.');
  const pdfjs=await leitor(),task=pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer())});
- try{const pdf=await task.promise;if(pdf.numPages>60)throw Error('Use relatórios com até 60 páginas.');const paginas=[];for(let n=1;n<=pdf.numPages;n++)paginas.push(await(await pdf.getPage(n)).getTextContent());return analisarPaginas(paginas,file.name);}finally{await task.destroy();}
+ try{const pdf=await task.promise;if(pdf.numPages>60)throw Error('Use relatórios com até 60 páginas.');const paginas=[];for(let n=1;n<=pdf.numPages;n++)paginas.push(await(await pdf.getPage(n)).getTextContent());const d=analisarPaginas(paginas,file.name),preview=await miniaturaPdfPix(pdf);if(token===geracao)miniaturasPix().atualizar(file.name,'pdf',{preview,paginas:pdf.numPages,tipo:d.tipo==='tecnico'?'Consultores técnicos':'Consultores de balcão',estado:'pronto'});return d;}finally{await task.destroy();}
 }
 async function importar(files){
  if(ocupado||!files.length)return;
@@ -52,14 +66,14 @@ async function importar(files){
  if(files.length>30){status('Importe até 30 documentos por vez.',true);return;}
  if(window.bloqueioLancamentos?.bloqueado||document.body.classList.contains('lancamentos-bloqueados')){status('Os lançamentos estão bloqueados pelo diretor.',true);return;}
  // A seleção de arquivos já está capturada; limpar não perde o lote recebido.
- limpar();ocupado=true;fase='leitura';const token=geracao;atualizarAcoes();
+ limpar();miniaturasPix().selecionar(files,'pdf');ocupado=true;fase='leitura';const token=geracao;atualizarAcoes();
  try{
   status('Atualizando o cadastro…');if(!window.obterBaseImportacaoPix)throw Error('Aguarde o carregamento do PIX e tente novamente.');const novaBase=await window.obterBaseImportacaoPix();if(token!==geracao)return;base=novaBase;
-  const novos=[];for(let i=0;i<files.length;i++){status(`Lendo ${i+1}/${files.length} · ${files[i].name}`);novos.push(await ler(files[i]));if(token!==geracao)return;}
+  const novos=[];for(let i=0;i<files.length;i++){status(`Lendo ${i+1}/${files.length} · ${files[i].name}`);novos.push(await ler(files[i],token));if(token!==geracao)return;}
   if(token!==geracao)return;documentos=novos;arquivosImportacao=files;$('#pin-data').value='';recalcular();
-  $('#pin-arquivos-lista').innerHTML=documentos.map(d=>`<span class="pin-file">${d.tipo==='tecnico'?'Técnicos':'Balcão'} · ${esc(d.arquivo)}</span>`).join('');
+
   $('#pixImportacaoNova').classList.add('pin-has-data');
- }catch(e){if(token===geracao){documentos=[];resultado=null;status(e.message||'Falha na leitura.',true);}}finally{if(token===geracao){ocupado=false;fase='';atualizarAcoes();}}
+ }catch(e){if(token===geracao){documentos=[];resultado=null;files.forEach(f=>miniaturasPix().atualizar(f.name,'pdf',{estado:'erro'}));status(e.message||'Falha na leitura.',true);}}finally{if(token===geracao){ocupado=false;fase='';atualizarAcoes();}}
 }
 function recalcular(){
  salvo=false;$('#pin-conferido').checked=false;
@@ -71,7 +85,7 @@ function recalcular(){
  linhas.forEach(l=>{l.dataImportacao=$('#pin-data').value;if(l.npsImportado){const nomes=l.npsImportado.arquivos||[l.npsImportado.arquivo];l.npsImportado.arquivosDetalhes=nomes.filter(n=>typeof n==='string'&&arquivosImportacao.some(f=>f.name===n)).map(nome=>({nome,tipo:'nps',pagina:1}));}});
  renderNps();
  const parciais=linhas.filter(r=>!r.completo),prontos=aptos();
- $('#pin-indicadores').innerHTML=`<strong>Dia a preencher: ${esc($('#pin-data').value.split('-').reverse().join('/'))}</strong><span>Referência do PDF: ${esc(periodo.inicio.split('-').reverse().join('/'))}${periodo.inicio===periodo.fim?'':' a '+esc(periodo.fim.split('-').reverse().join('/'))}</strong><span>${prontos.length} para importar</span><span>${parciais.length} parciais · não serão importados</span>${pendencias.length?`<span>${pendencias.length} vínculo(s) pendente(s)</span>`:''}`;
+ $('#pin-indicadores').innerHTML=`<strong>Dia a preencher: ${esc($('#pin-data').value.split('-').reverse().join('/'))}</strong><span>Referência do PDF: ${esc(periodo.inicio.split('-').reverse().join('/'))}${periodo.inicio===periodo.fim?'':' a '+esc(periodo.fim.split('-').reverse().join('/'))}</span><span>${prontos.length} para importar</span><span>${parciais.length} parciais · não serão importados</span>${pendencias.length?`<span>${pendencias.length} vínculo(s) pendente(s)</span>`:''}`;
  $('#pin-pendencias').innerHTML=pendencias.length?`<details open><summary>${pendencias.length} nome(s) sem vínculo</summary><div class="pin-links">${pendencias.map(r=>`<label><strong>${esc(r.nome)}</strong><small>${esc(r.motivo)}</small><select data-pin-vinculo="${esc(r.key)}"><option value="">Selecionar cadastro…</option><option value="__ignorar__">Não participa da campanha</option>${base.participantes.filter(p=>cargoTipo(p.cargo)===r.tipo).map(p=>`<option value="${esc(p.id)}">${esc(p.nome)} · ${esc(p.filial)}</option>`).join('')}</select></label>`).join('')}</div></details>`:'';
  const semBase=linhas.filter(r=>!r.completo&&!r.fontes.length);
  const grupos=[['Individual','Consultores'],['Consolidado','Supervisão e gerência']];
@@ -104,7 +118,7 @@ async function confirmar(){
   if(resolucoes===null){status('Comparação cancelada. O lote foi mantido para revisão; nenhum dado foi gravado.');return;}
   fase='gravacao';atualizarAcoes();status('Validando as escolhas e salvando a importação…');
   r=await window.confirmarImportacaoPix(linhas,semana,{resolucoes,exigirConferencia:true,arquivos:arquivosImportacao});
-  salvo=true;arquivosImportacao=[];npsDocs.forEach(d=>{if(d.preview)URL.revokeObjectURL(d.preview);});npsDocs=[];$('#pin-arquivos').value='';$('#pin-nps-arquivos').value='';$('#pin-nps-geral-arquivos').value='';
+  salvo=true;painelMiniaturas?.limpar();arquivosImportacao=[];npsDocs.forEach(d=>{if(d.preview)URL.revokeObjectURL(d.preview);});npsDocs=[];$('#pin-arquivos').value='';$('#pin-nps-arquivos').value='';$('#pin-nps-geral-arquivos').value='';
  }catch(e){
   const mensagem=e.message||'Não foi possível confirmar a importação. A lista foi mantida para revisão.';
   status(mensagem,true);
@@ -128,12 +142,13 @@ async function importarNps(files,geral=false){
  if(ocupado||salvo||!files.length)return;
  if(!resultado||!base){status('Selecione primeiro os PDFs dos lançamentos para definir a competência e os colaboradores.',true);$('#pin-nps-arquivos').value='';return;}
  if(files.length>12){status('Selecione até 12 imagens por vez.',true);return;}
+ miniaturasPix().selecionar(files,geral?'geral':'nps');
  ocupado=true;fase='leitura-nps';const token=geracao;atualizarAcoes();$('#pin-conferido').checked=false;$('#pin-nps-conferido').checked=false;
  try{
-  const novos=[];for(const file of files){const d=await (geral?lerImagemNpsGeral(file,resultado.periodo.inicio.slice(0,7),4,t=>{if(token===geracao)$('#pin-nps-status').textContent=t;}):lerImagemNps(file,resultado.periodo.inicio.slice(0,7),t=>{if(token===geracao)$('#pin-nps-status').textContent=t;}));if(token!==geracao)return;novos.push(d);}
+  const novos=[];for(const file of files){const d=await (geral?lerImagemNpsGeral(file,resultado.periodo.inicio.slice(0,7),4,t=>{if(token===geracao)$('#pin-nps-status').textContent=t;}):lerImagemNps(file,resultado.periodo.inicio.slice(0,7),t=>{if(token===geracao)$('#pin-nps-status').textContent=t;}));if(token!==geracao)return;novos.push(d);miniaturasPix().atualizar(file.name,geral?'geral':'nps',{estado:'pronto',tipo:geral?'NPS geral · S4':'NPS dos consultores'});}
   arquivosImportacao.push(...files.filter(f=>!arquivosImportacao.some(a=>a.name===f.name)));
   npsDocs.push(...novos);recalcular();$('#pin-nps-status').textContent='Leitura concluída. Confira os nomes e os percentuais; corrija qualquer valor antes de confirmar.';
- }catch(e){if(token===geracao)$('#pin-nps-status').textContent=e.message;}finally{if(token===geracao){ocupado=false;fase='';atualizarAcoes();}}
+ }catch(e){if(token===geracao){files.forEach(f=>miniaturasPix().atualizar(f.name,geral?'geral':'nps',{estado:'erro'}));$('#pin-nps-status').textContent=e.message;}}finally{if(token===geracao){ocupado=false;fase='';atualizarAcoes();}}
 }
 function renderNps(){
  const target=$('#pin-nps-previa');
@@ -147,11 +162,11 @@ function iniciar(){
  const container=$('#pix-lancamentos .panel');if(!container||$('#pixImportacaoNova'))return;
  const button=document.createElement('button');button.id='btnPixImportacaoNova';button.type='button';button.className='pin-launch';button.innerHTML='<span class="pin-launch-icon" aria-hidden="true">↥</span><span>Importar lançamentos</span>';button.onclick=abrir;$('#pixLancamentosAcoes').prepend(button);
  const area=document.createElement('section');area.id='pixImportacaoNova';area.className='pin-panel';area.hidden=true;area.setAttribute('aria-label','Importação de lançamentos PIX');
- area.innerHTML=`<header class="pin-heading"><div><span class="pin-eyebrow">PIX DO PRESIDENTE</span><h2>Importar lançamentos</h2><p>Selecione os PDFs, revise os colaboradores e confirme.</p></div><button type="button" id="pin-fechar" class="pin-close" aria-label="Cancelar e fechar importação">×</button></header><div class="pin-body"><div class="pin-upload-grid"><label class="pin-upload"><strong>Relatórios de técnicos e balcão</strong><span>PDFs do mesmo dia · até 15 MB por arquivo</span><input id="pin-arquivos" type="file" accept="application/pdf,.pdf" multiple></label><div class="pin-settings"><label>Data dos lançamentos<input id="pin-data" type="date" required aria-describedby="pin-data-ajuda"></label><small id="pin-data-ajuda">Meta e realizado serão preenchidos somente neste dia. Os outros dias serão preservados. Ticket, margem e NPS valem para a semana inteira.</small><label>Semana da campanha<select id="pin-semana"><option value="">Selecione</option><option value="1">Semana 1</option><option value="2">Semana 2</option><option value="3">Semana 3</option><option value="4">Semana 4</option></select></label><button type="button" id="pin-limpar" class="secondary">Trocar documentos</button></div></div><div id="pin-arquivos-lista" class="pin-files"></div><p id="pin-status" role="status" aria-live="polite">Selecione os PDFs e escolha a semana. Depois, revise a lista e confirme.</p><section class="pin-nps"><div class="pin-nps-top"><label><strong>NPS dos consultores · opcional</strong><small>Meta do mês e resultado individual. A linha TOTAL deste print é ignorada.</small><input id="pin-nps-arquivos" type="file" accept="image/png,image/jpeg,image/webp" multiple></label><button type="button" id="pin-nps-limpar" class="pin-cancel">Remover NPS</button></div><p id="pin-nps-status" role="status" aria-live="polite">Use a imagem com a meta e o resultado do mês da importação.</p><div id="pin-nps-geral-area" hidden><label><strong>NPS geral das unidades · somente S4</strong><small>Envie o painel NPS POR UNIDADE. Serão lidas as colunas META e REALIZ. O total dos consultores não substitui este painel.</small><input id="pin-nps-geral-arquivos" type="file" accept="image/png,image/jpeg,image/webp" multiple></label></div><div id="pin-nps-previa"></div><label class="pin-nps-check"><input type="checkbox" id="pin-nps-conferido"> Conferi os nomes, as filiais e os percentuais extraídos da imagem.</label></section><div id="pin-indicadores" class="pin-summary"></div><div id="pin-pendencias"></div><div id="pin-resultados"></div><div id="pin-removidos"></div><footer class="pin-footer"><div class="pin-checks"><label for="pin-conferido"><input id="pin-conferido" type="checkbox" aria-describedby="pin-conferido-ajuda"><span class="pin-check-copy"><strong>Conferi a lista e quero continuar a importação</strong><span id="pin-conferido-ajuda">Obrigatório. Marque depois de conferir os nomes, as filiais, as metas e os valores. Se já houver lançamento, você verá as duas versões para escolher qual manter antes de gravar.</span></span></label><small>Remover afeta só este lote e recalcula os totais. Cadastros e registros anteriores não são excluídos. Sem imagem de NPS, os valores de NPS existentes são preservados. Somente valores diferentes do mesmo dia ou dos indicadores semanais exigem comparação. Arquivos descartados e duplicados não são enviados ao armazenamento.</small></div><div class="pin-actions"><button type="button" id="pin-cancelar" class="pin-cancel">Cancelar importação</button><button type="button" id="pin-confirmar" class="pin-confirm" disabled>Confirmar importação</button></div></footer></div>`;
+ area.innerHTML=`<header class="pin-heading"><div><span class="pin-eyebrow">PIX DO PRESIDENTE</span><h2>Importar lançamentos</h2><p>Selecione os PDFs, revise os colaboradores e confirme.</p></div><button type="button" id="pin-fechar" class="pin-close" aria-label="Cancelar e fechar importação">×</button></header><div class="pin-body"><div class="pin-upload-grid"><label class="pin-upload"><strong>Relatórios de técnicos e balcão</strong><span>PDFs do mesmo dia · até 15 MB por arquivo</span><span class="pin-picker"><span class="pin-picker-button">Selecionar PDFs</span><span id="pin-pdf-resumo" class="pin-picker-summary" role="status">Adicione os relatórios em PDF</span><input id="pin-arquivos" class="pin-file-input" aria-label="Selecionar relatórios PDF" type="file" accept="application/pdf,.pdf" multiple></span></label><div class="pin-settings"><label>Data dos lançamentos<input id="pin-data" type="date" required aria-describedby="pin-data-ajuda"></label><small id="pin-data-ajuda">Meta e realizado serão preenchidos somente neste dia. Os outros dias serão preservados. Ticket, margem e NPS valem para a semana inteira.</small><label>Semana da campanha<select id="pin-semana"><option value="">Selecione</option><option value="1">Semana 1</option><option value="2">Semana 2</option><option value="3">Semana 3</option><option value="4">Semana 4</option></select></label><button type="button" id="pin-limpar" class="secondary">Trocar documentos</button></div></div><div id="pin-arquivos-lista" class="pin-attachments" aria-label="Relatórios PDF selecionados"></div><p id="pin-status" role="status" aria-live="polite">Selecione os PDFs e escolha a semana. Depois, revise a lista e confirme.</p><section class="pin-nps"><div class="pin-nps-top"><label><strong>NPS dos consultores · opcional</strong><small>Meta do mês e resultado individual. A linha TOTAL deste print é ignorada.</small><span class="pin-picker"><span class="pin-picker-button">Selecionar imagens</span><span id="pin-nps-resumo" class="pin-picker-summary" role="status">Adicione uma imagem de NPS</span><input id="pin-nps-arquivos" class="pin-file-input" aria-label="Selecionar imagens de NPS dos consultores" type="file" accept="image/png,image/jpeg,image/webp" multiple></span></label><button type="button" id="pin-nps-limpar" class="pin-cancel">Remover NPS</button></div><div id="pin-nps-miniaturas" class="pin-attachments" aria-label="Imagens de NPS selecionadas"></div><p id="pin-nps-status" role="status" aria-live="polite">Use a imagem com a meta e o resultado do mês da importação.</p><div id="pin-nps-geral-area" hidden><label><strong>NPS geral das unidades · somente S4</strong><small>Envie o painel NPS POR UNIDADE. Serão lidas as colunas META e REALIZ. O total dos consultores não substitui este painel.</small><span class="pin-picker"><span class="pin-picker-button">Selecionar painel</span><span id="pin-geral-resumo" class="pin-picker-summary" role="status">Adicione uma imagem de NPS</span><input id="pin-nps-geral-arquivos" class="pin-file-input" aria-label="Selecionar painel NPS por unidade" type="file" accept="image/png,image/jpeg,image/webp" multiple></span></label><div id="pin-nps-geral-miniaturas" class="pin-attachments" aria-label="Painéis de NPS selecionados"></div></div><div id="pin-nps-previa"></div><label class="pin-nps-check"><input type="checkbox" id="pin-nps-conferido"> Conferi os nomes, as filiais e os percentuais extraídos da imagem.</label></section><div id="pin-indicadores" class="pin-summary"></div><div id="pin-pendencias"></div><div id="pin-resultados"></div><div id="pin-removidos"></div><footer class="pin-footer"><div class="pin-checks"><label for="pin-conferido"><input id="pin-conferido" type="checkbox" aria-describedby="pin-conferido-ajuda"><span class="pin-check-copy"><strong>Conferi a lista e quero continuar a importação</strong><span id="pin-conferido-ajuda">Obrigatório. Marque depois de conferir os nomes, as filiais, as metas e os valores. Se já houver lançamento, você verá as duas versões para escolher qual manter antes de gravar.</span></span></label><small>Remover afeta só este lote e recalcula os totais. Cadastros e registros anteriores não são excluídos. Sem imagem de NPS, os valores de NPS existentes são preservados. Somente valores diferentes do mesmo dia ou dos indicadores semanais exigem comparação. Arquivos descartados e duplicados não são enviados ao armazenamento.</small></div><div class="pin-actions"><button type="button" id="pin-cancelar" class="pin-cancel">Cancelar importação</button><button type="button" id="pin-confirmar" class="pin-confirm" disabled>Confirmar importação</button></div></footer></div>`;
  container.querySelector('.panel-header').after(area);
  $('#pin-nps-arquivos').onchange=e=>importarNps([...e.target.files]);
  $('#pin-nps-geral-arquivos').onchange=e=>importarNps([...e.target.files],true);
- $('#pin-nps-limpar').onclick=()=>{if(ocupado||salvo)return;npsDocs.forEach(d=>{if(d.preview)URL.revokeObjectURL(d.preview);});npsDocs=[];arquivosImportacao=arquivosImportacao.filter(f=>/\.pdf$/i.test(f.name));npsLinks={};$('#pin-nps-conferido').checked=false;$('#pin-nps-arquivos').value='';$('#pin-nps-status').textContent='Imagem removida. O NPS salvo será preservado.';if(resultado)recalcular();};
+ $('#pin-nps-limpar').onclick=()=>{if(ocupado||salvo)return;painelMiniaturas?.removerGrupo('nps');painelMiniaturas?.removerGrupo('geral');$('#pin-nps-geral-arquivos').value='';npsDocs.forEach(d=>{if(d.preview)URL.revokeObjectURL(d.preview);});npsDocs=[];arquivosImportacao=arquivosImportacao.filter(f=>/\.pdf$/i.test(f.name));npsLinks={};$('#pin-nps-conferido').checked=false;$('#pin-nps-arquivos').value='';$('#pin-nps-status').textContent='Imagem removida. O NPS salvo será preservado.';if(resultado)recalcular();};
  $('#pin-fechar').onclick=cancelar;$('#pin-cancelar').onclick=cancelar;$('#pin-confirmar').onclick=confirmar;
  $('#pin-limpar').onclick=()=>{if(!ocupado){$('#pin-arquivos').value='';$('#pin-arquivos').click();}};$('#pin-arquivos').onchange=e=>importar([...e.target.files]);
  area.addEventListener('change',e=>{if(ocupado||salvo)return;
