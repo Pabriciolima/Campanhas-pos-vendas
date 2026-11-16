@@ -5524,3 +5524,53 @@ window.aplicarResultadoAuditoriaPix = (linhas, auditoria) => {
  if(mudou){renderDashboardPix();renderLancamentosPix();renderApuracaoPix();}
  return mudou;
 };
+
+// Contrato da nova importação: dados oficiais e preenchimento do formulário existente.
+window.obterBaseImportacaoPix = async () => {
+  await carregarParticipantesPixUmaVez();
+  return {participantes: participantesPix().filter(funcionarioPixAtivo).map(p=>({...p})),
+    nucleos: PIX_NUCLEOS_GESTORES.map(n=>({...n,filiais:[...n.filiais]}))};
+};
+window.preencherImportacaoPix = async (linha, semana) => {
+  if (window.bloqueioLancamentos?.bloqueado || document.body.classList.contains('lancamentos-bloqueados')) throw Error('Os lançamentos estão bloqueados pelo diretor.');
+  if (!linha.completo) throw Error('Resolva os vínculos e as filiais pendentes antes de preencher.');
+  if (linha.inicio !== linha.fim) throw Error('Nesta etapa, o preenchimento diário exige relatório de um único dia. O período completo permanece disponível na prévia.');
+  if (![1,2,3,4].includes(Number(semana))) throw Error('Selecione a semana da campanha.');
+  if (pixDataLocal(linha.inicio).getDay() === 0) throw Error('Domingo não está disponível no calendário da campanha.');
+  const funcionario = participantesPix().find(p=>String(p.id)===String(linha.funcionarioId)&&funcionarioPixAtivo(p));
+  if (!funcionario) throw Error('O colaborador não está mais ativo. Leia os documentos novamente.');
+  const competencia = linha.inicio.slice(0,7);
+  const registros = await window.obterResultadosPixExportacao(competencia);
+  const existentes = registros.filter(r=>String(r.funcionarioId)===String(funcionario.id)&&Number(r.semana)===Number(semana));
+  if (existentes.length > 1) throw Error('Há registros duplicados nesta semana. Revise antes de importar.');
+  const anterior = existentes[0];
+  const outras = registros.filter(r=>String(r.funcionarioId)===String(funcionario.id)&&Number(r.semana)!==Number(semana));
+  if (outras.some(r=>(r.datasAvaliadas||[]).includes(linha.inicio))) throw Error('Esta data já pertence a outra semana do colaborador.');
+  if (anterior && ((anterior.datasAvaliadas||[]).some(d=>d!==linha.inicio)||Object.keys(anterior.diasCalendario||{}).some(d=>d!==linha.inicio))) throw Error('Este lançamento já contém outros dias. A prévia foi mantida; a integração de vários dias será tratada na próxima etapa para preservar a meta e os valores existentes.');
+  if (anterior && !await Promise.resolve(window.confirm('Este colaborador já tem lançamento nesta semana. Abrir com os valores do relatório para conferência? A gravação só ocorre no botão Salvar.'))) return false;
+  if (anterior && !estadoPix.lancamentos.some(r=>String(r.id)===String(anterior.id))) estadoPix.lancamentos.push(anterior);
+  abrirLancamentoPix();
+  $('#pixLancamentoCompetencia').value=competencia;
+  $('#pixLancamentoSemana').value=String(semana);
+  $('#pixLancamentoId').value=anterior?.id||'';
+  atualizarSelectsPix();
+  const campoFilial=$('#pixLancamentoFilial');
+  const filial=[...campoFilial.options].find(o=>pixFilialNucleoNormalizada(o.value)===pixFilialNucleoNormalizada(linha.filial))?.value || funcionario.filial;
+  campoFilial.value=filial;
+  atualizarFuncionariosLancamentoPix(funcionario.id);
+  $('#pixLancamentoFuncionario').value=funcionario.id;
+  renderCamposLancamentoPix({...anterior,metaSemanal:linha.meta,realizadoSemanal:linha.realizado,
+    datasAvaliadas:[linha.inicio],diasCalendario:{[linha.inicio]:{realizado:linha.realizado}},
+    ticketMedio:linha.ticket ?? anterior?.ticketMedio,margem:linha.margem ?? anterior?.margem});
+  preencherConferenciaPixFonte(anterior?.auditoriaFonte);
+  await atualizarHistoricoModalPix();
+  if (!pixHistoricoModalConferido) throw Error('Não foi possível conferir as datas anteriores. Aguarde a conferência antes de salvar.');
+  if (usaRegraPixDiaria(competencia)) {
+    const diario = document.querySelector(`.pix-realizado-dia[data-dia="${linha.inicio}"]`);
+    if (!diario) throw Error('A data não está disponível no calendário da campanha.');
+    diario.value = pixMoeda(linha.realizado);
+    atualizarPainelDiarioPix();
+    atualizarPreviewPix();
+  }
+  return true;
+};
