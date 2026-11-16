@@ -34,7 +34,7 @@
 
 
 /* Conferência NPS: destaque pendente em vermelho e confirmação em verde. */
-.pin-panel .pin-nps-check{
+.pin-panel :is(.pin-nps-check,.pin-checks label[for="pin-conferido"]){
  --pin-confirm-neon:255,62,85;
  padding:14px 16px;margin-top:14px;min-height:54px;box-sizing:border-box;
  border:1px solid rgba(var(--pin-confirm-neon),.78);border-radius:12px;
@@ -43,33 +43,55 @@
  box-shadow:0 0 9px rgba(var(--pin-confirm-neon),.18),inset 0 0 12px rgba(var(--pin-confirm-neon),.035);
  transition:border-color .25s,background .25s,box-shadow .25s;
 }
-.pin-panel .pin-nps-check:not(:has(input:checked)):not(:has(input:disabled)){
+.pin-panel :is(.pin-nps-check,.pin-checks label[for="pin-conferido"]):not(:has(input:checked)):not(:has(input:disabled)){
  animation:pin-nps-neon-pulse 2.2s ease-in-out infinite;
 }
-.pin-panel .pin-nps-check:has(input:checked){
+.pin-panel :is(.pin-nps-check,.pin-checks label[for="pin-conferido"]):has(input:checked){
  --pin-confirm-neon:21,216,143;
  animation:none;border-color:rgba(var(--pin-confirm-neon),.9);
  background:rgba(var(--pin-confirm-neon),.08);
  box-shadow:0 0 13px rgba(var(--pin-confirm-neon),.24),inset 0 0 12px rgba(var(--pin-confirm-neon),.045);
 }
-.pin-panel .pin-nps-check input[type=checkbox]{
+.pin-panel :is(.pin-nps-check,.pin-checks label[for="pin-conferido"]) input[type=checkbox]{
  appearance:none;-webkit-appearance:none;position:relative;
  display:inline-grid;place-items:center;flex:0 0 24px;width:24px;height:24px;
  margin:0;padding:0;border:2px solid rgb(var(--pin-confirm-neon));border-radius:6px;
  background:rgba(var(--pin-confirm-neon),.09);cursor:pointer;
  box-shadow:0 0 10px rgba(var(--pin-confirm-neon),.4);
 }
-.pin-panel .pin-nps-check input[type=checkbox]:checked{background:#09815c;}
-.pin-panel .pin-nps-check input[type=checkbox]:checked::after{
+.pin-panel :is(.pin-nps-check,.pin-checks label[for="pin-conferido"]) input[type=checkbox]:checked{background:#09815c;}
+.pin-panel :is(.pin-nps-check,.pin-checks label[for="pin-conferido"]) input[type=checkbox]:checked::after{
  content:"";width:6px;height:11px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:translateY(-1px) rotate(45deg);
 }
-.pin-panel .pin-nps-check input:focus-visible{outline:3px solid var(--monaco-text,#183449);outline-offset:4px;}
-.pin-panel .pin-nps-check:has(input:disabled){animation:none;cursor:default;}
-.pin-panel .pin-nps-check input:disabled{cursor:default;}
+.pin-panel :is(.pin-nps-check,.pin-checks label[for="pin-conferido"]) input:focus-visible{outline:3px solid var(--monaco-text,#183449);outline-offset:4px;}
+.pin-panel :is(.pin-nps-check,.pin-checks label[for="pin-conferido"]):has(input:disabled){animation:none;cursor:default;}
+.pin-panel :is(.pin-nps-check,.pin-checks label[for="pin-conferido"]) input:disabled{cursor:default;}
 @keyframes pin-nps-neon-pulse{
  0%,100%{box-shadow:0 0 7px rgba(255,62,85,.16),inset 0 0 9px rgba(255,62,85,.025);}
  50%{box-shadow:0 0 19px rgba(255,62,85,.36),inset 0 0 15px rgba(255,62,85,.07);}
 }
 @media(prefers-reduced-motion:reduce){
- .pin-panel .pin-nps-check{animation:none!important;transition:none;}
+ .pin-panel :is(.pin-nps-check,.pin-checks label[for="pin-conferido"]){animation:none!important;transition:none;}
 }
+
+/* O botão indica as pendências reais; a validação existente controla disabled. */
+.pin-panel #pin-confirmar{
+ --pin-confirm-neon:21,216,143;
+ border:1px solid rgba(var(--pin-confirm-neon),.95);
+ background:linear-gradient(120deg,#087d60,#075e4c);
+ color:#fff;opacity:1;
+ box-shadow:0 0 14px rgba(var(--pin-confirm-neon),.28),inset 0 0 10px rgba(var(--pin-confirm-neon),.05);
+ transition:border-color .25s,background .25s,box-shadow .25s;
+}
+.pin-panel #pin-confirmar:disabled:not([aria-busy="true"]){
+ --pin-confirm-neon:255,62,85;
+ border-color:rgba(var(--pin-confirm-neon),.85);
+ background:linear-gradient(120deg,#6f1e30,#481925);
+ color:#fff;opacity:1;cursor:not-allowed;
+ animation:pin-nps-neon-pulse 2.2s ease-in-out infinite;
+}
+.pin-panel #pin-confirmar:enabled,.pin-panel #pin-confirmar[aria-busy="true"]{animation:none;}
+.pin-panel #pin-confirmar:enabled:hover{box-shadow:0 0 21px rgba(21,216,143,.4);}
+.pin-panel #pin-confirmar:focus-visible{outline:3px solid var(--monaco-text,#183449);outline-offset:4px;}
+.pin-panel #pin-confirmar[aria-busy="true"]{cursor:wait;}
+@media(prefers-reduced-motion:reduce){.pin-panel #pin-confirmar{animation:none!important;transition:none;}}
