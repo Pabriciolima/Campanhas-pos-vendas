@@ -1,4 +1,4 @@
-import {criarConfirmadorPix} from './pix-importacao-lote.js?v=20261116-confirmar2';
+import {criarConfirmadorPix} from './pix-importacao-lote.js?v=20261116-nps1';
 import {aplicarStatusAuditoriaPix,registrarAuditoriaStatusPix} from './pix-auditoria-status.js?v=20261103-audit10';
 import {auditarPix} from "./pix-auditoria-core.js?v=20261103";
 import {instalarConferenciaPixFonte,coletarConferenciaPixFonte,preencherConferenciaPixFonte,renderizarPainelAuditoriaPix} from "./pix-auditoria-fonte.js?v=20261104-hide-panel1";
@@ -50,7 +50,7 @@ import { escaparHtml as protegerHtml } from "./security/seguranca.js";
 import { firestore } from "./firebase-config.js";
 
 import { supabase } from "./supabase-config.js";
-import { criarNpsUnidadePix } from "./pix-nps-unidade.js?v=20261022-vigencia-novembro";
+import { criarNpsUnidadePix } from "./pix-nps-unidade.js?v=20261116-importacao-nps1";
 import { mensagemNpsUnidade } from "./pix-nps-unidade-core.js?v=20261022-vigencia-novembro";
 
 import {
@@ -4302,7 +4302,7 @@ function renderCamposLancamentoPix(dados = {}) {
                 <input type="number" min="0" max="100" step="0.01" id="pixMetaNps" value="${dados.metaNps ?? ""}" placeholder="Meta geral do núcleo" required>
               </label>
               <label>NPS realizado do núcleo
-                <input type="number" min="0" max="100" step="0.01" id="pixRealizadoNps" value="${dados.realizadoNps ?? ""}" placeholder="Resultado consolidado do núcleo" required>
+                <input type="number" min="-100" max="100" step="0.01" id="pixRealizadoNps" value="${dados.realizadoNps ?? ""}" placeholder="Resultado consolidado do núcleo" required>
               </label>
             </div>
           </section>
@@ -4314,7 +4314,7 @@ function renderCamposLancamentoPix(dados = {}) {
           </label>
           <label>
             NPS realizado
-            <input type="number" step="0.01" min="0" id="pixRealizadoNps" value="${dados.realizadoNps ?? ""}" placeholder="Ex.: 92" required />
+            <input type="number" step="0.01" min="-100" max="100" id="pixRealizadoNps" value="${dados.realizadoNps ?? ""}" placeholder="Ex.: 92" required />
             <small>O cofrinho é liberado na S4 conforme as metas individuais e o NPS geral da filial.</small>
           </label>
         `
@@ -5529,7 +5529,7 @@ window.aplicarResultadoAuditoriaPix = (linhas, auditoria) => {
 // Contrato da nova importação: dados oficiais e preenchimento do formulário existente.
 window.obterBaseImportacaoPix = async () => {
   await carregarParticipantesPixUmaVez();
-  return {participantes: participantesPix().filter(funcionarioPixAtivo).map(p=>({...p})),
+  return {participantes: participantesPix().filter(funcionarioPixAtivo).map(p=>({...p,usaNps:cargoUsaNpsPix(p.cargo)})),
     nucleos: PIX_NUCLEOS_GESTORES.map(n=>({...n,filiais:[...n.filiais]}))};
 };
 window.preencherImportacaoPix = async (linha, semana) => {
@@ -5592,7 +5592,7 @@ window.confirmarImportacaoPix = (...args) => {
       registros.push(...(data||[]).map(r=>({...r.dados,id:r.id})));
       if((data||[]).length<500)break;
     }
-    return {participantes:participantesPix(),registros};
+    return {participantes:participantesPix().map(p=>({...p,usaNps:cargoUsaNpsPix(p.cargo)})),registros};
   },
   gravar: async lote => {
     const {data,error}=await supabase.from('pix_lancamentos').upsert(lote,{onConflict:'id'}).select('id');
@@ -5603,3 +5603,5 @@ window.confirmarImportacaoPix = (...args) => {
   });
   return confirmarLoteImportacaoPix(...args);
 };
+
+window.conferirNpsFilialImportacao = dados => npsUnidadePix.preencherImportacao(dados);

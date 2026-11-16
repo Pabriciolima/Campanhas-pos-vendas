@@ -50,6 +50,14 @@ export function prepararLotePix(linhas, semana, participantes, registros, {atual
       osAbertaPercentual:anterior?.osAbertaPercentual??0,osAbertaInformada:informado(anterior,'osAbertaPercentual','osAbertaInformada'),
       criadoEm:anterior?.criadoEm||agora,atualizadoEm:agora,
       importacaoPdf:{data,semana:Number(semana),origem:linha.origem,arquivos:linha.arquivo?[linha.arquivo]:[],fontes:[...(linha.fontes||[])],conferidaEm:agora}};
+    if (linha.npsImportado) {
+      const nps=linha.npsImportado;
+      if (!p.usaNps || nps.competencia!==competencia || !Number.isFinite(nps.meta) || !Number.isFinite(nps.realizado) || nps.meta < -100 || nps.meta > 100 || nps.realizado < -100 || nps.realizado > 100) throw Error(`NPS inválido ou não permitido para ${p.nome}.`);
+      dados.metaNps=nps.meta;dados.realizadoNps=nps.realizado;
+      dados.metaNpsInformada=true;dados.realizadoNpsInformado=true;
+      if (nps.filiais) dados.npsFiliais={...nps.filiais};
+      dados.importacaoPdf.nps={...nps};
+    }
     delete dados.id;
     if(nucleo){dados.nucleoFiliais=[...nucleo];dados.metaConsolidada=true;dados.realizadoConsolidado=true;}
     return {id,competencia,semana:String(semana),filial:dados.filial,colaborador:p.nome,dados,updated_at:agora};

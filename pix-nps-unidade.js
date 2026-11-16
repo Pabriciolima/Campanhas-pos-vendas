@@ -161,5 +161,15 @@ export function criarNpsUnidadePix({ supabase, aoAtualizar, filiais, competencia
     window.setInterval(() => { if (!document.hidden && document.querySelector('#pixPresidente.active')) void carregar().catch(console.error); }, 30000);
     return carregar();
   }
-  return { avaliar, carregar, abrir, iniciar, atualizarResumo, vincularBotoes, blocoLancamento };
+  async function preencherImportacao({filial,competencia:mes,meta,realizado}) {
+    if (bloqueado()) throw Error('Os lançamentos estão bloqueados pelo diretor.');
+    if (!filiais().includes(filial) || !chaveNpsUnidade(filial,mes) || percentualNpsUnidade(meta) === null || percentualNpsUnidade(realizado) === null) throw Error('Confira a filial, a competência e os percentuais de NPS.');
+    await abrir(filial,mes);
+    if (!dialogo?.open) return false;
+    const c=campos();c.meta.value=meta;c.realizado.value=realizado;
+    // A revisão importada mantém a proteção por senha e a checagem de versão existentes.
+    atualizarProtecao();previa();
+    return true;
+  }
+  return { avaliar, carregar, abrir, iniciar, atualizarResumo, vincularBotoes, blocoLancamento, preencherImportacao };
 }

@@ -1,5 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';
 import {consolidar,cargoTipo,normalizar} from '../pix-importacao-core.js';
+import {vincularNps,aplicarNpsImportacao,percentualNpsImportacao} from '../pix-importacao-nps-core.js';
 function app(){
  const nodes=new Map();
  class El{
@@ -10,9 +11,9 @@ function app(){
   querySelectorAll(){return [];}replaceChildren(){this.html='';}focus(){}scrollIntoView(){}prepend(){}after(){}click(){}addEventListener(n,f){this.events[n]=f;}querySelector(){return new El();}
  }
  const panel=new El();nodes.set('#pix-lancamentos .panel',panel);nodes.set('#pixLancamentosAcoes',new El());let calls=0;let received=[];
- const ctx={document:{readyState:'complete',querySelector:s=>nodes.get(s),createElement:()=>new El(),body:{classList:{contains:()=>false}}},window:{confirmarImportacaoPix:async(rows)=>{calls++;received=rows;return {quantidade:rows.length,novos:rows.length,atualizados:0};}},consolidar,cargoTipo,normalizar};
- vm.createContext(ctx);const src=fs.readFileSync(new URL('../pix-importacao.js',import.meta.url),'utf8').replace(/^import .*?;\n/,'');vm.runInContext(src,ctx);
- const p={id:'a',nome:'CONSULTOR A',cargo:'Consultor Técnico',filial:'ANANINDEUA'};const row={nome:p.nome,tipo:'tecnico',meta:100,realizado:80,ticket:20,inicio:'2026-11-09',fim:'2026-11-09'};
+ const ctx={document:{readyState:'complete',querySelector:s=>nodes.get(s),createElement:()=>new El(),body:{classList:{contains:()=>false}}},window:{confirmarImportacaoPix:async(rows)=>{calls++;received=rows;return {quantidade:rows.length,novos:rows.length,atualizados:0};}},consolidar,cargoTipo,normalizar,vincularNps,aplicarNpsImportacao,percentualNpsImportacao};
+ vm.createContext(ctx);const src=fs.readFileSync(new URL('../pix-importacao.js',import.meta.url),'utf8').replace(/^import .*?;\n/gm,'');vm.runInContext(src,ctx);
+ const p={id:'a',nome:'CONSULTOR A',cargo:'Consultor Técnico',filial:'ANANINDEUA',usaNps:true};const row={nome:p.nome,tipo:'tecnico',meta:100,realizado:80,ticket:20,inicio:'2026-11-09',fim:'2026-11-09'};
  function seed(){ctx.seed={base:{participantes:[p],nucleos:[]},docs:[{inicio:row.inicio,fim:row.fim,linhas:[row]}]};vm.runInContext('base=seed.base;documentos=seed.docs;recalcular();',ctx);}
  return {ctx,nodes,seed,get calls(){return calls;},get received(){return received;}};
 }
@@ -41,4 +42,13 @@ test('checkboxes são independentes nas duas ordens; atualização é opcional',
  conferido.checked=false;change('pin-conferido');assert.equal(a.nodes.get('#pin-confirmar').disabled,true);
  atualizar.checked=true;change('pin-atualizar');conferido.checked=true;change('pin-conferido');assert.equal(atualizar.checked,true);assert.equal(conferido.checked,true);assert.equal(a.nodes.get('#pin-confirmar').disabled,false);
  semana.value='3';change('pin-semana');assert.equal(conferido.checked,false);assert.equal(atualizar.checked,true);assert.equal(a.nodes.get('#pin-confirmar').disabled,true);
+});
+test('imagem exige conferência do NPS e envia valores somente após os dois aceites',async()=>{
+ const a=app();a.seed();
+ vm.runInContext("npsDocs=[{competencia:'2026-11',linhas:[{nome:'CONSULTOR A',dn:'',meta:91.4,realizado:-20,competencia:'2026-11',arquivo:'nps.png'}]}];recalcular();",a.ctx);
+ a.nodes.get('#pin-semana').value='2';a.nodes.get('#pin-conferido').checked=true;
+ vm.runInContext('atualizarAcoes()',a.ctx);assert.equal(a.nodes.get('#pin-confirmar').disabled,true);
+ await a.nodes.get('#pin-confirmar').onclick();assert.equal(a.calls,0);
+ a.nodes.get('#pin-nps-conferido').checked=true;vm.runInContext('atualizarAcoes()',a.ctx);assert.equal(a.nodes.get('#pin-confirmar').disabled,false);
+ await a.nodes.get('#pin-confirmar').onclick();assert.equal(a.calls,1);assert.equal(a.received[0].npsImportado.meta,91.4);assert.equal(a.received[0].npsImportado.realizado,-20);
 });
