@@ -579,7 +579,8 @@ async function listarEvidenciasContextoPix(contexto) {
   }
 
   const unicos = new Map();
-  [...arquivosSemana, ...arquivosLegados].forEach(arquivo => {
+  const importados=typeof window.obterEvidenciasImportacaoPix==='function'?await window.obterEvidenciasImportacaoPix(contexto):[];
+  [...arquivosSemana, ...arquivosLegados,...importados].forEach(arquivo => {
     unicos.set(arquivo.caminho, arquivo);
   });
 
@@ -1331,6 +1332,7 @@ async function excluirPixEvidencia(
   caminho,
   botao = null
 ) {
+  if(caminho.startsWith('pix-importacoes-v1/')){await window.appAlert?.({mensagem:'Esta evidência está vinculada a uma importação. Ela será descartada automaticamente quando deixar de ser utilizada.',tipo:'info'});return;}
   if (!(await confirmarExclusaoPixPremium())) {
     return;
   }

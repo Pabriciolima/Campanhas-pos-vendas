@@ -70,7 +70,7 @@ export function aplicarNpsImportacao(linhas,nps,participantes,{semana}={}){
    if(porFilial.every(Boolean)){
     // Regra aprovada: uma filial atingindo a meta habilita o gerente; sem somar percentuais.
     encontrado=porFilial.find(r=>r.realizado>=r.meta)||porFilial[0];
-    return {...linha,npsStatus:'NPS das filiais',npsImportado:{meta:encontrado.meta,realizado:encontrado.realizado,competencia:encontrado.competencia,arquivo:porFilial.map(r=>r.arquivo).join(' / '),escopo:'nucleo',origem:'painel-unidade',semana:4,filiais:Object.fromEntries(linha.nucleoFiliais.map((f,i)=>[f,{meta:porFilial[i].meta,realizado:porFilial[i].realizado}]))}};
+    return {...linha,npsStatus:'NPS das filiais',npsImportado:{meta:encontrado.meta,realizado:encontrado.realizado,competencia:encontrado.competencia,arquivos:[...new Set(porFilial.map(r=>r.arquivo))],arquivo:porFilial.map(r=>r.arquivo).join(' / '),escopo:'nucleo',origem:'painel-unidade',semana:4,filiais:Object.fromEntries(linha.nucleoFiliais.map((f,i)=>[f,{meta:porFilial[i].meta,realizado:porFilial[i].realizado}]))}};
    }
   }else encontrado=escolher(gerais.filter(r=>r.filiais?.some(f=>normalizar(f)===normalizar(linha.filial))));
   if(!encontrado)return {...linha,npsStatus:linha.origem!=='Individual'&&Number(semana)!==4?'NPS geral somente na S4 · mantém o valor salvo':'NPS não identificado · mantém o valor salvo'};

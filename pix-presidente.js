@@ -1,4 +1,5 @@
-import {criarConfirmadorPix,localizarConflitosPix} from './pix-importacao-lote.js?v=20261116-comparacao1';
+import {criarEvidenciasImportacaoPix} from './pix-importacao-evidencias.js?v=20261116-diaria2';
+import {criarConfirmadorPix,localizarConflitosPix} from './pix-importacao-lote.js?v=20261116-diaria2';
 import {aplicarStatusAuditoriaPix,registrarAuditoriaStatusPix} from './pix-auditoria-status.js?v=20261103-audit10';
 import {auditarPix} from "./pix-auditoria-core.js?v=20261103";
 import {instalarConferenciaPixFonte,coletarConferenciaPixFonte,preencherConferenciaPixFonte,renderizarPainelAuditoriaPix} from "./pix-auditoria-fonte.js?v=20261104-hide-panel1";
@@ -1205,6 +1206,7 @@ function normalizarDiasPix(lancamento = {}) {
       data,
       rotulo: pixRotuloData(data).semana,
       naoTrabalhado: false,
+      meta: Number.isFinite(porData?.[data]?.meta) ? porData[data].meta : undefined,
       realizado: pixNumero(porData?.[data]?.realizado),
       informado: porData?.[data]?.realizado !== null && porData?.[data]?.realizado !== undefined && String(porData[data].realizado).trim() !== ""
     }));
@@ -1226,13 +1228,15 @@ function normalizarDiasPix(lancamento = {}) {
 
 function pixAvaliarSaldoDias(dias, metaDia, saldoInicial = 0) {
   let saldo = saldoInicial;
+  const metasValidas=dias.length&&dias.every(d=>Number.isFinite(d.meta))&&Math.abs(dias.reduce((s,d)=>s+d.meta,0)-metaDia*dias.length)<.02;
   return dias.map(dia => {
+    const metaEfetiva=metasValidas?dia.meta:metaDia;
     const realizado = pixNumero(dia.realizado);
     const informado = dia.informado !== false;
     const anterior = saldo;
-    const metaAjustada = Math.max(0, metaDia - anterior);
-    const atingiu = informado && metaDia > 0 && realizado + anterior >= metaDia - 0.000001;
-    if (informado) saldo = Math.round((anterior + realizado - metaDia) * 100) / 100;
+    const metaAjustada = Math.max(0, metaEfetiva - anterior);
+    const atingiu = informado && metaEfetiva > 0 && realizado + anterior >= metaEfetiva - 0.000001;
+    if (informado) saldo = Math.round((anterior + realizado - metaEfetiva) * 100) / 100;
     return { ...dia, realizado, informado, atingiu, metaAjustada,
       saldoAnterior: anterior, disponivel: realizado + Math.max(0, anterior),
       gorduraAposDia: Math.max(0, saldo), deficitAposDia: Math.max(0, -saldo) };
@@ -1285,9 +1289,10 @@ function pixContextoSemanasAnteriores(lancamento) {
   registros.forEach(item => {
     const dias = normalizarDiasPix(item).sort((a,b) => String(a.data).localeCompare(String(b.data)));
     const metaDia = dias.length ? pixNumero(item.metaSemanal) / dias.length : 0;
+    const metasValidas=dias.length&&dias.every(d=>Number.isFinite(d.meta))&&Math.abs(dias.reduce((s,d)=>s+d.meta,0)-pixNumero(item.metaSemanal))<.02;
     dias.forEach(dia => {
       if (dia.data) datasOcupadas.add(dia.data);
-      if (dia.informado) saldo = Math.round((saldo + pixNumero(dia.realizado) - metaDia) * 100) / 100;
+      if (dia.informado) saldo = Math.round((saldo + pixNumero(dia.realizado) - (metasValidas?dia.meta:metaDia)) * 100) / 100;
     });
   });
   return { saldo, datasOcupadas };
@@ -4626,7 +4631,7 @@ function renderDiasSelecionadosPix() {
       <div class="pix-day-card" data-pix-dia="${data}">
         <div class="pix-day-title"><b>${rotulo.semana} · ${rotulo.dia}</b><small>${data.slice(5).replace("-", "/")}</small></div>
         <small class="pix-meta-dia" data-meta-dia="${data}">Meta: —</small>
-        <input type="text" inputmode="decimal" class="pix-realizado-dia" data-dia="${data}"
+        <input type="text" inputmode="decimal" class="pix-realizado-dia" data-dia="${data}" data-meta="${Number.isFinite(salvo.meta)?salvo.meta:''}"
           placeholder="Realizado R$ 0,00" value="${salvo.realizado !== null && salvo.realizado !== undefined && String(salvo.realizado).trim() !== "" ? pixMoeda(salvo.realizado) : ""}">
         <span class="pix-dia-status" data-status-dia="${data}">Aguardando</span>
       </div>`;
@@ -4643,7 +4648,7 @@ function renderDiasSelecionadosPix() {
 function coletarDiasPixFormulario(preservar = false) {
   const dias = {};
   document.querySelectorAll(".pix-realizado-dia[data-dia]").forEach(input => {
-    dias[input.dataset.dia] = { realizado: input.value.trim() === "" ? null : pixNumero(input.value) };
+    dias[input.dataset.dia] = { ...(input.dataset.meta!==undefined&&input.dataset.meta!==''?{meta:Number(input.dataset.meta)}:{}), realizado: input.value.trim() === "" ? null : pixNumero(input.value) };
   });
   if (preservar) {
     const id = $("#pixLancamentoId")?.value;
@@ -4669,7 +4674,7 @@ function atualizarPainelDiarioPix() {
   const saldoInicial = pixContextoSemanasAnteriores({ competencia, funcionarioId: $("#pixLancamentoFuncionario")?.value, semana: $("#pixLancamentoSemana")?.value, id: $("#pixLancamentoId")?.value }).saldo;
   const dias = pixAvaliarSaldoDias(selecionadas.map(data => {
     const input = document.querySelector(`.pix-realizado-dia[data-dia="${data}"]`);
-    return { data, realizado: pixNumero(input?.value), informado: Boolean(input?.value?.trim()) };
+    return { data, meta: input?.dataset.meta!==''&&input?.dataset.meta!=null?Number(input.dataset.meta):undefined, realizado: pixNumero(input?.value), informado: Boolean(input?.value?.trim()) };
   }), metaDia, saldoInicial);
 
   dias.forEach(dia => {
@@ -5597,11 +5602,15 @@ window.conferirConflitosImportacaoPix = async (linhas,semana) => {
   return localizarConflitosPix(linhas,semana,registros);
 };
 
-let confirmarLoteImportacaoPix;
+let confirmarLoteImportacaoPix,evidenciasLotePix;
+function anexosLotePix(){return evidenciasLotePix ||= criarEvidenciasImportacaoPix(supabase);}
+window.obterEvidenciasImportacaoPix=contexto=>anexosLotePix().listar(contexto);
 window.confirmarImportacaoPix = (...args) => {
   confirmarLoteImportacaoPix ||= criarConfirmadorPix({
   bloqueado: () => Boolean(window.bloqueioLancamentos?.bloqueado || document.body.classList.contains('lancamentos-bloqueados')),
   carregar: carregarContextoImportacaoPix,
+  prepararEvidencias:(...args)=>anexosLotePix().preparar(...args),
+  limparEvidencias:()=>anexosLotePix().limpar(),
   gravar: async lote => {
     const {data,error}=await supabase.from('pix_lancamentos').upsert(lote,{onConflict:'id'}).select('id');
     if(error)throw error;

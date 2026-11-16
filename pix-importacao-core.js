@@ -61,7 +61,7 @@ export function consolidar(documentos, participantes, nucleos=[], vinculos={}, e
   if(cargo!==r.tipo){ignorados.push({...r,key,motivo:`Cargo cadastrado: ${p.cargo}. Esta linha não pertence a este setor.`});return;}
   const identidade=[p.id,r.tipo,r.inicio,r.fim].join('|');
   if(vistos.has(identidade))throw Error(`Linha duplicada para ${p.nome}. Remova o documento repetido.`);vistos.add(identidade);
-  individuais.push({...r,key,funcionarioId:p.id,nome:p.nome,filial:p.filial,cargo:p.cargo,dn:p.dn,origem:'Individual',arquivos:r.arquivo?[r.arquivo]:[],fontes:[r.nome],completo:true});
+  individuais.push({...r,key,funcionarioId:p.id,nome:p.nome,filial:p.filial,cargo:p.cargo,dn:p.dn,origem:'Individual',arquivosDetalhes:[{nome:r.arquivo,pagina:r.pagina,tipo:'pdf'}],arquivos:r.arquivo?[r.arquivo]:[],fontes:[r.nome],completo:true});
  }));
  const saida=[...individuais];const filiais=new Set(individuais.map(r=>normalizar(r.filial)));
  for(const p of ativos){
@@ -76,7 +76,7 @@ export function consolidar(documentos, participantes, nucleos=[], vinculos={}, e
   const faltantes=unidades.flatMap(f=>tipos.filter(t=>!fontes.some(r=>normalizar(r.filial)===normalizar(f)&&r.tipo===t)).map(t=>`${f} / ${t==='tecnico'?'Técnicos':'Balcão'}`));
   const pendentes=pendencias.length>0;
   const sum=k=>centavos(fontes.reduce((s,r)=>s+(r[k]??0),0));const margens=fontes.filter(r=>r.tipo==='balcao');
-  saida.push({funcionarioId:p.id,nome:p.nome,cargo:p.cargo,filial:nucleo?unidades[0]:p.filial,dn:p.dn,tipo,origem:'Consolidado',inicio:documentos[0]?.inicio,fim:documentos[0]?.fim,meta:sum('meta'),realizado:sum('realizado'),ticket:tipos.includes('tecnico')?sum('ticket'):null,margem:margens.length?centavos(margens.reduce((s,r)=>s+r.margem,0)/margens.length):null,arquivos:[...new Set(fontes.map(r=>r.arquivo).filter(Boolean))],fontes:fontes.map(r=>`${r.nome} · ${r.filial}`),nucleoFiliais:nucleo?unidades:[],completo:!faltantes.length&&!pendentes,motivo:faltantes.length?'Aguardando '+faltantes.join(', '):pendentes?'Há nomes sem vínculo; total sujeito à conferência.':'',faltantes});
+  saida.push({funcionarioId:p.id,nome:p.nome,cargo:p.cargo,filial:nucleo?unidades[0]:p.filial,dn:p.dn,tipo,origem:'Consolidado',inicio:documentos[0]?.inicio,fim:documentos[0]?.fim,meta:sum('meta'),realizado:sum('realizado'),ticket:tipos.includes('tecnico')?sum('ticket'):null,margem:margens.length?centavos(margens.reduce((s,r)=>s+r.margem,0)/margens.length):null,arquivosDetalhes:[...new Map(fontes.map(r=>[r.arquivo+'|'+r.pagina,{nome:r.arquivo,pagina:r.pagina,tipo:'pdf'}])).values()],arquivos:[...new Set(fontes.map(r=>r.arquivo).filter(Boolean))],fontes:fontes.map(r=>`${r.nome} · ${r.filial}`),nucleoFiliais:nucleo?unidades:[],completo:!faltantes.length&&!pendentes,motivo:faltantes.length?'Aguardando '+faltantes.join(', '):pendentes?'Há nomes sem vínculo; total sujeito à conferência.':'',faltantes});
  }
  return {linhas:saida,pendencias,ignorados,periodo:documentos[0]?{inicio:documentos[0].inicio,fim:documentos[0].fim}:null};
 }
