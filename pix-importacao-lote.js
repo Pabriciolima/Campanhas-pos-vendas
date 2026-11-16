@@ -1,14 +1,27 @@
-import {normalizar, centavos} from './pix-importacao-core.js?v=20261116-confirmar2';
+import {normalizar, centavos} from './pix-importacao-core.js?v=20261116-comparacao1';
 
 // Prepara todo o lote antes de qualquer escrita. Não altera os objetos recebidos.
 const informado = (r, campo, flag) => r?.[flag] ?? Boolean(r && r[campo] != null && String(r[campo]).trim() !== '');
 
-export function prepararLotePix(linhas, semana, participantes, registros, {atualizar=false, agora=new Date().toISOString()}={}) {
+export function assinaturaRegistroPix(registro) {
+  const ordenar=v=>Array.isArray(v)?v.map(ordenar):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,ordenar(v[k])])):v;
+  return JSON.stringify(ordenar(registro));
+}
+export function localizarConflitosPix(linhas,semana,registros) {
+  return linhas.flatMap(linha=>{
+    const competencia=linha.inicio.slice(0,7);
+    const encontrados=registros.filter(r=>r.competencia===competencia&&Number(r.semana)===Number(semana)&&(String(r.funcionarioId)===String(linha.funcionarioId)||(linha.nucleoFiliais?.length&&normalizar(r.nome)===normalizar(linha.nome))));
+    if(encontrados.length>1)throw Error(`Há lançamentos duplicados para ${linha.nome}. Revise antes de importar.`);
+    return encontrados.length?[{chave:String(linha.funcionarioId),salvo:encontrados[0],importacao:linha,assinatura:assinaturaRegistroPix(encontrados[0]),semana:Number(semana),competencia}]:[];
+  });
+}
+
+export function prepararLotePix(linhas, semana, participantes, registros, {atualizar=false,resolucoes={},exigirConferencia=false, agora=new Date().toISOString()}={}) {
   if(![1,2,3,4].includes(Number(semana)))throw Error('Selecione a semana da campanha.');
   if(!Array.isArray(linhas)||!linhas.length)throw Error('Não há colaboradores aptos para importar.');
   const periodos=new Set(linhas.map(r=>r.inicio+'|'+r.fim));
   if(periodos.size!==1)throw Error('Todos os documentos devem ter o mesmo período.');
-  const vistos=new Set(), nomesGerentes=new Set();let novos=0,atualizados=0;
+  const vistos=new Set(), nomesGerentes=new Set();let novos=0,atualizados=0,mantidos=0;
   const lote=linhas.map(linha=>{
     if(!linha.completo)throw Error(`Há pendências para ${linha.nome}.`);
     if(linha.inicio!==linha.fim)throw Error('Por enquanto, confirme apenas relatórios de um único dia.');
@@ -28,12 +41,21 @@ export function prepararLotePix(linhas, semana, participantes, registros, {atual
     const doMes=registros.filter(r=>r.competencia===competencia&&pertence(r));
     const existentes=doMes.filter(r=>Number(r.semana)===Number(semana));
     if(existentes.length>1)throw Error(`Há lançamentos duplicados para ${p.nome}. Corrija antes de importar.`);
+    const anterior=existentes[0],escolha=resolucoes[identidade];
+    if(anterior && escolha){
+      if(escolha.registroId!==anterior.id||escolha.assinatura!==assinaturaRegistroPix(anterior))throw Error(`O lançamento de ${p.nome} mudou após a comparação. Compare as versões novamente.`);
+      if(!['manter','importar'].includes(escolha.acao))throw Error('Escolha qual versão manter para cada colaborador.');
+      if(escolha.acao==='manter'){mantidos++;return null;}
+    }else if(anterior&&exigirConferencia)throw Error(`Compare o lançamento salvo de ${p.nome} e escolha qual versão manter.`);
+    else if(!anterior&&escolha)throw Error(`O lançamento de ${p.nome} mudou após a comparação. Atualize a revisão.`);
     if(doMes.some(r=>Number(r.semana)!==Number(semana)&&((r.datasAvaliadas||[]).includes(data)||Object.hasOwn(r.diasCalendario||{},data))))throw Error(`A data de ${p.nome} já pertence a outra semana.`);
-    const anterior=existentes[0];
     if(anterior){
-      const datas=[...(anterior.datasAvaliadas||[]),...Object.keys(anterior.diasCalendario||{})];
-      if(!datas.length||datas.some(d=>d!==data))throw Error(`${p.nome} já possui lançamento com outro período. Nenhum dado foi alterado. Revise o registro existente.`);
-      if(!atualizar)throw Error(`${p.nome} já possui lançamento neste dia. Marque a opção de atualizar registros existentes para substituí-lo.`);
+      // A substituição de outro período só é permitida após escolha específica na comparação.
+      if(!escolha){
+        const datas=[...(anterior.datasAvaliadas||[]),...Object.keys(anterior.diasCalendario||{})];
+        if(!datas.length||datas.some(d=>d!==data))throw Error(`${p.nome} já possui lançamento com outro período. Compare as versões antes de substituir.`);
+        if(!atualizar)throw Error(`${p.nome} já possui lançamento neste dia. Marque a opção de atualizar registros existentes para substituí-lo.`);
+      }
       atualizados++;
     }else novos++;
     const id=anterior?.id||`pix_imp_${competencia}_${semana}_${identidade}`;
@@ -49,7 +71,7 @@ export function prepararLotePix(linhas, semana, participantes, registros, {atual
       realizadoNps:anterior?.realizadoNps??0,realizadoNpsInformado:informado(anterior,'realizadoNps','realizadoNpsInformado'),
       osAbertaPercentual:anterior?.osAbertaPercentual??0,osAbertaInformada:informado(anterior,'osAbertaPercentual','osAbertaInformada'),
       criadoEm:anterior?.criadoEm||agora,atualizadoEm:agora,
-      importacaoPdf:{data,semana:Number(semana),origem:linha.origem,arquivos:linha.arquivo?[linha.arquivo]:[],fontes:[...(linha.fontes||[])],conferidaEm:agora}};
+      importacaoPdf:{...(anterior?.importacaoPdf?.nps?{nps:anterior.importacaoPdf.nps}:{}),data,semana:Number(semana),origem:linha.origem,arquivos:linha.arquivos?.length?[...linha.arquivos]:linha.arquivo?[linha.arquivo]:[],fontes:[...(linha.fontes||[])],conferidaEm:agora}};
     if (linha.npsImportado) {
       const nps=linha.npsImportado;
       if (!p.usaNps || nps.competencia!==competencia || !Number.isFinite(nps.meta) || !Number.isFinite(nps.realizado) || nps.meta < -100 || nps.meta > 100 || nps.realizado < -100 || nps.realizado > 100) throw Error(`NPS inválido ou não permitido para ${p.nome}.`);
@@ -59,11 +81,16 @@ export function prepararLotePix(linhas, semana, participantes, registros, {atual
       if (nps.filiais) dados.npsFiliais={...nps.filiais};
       dados.importacaoPdf.nps={...nps};
     }
-    delete dados.id;
+    if(anterior&&escolha?.acao==='importar'){
+      const historico=Array.isArray(anterior.historicoImportacao)?anterior.historicoImportacao:[];
+      const versao={...anterior};delete versao.historicoImportacao;delete versao.__versaoBanco;
+      dados.historicoImportacao=[...historico,{substituidoEm:agora,motivo:'Nova importação escolhida na comparação',registro:versao}];
+    }
+    delete dados.id;delete dados.__versaoBanco;
     if(nucleo){dados.nucleoFiliais=[...nucleo];dados.metaConsolidada=true;dados.realizadoConsolidado=true;}
     return {id,competencia,semana:String(semana),filial:dados.filial,colaborador:p.nome,dados,updated_at:agora};
   });
-  return {lote,novos,atualizados};
+  return {lote:lote.filter(Boolean),novos,atualizados,mantidos};
 }
 
 // Uma requisição grava o lote validado. Sem ciclos de escrita parcial.
@@ -77,10 +104,10 @@ export function criarConfirmadorPix({carregar,gravar,bloqueado,atualizarTela}) {
       const {participantes,registros}=await carregar(linhas);
       const preparado=prepararLotePix(linhas,semana,participantes,registros,opcoes);
       if(bloqueado())throw Error('Os lançamentos foram bloqueados. A importação não foi gravada.');
-      const ids=await gravar(preparado.lote);
+      const ids=preparado.lote.length?await gravar(preparado.lote):[];
       if(!Array.isArray(ids)||ids.length!==preparado.lote.length)throw Error('Não foi possível confirmar todos os registros. Atualize a lista antes de tentar novamente.');
-      let aviso='';try{await atualizarTela();}catch{aviso='Os registros foram salvos, mas a lista não atualizou. Recarregue a página.';}
-      return {quantidade:preparado.lote.length,novos:preparado.novos,atualizados:preparado.atualizados,aviso};
+      let aviso='';try{await atualizarTela();}catch{aviso=preparado.lote.length?'Os registros foram salvos, mas a lista não atualizou. Recarregue a página.':'Os registros foram mantidos, mas a lista não atualizou. Recarregue a página.';}
+      return {quantidade:preparado.lote.length,novos:preparado.novos,atualizados:preparado.atualizados,mantidos:preparado.mantidos,aviso};
     }finally{executando=false;}
   };
 }

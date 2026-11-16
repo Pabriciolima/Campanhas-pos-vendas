@@ -1,6 +1,7 @@
+import {escolherVersoesImportacaoPix} from './pix-importacao-comparacao.js?v=20261116-comparacao1';
 import {lerImagemNps,lerImagemNpsGeral} from './pix-importacao-nps-imagem.js?v=20261116-s4geral2';
 import {vincularNps,aplicarNpsImportacao,percentualNpsImportacao} from './pix-importacao-nps-core.js?v=20261116-s4geral2';
-import {analisarPaginas,consolidar,cargoTipo,normalizar} from './pix-importacao-core.js?v=20261116-confirmar2';
+import {analisarPaginas,consolidar,cargoTipo,normalizar} from './pix-importacao-core.js?v=20261116-comparacao1';
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const moeda=n=>n==null?'—':n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
@@ -11,10 +12,10 @@ function status(texto,erro=false){const el=$('#pin-status');el.textContent=texto
 function atualizarAcoes(){
  const pronto=aptos().length>0;
  $('#pin-confirmar').setAttribute('aria-busy',String(ocupado&&fase==='gravacao'));
- $('#pin-confirmar').textContent=ocupado&&fase==='gravacao'?'Importando lançamentos…':salvo?'Importação concluída':`Confirmar importação${pronto?' · '+aptos().length:''}`;
+ $('#pin-confirmar').textContent=ocupado&&fase==='conferencia'?'Conferindo registros…':ocupado&&fase==='gravacao'?'Importando lançamentos…':salvo?'Importação concluída':`Confirmar importação${pronto?' · '+aptos().length:''}`;
  $('#pin-confirmar').disabled=ocupado||salvo||!pronto||!$('#pin-semana').value||!$('#pin-conferido').checked||(npsAtivos().length>0&&!$('#pin-nps-conferido').checked);
  $('#pin-cancelar').textContent=salvo?'Fechar':'Cancelar importação';
- $('#pin-arquivos').disabled=ocupado;$('#pin-semana').disabled=ocupado||salvo;$('#pin-conferido').disabled=ocupado||salvo;$('#pin-atualizar').disabled=ocupado||salvo;$('#pin-limpar').disabled=ocupado;$('#pin-cancelar').disabled=ocupado&&fase==='gravacao';$('#pin-fechar').disabled=ocupado&&fase==='gravacao';
+ $('#pin-arquivos').disabled=ocupado;$('#pin-semana').disabled=ocupado||salvo;$('#pin-conferido').disabled=ocupado||salvo;$('#pin-limpar').disabled=ocupado;$('#pin-cancelar').disabled=ocupado&&['gravacao','conferencia'].includes(fase);$('#pin-fechar').disabled=ocupado&&['gravacao','conferencia'].includes(fase);
  $('#pin-nps-geral-area').hidden=Number($('#pin-semana').value)!==4;$('#pin-nps-geral-arquivos').disabled=ocupado||salvo;
  $('#pin-nps-arquivos').disabled=ocupado||salvo;$('#pin-nps-limpar').disabled=ocupado||salvo;$('#pin-nps-conferido').disabled=ocupado||salvo;
  $('#pin-nps-previa').querySelectorAll('input,select').forEach(b=>b.disabled=ocupado||salvo);
@@ -26,13 +27,13 @@ function abrir(){if(salvo)limpar();const panel=$('#pixImportacaoNova');panel.hid
 function limpar(){
  geracao++;documentos=[];resultado=null;vinculos={};excluidos=new Set();salvo=false;
  npsDocs.forEach(d=>{if(d.preview)URL.revokeObjectURL(d.preview);});npsDocs=[];npsLinks={};npsLidos=[];$('#pin-nps-arquivos').value='';$('#pin-nps-geral-arquivos').value='';$('#pin-nps-conferido').checked=false;$('#pin-nps-previa').replaceChildren();$('#pin-nps-status').textContent='Use a imagem com a meta e o resultado do mês da importação.';
- $('#pin-arquivos').value='';$('#pin-conferido').checked=false;$('#pin-atualizar').checked=false;
+ $('#pin-arquivos').value='';$('#pin-conferido').checked=false;
  for(const id of ['pin-arquivos-lista','pin-resultados','pin-pendencias','pin-indicadores','pin-removidos'])$('#'+id).replaceChildren();
  $('#pixImportacaoNova').classList.remove('pin-has-data');
  status('Selecione os PDFs e escolha a semana. Depois, revise a lista e confirme.');atualizarAcoes();
 }
 async function cancelar(){
- if(ocupado&&fase==='gravacao')return;
+ if(ocupado&&['gravacao','conferencia'].includes(fase))return;
  ocupado=false;fase='';$('#pin-semana').value='';limpar();$('#pixImportacaoNova').hidden=true;$('#btnPixImportacaoNova').focus();
 }
 
@@ -90,10 +91,16 @@ async function confirmar(){
  if(!$('#pin-conferido').checked||!$('#pin-semana').value||!aptos().length||(npsAtivos().length>0&&!$('#pin-nps-conferido').checked)){status('Escolha a semana e marque a conferência da lista e do NPS, se houver imagem.',true);return;}
  if(!window.confirmarImportacaoPix){status('Atualize a página para carregar a confirmação da importação.',true);return;}
  const competencia=resultado.periodo.inicio.slice(0,7),semana=Number($('#pin-semana').value);
- ocupado=true;fase='gravacao';atualizarAcoes();let r;
+ ocupado=true;fase='conferencia';atualizarAcoes();let r;
  try{
-  status('Validando e salvando a importação…');
-  r=await window.confirmarImportacaoPix(aptos(),semana,{atualizar:$('#pin-atualizar').checked});
+  if(typeof window.conferirConflitosImportacaoPix!=='function')throw Error('Atualize a página para carregar a comparação dos lançamentos.');
+  status('Consultando lançamentos já salvos…');
+  const linhas=aptos();
+  const conflitos=await window.conferirConflitosImportacaoPix(linhas,semana);
+  const resolucoes=conflitos.length?await escolherVersoesImportacaoPix(conflitos):{};
+  if(resolucoes===null){status('Comparação cancelada. O lote foi mantido para revisão; nenhum dado foi gravado.');return;}
+  fase='gravacao';atualizarAcoes();status('Validando as escolhas e salvando a importação…');
+  r=await window.confirmarImportacaoPix(linhas,semana,{resolucoes,exigirConferencia:true});
   salvo=true;
  }catch(e){
   const mensagem=e.message||'Não foi possível confirmar a importação. A lista foi mantida para revisão.';
@@ -101,7 +108,7 @@ async function confirmar(){
   await informeImportacao(mensagem,{tipo:'error',titulo:'Não foi possível concluir a importação'});
   return;
  }finally{ocupado=false;fase='';atualizarAcoes();}
- const resumo=`${r.quantidade} lançamento(s) importado(s): ${r.novos} novo(s) e ${r.atualizados} atualizado(s).`;
+ const resumo=`${r.quantidade} lançamento(s) importado(s): ${r.novos} novo(s), ${r.atualizados} atualizado(s) e ${r.mantidos||0} mantido(s) sem alteração.`;
  status(resumo);$('#pixImportacaoNova').hidden=true;
  // A navegação ocorre assim que a gravação é confirmada; a atualização da lista não atrasa o aviso.
  let navegacao=Promise.resolve('');
@@ -109,7 +116,7 @@ async function confirmar(){
   if(typeof window.abrirVisaoGeralImportacaoPix==='function')navegacao=Promise.resolve(window.abrirVisaoGeralImportacaoPix(competencia)).then(()=>'',()=> 'Os dados foram salvos, mas a Visão geral não atualizou. Recarregue a página.');
   else document.querySelector('.pix-menu-btn[data-pix-view="dashboard"]')?.click();
  }catch{navegacao=Promise.resolve('Os dados foram salvos. Abra a Visão geral pelo menu lateral.');}
- await informeImportacao(`${resumo}\nCompetência: ${competencia.slice(5)}/${competencia.slice(0,4)} · Semana ${semana}.\n${r.aviso||'Os dados foram salvos. Acompanhe os resultados na Visão geral.'}`);
+ await informeImportacao(`${resumo}\nCompetência: ${competencia.slice(5)}/${competencia.slice(0,4)} · Semana ${semana}.\n${r.aviso||(r.quantidade?'Os dados foram salvos. Acompanhe os resultados na Visão geral.':'Os lançamentos existentes foram mantidos. Nenhum dado foi substituído.')}`,{titulo:r.quantidade?'Importação realizada com sucesso!':'Conferência concluída · lançamentos mantidos'});
  const aviso=await navegacao;
  if(aviso)await informeImportacao(aviso,{tipo:'warning',titulo:'Importação salva · atualização pendente'});
 }
@@ -136,7 +143,7 @@ function iniciar(){
  const container=$('#pix-lancamentos .panel');if(!container||$('#pixImportacaoNova'))return;
  const button=document.createElement('button');button.id='btnPixImportacaoNova';button.type='button';button.className='pin-launch';button.innerHTML='<span class="pin-launch-icon" aria-hidden="true">↥</span><span>Importar lançamentos</span>';button.onclick=abrir;$('#pixLancamentosAcoes').prepend(button);
  const area=document.createElement('section');area.id='pixImportacaoNova';area.className='pin-panel';area.hidden=true;area.setAttribute('aria-label','Importação de lançamentos PIX');
- area.innerHTML=`<header class="pin-heading"><div><span class="pin-eyebrow">PIX DO PRESIDENTE</span><h2>Importar lançamentos</h2><p>Selecione os PDFs, revise os colaboradores e confirme.</p></div><button type="button" id="pin-fechar" class="pin-close" aria-label="Cancelar e fechar importação">×</button></header><div class="pin-body"><div class="pin-upload-grid"><label class="pin-upload"><strong>Relatórios de técnicos e balcão</strong><span>PDFs do mesmo dia · até 15 MB por arquivo</span><input id="pin-arquivos" type="file" accept="application/pdf,.pdf" multiple></label><div class="pin-settings"><label>Semana da campanha<select id="pin-semana"><option value="">Selecione</option><option value="1">Semana 1</option><option value="2">Semana 2</option><option value="3">Semana 3</option><option value="4">Semana 4</option></select></label><button type="button" id="pin-limpar" class="secondary">Trocar documentos</button></div></div><div id="pin-arquivos-lista" class="pin-files"></div><p id="pin-status" role="status" aria-live="polite">Selecione os PDFs e escolha a semana. Depois, revise a lista e confirme.</p><section class="pin-nps"><div class="pin-nps-top"><label><strong>NPS dos consultores · opcional</strong><small>Meta do mês e resultado individual. A linha TOTAL deste print é ignorada.</small><input id="pin-nps-arquivos" type="file" accept="image/png,image/jpeg,image/webp" multiple></label><button type="button" id="pin-nps-limpar" class="pin-cancel">Remover NPS</button></div><p id="pin-nps-status" role="status" aria-live="polite">Use a imagem com a meta e o resultado do mês da importação.</p><div id="pin-nps-geral-area" hidden><label><strong>NPS geral das unidades · somente S4</strong><small>Envie o painel NPS POR UNIDADE. Serão lidas as colunas META e REALIZ. O total dos consultores não substitui este painel.</small><input id="pin-nps-geral-arquivos" type="file" accept="image/png,image/jpeg,image/webp" multiple></label></div><div id="pin-nps-previa"></div><label class="pin-nps-check"><input type="checkbox" id="pin-nps-conferido"> Conferi os nomes, as filiais e os percentuais extraídos da imagem.</label></section><div id="pin-indicadores" class="pin-summary"></div><div id="pin-pendencias"></div><div id="pin-resultados"></div><div id="pin-removidos"></div><footer class="pin-footer"><div class="pin-checks"><label for="pin-conferido"><input id="pin-conferido" type="checkbox" aria-describedby="pin-conferido-ajuda"><span class="pin-check-copy"><strong>Conferi a lista e quero importar estes lançamentos</strong><span id="pin-conferido-ajuda">Obrigatório. Marque depois de conferir os nomes, as filiais, as metas e os valores. Esta opção libera o botão “Confirmar importação”.</span></span></label><label for="pin-atualizar"><input id="pin-atualizar" type="checkbox" aria-describedby="pin-atualizar-ajuda"><span class="pin-check-copy"><strong>Atualizar os valores que já estão salvos neste mesmo dia</strong><span id="pin-atualizar-ajuda">Opcional. Marque somente se quiser corrigir um lançamento já salvo para a mesma data e semana, usando os valores destes PDFs. Os demais campos serão mantidos. O NPS só muda se você anexar e conferir uma imagem de NPS. Para um lançamento novo, deixe desmarcado.</span></span></label><small>Remover afeta só este lote e recalcula os totais. Cadastros e registros anteriores não são excluídos. Sem imagem de NPS, os valores de NPS existentes são preservados.</small></div><div class="pin-actions"><button type="button" id="pin-cancelar" class="pin-cancel">Cancelar importação</button><button type="button" id="pin-confirmar" class="pin-confirm" disabled>Confirmar importação</button></div></footer></div>`;
+ area.innerHTML=`<header class="pin-heading"><div><span class="pin-eyebrow">PIX DO PRESIDENTE</span><h2>Importar lançamentos</h2><p>Selecione os PDFs, revise os colaboradores e confirme.</p></div><button type="button" id="pin-fechar" class="pin-close" aria-label="Cancelar e fechar importação">×</button></header><div class="pin-body"><div class="pin-upload-grid"><label class="pin-upload"><strong>Relatórios de técnicos e balcão</strong><span>PDFs do mesmo dia · até 15 MB por arquivo</span><input id="pin-arquivos" type="file" accept="application/pdf,.pdf" multiple></label><div class="pin-settings"><label>Semana da campanha<select id="pin-semana"><option value="">Selecione</option><option value="1">Semana 1</option><option value="2">Semana 2</option><option value="3">Semana 3</option><option value="4">Semana 4</option></select></label><button type="button" id="pin-limpar" class="secondary">Trocar documentos</button></div></div><div id="pin-arquivos-lista" class="pin-files"></div><p id="pin-status" role="status" aria-live="polite">Selecione os PDFs e escolha a semana. Depois, revise a lista e confirme.</p><section class="pin-nps"><div class="pin-nps-top"><label><strong>NPS dos consultores · opcional</strong><small>Meta do mês e resultado individual. A linha TOTAL deste print é ignorada.</small><input id="pin-nps-arquivos" type="file" accept="image/png,image/jpeg,image/webp" multiple></label><button type="button" id="pin-nps-limpar" class="pin-cancel">Remover NPS</button></div><p id="pin-nps-status" role="status" aria-live="polite">Use a imagem com a meta e o resultado do mês da importação.</p><div id="pin-nps-geral-area" hidden><label><strong>NPS geral das unidades · somente S4</strong><small>Envie o painel NPS POR UNIDADE. Serão lidas as colunas META e REALIZ. O total dos consultores não substitui este painel.</small><input id="pin-nps-geral-arquivos" type="file" accept="image/png,image/jpeg,image/webp" multiple></label></div><div id="pin-nps-previa"></div><label class="pin-nps-check"><input type="checkbox" id="pin-nps-conferido"> Conferi os nomes, as filiais e os percentuais extraídos da imagem.</label></section><div id="pin-indicadores" class="pin-summary"></div><div id="pin-pendencias"></div><div id="pin-resultados"></div><div id="pin-removidos"></div><footer class="pin-footer"><div class="pin-checks"><label for="pin-conferido"><input id="pin-conferido" type="checkbox" aria-describedby="pin-conferido-ajuda"><span class="pin-check-copy"><strong>Conferi a lista e quero continuar a importação</strong><span id="pin-conferido-ajuda">Obrigatório. Marque depois de conferir os nomes, as filiais, as metas e os valores. Se já houver lançamento, você verá as duas versões para escolher qual manter antes de gravar.</span></span></label><small>Remover afeta só este lote e recalcula os totais. Cadastros e registros anteriores não são excluídos. Sem imagem de NPS, os valores de NPS existentes são preservados. Conflitos são resolvidos por colaborador na comparação.</small></div><div class="pin-actions"><button type="button" id="pin-cancelar" class="pin-cancel">Cancelar importação</button><button type="button" id="pin-confirmar" class="pin-confirm" disabled>Confirmar importação</button></div></footer></div>`;
  container.querySelector('.panel-header').after(area);
  $('#pin-nps-arquivos').onchange=e=>importarNps([...e.target.files]);
  $('#pin-nps-geral-arquivos').onchange=e=>importarNps([...e.target.files],true);

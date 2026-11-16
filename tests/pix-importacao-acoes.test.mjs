@@ -10,12 +10,12 @@ function app(){
   setAttribute(){}
   querySelectorAll(){return [];}replaceChildren(){this.html='';}focus(){}scrollIntoView(){}prepend(){}after(){}click(){}addEventListener(n,f){this.events[n]=f;}querySelector(){return new El();}
  }
- const panel=new El();nodes.set('#pix-lancamentos .panel',panel);nodes.set('#pixLancamentosAcoes',new El());let calls=0;let received=[];const avisos=[],navegacoes=[];
- const ctx={document:{readyState:'complete',querySelector:s=>nodes.get(s),createElement:()=>new El(),body:{classList:{contains:()=>false}}},window:{CampanhaUI:{alert:async(mensagem,opcoes)=>{avisos.push({mensagem,opcoes});return true;}},abrirVisaoGeralImportacaoPix:async mes=>{navegacoes.push(mes);},confirmarImportacaoPix:async(rows)=>{calls++;received=rows;return {quantidade:rows.length,novos:rows.length,atualizados:0};}},consolidar,cargoTipo,normalizar,vincularNps,aplicarNpsImportacao,percentualNpsImportacao};
+ const panel=new El();nodes.set('#pix-lancamentos .panel',panel);nodes.set('#pixLancamentosAcoes',new El());let calls=0;let received=[];const avisos=[],navegacoes=[];let recebidasOpcoes;
+ const ctx={document:{readyState:'complete',querySelector:s=>nodes.get(s),createElement:()=>new El(),body:{classList:{contains:()=>false}}},window:{CampanhaUI:{alert:async(mensagem,opcoes)=>{avisos.push({mensagem,opcoes});return true;}},abrirVisaoGeralImportacaoPix:async mes=>{navegacoes.push(mes);},conferirConflitosImportacaoPix:async()=>[],confirmarImportacaoPix:async(rows,semana,opcoes)=>{calls++;received=rows;recebidasOpcoes=opcoes;return {quantidade:rows.length,novos:rows.length,atualizados:0};}},consolidar,cargoTipo,normalizar,vincularNps,aplicarNpsImportacao,percentualNpsImportacao};
  vm.createContext(ctx);const src=fs.readFileSync(new URL('../pix-importacao.js',import.meta.url),'utf8').replace(/^import .*?;\n/gm,'');vm.runInContext(src,ctx);
  const p={id:'a',nome:'CONSULTOR A',cargo:'Consultor Técnico',filial:'ANANINDEUA',usaNps:true};const row={nome:p.nome,tipo:'tecnico',meta:100,realizado:80,ticket:20,inicio:'2026-11-09',fim:'2026-11-09'};
  function seed(){ctx.seed={base:{participantes:[p],nucleos:[]},docs:[{inicio:row.inicio,fim:row.fim,linhas:[row]}]};vm.runInContext('base=seed.base;documentos=seed.docs;recalcular();',ctx);}
- return {ctx,nodes,seed,avisos,navegacoes,get calls(){return calls;},get received(){return received;}};
+ return {ctx,nodes,seed,avisos,navegacoes,get calls(){return calls;},get received(){return received;},get opcoes(){return recebidasOpcoes;}};
 }
 test('remover e restaurar atuam só na prévia; cancelar limpa sem chamar gravação',async()=>{
  const a=app();a.seed();const area=a.nodes.get('#pixImportacaoNova');
@@ -32,16 +32,10 @@ test('só confirma após semana e conferência; uma confirmação salva e bloque
  await a.nodes.get('#pin-confirmar').onclick();assert.equal(a.calls,1);
  await a.nodes.get('#pin-cancelar').onclick();assert.equal(a.calls,1);
 });
-test('checkboxes são independentes nas duas ordens; atualização é opcional',()=>{
- const a=app();a.seed();const area=a.nodes.get('#pixImportacaoNova');const conferido=a.nodes.get('#pin-conferido'),atualizar=a.nodes.get('#pin-atualizar'),semana=a.nodes.get('#pin-semana');
- const change=id=>area.events.change({target:{id,dataset:{}}});
- semana.value='2';change('pin-semana');
- conferido.checked=true;change('pin-conferido');assert.equal(a.nodes.get('#pin-confirmar').disabled,false);
- atualizar.checked=true;change('pin-atualizar');assert.equal(conferido.checked,true);assert.equal(atualizar.checked,true);assert.equal(a.nodes.get('#pin-confirmar').disabled,false);
- atualizar.checked=false;change('pin-atualizar');assert.equal(conferido.checked,true);assert.equal(a.nodes.get('#pin-confirmar').disabled,false);
- conferido.checked=false;change('pin-conferido');assert.equal(a.nodes.get('#pin-confirmar').disabled,true);
- atualizar.checked=true;change('pin-atualizar');conferido.checked=true;change('pin-conferido');assert.equal(atualizar.checked,true);assert.equal(conferido.checked,true);assert.equal(a.nodes.get('#pin-confirmar').disabled,false);
- semana.value='3';change('pin-semana');assert.equal(conferido.checked,false);assert.equal(atualizar.checked,true);assert.equal(a.nodes.get('#pin-confirmar').disabled,true);
+test('conferência é obrigatória; mudar a semana exige nova revisão',()=>{
+ const a=app();a.seed();const area=a.nodes.get('#pixImportacaoNova'),conferido=a.nodes.get('#pin-conferido'),semana=a.nodes.get('#pin-semana');
+ semana.value='2';conferido.checked=true;area.events.change({target:{id:'pin-conferido',dataset:{}}});assert.equal(a.nodes.get('#pin-confirmar').disabled,false);
+ semana.value='3';area.events.change({target:{id:'pin-semana',dataset:{}}});assert.equal(conferido.checked,false);assert.equal(a.nodes.get('#pin-confirmar').disabled,true);
 });
 test('imagem exige conferência do NPS e envia valores somente após os dois aceites',async()=>{
  const a=app();a.seed();
@@ -65,8 +59,8 @@ test('campo do painel geral aparece somente na S4 e não alimenta semanas anteri
 test('só exibe sucesso e volta à visão geral após confirmação da gravação',async()=>{
  const a=app();a.seed();a.nodes.get('#pixImportacaoNova').hidden=false;a.nodes.get('#pin-semana').value='2';a.nodes.get('#pin-conferido').checked=true;
  let finalizar;a.ctx.window.confirmarImportacaoPix=()=>new Promise(resolve=>finalizar=resolve);
- const tarefa=a.nodes.get('#pin-confirmar').onclick();
- assert.equal(a.nodes.get('#pin-confirmar').disabled,true);assert.match(a.nodes.get('#pin-confirmar').textContent,/Importando/);assert.equal(a.avisos.length,0);assert.equal(a.navegacoes.length,0);assert.equal(a.nodes.get('#pixImportacaoNova').hidden,false);
+ const tarefa=a.nodes.get('#pin-confirmar').onclick();await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(a.nodes.get('#pin-confirmar').disabled,true);assert.match(a.nodes.get('#pin-confirmar').textContent,/Conferindo|Importando/);assert.equal(a.avisos.length,0);assert.equal(a.navegacoes.length,0);assert.equal(a.nodes.get('#pixImportacaoNova').hidden,false);
  finalizar({quantidade:12,novos:8,atualizados:4});await tarefa;
  assert.equal(a.nodes.get('#pixImportacaoNova').hidden,true);assert.deepEqual(a.navegacoes,['2026-11']);assert.equal(a.avisos[0].opcoes.tipo,'success');assert.match(a.avisos[0].opcoes.titulo,/sucesso/);assert.match(a.avisos[0].mensagem,/12 lançamento/);assert.match(a.avisos[0].mensagem,/8 novo/);assert.match(a.avisos[0].mensagem,/4 atualizado/);assert.match(a.avisos[0].mensagem,/11\/2026.*Semana 2/);assert.equal(a.nodes.get('#pin-confirmar').disabled,true);
 });
@@ -79,4 +73,19 @@ test('falha ao atualizar a visão geral não transforma gravação concluída em
  const a=app();a.seed();a.nodes.get('#pin-semana').value='2';a.nodes.get('#pin-conferido').checked=true;a.ctx.window.abrirVisaoGeralImportacaoPix=async()=>{throw Error('rede');};
  await a.nodes.get('#pin-confirmar').onclick();assert.equal(a.calls,1);assert.deepEqual(a.avisos.map(a=>a.opcoes.tipo),['success','warning']);assert.match(a.avisos[1].mensagem,/dados foram salvos/);assert.equal(a.nodes.get('#pixImportacaoNova').hidden,true);
  await a.nodes.get('#pin-confirmar').onclick();assert.equal(a.calls,1);
+});
+
+test('conflitos abrem comparação antes de gravar e enviam as escolhas por colaborador',async()=>{
+ const a=app();a.seed();a.nodes.get('#pin-semana').value='2';a.nodes.get('#pin-conferido').checked=true;
+ const conflito={chave:'a',salvo:{id:'old'},importacao:{nome:'CONSULTOR A'},assinatura:'versao'};
+ a.ctx.window.conferirConflitosImportacaoPix=async()=>[conflito];
+ let escolher;a.ctx.escolherVersoesImportacaoPix=()=>new Promise(resolve=>escolher=resolve);
+ const tarefa=a.nodes.get('#pin-confirmar').onclick();await new Promise(resolve=>setImmediate(resolve));assert.equal(a.calls,0);
+ escolher({a:{acao:'importar',registroId:'old',assinatura:'versao'}});await tarefa;
+ assert.equal(a.calls,1);assert.equal(a.opcoes.exigirConferencia,true);assert.equal(a.opcoes.resolucoes.a.acao,'importar');
+});
+test('cancelar a comparação mantém a prévia e não grava nem navega',async()=>{
+ const a=app();a.seed();a.nodes.get('#pixImportacaoNova').hidden=false;a.nodes.get('#pin-semana').value='2';a.nodes.get('#pin-conferido').checked=true;
+ a.ctx.window.conferirConflitosImportacaoPix=async()=>[{chave:'a'}];a.ctx.escolherVersoesImportacaoPix=async()=>null;
+ await a.nodes.get('#pin-confirmar').onclick();assert.equal(a.calls,0);assert.equal(a.navegacoes.length,0);assert.equal(a.nodes.get('#pixImportacaoNova').hidden,false);assert.equal(vm.runInContext('aptos().length',a.ctx),1);assert.equal(a.nodes.get('#pin-confirmar').disabled,false);
 });

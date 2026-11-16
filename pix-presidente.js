@@ -1,4 +1,4 @@
-import {criarConfirmadorPix} from './pix-importacao-lote.js?v=20261116-s4geral2';
+import {criarConfirmadorPix,localizarConflitosPix} from './pix-importacao-lote.js?v=20261116-comparacao1';
 import {aplicarStatusAuditoriaPix,registrarAuditoriaStatusPix} from './pix-auditoria-status.js?v=20261103-audit10';
 import {auditarPix} from "./pix-auditoria-core.js?v=20261103";
 import {instalarConferenciaPixFonte,coletarConferenciaPixFonte,preencherConferenciaPixFonte,renderizarPainelAuditoriaPix} from "./pix-auditoria-fonte.js?v=20261104-hide-panel1";
@@ -2634,7 +2634,7 @@ function indicadorPixTexto(resultado) {
                 ${pixNumero(resultado.metaNps)
                   .toFixed(2)
                   .replace(".", ",")}
-                / 
+                /
                 ${pixNumero(resultado.realizadoNps)
                   .toFixed(2)
                   .replace(".", ",")}
@@ -3451,7 +3451,7 @@ function renderPoliticasPix() {
       ${grupos.map(grupo => {
         const politica = pixPoliticaVigente(grupo.cargos[0], competencia);
         const faixas = politica?.faixas || [];
-        
+
         return `
           <article class="pix-policy-pro ${grupo.classe}">
             <header>
@@ -5577,23 +5577,31 @@ window.preencherImportacaoPix = async (linha, semana) => {
 };
 
 
-let confirmarLoteImportacaoPix;
-window.confirmarImportacaoPix = (...args) => {
-  confirmarLoteImportacaoPix ||= criarConfirmadorPix({
-  bloqueado: () => Boolean(window.bloqueioLancamentos?.bloqueado || document.body.classList.contains('lancamentos-bloqueados')),
-  carregar: async linhas => {
+async function carregarContextoImportacaoPix(linhas) {
     await carregarParticipantesPixUmaVez();
     const competencia = linhas[0]?.inicio?.slice(0,7);
     if (!competencia) throw Error('Selecione os documentos antes de confirmar.');
     const registros = [];
     for(let inicio=0;;inicio+=500){
-      const {data,error}=await supabase.from('pix_lancamentos').select('id,dados').eq('competencia',competencia).order('id').range(inicio,inicio+499);
+      const {data,error}=await supabase.from('pix_lancamentos').select('id,dados,updated_at').eq('competencia',competencia).order('id').range(inicio,inicio+499);
       if(error)throw error;
-      registros.push(...(data||[]).map(r=>({...r.dados,id:r.id})));
+      registros.push(...(data||[]).map(r=>({...r.dados,id:r.id,__versaoBanco:r.updated_at})));
       if((data||[]).length<500)break;
     }
     return {participantes:participantesPix().map(p=>({...p,usaNps:cargoUsaNpsPix(p.cargo)})),registros};
-  },
+
+}
+window.conferirConflitosImportacaoPix = async (linhas,semana) => {
+  if(window.bloqueioLancamentos?.bloqueado || document.body.classList.contains('lancamentos-bloqueados'))throw Error('Os lançamentos estão bloqueados pelo diretor.');
+  const {registros}=await carregarContextoImportacaoPix(linhas);
+  return localizarConflitosPix(linhas,semana,registros);
+};
+
+let confirmarLoteImportacaoPix;
+window.confirmarImportacaoPix = (...args) => {
+  confirmarLoteImportacaoPix ||= criarConfirmadorPix({
+  bloqueado: () => Boolean(window.bloqueioLancamentos?.bloqueado || document.body.classList.contains('lancamentos-bloqueados')),
+  carregar: carregarContextoImportacaoPix,
   gravar: async lote => {
     const {data,error}=await supabase.from('pix_lancamentos').upsert(lote,{onConflict:'id'}).select('id');
     if(error)throw error;
