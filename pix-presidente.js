@@ -5596,6 +5596,16 @@ async function carregarContextoImportacaoPix(linhas) {
     return {participantes:participantesPix().map(p=>({...p,usaNps:cargoUsaNpsPix(p.cargo)})),registros};
 
 }
+// Leitura oficial do NPS semanal, independente dos filtros e da paginação da tela.
+window.consultarNpsImportacaoPix = async (competencia,semana) => {
+ if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(competencia)||![1,2,3,4].includes(Number(semana)))throw Error('Selecione a competência e a semana.');
+ const {registros}=await carregarContextoImportacaoPix([{inicio:competencia+'-01'}]);
+ return registros.filter(r=>Number(r.semana)===Number(semana)).map(r=>({
+  funcionarioId:r.funcionarioId,competencia:r.competencia,semana:r.semana,
+  metaNps:r.metaNps,realizadoNps:r.realizadoNps,
+  metaNpsInformada:r.metaNpsInformada,realizadoNpsInformado:r.realizadoNpsInformado
+ }));
+};
 window.conferirConflitosImportacaoPix = async (linhas,semana) => {
   if(window.bloqueioLancamentos?.bloqueado || document.body.classList.contains('lancamentos-bloqueados'))throw Error('Os lançamentos estão bloqueados pelo diretor.');
   const {registros}=await carregarContextoImportacaoPix(linhas);

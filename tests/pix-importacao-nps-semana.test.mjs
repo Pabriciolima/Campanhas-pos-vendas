@@ -1,0 +1,11 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {resumirNpsSemanaPix} from '../pix-importacao-nps-semana.js';
+const p=[{id:'a',usaNps:true},{id:'b',usaNps:true},{id:'c',usaNps:false}];
+const ls=p.map((v,i)=>({funcionarioId:v.id,nome:v.id,filial:'ANANINDEUA',origem:'Individual',completo:true}));
+const r={funcionarioId:'a',competencia:'2026-11',semana:2,metaNps:91.4,realizadoNps:100,metaNpsInformada:true,realizadoNpsInformado:true};
+test('considera apenas elegíveis do lote na mesma semana e competência',()=>{const x=resumirNpsSemanaPix(ls,p,[r,{...r,funcionarioId:'b',semana:1},{...r,funcionarioId:'b',competencia:'2026-10'}],'2026-11',2);assert.equal(x.aptos.length,2);assert.equal(x.salvos.length,1);assert.equal(x.pendentes[0].funcionarioId,'b');});
+test('semana completa não pede imagem novamente',()=>{const x=resumirNpsSemanaPix(ls,p,[r,{...r,funcionarioId:'b'}],'2026-11',2);assert.equal(x.salvos.length,2);assert.equal(x.pendentes.length,0);});
+test('zero e negativo são resultados válidos quando já informados',()=>{for(const realizadoNps of [0,-100,-20])assert.equal(resumirNpsSemanaPix(ls.slice(0,1),p,[{...r,realizadoNps}],'2026-11',2).salvos.length,1);});
+test('valores vazios, flags falsas e padrão zero não viram lançamento feito',()=>{for(const dados of [{realizadoNps:null},{realizadoNps:''},{metaNpsInformada:false},{realizadoNpsInformado:false},{metaNps:0,realizadoNps:0,metaNpsInformada:undefined,realizadoNpsInformado:undefined}])assert.equal(resumirNpsSemanaPix(ls,p,[{...r,...dados}],'2026-11',2).salvos.length,0);});
+test('legado com meta positiva e resultado zero é reconhecido',()=>{const x=resumirNpsSemanaPix(ls,p,[{...r,metaNpsInformada:undefined,realizadoNpsInformado:undefined,realizadoNps:0}],'2026-11',2);assert.equal(x.salvos.length,1);});
+test('excluídos, parciais, consolidados e duplicados não geram confirmação indevida',()=>{assert.equal(resumirNpsSemanaPix([{...ls[0],completo:false}],p,[r],'2026-11',2).aptos.length,0);assert.equal(resumirNpsSemanaPix([{...ls[0],origem:'Consolidado'}],p,[r],'2026-11',2).aptos.length,0);assert.equal(resumirNpsSemanaPix([],p,[r],'2026-11',2).salvos.length,0);assert.equal(resumirNpsSemanaPix(ls,p,[r,r],'2026-11',2).salvos.length,0);});
