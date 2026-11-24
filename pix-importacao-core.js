@@ -43,7 +43,10 @@ export function analisarPaginas(paginas, arquivo='Relatório.pdf') {
    const obter=label=>{const [min,max]=cols[label];const values=row.items.filter(i=>{const mid=i.transform[4]+i.width/2;return mid>=min-2&&mid<max-2&&numeroBR(i.str)!==null;});if(values.length!==1)throw Error(`${arquivo}: valor ausente ou ambíguo em ${label}, ${nome}.`);return numeroBR(values[0].str);};
    // Rodapés sem valores nunca viram colaboradores.
    if(!row.items.some(i=>numeroBR(i.str)!==null))continue;
-   linhas.push({nome,tipo,realizado:obter(tipo==='tecnico'?'VLR TOTAL':'VALOR VENDA'),meta:tipo==='tecnico'?centavos(obter('OBJETIVO M O')+obter('OBJETIVO PECAS')):obter('OBJETIVO'),ticket:tipo==='tecnico'?obter('TICKET MEDIO'):null,margem:tipo==='balcao'?obter('RENT'):null,inicio,fim,arquivo,pagina:pagina+1});
+   const realizado=obter(tipo==='tecnico'?'VLR TOTAL':'VALOR VENDA');
+   // Sem movimento: não exigir ticket/margem nem criar dia de trabalho.
+   if(realizado===0){linhas.push({nome,tipo,realizado:0,meta:null,ticket:null,margem:null,semMovimento:true,inicio,fim,arquivo,pagina:pagina+1});continue;}
+   linhas.push({nome,tipo,realizado,meta:tipo==='tecnico'?centavos(obter('OBJETIVO M O')+obter('OBJETIVO PECAS')):obter('OBJETIVO'),ticket:tipo==='tecnico'?obter('TICKET MEDIO'):null,margem:tipo==='balcao'?obter('RENT'):null,inicio,fim,arquivo,pagina:pagina+1});
   }
  }
  if(!linhas.length)throw Error(`${arquivo}: nenhuma linha de vendedor foi identificada.`);
@@ -51,19 +54,21 @@ export function analisarPaginas(paginas, arquivo='Relatório.pdf') {
 }
 export function consolidar(documentos, participantes, nucleos=[], vinculos={}, excluidos=new Set()) {
  const periodos=new Set(documentos.map(d=>d.inicio+'|'+d.fim));if(periodos.size>1)throw Error('Importe documentos do mesmo período. Os arquivos atuais têm datas diferentes.');
- const ativos=participantes.filter(p=>p.ativo!==false&&p.ativo!=='false');const individuais=[],pendencias=[],ignorados=[],vistos=new Set();
+ const ativos=participantes.filter(p=>p.ativo!==false&&p.ativo!=='false');const individuais=[],semMovimento=[],pendencias=[],ignorados=[],vistos=new Set();
  documentos.forEach((doc,di)=>doc.linhas.forEach((r,ri)=>{
   const key=`${di}:${ri}`;const candidatos=ativos.filter(p=>normalizar(p.nome)===normalizar(r.nome));
   const manual=vinculos[key];if(manual==='__ignorar__'){ignorados.push({...r,key,motivo:'Fora da campanha, confirmado na conferência.'});return;}const p=manual?ativos.find(p=>String(p.id)===String(manual)):candidatos.length===1?candidatos[0]:null;
+  if(!p&&r.realizado===0){ignorados.push({...r,key,motivo:'Sem movimento no relatório: não será considerado dia trabalhado.'});return;}
   if(!p){pendencias.push({...r,key,motivo:candidatos.length?'Nome presente em mais de uma filial. Selecione o cadastro correto.':'Nome não localizado. Selecione o cadastro ou deixe fora da importação.'});return;}
   if(excluidos.has(String(p.id))){ignorados.push({...r,key,motivo:'Removido deste lote de importação.'});return;}
   const cargo=cargoTipo(p.cargo);
   if(cargo!==r.tipo){ignorados.push({...r,key,motivo:`Cargo cadastrado: ${p.cargo}. Esta linha não pertence a este setor.`});return;}
   const identidade=[p.id,r.tipo,r.inicio,r.fim].join('|');
   if(vistos.has(identidade))throw Error(`Linha duplicada para ${p.nome}. Remova o documento repetido.`);vistos.add(identidade);
+  if(r.realizado===0){semMovimento.push({...r,filial:p.filial});ignorados.push({...r,key,nome:p.nome,filial:p.filial,motivo:'Sem movimento no relatório: não será considerado dia trabalhado.'});return;}
   individuais.push({...r,key,funcionarioId:p.id,nome:p.nome,filial:p.filial,cargo:p.cargo,dn:p.dn,origem:'Individual',arquivosDetalhes:[{nome:r.arquivo,pagina:r.pagina,tipo:'pdf'}],arquivos:r.arquivo?[r.arquivo]:[],fontes:[r.nome],completo:true});
  }));
- const saida=[...individuais];const filiais=new Set(individuais.map(r=>normalizar(r.filial)));
+ const saida=[...individuais];const cobertura=[...individuais,...semMovimento];const filiais=new Set(cobertura.map(r=>normalizar(r.filial)));
  for(const p of ativos){
   if(excluidos.has(String(p.id)))continue;
   const tipo=cargoTipo(p.cargo);if(!['supervisor-tecnico','supervisor-balcao','orcamentista','gerente'].includes(tipo))continue;
@@ -73,10 +78,12 @@ export function consolidar(documentos, participantes, nucleos=[], vinculos={}, e
   if(saida.some(r=>r.origem==='Consolidado'&&normalizar(r.nome)===normalizar(p.nome)))continue;
   const tipos=tipo==='gerente'?['tecnico','balcao']:tipo==='supervisor-balcao'?['balcao']:['tecnico'];
   const fontes=individuais.filter(r=>unidades.some(f=>normalizar(f)===normalizar(r.filial))&&tipos.includes(r.tipo));
-  const faltantes=unidades.flatMap(f=>tipos.filter(t=>!fontes.some(r=>normalizar(r.filial)===normalizar(f)&&r.tipo===t)).map(t=>`${f} / ${t==='tecnico'?'Técnicos':'Balcão'}`));
+  // Um setor enviado só com zeros está conferido, mas não gera lançamento zerado.
+  if(!fontes.length)continue;
+  const faltantes=unidades.flatMap(f=>tipos.filter(t=>!cobertura.some(r=>normalizar(r.filial)===normalizar(f)&&r.tipo===t)).map(t=>`${f} / ${t==='tecnico'?'Técnicos':'Balcão'}`));
   const pendentes=pendencias.length>0;
   const sum=k=>centavos(fontes.reduce((s,r)=>s+(r[k]??0),0));const margens=fontes.filter(r=>r.tipo==='balcao');
-  // Supervisão técnica: média simples dos tickets individuais da filial (zero participa).
+  // Supervisão técnica: média dos tickets de quem teve movimento na filial.
   const tecnicos=fontes.filter(r=>r.tipo==='tecnico');
   const ticketConsolidado=tipo==='supervisor-tecnico'?(tecnicos.length?centavos(tecnicos.reduce((s,r)=>s+(r.ticket??0),0)/tecnicos.length):null):tipos.includes('tecnico')?sum('ticket'):null;
   saida.push({funcionarioId:p.id,nome:p.nome,cargo:p.cargo,filial:nucleo?unidades[0]:p.filial,dn:p.dn,tipo,origem:'Consolidado',inicio:documentos[0]?.inicio,fim:documentos[0]?.fim,meta:sum('meta'),realizado:sum('realizado'),ticket:ticketConsolidado,margem:margens.length?centavos(margens.reduce((s,r)=>s+r.margem,0)/margens.length):null,arquivosDetalhes:[...new Map(fontes.map(r=>[r.arquivo+'|'+r.pagina,{nome:r.arquivo,pagina:r.pagina,tipo:'pdf'}])).values()],arquivos:[...new Set(fontes.map(r=>r.arquivo).filter(Boolean))],fontes:fontes.map(r=>`${r.nome} · ${r.filial}`),nucleoFiliais:nucleo?unidades:[],completo:!faltantes.length&&!pendentes,motivo:faltantes.length?'Aguardando '+faltantes.join(', '):pendentes?'Há nomes sem vínculo; total sujeito à conferência.':'',faltantes});

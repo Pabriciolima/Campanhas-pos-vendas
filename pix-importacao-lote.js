@@ -1,4 +1,4 @@
-import {normalizar,centavos} from './pix-importacao-core.js?v=20261116-media-supervisores1';
+import {normalizar,centavos} from './pix-importacao-core.js?v=20261124-sem-movimento1';
 import {dataImportacaoPix,diasSalvosPix,preverImportacaoDiariaPix} from './pix-importacao-diaria-core.js?v=20261116-diaria2';
 const informado=(r,c,f)=>r?.[f]??Boolean(r&&r[c]!=null&&String(r[c]).trim()!=='');
 export function assinaturaRegistroPix(r){const ord=v=>Array.isArray(v)?v.map(ord):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,ord(v[k])])):v;return JSON.stringify(ord(r));}
