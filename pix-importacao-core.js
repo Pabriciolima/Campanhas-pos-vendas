@@ -9,6 +9,7 @@ export function numeroBR(v) {
 export function cargoTipo(cargo) {
  const c=normalizar(cargo);
  if(c.includes('GERENTE'))return 'gerente';
+ if(c.includes('COORDENADOR'))return 'coordenador';
  if(c.includes('ORCAMENT')||c.includes('FACILITADOR'))return 'orcamentista';
  if(c.includes('SUPERVISOR')&&/PECAS|BALCAO/.test(c))return 'supervisor-balcao';
  if(c.includes('SUPERVISOR')&&/ASSIST|ATEND|TECNIC/.test(c))return 'supervisor-tecnico';
@@ -72,12 +73,12 @@ export function consolidar(documentos, participantes, nucleos=[], vinculos={}, e
  const saida=[...individuais];const cobertura=[...individuais,...semMovimento];const filiais=new Set(cobertura.map(r=>normalizar(r.filial)));
  for(const p of ativos){
   if(excluidos.has(String(p.id)))continue;
-  const tipo=cargoTipo(p.cargo);if(!['supervisor-tecnico','supervisor-balcao','supervisor-posvendas','orcamentista','gerente'].includes(tipo))continue;
+  const tipo=cargoTipo(p.cargo);if(!['supervisor-tecnico','supervisor-balcao','supervisor-posvendas','orcamentista','gerente','coordenador'].includes(tipo))continue;
   const nucleo=tipo==='gerente'?nucleos.find(n=>normalizar(n.nome)===normalizar(p.nome)):null;
   const unidades=nucleo?.filiais?.length?nucleo.filiais:[p.filial];if(!unidades.some(f=>filiais.has(normalizar(f))))continue;
   // Replica de cadastro do mesmo gerente não cria um segundo pagamento.
   if(saida.some(r=>r.origem==='Consolidado'&&normalizar(r.nome)===normalizar(p.nome)))continue;
-  const tipos=['gerente','supervisor-posvendas'].includes(tipo)?['tecnico','balcao']:tipo==='supervisor-balcao'?['balcao']:['tecnico'];
+  const tipos=['gerente','coordenador','supervisor-posvendas'].includes(tipo)?['tecnico','balcao']:tipo==='supervisor-balcao'?['balcao']:['tecnico'];
   const fontes=individuais.filter(r=>unidades.some(f=>normalizar(f)===normalizar(r.filial))&&tipos.includes(r.tipo));
   // Um setor enviado só com valores não positivos está conferido, mas não gera lançamento zerado.
   if(!fontes.length)continue;

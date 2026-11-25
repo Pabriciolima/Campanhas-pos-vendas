@@ -1,0 +1,10 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {consolidar,cargoTipo} from '../pix-importacao-core.js';
+const inicio='2026-11-16',fim=inicio;
+const ps=[{id:'a',nome:'TECNICO',cargo:'Consultor Técnico',filial:'SINOP'},{id:'b',nome:'BALCAO',cargo:'Consultor Peças Balcão',filial:'SINOP'},{id:'s',nome:'SUPERVISOR',cargo:'Supervisor de Assistência',filial:'SINOP'},{id:'c',nome:'CRYSTIAN CAMPOS',cargo:'Coordenador',filial:'SINOP'},{id:'o',nome:'COORD OUTRO',cargo:'Coordenador',filial:'CUIABA'}];
+const docs=[{inicio,fim,linhas:[{nome:'TECNICO',tipo:'tecnico',meta:100,realizado:80,ticket:20,inicio,fim},{nome:'BALCAO',tipo:'balcao',meta:200,realizado:90,margem:30,inicio,fim}]}];
+test('reconhece coordenador e coordenadora',()=>{assert.equal(cargoTipo('Coordenador'),'coordenador');assert.equal(cargoTipo('Coordenadora de Pós-vendas'),'coordenador');});
+test('inclui coordenador com totais dos consultores sem duplicar supervisão',()=>{const c=consolidar(docs,ps).linhas.find(l=>l.funcionarioId==='c');assert.equal(c.completo,true);assert.equal(c.meta,300);assert.equal(c.realizado,170);assert.equal(c.ticket,20);assert.equal(c.margem,30);assert.equal(c.fontes.length,2);});
+test('não inclui outra filial, inativo ou coordenador removido da prévia',()=>{assert.equal(consolidar(docs,ps).linhas.some(l=>l.funcionarioId==='o'),false);assert.equal(consolidar(docs,ps.map(p=>p.id==='c'?{...p,ativo:false}:p)).linhas.some(l=>l.funcionarioId==='c'),false);assert.equal(consolidar(docs,ps,[],{},new Set(['c'])).linhas.some(l=>l.funcionarioId==='c'),false);});
+test('falta de um setor deixa coordenador parcial sem liberação para importar',()=>{const c=consolidar([{...docs[0],linhas:[docs[0].linhas[0]]}],ps).linhas.find(l=>l.funcionarioId==='c');assert.equal(c.completo,false);assert.match(c.motivo,/Balcão/);});
+test('zero e negativo não compõem totais e todos sem movimento não criam dia do coordenador',()=>{for(const realizado of [0,-10]){const d=[{...docs[0],linhas:docs[0].linhas.map(l=>({...l,realizado}))}];assert.equal(consolidar(d,ps).linhas.some(l=>l.funcionarioId==='c'),false);}});
