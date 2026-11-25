@@ -12,6 +12,7 @@ export function cargoTipo(cargo) {
  if(c.includes('ORCAMENT')||c.includes('FACILITADOR'))return 'orcamentista';
  if(c.includes('SUPERVISOR')&&/PECAS|BALCAO/.test(c))return 'supervisor-balcao';
  if(c.includes('SUPERVISOR')&&/ASSIST|ATEND|TECNIC/.test(c))return 'supervisor-tecnico';
+ if(c.includes('SUPERVISOR')&&/POS\s*VENDAS/.test(c))return 'supervisor-posvendas';
  if(c.includes('CONSULTOR')&&/BALCAO|PECAS/.test(c))return 'balcao';
  if(c.includes('CONSULTOR')&&c.includes('TECNIC'))return 'tecnico';
  return 'outro';
@@ -71,12 +72,12 @@ export function consolidar(documentos, participantes, nucleos=[], vinculos={}, e
  const saida=[...individuais];const cobertura=[...individuais,...semMovimento];const filiais=new Set(cobertura.map(r=>normalizar(r.filial)));
  for(const p of ativos){
   if(excluidos.has(String(p.id)))continue;
-  const tipo=cargoTipo(p.cargo);if(!['supervisor-tecnico','supervisor-balcao','orcamentista','gerente'].includes(tipo))continue;
+  const tipo=cargoTipo(p.cargo);if(!['supervisor-tecnico','supervisor-balcao','supervisor-posvendas','orcamentista','gerente'].includes(tipo))continue;
   const nucleo=tipo==='gerente'?nucleos.find(n=>normalizar(n.nome)===normalizar(p.nome)):null;
   const unidades=nucleo?.filiais?.length?nucleo.filiais:[p.filial];if(!unidades.some(f=>filiais.has(normalizar(f))))continue;
   // Replica de cadastro do mesmo gerente não cria um segundo pagamento.
   if(saida.some(r=>r.origem==='Consolidado'&&normalizar(r.nome)===normalizar(p.nome)))continue;
-  const tipos=tipo==='gerente'?['tecnico','balcao']:tipo==='supervisor-balcao'?['balcao']:['tecnico'];
+  const tipos=['gerente','supervisor-posvendas'].includes(tipo)?['tecnico','balcao']:tipo==='supervisor-balcao'?['balcao']:['tecnico'];
   const fontes=individuais.filter(r=>unidades.some(f=>normalizar(f)===normalizar(r.filial))&&tipos.includes(r.tipo));
   // Um setor enviado só com valores não positivos está conferido, mas não gera lançamento zerado.
   if(!fontes.length)continue;
@@ -85,7 +86,7 @@ export function consolidar(documentos, participantes, nucleos=[], vinculos={}, e
   const sum=k=>centavos(fontes.reduce((s,r)=>s+(r[k]??0),0));const margens=fontes.filter(r=>r.tipo==='balcao');
   // Supervisão técnica: média dos tickets de quem teve movimento na filial.
   const tecnicos=fontes.filter(r=>r.tipo==='tecnico');
-  const ticketConsolidado=tipo==='supervisor-tecnico'?(tecnicos.length?centavos(tecnicos.reduce((s,r)=>s+(r.ticket??0),0)/tecnicos.length):null):tipos.includes('tecnico')?sum('ticket'):null;
+  const ticketConsolidado=['supervisor-tecnico','supervisor-posvendas'].includes(tipo)?(tecnicos.length?centavos(tecnicos.reduce((s,r)=>s+(r.ticket??0),0)/tecnicos.length):null):tipos.includes('tecnico')?sum('ticket'):null;
   saida.push({funcionarioId:p.id,nome:p.nome,cargo:p.cargo,filial:nucleo?unidades[0]:p.filial,dn:p.dn,tipo,origem:'Consolidado',inicio:documentos[0]?.inicio,fim:documentos[0]?.fim,meta:sum('meta'),realizado:sum('realizado'),ticket:ticketConsolidado,margem:margens.length?centavos(margens.reduce((s,r)=>s+r.margem,0)/margens.length):null,arquivosDetalhes:[...new Map(fontes.map(r=>[r.arquivo+'|'+r.pagina,{nome:r.arquivo,pagina:r.pagina,tipo:'pdf'}])).values()],arquivos:[...new Set(fontes.map(r=>r.arquivo).filter(Boolean))],fontes:fontes.map(r=>`${r.nome} · ${r.filial}`),nucleoFiliais:nucleo?unidades:[],completo:!faltantes.length&&!pendentes,motivo:faltantes.length?'Aguardando '+faltantes.join(', '):pendentes?'Há nomes sem vínculo; total sujeito à conferência.':'',faltantes});
  }
  return {linhas:saida,pendencias,ignorados,periodo:documentos[0]?{inicio:documentos[0].inicio,fim:documentos[0].fim}:null};
