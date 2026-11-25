@@ -45,7 +45,7 @@ export function analisarPaginas(paginas, arquivo='Relatório.pdf') {
    if(!row.items.some(i=>numeroBR(i.str)!==null))continue;
    const realizado=obter(tipo==='tecnico'?'VLR TOTAL':'VALOR VENDA');
    // Sem movimento: não exigir ticket/margem nem criar dia de trabalho.
-   if(realizado===0){linhas.push({nome,tipo,realizado:0,meta:null,ticket:null,margem:null,semMovimento:true,inicio,fim,arquivo,pagina:pagina+1});continue;}
+   if(realizado<=0){linhas.push({nome,tipo,realizado,meta:null,ticket:null,margem:null,semMovimento:true,inicio,fim,arquivo,pagina:pagina+1});continue;}
    linhas.push({nome,tipo,realizado,meta:tipo==='tecnico'?centavos(obter('OBJETIVO M O')+obter('OBJETIVO PECAS')):obter('OBJETIVO'),ticket:tipo==='tecnico'?obter('TICKET MEDIO'):null,margem:tipo==='balcao'?obter('RENT'):null,inicio,fim,arquivo,pagina:pagina+1});
   }
  }
@@ -58,14 +58,14 @@ export function consolidar(documentos, participantes, nucleos=[], vinculos={}, e
  documentos.forEach((doc,di)=>doc.linhas.forEach((r,ri)=>{
   const key=`${di}:${ri}`;const candidatos=ativos.filter(p=>normalizar(p.nome)===normalizar(r.nome));
   const manual=vinculos[key];if(manual==='__ignorar__'){ignorados.push({...r,key,motivo:'Fora da campanha, confirmado na conferência.'});return;}const p=manual?ativos.find(p=>String(p.id)===String(manual)):candidatos.length===1?candidatos[0]:null;
-  if(!p&&r.realizado===0){ignorados.push({...r,key,motivo:'Sem movimento no relatório: não será considerado dia trabalhado.'});return;}
+  if(!p&&Number.isFinite(r.realizado)&&r.realizado<=0){ignorados.push({...r,key,motivo:'Sem movimento no relatório (realizado zerado ou negativo): não será considerado dia trabalhado.'});return;}
   if(!p){pendencias.push({...r,key,motivo:candidatos.length?'Nome presente em mais de uma filial. Selecione o cadastro correto.':'Nome não localizado. Selecione o cadastro ou deixe fora da importação.'});return;}
   if(excluidos.has(String(p.id))){ignorados.push({...r,key,motivo:'Removido deste lote de importação.'});return;}
   const cargo=cargoTipo(p.cargo);
   if(cargo!==r.tipo){ignorados.push({...r,key,motivo:`Cargo cadastrado: ${p.cargo}. Esta linha não pertence a este setor.`});return;}
   const identidade=[p.id,r.tipo,r.inicio,r.fim].join('|');
   if(vistos.has(identidade))throw Error(`Linha duplicada para ${p.nome}. Remova o documento repetido.`);vistos.add(identidade);
-  if(r.realizado===0){semMovimento.push({...r,filial:p.filial});ignorados.push({...r,key,nome:p.nome,filial:p.filial,motivo:'Sem movimento no relatório: não será considerado dia trabalhado.'});return;}
+  if(Number.isFinite(r.realizado)&&r.realizado<=0){semMovimento.push({...r,filial:p.filial});ignorados.push({...r,key,nome:p.nome,filial:p.filial,motivo:'Sem movimento no relatório (realizado zerado ou negativo): não será considerado dia trabalhado.'});return;}
   individuais.push({...r,key,funcionarioId:p.id,nome:p.nome,filial:p.filial,cargo:p.cargo,dn:p.dn,origem:'Individual',arquivosDetalhes:[{nome:r.arquivo,pagina:r.pagina,tipo:'pdf'}],arquivos:r.arquivo?[r.arquivo]:[],fontes:[r.nome],completo:true});
  }));
  const saida=[...individuais];const cobertura=[...individuais,...semMovimento];const filiais=new Set(cobertura.map(r=>normalizar(r.filial)));
@@ -78,7 +78,7 @@ export function consolidar(documentos, participantes, nucleos=[], vinculos={}, e
   if(saida.some(r=>r.origem==='Consolidado'&&normalizar(r.nome)===normalizar(p.nome)))continue;
   const tipos=tipo==='gerente'?['tecnico','balcao']:tipo==='supervisor-balcao'?['balcao']:['tecnico'];
   const fontes=individuais.filter(r=>unidades.some(f=>normalizar(f)===normalizar(r.filial))&&tipos.includes(r.tipo));
-  // Um setor enviado só com zeros está conferido, mas não gera lançamento zerado.
+  // Um setor enviado só com valores não positivos está conferido, mas não gera lançamento zerado.
   if(!fontes.length)continue;
   const faltantes=unidades.flatMap(f=>tipos.filter(t=>!cobertura.some(r=>normalizar(r.filial)===normalizar(f)&&r.tipo===t)).map(t=>`${f} / ${t==='tecnico'?'Técnicos':'Balcão'}`));
   const pendentes=pendencias.length>0;
