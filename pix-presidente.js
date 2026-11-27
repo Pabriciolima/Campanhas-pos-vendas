@@ -5646,3 +5646,11 @@ window.abrirVisaoGeralImportacaoPix = async competencia => {
   // Consulta sem o filtro de filial da tela anterior.
   await carregarLancamentosPixUmaVez();
 };
+
+// Ponte somente leitura: usa o motor oficial em todo o histórico e restaura a tela.
+window.obterHistoricoDiretoriaPix = async registros => {
+ await carregarParticipantesPixUmaVez();
+ const anteriores=estadoPix.lancamentos;
+ try{estadoPix.lancamentos=registros;return registros.map(calcularPix).filter(r=>!r.replicaNucleo&&r.status!=="NÚCLEO CONSOLIDADO");}
+ finally{estadoPix.lancamentos=anteriores;}
+};

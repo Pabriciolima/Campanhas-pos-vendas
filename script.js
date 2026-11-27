@@ -8012,3 +8012,10 @@ window.obterContextoAssistenteOficina = (incluirResultados = true) => ({
  participantes: db.funcionarios.map(({id,nome,filial,cargo}) => ({id,nome,filial,cargo})),
  resultados: incluirResultados ? db.lancamentos.map(calcularLancamento) : []
 });
+
+window.obterHistoricoDiretoriaOficina = async registros => {
+ if(!funcionariosCarregados)await carregarFuncionariosProdutivosSupabase();
+ const anteriores=db.lancamentos;
+ try{db.lancamentos=registros;return obterResultadosCampanha();}
+ finally{db.lancamentos=anteriores;}
+};

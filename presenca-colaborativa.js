@@ -35,7 +35,8 @@ const PC_MODULOS = {
   pix: "Pix do Presidente",
   crm: "CRM",
   compras: "Central de Compras",
-  garantia: "Garantia"
+  garantia: "Garantia",
+  diretoria: "Diretoria"
 };
 
 let pcPerfil = lerPerfil();
@@ -125,7 +126,10 @@ function lerPerfil() {
 function salvarPerfil(perfil) {
   pcPerfil = {...perfil, nome:String(perfil.nome||'').trim().slice(0,100), filial:String(perfil.filial||'').trim().slice(0,120), expiresAt:Date.now()+8*60*60*1000};
   sessionStorage.setItem(PC_STORAGE, JSON.stringify(pcPerfil));
+  window.dispatchEvent(new CustomEvent("campanhas:perfil-alterado"));
 }
+
+window.obterPerfilCampanhas = () => perfilValido(pcPerfil) ? {...pcPerfil} : null;
 
 function elementoEstaVisivel(elemento) {
   if (!elemento) return false;
@@ -149,6 +153,7 @@ function secaoAtivaContem(termo) {
 }
 
 function moduloAtual() {
+  if(document.body.classList.contains("modulo-diretoria-ativo"))return "diretoria";
   if (
     elementoEstaVisivel(document.querySelector("#comprasCampanhas.active,#comprasCampanha.active,#comprasModule.active,#compras-module.active")) ||
     secaoAtivaContem("compra")

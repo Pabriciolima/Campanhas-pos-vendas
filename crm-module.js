@@ -1861,8 +1861,8 @@
                 return lista.find(item => normalizar(item.nome) === chave) || null;
               }
 
-              function calcularParticipante(participante) {
-                const dados = dadosCompetencia();
+              function calcularParticipante(participante, dadosHistoricos = null) {
+                const dados = dadosHistoricos || dadosCompetencia();
                 const nivel = chaveNivel(participante.nivel || participante.funcao);
                 const regras = REGRAS[nivel];
 
@@ -2010,8 +2010,8 @@
               }
 
 
-              function sincronizarLancamentosManuais() {
-                const dados = dadosCompetencia();
+              function sincronizarLancamentosManuais(dadosHistoricos = null) {
+                const dados = dadosHistoricos || dadosCompetencia();
                 const manuais = Array.isArray(dados.manuais) ? dados.manuais : [];
 
                 const limpar = lista =>
@@ -7921,6 +7921,26 @@
                  */
                 carregarSupabaseInicialCRM();
               }
+
+              window.obterHistoricoDiretoriaCRM = (pessoas, registros) => {
+                const meses = {};
+                for(const r of registros){
+                  if(!/^[0-9]{4}-[0-9]{2}$/.test(r.competencia)||!['clientes','atendimento','satisfacao','indicadores','manuais'].includes(r.tipo))continue;
+                  meses[r.competencia] ||= {clientes:[],atendimento:[],satisfacao:[],indicadores:[],manuais:[]};
+                  meses[r.competencia][r.tipo]=Array.isArray(r.dados)?r.dados:[];
+                }
+                const rows=[];
+                for(const [competencia,dados] of Object.entries(meses)){
+                  if(!Object.values(dados).some(a=>a.length))continue;
+                  sincronizarLancamentosManuais(dados);
+                  for(const linha of pessoas){
+                    const p=participanteDoSupabaseCRM(linha),r=calcularParticipante(p,dados);
+                    if(!r.possuiClientes&&!r.possuiAtendimento&&!r.possuiSatisfacao&&!r.possuiIndicadores)continue;
+                    rows.push({...r,id:competencia+'|'+p.id,competencia,criadoEm:registros.filter(r=>r.competencia===competencia).map(r=>r.created_at).filter(Boolean).sort()[0]});
+                  }
+                }
+                return rows;
+              };
 
               window.CRMModule = {
                 version: VERSION,

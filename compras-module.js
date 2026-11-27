@@ -7331,3 +7331,20 @@ if(typeof document!=='undefined'&&!window.__cmpPolicyExportBound){
   }
  });
 }
+
+window.obterHistoricoDiretoriaCompras = async () => {
+ await bancoCompras.sincronizar();
+ const [responsaveis,indicadores,ajustes] = await Promise.all(Object.values(COLECOES).filter(c=>c!==COLECOES.importacoes).map(c=>getDocs(c)));
+ const anteriores={responsaveis:state.responsaveis,indicadores:state.indicadores,ajustes:state.ajustes};
+ try{
+  state.responsaveis=responsaveis.docs.map(d=>({...d.data(),id:d.id}));
+  state.indicadores=indicadores.docs.map(d=>({...d.data(),id:d.id}));
+  state.ajustes=ajustes.docs.map(d=>({...d.data(),id:d.id}));
+  const meses=[...new Set(state.indicadores.map(i=>i.competencia).filter(Boolean))],rows=[];
+  for(const competencia of meses)for(const p of state.responsaveis){
+   const r=aplicarAjusteApuracao(calcularApuracaoResponsavel(p,competencia));
+   if(r.quantidadeUnidades>0&&r.status!=='EXCLUÍDO'&&r.status!=='EXCLUIDO')rows.push({...r,id:competencia+'|'+p.id});
+  }
+  return rows;
+ }finally{Object.assign(state,anteriores);}
+};
