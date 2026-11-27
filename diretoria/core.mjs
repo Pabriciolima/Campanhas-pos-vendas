@@ -3,7 +3,8 @@ export const CAMPANHAS=Object.freeze([
  {id:'oficina',nome:'Campanha da Oficina',cor:'#66a9ff'},
  {id:'garantia',nome:'Campanhas de Garantia',cor:'#e8b768'},
  {id:'crm',nome:'Bonificações CRM',cor:'#a89cff'},
- {id:'compras',nome:'Campanha de Compras',cor:'#f58aa9'}
+ {id:'compras',nome:'Campanha de Compras',cor:'#f58aa9'},
+ {id:'apms',nome:'Campanhas APMs',cor:'#fb9864',origem:'Sistema APMs'}
 ]);
 const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();
 export function perfilDiretoria(perfil,agora=Date.now()){
@@ -27,7 +28,7 @@ export function consolidarInvestimento(registros,fontes,{ano='',mes='',base='pag
  const linhas=CAMPANHAS.map(c=>{
   const historico=todos.filter(r=>r.campanha===c.id),dados=filtrados.filter(r=>r.campanha===c.id),fonte=fontes.find(f=>f.id===c.id);
   const selecionados=base==='pago'?dados.filter(r=>r.confirmado):dados;
-  return {...c,disponivel:fonte?.status==='ok',status:fonte?.status||'indisponivel',nota:fonte?.nota||'',inicio:historico.map(r=>r.inicio).sort()[0]||null,ciclos:new Set(dados.map(r=>r.ciclo)).size,registros:dados.length,valorCentavos:selecionados.reduce((s,r)=>s+r[base],0)};
+  return {...c,participacao:0,disponivel:fonte?.status==='ok',status:fonte?.status||'indisponivel',nota:fonte?.nota||'',inicio:historico.map(r=>r.inicio).sort()[0]||null,ciclos:new Set(dados.map(r=>r.ciclo)).size,registros:dados.length,valorCentavos:selecionados.reduce((s,r)=>s+r[base],0)};
  });
  const total=linhas.reduce((s,c)=>s+c.valorCentavos,0);linhas.forEach(c=>c.participacao=total?c.valorCentavos/total*100:0);
  const lider=[...linhas].sort((a,b)=>b.valorCentavos-a.valorCentavos)[0];

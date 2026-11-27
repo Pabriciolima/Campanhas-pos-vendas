@@ -14,8 +14,9 @@ export async function carregarInvestimento(signal){
   garantia:async()=>{await autenticarModulo('garantia');const {state}=await chamarModulo('garantia',{acao:'ler'});if(!state?.competencias)throw Error('Histórico de Garantia indisponível.');const rows=[];for(const [competencia,mes] of Object.entries(state.competencias))for(const p of mes.participantes||[]){const r=apurarPessoa(p,mes);if(r.total!==null&&r.status==='VALIDADO')rows.push({...p,...mes.validados?.[chavePessoa(p)],id:competencia+'|'+chavePessoa(p),competencia,total:r.total});}return financeiro('garantia',rows,r=>r.total);},
   compras:async()=>{await autenticarModulo('compras');const calc=await calculador('obterHistoricoDiretoriaCompras');return financeiro('compras',await calc(),r=>r.bonusTotal);}
  };
- const resultados=await Promise.allSettled(CAMPANHAS.map(async c=>({id:c.id,registros:await leitores[c.id]()})));
+ const campanhasLocais=CAMPANHAS.filter(c=>c.id!=='apms');
+ const resultados=await Promise.allSettled(campanhasLocais.map(async c=>({id:c.id,registros:await leitores[c.id]()})));
  if(signal?.aborted)throw new DOMException('Cancelado','AbortError');
- const registros=[],fontes=[];resultados.forEach((r,i)=>{const c=CAMPANHAS[i];if(r.status==='fulfilled'){registros.push(...r.value.registros);fontes.push({id:c.id,status:'ok',nota:c.id==='crm'?'Recalculado com os cadastros disponíveis.':c.id==='garantia'?'Apurações validadas do módulo.':'Motor oficial de apuração.'});}else fontes.push({id:c.id,status:r.reason?.status===401?'protegido':'erro',nota:r.reason?.status===401?'Entre no módulo com a senha já existente e atualize este painel.':'Não foi possível consultar esta campanha. Atualize para tentar novamente.'});});
+ const registros=[],fontes=[];resultados.forEach((r,i)=>{const c=campanhasLocais[i];if(r.status==='fulfilled'){registros.push(...r.value.registros);fontes.push({id:c.id,status:'ok',nota:c.id==='crm'?'Recalculado com os cadastros disponíveis.':c.id==='garantia'?'Apurações validadas do módulo.':'Motor oficial de apuração.'});}else fontes.push({id:c.id,status:r.reason?.status===401?'protegido':'erro',nota:r.reason?.status===401?'Entre no módulo com a senha já existente e atualize este painel.':'Não foi possível consultar esta campanha. Atualize para tentar novamente.'});});
  return {registros,fontes,atualizado:new Date().toISOString(),demo:false};
 }

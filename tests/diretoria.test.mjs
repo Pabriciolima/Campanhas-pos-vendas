@@ -31,10 +31,10 @@ test('filtros históricos, ciclos semanais e percentuais',()=>{
  const r=consolidarInvestimento(rs,fontes,{ano:'2026',mes:'11'});assert.equal(r.totalCentavos,30000);assert.equal(r.linhas[0].ciclos,2);assert.equal(r.lider.participacao,100);assert.deepEqual(r.anos,['2026','2025']);
 });
 test('fontes indisponíveis são separadas de campanhas sem valores',()=>{
- const r=consolidarInvestimento([],fontes.map(f=>f.id==='garantia'?{...f,status:'protegido'}:f));assert.equal(r.cobertura,4);assert.equal(r.linhas.find(l=>l.id==='garantia').disponivel,false);assert.equal(r.linhas[0].disponivel,true);
+ const r=consolidarInvestimento([],fontes.map(f=>f.id==='garantia'?{...f,status:'protegido'}:f));assert.equal(r.cobertura,CAMPANHAS.length-1);assert.equal(r.linhas.find(l=>l.id==='garantia').disponivel,false);assert.equal(r.linhas[0].disponivel,true);
 });
 test('demonstração fica independente dos registros oficiais',()=>{
- const d=dadosDemonstracao();assert.equal(d.demo,true);assert.equal(d.registros.length,30);assert.ok(consolidarInvestimento(d.registros,d.fontes).totalCentavos>0);assert.equal(consolidarInvestimento([],fontes).totalCentavos,0);
+ const d=dadosDemonstracao();assert.equal(d.demo,true);assert.equal(d.registros.length,CAMPANHAS.length*6);assert.ok(consolidarInvestimento(d.registros,d.fontes).totalCentavos>0);assert.equal(consolidarInvestimento([],fontes).totalCentavos,0);
 });
 test('consulta paginada carrega além do limite de mil registros',async()=>{
  const todos=Array.from({length:1201},(_,id)=>({id}));let pages=0;
