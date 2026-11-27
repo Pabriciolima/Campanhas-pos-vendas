@@ -3239,7 +3239,7 @@ function montarTabelaResultadosPix(
 
   if (comAcoes) {
     // Rótulos acessíveis para a apresentação responsiva em notebooks.
-    const rotulos = ["Competência","Semana","Filial","Colaborador","Cargo","Indicadores","Bonif. faturamento","Bônus ticket","NPS","Penalidade","Total","Status","Ações"];
+    const rotulos = ["Competência","Semana","Filial","Colaborador","Cargo","Indicadores","Bonif. faturamento","Bônus Ticket / Margem","NPS","Penalidade","Total","Status","Ações"];
     tabela.querySelectorAll("tr").forEach(linha => {
       if (linha.querySelector("td.empty")) return;
       Array.from(linha.cells).forEach((celula, indice) => {
