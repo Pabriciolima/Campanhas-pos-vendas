@@ -1,3 +1,4 @@
+import {criarDestaqueGorduraPix} from './pix-gordura-relatorio.js?v=20261127-gordura1';
 import {mapearLimitadoPix,criarExecucaoUnicaPix,carregarBlobPix,cancelarSeNecessario,cederTelaPix,limparCacheImagensPix} from './pix-exportacao-utils.js?v=20261103-perf1';
 import {aplicarStatusAuditoriaPix} from './pix-auditoria-status.js?v=20261103-audit10';
 import {auditarImagensPix} from './pix-auditoria-imagens.js?v=20261103-values4';
@@ -2815,8 +2816,10 @@ async function gerarPdfPixIndependente() {
   documento.setTextColor(155,35,35);documento.setFontSize(7);
   documento.text("Consulte as divergências lidas nas imagens e eventuais leituras que precisam de revisão na página adicional.",12,38);
   documento.setTextColor(20,42,58);
+  const destaqueGordura=criarDestaqueGorduraPix(documento,resultados);
   documento.autoTable({
     startY: 44,
+    rowPageBreak: "avoid",
     margin: {
       left: 10,
       right: 10
@@ -2894,8 +2897,11 @@ async function gerarPdfPixIndependente() {
       fillColor:
         [247, 250, 252]
     },
+    willDrawCell: destaqueGordura.willDrawCell,
+    didDrawCell: destaqueGordura.didDrawCell,
     didParseCell:
       dados => {
+        destaqueGordura.didParseCell(dados);
         if (
           dados.section === "body" &&
           dados.column.index === 11
