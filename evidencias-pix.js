@@ -2885,6 +2885,7 @@ async function gerarPdfPixIndependente() {
       lineWidth:
         0.15
     },
+    columnStyles: {7: {cellWidth: 22}},
     headStyles: {
       fillColor:
         [11, 122, 83],
