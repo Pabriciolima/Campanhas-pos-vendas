@@ -33,25 +33,31 @@ A demonstração é opt-in, identificada como fictícia, mantida somente em mem�
 `node --test tests/diretoria.test.mjs tests/diretoria-apms.test.mjs` cobre identidade, expiração, dinheiro, distinção financeira, réplicas, duplicidade de núcleo, filtros, ciclos, cobertura, demonstração e paginação. A suíte preexistente apresenta falhas também na revisão-base; não foram alteradas regras de pagamento para acomodar esses testes antigos.
 
 
-## Integração APMs — 27/11/2026
+## Integração APMs automática — critério atualizado em 27/11/2026
 
-A sexta frente, Campanhas APMs, consulta a campanha ativa do Fatura APMS no mesmo projeto Supabase, nas tabelas `apms_campaign_claims`, `apms_campaign_branches` e `apms_campaign_members`. Não consulta faturamento/propostas como investimento e não copia evidências/PDFs.
+Por instrução do usuário, APMs agora carrega sem login adicional e inclui **somente o ganho do APM**. Vendedor e gerente não entram no BI desta frente. Pago continua significando apurado, conforme critério aprovado para a Diretoria; não há confirmação de transferência bancária na origem.
 
-- `services/diretoriaBiService.ts`: composição assíncrona das fontes locais e APMs e demonstração isolada.
-- `services/apmMapping.ts`: contrato de dados tipado, `mapApmCampanhaToBi`, deduplicação, filtros e métricas por período/filial/pessoa.
-- `services/apmsGateway.ts`: cliente Supabase isolado, autenticação APMs e leitura paginada de colunas explícitas. Chave exclusivamente pública anon em `apmsConfig.ts`.
-- `components/diretoria/DetalheApmCampanha.tsx`: evolução mensal, distribuição por filial, KPIs, bonificações por função e contratos, mantendo as três parcelas de cada contrato.
+### Fonte resumida e atualização
 
-**Acesso:** no perfil Abel, clicar em Detalhar APMs → Conectar APMs e usar uma conta administrativa já existente do sistema APMs. A identificação de presença Abel controla a interface, mas não concede privilégios na base APMs. A identidade é confirmada com `auth.getUser()` e o vínculo administrativo é consultado na tabela sob RLS. Contas regionais são recusadas para impedir um consolidado incompleto apresentado como total. Não são criados usuários nem alteradas permissões/RLS.
+A migração `apms_diretoria_resumo_sem_login`, registrada no Supabase, criou `public.apms_diretoria_resumo`: totais por competência, APM e filial. O SQL reproduzível está em `supabase/apms_diretoria_resumo.sql`.
 
-O cliente não reutiliza nem altera a sessão dos outros módulos: `persistSession:false`, `autoRefreshToken:false`, refresh quando necessário antes da consulta. A senha não é guardada; a sessão fica em memória da página até desconexão, troca de perfil ou recarregamento. Desconectar apaga imediatamente APMs dos totais na tela, mesmo se outra fonte demorar para atualizar. Nenhuma credencial é adicionada a localStorage/sessionStorage.
+A tabela contém apenas identificador/nome do APM, mês, filial/UF, contagem agregada, valor APM e datas do resumo. Não contém contratos, minutas, vendedores, gerentes, clientes, chassi, usuário, caminho de PDF ou evidências. A soma usa exclusivamente `apm_amount` do sistema de origem.
 
-**Cálculo:** usa os valores gerados pela base: `apm_amount + seller_amount + manager_amount`, uma vez por contrato, sem multiplicar pelos chassis. A chave normaliza a minuta e a competência; o banco de origem já exige minuta única. Mapeamento incompleto, falha de consulta ou de vínculo exclui a fonte inteira do consolidado em vez de adicionar um subtotal ou valores fictícios. Registros cancelados/excluídos, se recebidos por versões futuras da fonte, são desconsiderados pelo mapeador.
+A carga inicial lê o histórico já lançado. Gatilhos privados recalculam o resumo após inserção, alteração ou exclusão de contratos e atualização das filiais. A publicação é transacional e serializada por advisory lock; nenhuma atualização altera os registros de origem. O gatilho é uma função SECURITY DEFINER no schema privado `fat_private`, com search_path vazio e EXECUTE revogado de PUBLIC, anon e authenticated. Não existe RPC público com privilégio elevado.
 
-As pessoas são contadas por nome normalizado da fonte; a origem não possui identificadores de beneficiário distintos dos nomes. Homônimos podem exigir futura integração ao cadastro de pessoas. O ticket por pessoa divide o total do período/filial selecionados pelas pessoas únicas contempladas. Uma pessoa em vários contratos é contada uma vez, mantendo todas as suas bonificações. Ciclos APMs são competências mensais.
+**Modelo de acesso aprovado:** os valores agregados são intencionalmente consultáveis sem autenticação, para atender ao pedido de não solicitar acesso. RLS da tabela resumida permite SELECT a anon/authenticated, sem INSERT/UPDATE/DELETE. O menu permanece visível somente no perfil Abel, mas a presença por nome não é uma barreira de autorização para a API resumida. Contratos, cadastros privados e evidências permanecem nas permissões originais do APMs. Nenhuma senha ou chave secreta foi publicada. A consulta não depende de sessão autenticada nem de dados armazenados no navegador.
 
-A base atual registra apurações, não transferências bancárias. O padrão aprovado continua sendo pago = apurado. A perspectiva financeira confirmada não cria confirmações inexistentes. Evolução mensal apresenta a apuração e, quando há confirmação explicitamente fornecida pelo mapeamento, a respectiva série financeira.
+### Componentes
 
-**Verificação:** estrutura e total lidos diretamente no banco: 2 contratos de novembro/2026, R$400 APMs + R$400 indicações + R$180 gerência = R$980. Testes cobrem permissões, duplicidade, chassis, falhas e separação dos dados fictícios. Teste de navegador com transporte controlado cobre conexão administrativa, recusa de operador, filtros, gráficos, logout e layout móvel. Sem credenciais de usuário, não se presume uma sessão administrativa real no navegador de teste.
+- `services/apmsGateway.ts`: consulta automática paginada de `apms_diretoria_resumo`, com chave pública anon e cache no-store, sem chamadas de login ou acesso aos contratos.
+- `services/apmMapping.ts`: `ApmResumoRow` e `mapApmCampanhaToBi` tipados; valor já agregado não é multiplicado por quantidade de contratos ou chassis. Chave mensal/APM/filial evita duplicações.
+- `services/diretoriaBiService.ts`: composição do resumo APMs com as cinco fontes locais, preservando o perfil Abel na interface.
+- `components/diretoria/DetalheApmCampanha.tsx`: valores por APM, evolução mensal, média por APM e filtros por filial/APM. Não há formulário de conexão nem lista de contratos nesta visão.
 
-Build: `npm ci --prefix diretoria`, `npm run --prefix diretoria typecheck` e `npm run --prefix diretoria build`. A verificação TypeScript inclui o serviço e os componentes da Diretoria. Novos blocos devem reutilizar a camada normalizada sem somar novamente as parcelas APM, vendedor e gerente ao investimento já consolidado por contrato.
+Demonstração continua explicitamente fictícia e separada dos dados reais. Falha de rede/mapeamento não adiciona estimativas nem subtotal incompleto. O botão Atualizar consulta os novos totais. O painel também consulta ao abrir e a cada 60 segundos enquanto visível, sem sobrepor consultas nem atualizar a demonstração.
+
+### Validação
+
+O banco e o gatilho foram conferidos: dois contratos, com R$400 de ganho APM; R$400 de indicação e R$180 de gerência ficam excluídos. Foi verificado que anon pode apenas ler o resumo, não inserir nele, ler contratos ou executar a função privada. Um UPDATE sem linhas nas filiais exercitou o gatilho sem modificar cadastros, mantendo R$400 no resumo.
+
+`npm ci --prefix diretoria`, `npm run --prefix diretoria typecheck`, `npm run --prefix diretoria build` e `node --test tests/diretoria.test.mjs tests/diretoria-apms.test.mjs tests/seguranca.test.mjs` validam tipos, valores, filtros, paginação, perfil, acesso automático e exclusão das parcelas de vendedor/gerente.

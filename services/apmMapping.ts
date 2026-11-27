@@ -1,56 +1,36 @@
 import {registroFinanceiro,centavos} from '../diretoria/core.mjs';
-export interface ApmCampanhaRow {
- id:string; competence:string; contract:string; closed_on:string;
- consultant:string; branch_id?:string|null; state?:string|null;
- seller?:string|null; manager:string; apm_amount:number|string;
- seller_amount:number|string; manager_amount:number|string;
- model?:string|null; chassis_quantity?:number|null; modality?:string|null;
- policy_version?:string; created_at?:string; updated_at?:string;
- deleted_at?:string|null; status?:string; statusPagamento?:string;
- pago?:boolean; pagamentoConfirmado?:boolean; valorPago?:number|string;
+export interface ApmResumoRow {
+ competencia:string;apm:string;apm_nome:string;filial_id:string;filial_nome:string;
+ uf:string;contratos:number;valor_apm:number|string;data_inicio:string;atualizado_em:string;
 }
-export interface ApmBranch {id:string;name:string;state?:string}
-export interface ApmBeneficiario {nome:string;papel:'APM'|'Vendedor'|'Gerente';valorCentavos:number}
 export interface ApmBiRecord {
- campanha:'apms';id:string;chave:string;competencia:string;ciclo:string;
- apurado:number;pago:number;confirmado:boolean;inicio:string;atualizado:string;origem:string;
- apm:{contrato:string;fechamento:string;filial:string;filialId:string;uf:string;
-  modelo:string;chassis:number;modalidade:string;politica:string;beneficiarios:ApmBeneficiario[]};
+ campanha:'apms';id:string;chave:string;competencia:string;ciclo:string;apurado:number;pago:number;
+ confirmado:boolean;inicio:string;atualizado:string;origem:string;
+ apmResumo:{apm:string;nome:string;filialId:string;filial:string;uf:string;contratos:number};
 }
-const norm=(s:unknown)=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().replace(/\s+/g,' ').toUpperCase();
-const nomes:Record<string,string>={RENAN:'Renan',DANIELA:'Daniela',LUANA:'Luana',CAROLINY:'Caroliny'};
-function dinheiro(v:unknown):number {if(!['number','string'].includes(typeof v)||String(v).trim()===''||!/^\d+(\.\d+)?$/.test(String(v)))throw Error('Valor APMs ausente ou inválido.');const c=centavos(v);if(c===null||!Number.isSafeInteger(c))throw Error('Valor APMs inválido.');return c;}
-export function mapApmCampanhaToBi(row:ApmCampanhaRow,branches:ApmBranch[]=[]):ApmBiRecord|null {
- if(row.deleted_at||['CANCELADO','CANCELADA','EXCLUIDO','EXCLUIDA'].includes(norm(row.status)))return null;
- const competencia=String(row.competence||'').slice(0,7),contrato=norm(row.contract);
- if(!row.id||!contrato||!/^\d{4}-(0[1-9]|1[0-2])$/.test(competencia)||!/^\d{4}-\d{2}-\d{2}$/.test(row.closed_on)||row.closed_on.slice(0,7)!==competencia)throw Error('Contrato APMs com identificação ou competência inválida.');
- const valores=[dinheiro(row.apm_amount),dinheiro(row.seller_amount),dinheiro(row.manager_amount)];
- if((valores[0]>0&&!row.consultant?.trim())||(valores[1]>0&&!row.seller?.trim())||(valores[2]>0&&!row.manager?.trim()))throw Error('Beneficiário APMs não identificado.');
- const pessoas=[nomes[row.consultant]||row.consultant,row.seller||'',row.manager];
- const papeis=['APM','Vendedor','Gerente'] as const;
- const beneficiarios=papeis.map((papel,i)=>({nome:pessoas[i].trim(),papel,valorCentavos:valores[i]})).filter(b=>b.valorCentavos>0);
- // Valores gerados pela base, por contrato: chassis não multiplicam os bônus.
- const total=valores.reduce((a,b)=>a+b,0);const base=registroFinanceiro('apms',{...row,id:contrato,competencia,origem:'Sistema APMs'},total/100);
- if(!base)throw Error('Contrato APMs não pôde ser consolidado.');
- const filial=branches.find(b=>b.id===row.branch_id);
- return {...base,campanha:'apms',id:row.id,apm:{contrato,fechamento:row.closed_on,filial:filial?.name||'Filial não identificada',filialId:row.branch_id||'sem-filial',uf:filial?.state||row.state||'',modelo:row.model||'Modelo não informado',chassis:row.chassis_quantity||1,modalidade:row.modality||'Não informada',politica:row.policy_version||'Não informada',beneficiarios}};
+export function mapApmCampanhaToBi(row:ApmResumoRow):ApmBiRecord {
+ const competencia=String(row.competencia||'').slice(0,7);
+ if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(competencia)||!row.apm?.trim()||!row.apm_nome?.trim()||!row.filial_id||!Number.isInteger(row.contratos)||row.contratos<0)throw Error('Resumo APMs incompatível.');
+ if(!['number','string'].includes(typeof row.valor_apm)||!/^\d+(\.\d+)?$/.test(String(row.valor_apm)))throw Error('Valor APMs inválido.');
+ const valor=centavos(row.valor_apm);if(valor===null||!Number.isSafeInteger(valor))throw Error('Valor APMs inválido.');
+ const id=competencia+'|'+row.apm+'|'+row.filial_id;
+ const base=registroFinanceiro('apms',{id,competencia,criadoEm:row.data_inicio,atualizadoEm:row.atualizado_em,origem:'Sistema APMs · somente ganho APM'},valor/100);
+ if(!base)throw Error('Resumo APMs inválido.');
+ return {...base,campanha:'apms',apmResumo:{apm:row.apm,nome:row.apm_nome,filialId:row.filial_id,filial:row.filial_nome||'Filial não identificada',uf:row.uf||'',contratos:row.contratos}};
 }
-export function resumirApms(registros:ApmBiRecord[],{ano='',mes='',filial='',base='apurado'}={}) {
- const map=new Map<string,ApmBiRecord>();for(const r of registros){if(r.campanha!=='apms'||!r.apm)continue;const old=map.get(r.chave);if(!old||r.atualizado>old.atualizado)map.set(r.chave,r);}
- const todos=[...map.values()],porPeriodo=todos.filter(r=>(!ano||r.competencia.startsWith(ano+'-'))&&(!mes||r.competencia.slice(5)===mes));
- const filtrados=porPeriodo.filter(r=>!filial||r.apm.filialId===filial).sort((a,b)=>b.apm.fechamento.localeCompare(a.apm.fechamento)||a.apm.contrato.localeCompare(b.apm.contrato)),pessoas=new Set<string>();
- const soma=(rs:ApmBiRecord[],field:'apurado'|'pago')=>rs.reduce((n,r)=>n+r[field],0);
+export function resumirApms(registros:ApmBiRecord[],{ano='',mes='',filial='',apm='',base='apurado'}={}){
+ const unicos=new Map<string,ApmBiRecord>();for(const r of registros){if(!r.apmResumo)continue;const v=unicos.get(r.chave);if(!v||r.atualizado>v.atualizado)unicos.set(r.chave,r);}
+ const periodo=[...unicos.values()].filter(r=>(!ano||r.competencia.startsWith(ano+'-'))&&(!mes||r.competencia.slice(5)===mes));
+ const dados=periodo.filter(r=>(!filial||r.apmResumo.filialId===filial)&&(!apm||r.apmResumo.apm===apm));
  const valor=(r:ApmBiRecord)=>base==='pago'?r.pago:r.apurado;
- for(const r of filtrados)if(valor(r)>0)for(const b of r.apm.beneficiarios)pessoas.add(norm(b.nome));
- const meses=[...new Set(filtrados.map(r=>r.competencia))].sort();
- const evolucao=meses.map(competencia=>{const rs=filtrados.filter(r=>r.competencia===competencia);const pessoasMes=new Set(rs.filter(r=>r.apurado>0).flatMap(r=>r.apm.beneficiarios.map(b=>norm(b.nome))));return {competencia,apurado:soma(rs,'apurado'),pago:soma(rs,'pago'),valorCentavos:rs.reduce((s,r)=>s+valor(r),0),contratos:rs.length,pessoas:pessoasMes.size,ticketMedio:pessoasMes.size?Math.round(soma(rs,'apurado')/pessoasMes.size):0};});
- const ids=[...new Set(porPeriodo.map(r=>r.apm.filialId))];
- const filiais=ids.map(id=>{const rs=porPeriodo.filter(r=>r.apm.filialId===id);return {id,nome:rs[0].apm.filial,contratos:rs.length,valorCentavos:rs.reduce((s,r)=>s+valor(r),0)};}).sort((a,b)=>b.valorCentavos-a.valorCentavos);
- const papeis=['APM','Vendedor','Gerente'].map(papel=>({papel,valorCentavos:filtrados.filter(r=>valor(r)>0).reduce((s,r)=>s+r.apm.beneficiarios.filter(b=>b.papel===papel).reduce((a,b)=>a+b.valorCentavos,0),0)}));
- const total=filtrados.reduce((s,r)=>s+valor(r),0);
- return {registros:filtrados,evolucao,filiais,papeis,total,contratos:filtrados.length,pessoas:pessoas.size,habilitados:filtrados.filter(r=>valor(r)>0).length,ticketMedio:pessoas.size?Math.round(total/pessoas.size):0,confirmados:filtrados.filter(r=>r.confirmado).length};
+ const total=dados.reduce((s,r)=>s+valor(r),0),pessoas=new Set(dados.filter(r=>valor(r)>0).map(r=>r.apmResumo.apm)).size;
+ const meses=[...new Set(dados.map(r=>r.competencia))].sort();
+ const evolucao=meses.map(competencia=>{const rs=dados.filter(r=>r.competencia===competencia),valorCentavos=rs.reduce((s,r)=>s+valor(r),0);const pessoas=new Set(rs.filter(r=>valor(r)>0).map(r=>r.apmResumo.apm)).size;return {competencia,valorCentavos,pessoas,media:pessoas?Math.round(valorCentavos/pessoas):0};});
+ const filiais=[...new Set(periodo.map(r=>r.apmResumo.filialId))].map(id=>{const rs=periodo.filter(r=>r.apmResumo.filialId===id);return {id,nome:rs[0].apmResumo.filial,valorCentavos:rs.reduce((s,r)=>s+valor(r),0)};});
+ const apms=[...new Set(periodo.filter(r=>!filial||r.apmResumo.filialId===filial).map(r=>r.apmResumo.apm))].map(id=>{const rs=periodo.filter(r=>r.apmResumo.apm===id&&(!filial||r.apmResumo.filialId===filial)),total=rs.reduce((s,r)=>s+valor(r),0),meses=new Set(rs.map(r=>r.competencia)).size;return {id,nome:rs[0].apmResumo.nome,total,meses,filiais:new Set(rs.map(r=>r.apmResumo.filialId)).size,media:meses?Math.round(total/meses):0};}).sort((a,b)=>b.total-a.total);
+ return {total,pessoas,media:pessoas?Math.round(total/pessoas):0,evolucao,filiais,apms,registros:dados};
 }
-export function demonstracaoApms():ApmBiRecord[] {
- const branches=[{id:'demo-pa',name:'Ananindeua',state:'PA'},{id:'demo-ma',name:'São Luís',state:'MA'},{id:'demo-mt',name:'Cuiabá',state:'MT'}];
- const rows:ApmBiRecord[]=[];for(let m=6;m<=11;m++)for(let i=0;i<6+m%3;i++){const b=branches[i%3];rows.push(mapApmCampanhaToBi({id:`demo-apm-${m}-${i}`,competence:`2026-${String(m).padStart(2,'0')}-01`,closed_on:`2026-${String(m).padStart(2,'0')}-15`,contract:`DEMO-${m}-${i}`,consultant:['CAROLINY','LUANA','RENAN'][i%3],manager:['Gerente A','Gerente B','Gerente C'][i%3],seller:i%2?'Vendedor '+i:null,branch_id:b.id,apm_amount:200,seller_amount:i%2?200:0,manager_amount:90,model:'VW 19.180',chassis_quantity:1,modality:'VOLKS TOTAL PREV',policy_version:'DEMONSTRAÇÃO'},branches)!);}return rows;
+export function demonstracaoApms():ApmBiRecord[]{
+ const nomes=['Caroliny','Renan','Luana','Daniela'],rows:ApmBiRecord[]=[];
+ for(let m=6;m<=11;m++)for(let i=0;i<4;i++)rows.push(mapApmCampanhaToBi({competencia:`2026-${String(m).padStart(2,'0')}-01`,apm:nomes[i].toUpperCase(),apm_nome:nomes[i],filial_id:['4700','4738','4731','4730'][i],filial_nome:['Ananindeua','Cuiabá','São Luís','Teresina'][i],uf:['PA','MT','MA','PI'][i],contratos:m+i,valor_apm:(m+i)*200,data_inicio:'2026-06-01',atualizado_em:'2026-11-27T12:00:00Z'}));return rows;
 }
