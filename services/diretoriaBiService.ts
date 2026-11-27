@@ -6,7 +6,7 @@ export interface ApmsGateway {lerResumo:(signal?:AbortSignal)=>Promise<ApmResumo
 export async function carregarFonteApms(gateway:ApmsGateway,signal?:AbortSignal){
  try{
   const rows=await gateway.lerResumo(signal);const registros=rows.map(mapApmCampanhaToBi);
-  return {registros,fonte:{id:'apms',status:'ok',nota:'Origem: Sistema APMs · conexão automática. Somente ganhos dos APMs; vendedor e gerente não incluídos.'}};
+  return {registros,fonte:{id:'apms',status:'ok',nota:'Origem: Sistema APMs · conexão automática. Ganhos de APMs, vendedores e gerentes incluídos uma vez.'}};
  }catch(e:any){if(signal?.aborted||e.name==='AbortError')throw e;return {registros:[],fonte:{id:'apms',status:'erro',nota:'Não foi possível atualizar os totais APMs. Tente novamente; nenhum valor fictício foi somado.'}};}
 }
 export async function carregarDiretoriaBi(carregarLocal:(signal:AbortSignal)=>Promise<LocalResult>,gateway:ApmsGateway,signal:AbortSignal){

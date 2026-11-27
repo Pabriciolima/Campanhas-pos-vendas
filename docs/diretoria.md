@@ -61,3 +61,12 @@ Demonstração continua explicitamente fictícia e separada dos dados reais. Fal
 O banco e o gatilho foram conferidos: dois contratos, com R$400 de ganho APM; R$400 de indicação e R$180 de gerência ficam excluídos. Foi verificado que anon pode apenas ler o resumo, não inserir nele, ler contratos ou executar a função privada. Um UPDATE sem linhas nas filiais exercitou o gatilho sem modificar cadastros, mantendo R$400 no resumo.
 
 `npm ci --prefix diretoria`, `npm run --prefix diretoria typecheck`, `npm run --prefix diretoria build` e `node --test tests/diretoria.test.mjs tests/diretoria-apms.test.mjs tests/seguranca.test.mjs` validam tipos, valores, filtros, paginação, perfil, acesso automático e exclusão das parcelas de vendedor/gerente.
+
+
+## Atualização de escopo — todas as funções
+
+O usuário corrigiu o critério: a frente APMs deve somar APM, vendedor e gerente. A migração complementar `apms_diretoria_incluir_vendedores_gerentes` adiciona `valor_vendedor` e `valor_gerente` ao resumo e atualiza a função privada/gatilhos para recalcular as três parcelas. SQL: `supabase/apms_diretoria_todas_parcelas.sql`. O histórico foi recalculado sem modificar contratos, e os próximos lançamentos alimentam automaticamente todas as parcelas.
+
+O escopo vigente substitui a restrição anterior de considerar somente APM. Carregamento segue sem login adicional. O resumo público permanece agregado por competência/APM responsável/filial, sem nomes de vendedores/gerentes, minutas ou PDFs. A tabela detalha ganho APM, vendedores, gerentes e total da carteira; o total da carteira não é apresentado como remuneração pessoal do APM. A campanha entra no consolidado uma vez pelo total das três parcelas, sem repetir os valores individuais.
+
+Validação atual: R$400 APMs + R$400 vendedores + R$180 gerentes = R$980. A perspectiva de pagamentos financeiros confirmados continua sem criar confirmações bancárias inexistentes.
