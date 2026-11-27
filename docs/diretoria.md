@@ -70,3 +70,47 @@ O usuário corrigiu o critério: a frente APMs deve somar APM, vendedor e gerent
 O escopo vigente substitui a restrição anterior de considerar somente APM. Carregamento segue sem login adicional. O resumo público permanece agregado por competência/APM responsável/filial, sem nomes de vendedores/gerentes, minutas ou PDFs. A tabela detalha ganho APM, vendedores, gerentes e total da carteira; o total da carteira não é apresentado como remuneração pessoal do APM. A campanha entra no consolidado uma vez pelo total das três parcelas, sem repetir os valores individuais.
 
 Validação atual: R$400 APMs + R$400 vendedores + R$180 gerentes = R$980. A perspectiva de pagamentos financeiros confirmados continua sem criar confirmações bancárias inexistentes.
+
+
+## BI interativo e drill-down — 27/11/2026
+
+A tela agora oferece consolidado e navegação por campanha com breadcrumb, filtros cruzados, ranking e ficha individual. O menu continua exclusivo do perfil Abel e mantém as permissões existentes das fontes.
+
+### Arquitetura e contratos
+
+- `services/diretoriaAnalyticsService.ts`: modelo analítico tipado, normalização, deduplicação, filtros, comparação temporal, grupos, rankings, extrato e demonstração. Verificado também com `strict:true` por `diretoria/tsconfig.analytics.json`.
+- `services/diretoriaExportService.ts`: um único recorte para CSV, XLSX real (ExcelJS já carregado sob demanda no sistema), impressão executiva e extrato individual. CSV neutraliza fórmulas; HTML escapa textos; XLSX guarda valores monetários como números.
+- `components/diretoria/AnalyticsCharts.tsx`: barras/rosca/área Recharts e alternativas de clique por teclado.
+- `components/diretoria/BiCampanhaDetalhe.tsx`: cruzamento de mês/semana, cargo, filial, busca, ordenação e paginação visual do ranking.
+- `components/diretoria/FichaColaborador.tsx`: diálogo nativo com foco contido, fechamento por Escape e extrato nos filtros atuais ou no histórico completo da campanha.
+- `components/diretoria/BiInvestimentoCampanhas.tsx`: filtros globais e orquestração, macro e micro, cobertura e exportação.
+
+O mapeamento financeiro local agora preserva também nome, cargo e filiais, sem alterar o motor de cálculo das campanhas. Garantia usa a descrição oficial do perfil; gestores e compras preservam seus vínculos de múltiplas unidades.
+
+### Critérios matemáticos
+
+Dinheiro é calculado em centavos inteiros. A chave financeira original deduplica revisões antes de agrupar pagamentos. Zero não gera pessoa bonificada. Pessoas são agrupadas por nome normalizado; não se presume que IDs de cadastros diferentes tenham correspondência global. Nomes idênticos de homônimos e mudanças de nome exigem um futuro identificador corporativo único para conciliação perfeita.
+
+Premiações/ciclos recebidos são ciclos positivos distintos por campanha e pessoa. Média por ciclo é total dividido pelos ciclos recebidos. Média mensal usa o número de meses do intervalo, incluindo lacunas, não apenas meses com pagamento. Ano atual compara os mesmos meses do ano anterior; últimos seis meses e mês específico usam a janela anterior equivalente. Com base anterior zero/ausente, a variação percentual fica sem base comparável, em vez de inventar percentual.
+
+Filiais de núcleo ficam em categoria conjunta, sem rateio nem dupla contagem no gráfico. Filtro de uma filial inclui pagamentos associados ao seu núcleo integral, explicitado na interface. Matriz corresponde a Ananindeua e núcleos vinculados; Regionais exclui os núcleos que contêm a matriz.
+
+### Limites explícitos das fontes
+
+O resumo automático APMs continua somando as três parcelas (R$400 + R$400 + R$180 no histórico conferido). Para o ranking, a parcela do APM é atribuída ao APM identificado; vendedor e gerente continuam em totais agregados, sem nomes fictícios nem atribuição desses ganhos ao APM responsável. Não foram ampliadas permissões públicas para expor nomes/contratos protegidos. O investimento e o gráfico por função incluem esses totais; contagem de pessoas os exclui e ticket completo fica indisponível quando falta identidade, com ticket dos identificados apresentado separadamente.
+
+Garantia e Compras permanecem protegidas conforme as sessões/senhas já existentes. Clicar abre a análise com indicação de cobertura; dados reais indisponíveis não são substituídos por mock. Uma campanha com dados financeiros incompatíveis é excluída inteira da consolidação, em vez de apresentar um subtotal incorreto. O serviço não grava dados operacionais ou financeiros.
+
+### Demonstração e exportação
+
+A opção Ver demonstração gera 72 pessoas, seis campanhas, múltiplos cargos e filiais e seis meses móveis; Pix contém quatro semanas por mês. É isolada em memória, explicitamente fictícia, sem gravações no Supabase. Exportações de demonstração levam aviso e prefixo no nome do arquivo.
+
+CSV, Excel e PDF respeitam todos os filtros, busca e ordenação, exportando também as linhas fora da página visual de 25 registros. Totais agregados sem nomes estão separados e entram uma vez na soma. XLSX contém ranking/resumo e extrato filtrado em abas distintas. Imprimir abre relatório executivo com os filtros descritos e permite salvar em PDF pelo navegador; não baixa nem anexa evidências/PDFs antigos.
+
+### Validação
+
+`npm run --prefix diretoria typecheck` verifica TypeScript geral e o serviço analítico em modo estrito. `node --test tests/diretoria-analytics.test.mjs tests/diretoria.test.mjs tests/diretoria-apms.test.mjs tests/seguranca.test.mjs` cobre cálculo, filtros, períodos, comparação anual, núcleo, ranking, ficha, cobertura, dados agregados, demonstração, CSV/HTML e compatibilidade.
+
+`scripts/diretoria-drilldown-qa.cjs` é o cenário de navegador com transporte financeiro controlado, sem escritas no banco: testa clique no SVG, seis campanhas, filtros globais/locais, semana, busca, ficha e histórico, ordenação, CSV, XLSX real com leitura dos números/ordem via ExcelJS, popup PDF, modo demonstração e largura móvel. Requer Playwright disponível no ambiente e `BI_QA_DEPS` apontando a um node_modules com @sparticuz/chromium e exceljs 4.4.0 (padrão de execução /tmp/bi-exec-qa/node_modules). Os artefatos de QA são temporários e não pertencem aos dados oficiais.
+
+A conferência final com as consultas reais preservou R$659.370 nas fontes locais disponíveis, com 1.101 registros identificados por nome/cargo/filial. Com R$980 de APMs, o investimento conhecido permanece em R$660.350. Garantia e Compras foram corretamente sinalizadas como protegidas. Nenhuma permissão de leitura nominal de APMs foi ampliada nesta evolução. Impressão nativa do BI usa o marcador `data-native-print` para evitar download desnecessário de jsPDF/AutoTable e preservar a abertura do relatório pelo clique do usuário.

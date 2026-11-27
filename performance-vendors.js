@@ -90,8 +90,8 @@
   }
 
   function vendorForButton(button) {
-    // Políticas usam window.print e não precisam baixar jsPDF nem AutoTable.
-    if (button.matches('[data-policy-print]')) return '';
+    // Políticas e relatórios nativos do BI usam window.print, sem jsPDF/AutoTable.
+    if (button.matches('[data-policy-print],[data-native-print]')) return '';
     const assinatura = [
       button.id,
       button.className,

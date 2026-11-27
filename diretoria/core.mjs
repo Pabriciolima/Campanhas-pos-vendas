@@ -20,7 +20,9 @@ export function registroFinanceiro(campanha,d,valor,index=0){
  const pago=confirmado?centavos(valorPago):0;if(pago===null)throw Error('Valor de pagamento inválido.');
  const nucleo=Array.isArray(d.nucleoFiliais)&&d.nucleoFiliais.length?norm(d.nome)+'|'+d.nucleoFiliais.map(norm).sort().join('+'):null;
  const chave=nucleo||String(d.funcionarioId||d.participanteId||d.responsavelId||d.id||index);
- return {campanha,id:String(d.id||chave),chave:`${campanha}|${competencia}|${d.semana||''}|${chave}`,competencia,ciclo:competencia+(campanha==='pix'?'|S'+String(d.semana||'sem-semana'):''),apurado,pago,confirmado,inicio:d.criadoEm||d.created_at||competencia+'-01',atualizado:d.atualizadoEm||d.updated_at||'',origem:d.origem||'Base oficial'};
+ const nome=String(d.nome||d.colaborador||'').trim();
+ const filiais=(Array.isArray(d.nucleoFiliais)&&d.nucleoFiliais.length?d.nucleoFiliais:Array.isArray(d.unidadesAvaliadas)&&d.unidadesAvaliadas.length?d.unidadesAvaliadas:[d.filial]).map(f=>typeof f==='string'?f:String(f?.nome||f?.unidade||'')).filter(Boolean);
+ return {pessoa:{id:String(d.funcionarioId||d.participanteId||d.responsavelId||''),nome,cargo:String(d.cargo||d.funcao||d.perfil||'Não informado'),filiais},campanha,id:String(d.id||chave),chave:`${campanha}|${competencia}|${d.semana||''}|${chave}`,competencia,ciclo:competencia+(campanha==='pix'?'|S'+String(d.semana||'sem-semana'):''),apurado,pago,confirmado,inicio:d.criadoEm||d.created_at||competencia+'-01',atualizado:d.atualizadoEm||d.updated_at||'',origem:d.origem||'Base oficial'};
 }
 export function consolidarInvestimento(registros,fontes,{ano='',mes='',base='pago'}={}){
  const unicos=new Map();for(const r of registros){if(!r)continue;const velho=unicos.get(r.chave);if(!velho||String(r.atualizado)>String(velho.atualizado))unicos.set(r.chave,r);}

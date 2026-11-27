@@ -1,0 +1,1 @@
+{"extends":"./tsconfig.json","compilerOptions":{"strict":true},"include":["../services/diretoriaAnalyticsService.ts","../services/diretoriaExportService.ts"]}

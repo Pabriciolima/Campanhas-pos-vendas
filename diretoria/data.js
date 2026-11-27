@@ -1,7 +1,7 @@
 import {supabase} from '../supabase-config.js';
 import {autenticarModulo,chamarModulo} from '../modulos-edge.js';
-import {apurarPessoa,chavePessoa} from '../garantia-dados.js?v=20261027-minimo80';
-import {CAMPANHAS,registroFinanceiro} from './core.mjs';
+import {apurarPessoa,chavePessoa,PERFIS} from '../garantia-dados.js?v=20261027-minimo80';
+import {CAMPANHAS,registroFinanceiro} from './core.mjs?v=20261127-drill4';
 import {lerTudo} from './pagination.mjs';
 const financeiro=(id,rows,valor)=>rows.map((r,i)=>registroFinanceiro(id,r,valor(r),i)).filter(Boolean);
 const raw=rows=>rows.map(r=>({...r.dados,id:r.id,competencia:r.competencia||r.dados?.competencia,filial:r.filial||r.dados?.filial,created_at:r.created_at||r.dados?.created_at,updated_at:r.updated_at||r.dados?.updated_at}));
@@ -11,7 +11,7 @@ export async function carregarInvestimento(signal){
   pix:async()=>{const rows=raw(await lerTudo(supabase,'pix_lancamentos',signal)),calc=await calculador('obterHistoricoDiretoriaPix');await window.recarregarNpsFilialPix?.();return financeiro('pix',await calc(rows),r=>r.bonusFinal);},
   oficina:async()=>{const rows=raw(await lerTudo(supabase,'produtivos_lancamentos',signal)),calc=await calculador('obterHistoricoDiretoriaOficina');return financeiro('oficina',await calc(rows),r=>r.bonusFinal);},
   crm:async()=>{const [ps,cs]=await Promise.all([lerTudo(supabase,'crm_participantes',signal),lerTudo(supabase,'crm_competencias',signal)]),calc=await calculador('obterHistoricoDiretoriaCRM');return financeiro('crm',calc(ps,cs),r=>r.total);},
-  garantia:async()=>{await autenticarModulo('garantia');const {state}=await chamarModulo('garantia',{acao:'ler'});if(!state?.competencias)throw Error('Histórico de Garantia indisponível.');const rows=[];for(const [competencia,mes] of Object.entries(state.competencias))for(const p of mes.participantes||[]){const r=apurarPessoa(p,mes);if(r.total!==null&&r.status==='VALIDADO')rows.push({...p,...mes.validados?.[chavePessoa(p)],id:competencia+'|'+chavePessoa(p),competencia,total:r.total});}return financeiro('garantia',rows,r=>r.total);},
+  garantia:async()=>{await autenticarModulo('garantia');const {state}=await chamarModulo('garantia',{acao:'ler'});if(!state?.competencias)throw Error('Histórico de Garantia indisponível.');const rows=[];for(const [competencia,mes] of Object.entries(state.competencias))for(const p of mes.participantes||[]){const r=apurarPessoa(p,mes);if(r.total!==null&&r.status==='VALIDADO')rows.push({...p,cargo:PERFIS[p.perfil]||p.cargo||p.perfil,...mes.validados?.[chavePessoa(p)],id:competencia+'|'+chavePessoa(p),competencia,total:r.total});}return financeiro('garantia',rows,r=>r.total);},
   compras:async()=>{await autenticarModulo('compras');const calc=await calculador('obterHistoricoDiretoriaCompras');return financeiro('compras',await calc(),r=>r.bonusTotal);}
  };
  const campanhasLocais=CAMPANHAS.filter(c=>c.id!=='apms');

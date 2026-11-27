@@ -2,7 +2,7 @@
   "private": true,
   "scripts": {
     "build": "node build.mjs",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.analytics.json"
   },
   "dependencies": {
     "react": "18.3.1",
